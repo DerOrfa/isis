@@ -220,7 +220,7 @@ public:
 	Reference multiply( const ValueBase &ref )const;
 	Reference divide( const ValueBase &ref )const;
 
-	template<typename T> typename std::enable_if<knowType<T>::value,bool>::type apply(const T &val){
+	template<typename T> typename std::enable_if<knownType<T>(),bool>::type apply(const T &val){
 		return apply(Value<T>(val));
 	}
 	bool apply(const ValueBase &val);
@@ -237,7 +237,7 @@ public:
 	 * If the lexical cast fails as well, boost::bad_lexical_cast is thrown.
 	 * \param labeled if true the typename will be appended to the resulting string in brackets.
 	 */
-	virtual std::string toString(bool labeled = false, std::string formatting="") const override;
+	virtual std::string toString(bool labeled = false ) const override;
 };
 
 

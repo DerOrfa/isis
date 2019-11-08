@@ -242,14 +242,15 @@ protected:
 			if( !found->is<T>() ) {
 				if( !found->transform<T>() ) {// convert to requested type
 					LOG( Runtime, warning ) << "Conversion of Property " << path << " from " << util::MSubject( found->getTypeName() ) << " to "
-											<< util::MSubject( util::Value<T>::staticName() ) << " failed";
+											<< util::MSubject( util::ValueNew::staticName<T>() ) << " failed";
 					return optional<T &>();
 				}
 			}
 			assert( found->is<T>() );
-			return at ?
-				found->at(*at).castTo<T>():
-				found->castTo<T>(); // use single value ops, if at was not given
+			return std::get<T>(at ? 
+				found->at(*at):
+				found->front()
+			); // use single value ops, if at was not given
 		}
 		return optional<T &>();
 	}
@@ -257,11 +258,11 @@ protected:
 		const optional< const PropertyValue & > ref = queryProperty( path );
 
 		if( !ref ){
-			LOG( Runtime, warning ) << "Property " << MSubject( path ) << " doesn't exist returning " << MSubject( Value<T>() );
+			LOG( Runtime, warning ) << "Property " << MSubject( path ) << " doesn't exist returning " << MSubject( ValueNew(T()) );
 			return T();
 		} else if (ref->size()<=at.get_value_or(0)){
-			LOG_IF(at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " does exist, but index " << MSubject( at ) << " is out of bounds. returning " << MSubject( Value<T>() );
-			LOG_IF(!at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " is empty. returning " << MSubject( Value<T>() );
+			LOG_IF(at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " does exist, but index " << MSubject( at ) << " is out of bounds. returning " << MSubject( ValueNew(T()) );
+			LOG_IF(!at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " is empty. returning " << MSubject( ValueNew(T()) );
 			return T();
 		} else
 			return at ?
@@ -596,8 +597,8 @@ public:
 	 * \returns true if the transformation was done, false if it failed
 	 */
 	template<typename DST> bool transform( const PropPath &from, const PropPath &to) {
-		checkType<DST>();
-		return transform( from, to, Value<DST>::staticID());
+		// checkType<DST>(); @todo maybe implement me
+		return transform( from, to, ValueNew::staticIndex<DST>());
 	}
 
 	/**
@@ -636,13 +637,13 @@ public:
 	// Additional get/set - Functions
 	//////////////////////////////////////////////////////////////////////////////////////
 	
-	PropertyValue &setValue(const PropPath &path, const ValueBase &val, size_t at);
-	PropertyValue &setValue(const PropPath &path, const ValueBase &val);
+	PropertyValue &setValue(const PropPath &path, const ValueNew &val, size_t at);
+	PropertyValue &setValue(const PropPath &path, const ValueNew &val);
 	
 	/**
 	 * Set the given property to a given value/type.
 	 * The needed flag (if set) will be kept.
-	 * The property will be set to the one given value if
+	 * The property will be set to the one of the given value if
 	 * - the property is empty or
 	 * - the property is already set to one value of the same type (value will be overwritten)
 	 * - the property is already set to another value and the new value can be converted to that type (value will be overwritten but type will be kept)
@@ -659,8 +660,8 @@ public:
 	 * the reference can be used to not ask for the Property each time)
 	 */
 	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val ) {
-		util::checkType<T>();
-		return setValue(path,Value<T>( val ));
+		static_assert(util::knownType<T>(),"invalid type");
+		return setValue(path,val);
 	}
 	PropertyValue &setValueAs( const PropPath &path, const char *val );
 	
@@ -684,8 +685,8 @@ public:
 	 * the reference can be used to not ask for the Property each time)
 	 */
 	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, size_t at ) {
-		util::checkType<T>();
-		return setValue(path,Value<T>( val ), at);
+		static_assert(util::knownType<T>(),"invalid type");
+		return setValue(path,Value( val ), at);
 	}
 	PropertyValue &setValueAs( const PropPath &path, const char *val, size_t at );
 
@@ -796,13 +797,13 @@ public:
 			*fetched = def;
 		} else if( !fetched->is<T>() ) { // apparently it already has a value so lets try use that
 			if( !transform<T>( path, path ) ) {
-				throw std::logic_error(fetched->toString(true)+" cannot be transformed to "+util::Value<T>::staticName() );
+				throw std::logic_error(fetched->toString(true)+" cannot be transformed to "+util::ValueNew::staticName<T>() );
 			}
 		}
 
 		assert( fetched->is<T>() );
 		assert( !fetched->isEmpty() );
-		return fetched->castTo<T>();
+		return fetched->as<T>();
 	}
 
 

@@ -51,7 +51,7 @@ public:
 	 * (The value is used as default value if the parameter never gets to parse any other value)
 	 * \param is_needed flag if parameter is a needed one (default: true)
 	 */
-	template<class T, typename = std::enable_if_t<knowType<T>::value> >
+	template<class T, typename = std::enable_if_t<knownType<T>()> >
 	ProgParameter( const T &ref, bool is_needed = true ): PropertyValue( ref, is_needed ), m_hidden( false ), m_parsed( false ) {}
 	/**
 	 * Put the given value into this parameter.
@@ -75,7 +75,7 @@ public:
 	 */
 	template<typename T> operator const T()const {
 		LOG_IF( isEmpty(), isis::CoreDebug, isis::error ) << "Program parameters must not be empty. Please set it to any value.";
-		return front().castTo<T>();
+		return std::get<T>(front());
 	}
 
 #ifdef BOOST_NO_EXPLICIT_CONVERSION_OPERATORS

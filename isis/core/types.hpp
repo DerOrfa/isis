@@ -22,7 +22,7 @@ typedef std::chrono::time_point<std::chrono::system_clock,std::chrono::days> dat
 typedef timestamp::duration duration; // @todo float duration might be nice
 
 typedef std::variant<
-bool
+  bool
 , int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t
 , float, double
 , color24, color48
@@ -33,7 +33,6 @@ bool
 , std::complex<float>, std::complex<double>
 , date, timestamp, duration
 > ValueTypes;
-
 
 namespace _internal{
 struct name_visitor{
@@ -53,10 +52,11 @@ template<bool ENABLED> struct additive{
 }
 
 /**
- * resolves to boost::true_type if type is known, boost::false_type if not
+ * resolves to true if type is known, false if not
  */
 template< typename T > constexpr bool knownType(){ //@todo can we get rid of this?
-	return std::holds_alternative<T>(ValueTypes());
+#warning implement me
+	return true;
 }
 
 /**

@@ -327,7 +327,7 @@ public:
 	template<typename T> MemChunk( const T *const org, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false  ):
 		MemChunk<TYPE>( nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid )
 	{
-		util::checkType<T>();
+		static_assert(util::knownType<T>(),"invalid type");
 		this->asValueArrayBase().copyFromMem( org, this->getVolume() );
 	}
 	/// Create a deep copy of a given Chunk (automatic conversion will be used if datatype does not fit)

@@ -26,6 +26,7 @@ public:
     
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
 
+	template<typename T> ValueNew(T &&v):ValueTypes(v){}
     ValueNew(const ValueTypes &v);
     ValueNew(ValueTypes &&v);
 	template<typename T> ValueNew& operator=(const T& v){ValueTypes::operator=(v);return *this;}
@@ -101,12 +102,15 @@ public:
 			return std::get<T>(ret);
 		} catch(...) {//@todo specify exception
 			LOG( Debug, error )
-					<< "Interpretation of " << toString( true ) << " as " << Value<T>::staticName()
+					<< "Interpretation of " << toString( true ) << " as " << ValueNew::staticName<T>()
 					<< " failed. Returning " << ValueNew(T()).toString() << ".";
 			return T();
 		} 
 	}
 	
+	bool isFloat()const;
+	bool isInteger()const;
+
 	/**
 	 * Check if the this value is greater to another value converted to this values type.
 	 * The function tries to convert ref to the type of this and compares the result.
@@ -140,18 +144,30 @@ public:
 	 */
 	bool eq( const ValueNew &ref )const;
 
-	ValueNew& plus( const ValueNew &ref )const;
-	ValueNew& minus( const ValueNew &ref )const;
-	ValueNew& multiply( const ValueNew &ref )const;
-	ValueNew& divide( const ValueNew &ref )const;
+	ValueNew plus( const ValueNew &ref )const;
+	ValueNew minus( const ValueNew &ref )const;
+	ValueNew multiply( const ValueNew &ref )const;
+	ValueNew divide( const ValueNew &ref )const;
 
+	ValueNew& add( const ValueNew &ref );
+	ValueNew& substract( const ValueNew &ref );
+	ValueNew& multiply_me( const ValueNew &ref );
+	ValueNew& divide_me( const ValueNew &ref );
+	
+	/**
+	 * Set value to a new value but keep its type.
+	 * This will convert the applied value to the current type.
+	 * If this conversion fails nothing is done and false is returned.
+	 * \returns true if conversion was successfull (and the value was changed), false otherwise
+	 */
+	bool apply(const ValueNew &other);
 };
 
 }
 
+// streaming output
 namespace std
 {
-/// Streaming output for Chunk (forward to PropertyMap)
 template<typename charT, typename traits>
 basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::ValueNew &s )
 {

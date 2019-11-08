@@ -189,10 +189,10 @@ public:
 template<typename TYPE> class ValueArray: public ValueArrayBase
 {
 	std::shared_ptr<TYPE> m_val;
-	static const util::ValueReference getValueFrom( const void *p ) {
-		return util::Value<TYPE>( *reinterpret_cast<const TYPE *>( p ) );
+	static const util::ValueNew getValueFrom( const void *p ) {
+		return util::ValueNew( *reinterpret_cast<const TYPE *>( p ) );
 	}
-	static void setValueInto( void *p, const util::ValueBase &val ) {
+	static void setValueInto( void *p, const util::ValueNew &val ) {
 		*reinterpret_cast<TYPE *>( p ) = val.as<TYPE>();
 	}
 protected:
@@ -206,8 +206,8 @@ public:
 	typedef typename iterator::reference reference;
 	typedef typename const_iterator::reference const_reference;
 
-	constexpr static unsigned short staticID(){
-		return util::Value<TYPE>::staticID()<<8 ;
+	constexpr static unsigned short staticIndex(){
+		return util::ValueNew::staticIndex<TYPE>()<<8 ;
 	}
 	/// delete-functor which does nothing (in case someone else manages the data).
 	struct NonDeleter {
@@ -240,7 +240,7 @@ public:
 	 * this is just here for child classes which may want to check)
 	 */
 	ValueArray( const std::shared_ptr<TYPE> &ptr, size_t length ): ValueArrayBase( length ), m_val( ptr ) {
-		util::checkType<TYPE>();
+		static_assert(util::knownType<TYPE>(),"invalid type");
 		static_assert(!std::is_const<TYPE>::value,"ValueArray type must not be const");
 		LOG_IF( length == 0, Debug, warning )
 			<< "Creating an empty (lenght==0) ValueArray of type " << util::MSubject( staticName() )
@@ -268,7 +268,7 @@ public:
 	 */
 
 	template<typename D> ValueArray( TYPE *const ptr, size_t length, D d ): ValueArrayBase( length ), m_val( ptr, d ) {
-		util::checkType<TYPE>();
+		static_assert(util::knownType<TYPE>(),"invalid type");
 		static_assert(!std::is_const<TYPE>::value,"ValueArray type must not be const");
 	}
 
@@ -298,28 +298,28 @@ public:
 	const_iterator end()const {return begin() + m_len;}
 
 	/// @copydoc util::Value::toString
-	virtual std::string toString( bool labeled = false, std::string formatting="" )const override {
+	virtual std::string toString( bool labeled = false )const override {
 		std::string ret;
 
 		if ( m_len ) {
 			for ( const_iterator i = begin(); i < end() - 1; i++ )
-				ret += util::Value<TYPE>( *i ).toString( false, formatting ) + "|";
+				ret += util::ValueNew( *i ).toString( false ) + "|";
 
 
-			ret += util::Value<TYPE>( *( end() - 1 ) ).toString( labeled, formatting );
+			ret += util::ValueNew( *( end() - 1 ) ).toString( labeled );
 		}
 
 		return std::to_string( m_len ) + "#" + ret;
 	}
 
 	std::string getTypeName()const override {return staticName();}
-	unsigned short getTypeID()const override {return staticID();}
+	unsigned short getTypeID()const override {return staticIndex();}
 	bool isFloat() const override {return std::is_floating_point< TYPE >::value;}
 	bool isInteger() const override {return std::is_integral< TYPE >::value;}
 
 	/// @copydoc util::Value::staticName
 	static std::string staticName() {
-		return std::string( util::Value<TYPE>::staticName() ) + "*";
+		return std::string( util::ValueNew::staticName<TYPE>() ) + "*";
 	}
 
 	/**
@@ -385,7 +385,7 @@ public:
 	}
 	//
 	scaling_pair getScalingTo( unsigned short typeID, autoscaleOption scaleopt = autoscale )const override {
-		if( typeID == staticID() && scaleopt == autoscale ) { // if id is the same and autoscale is requested
+		if( typeID == getTypeID() && scaleopt == autoscale ) { // if id is the same and autoscale is requested
 			static const util::Value<uint8_t> one( 1 );
 			static const util::Value<uint8_t> zero( 0 );
 			return std::pair<util::ValueReference, util::ValueReference>( one, zero ); // the result is always 1/0
@@ -402,7 +402,7 @@ public:
 };
 template<typename T> bool ValueArrayBase::is()const
 {
-	util::checkType<T>();
+	static_assert(util::knownType<T>(),"invalid type");
 	return getTypeID() == ValueArray<T>::staticID();
 }
 

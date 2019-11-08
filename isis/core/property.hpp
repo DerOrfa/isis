@@ -13,7 +13,6 @@
 #ifndef ISISPROPERTY_HPP
 #define ISISPROPERTY_HPP
 
-#include <boost/ptr_container/ptr_vector.hpp>
 #include "value.hpp"
 #include "log.hpp"
 
@@ -32,12 +31,12 @@ namespace util
 class PropertyValue
 {
 	bool m_needed;
-	boost::ptr_vector<ValueBase,ValueBase::heap_clone_allocator> container;
+	std::vector<ValueNew> container;
 public:
-	typedef boost::ptr_vector<ValueBase,ValueBase::heap_clone_allocator>::iterator iterator;
-	typedef boost::ptr_vector<ValueBase,ValueBase::heap_clone_allocator>::const_iterator const_iterator;
-	typedef boost::ptr_vector<ValueBase,ValueBase::heap_clone_allocator>::reference reference;
-	typedef boost::ptr_vector<ValueBase,ValueBase::heap_clone_allocator>::const_reference const_reference;
+	typedef std::vector<ValueNew>::iterator iterator;
+	typedef std::vector<ValueNew>::const_iterator const_iterator;
+	typedef std::vector<ValueNew>::reference reference;
+	typedef std::vector<ValueNew>::const_reference const_reference;
 	typedef PropertyValue value_type;
 	/**
 	 * Explicit constructor.
@@ -46,28 +45,28 @@ public:
 	 * \param ref the value to be stored
 	 * \param _needed flag if this PropertyValue is needed an thus not allowed to be empty (a.k.a. undefined)
 	 */
-	template<typename T> explicit PropertyValue( const T &ref, bool _needed = false ):m_needed( _needed ),container(1) {
-		container.push_back(new Value<T>( ref ));
+	template<typename T> explicit PropertyValue( const T &ref, bool _needed = false ):m_needed( _needed ) {
+		container.emplace_back(ValueNew(ref));
 	}
 	/// Create a property and store the given single value object.
-	template<typename T> PropertyValue( const Value<T> &ref, bool _needed = false ):m_needed( _needed ),container(1) {push_back(ref );}
+	PropertyValue( const ValueNew &ref, bool _needed = false ):m_needed( _needed ) {container.emplace_back(ref);}
 	/// Create a property and store the given single value object.
-	PropertyValue( const ValueBase& ref, bool _needed = false ):m_needed( _needed ),container(1) {push_back(ref);}
-    virtual ~PropertyValue(){}
+	PropertyValue( ValueNew &&ref, bool _needed = false ):m_needed( _needed ){container.emplace_back(ref);}
+    virtual ~PropertyValue() = default;
 
 	////////////////////////////////////////////////////////////////////////////
 	// List operations
 	////////////////////////////////////////////////////////////////////////////
 	void push_back(const PropertyValue& ref);
-	void push_back(const ValueBase& ref);
-	template<typename T> typename std::enable_if<knowType<T>::value >::type push_back(const T& ref){insert(end(),ref);}
+	void push_back(const ValueNew& ref);
+	template<typename T> typename std::enable_if<knownType<T>() >::type push_back(const T& ref){insert(end(),ref);}
 
-	iterator insert(iterator at,const ValueBase& ref);
-	void insert(iterator at,const PropertyValue& ref);
+	iterator insert(iterator at,const ValueNew& ref);
+	iterator insert(iterator at,const PropertyValue& ref);
 	
-	template<typename T> typename std::enable_if<knowType<T>::value, iterator >::type insert(iterator at,const T& ref){
-		LOG_IF(!isEmpty() && getTypeID()!=Value<T>::staticID(),Debug,error) << "Inserting inconsistent type " << MSubject(Value<T>(ref).toString(true)) << " in " << MSubject(*this);
-		return container.insert(at,new Value<T>(ref));
+	template<typename T> typename std::enable_if<knownType<T>(), iterator >::type insert(iterator at,const T& ref){
+		LOG_IF(!isEmpty() && getTypeID()!=ValueNew::staticIndex<T>(),Debug,error) << "Inserting inconsistent type " << MSubject(ValueNew(ref).toString(true)) << " in " << MSubject(*this);
+		return container.emplace(at,ValueNew(ref));
 	}
 
 	iterator erase( size_t at );
@@ -76,19 +75,20 @@ public:
 	iterator erase( iterator first, iterator last );
 	
 	void reserve(size_t size);
-	void resize( size_t size, const ValueBase& clone );
-	template<typename T> typename std::enable_if<knowType<T>::value,ValueBase& >::type set(size_t idx,const T& val){
+	void resize( size_t size, const ValueNew& clone );
+	template<typename T> typename std::enable_if<knownType<T>(),ValueNew& >::type set(size_t idx,const T& val){
 		if(size()<=idx)
-			resize(idx+1,Value<T>());
-		return *container.replace(idx,new Value<T>(val));
+			resize(idx+1,ValueNew(T()));
+		container[idx]=val;
+		return container[idx];
 	}
 
-	ValueBase&        operator[]( size_t n );
-	const ValueBase&  operator[]( size_t n ) const;
-	ValueBase&        at( size_t n );
-	const ValueBase&  at( size_t n ) const;
-	ValueBase&        front();
-	const ValueBase&  front()const;
+	ValueNew&        operator[]( size_t n );
+	const ValueNew&  operator[]( size_t n ) const;
+	ValueNew&        at( size_t n );
+	const ValueNew&  at( size_t n ) const;
+	ValueNew&        front();
+	const ValueNew&  front()const;
 
 	iterator begin();
 	const_iterator begin()const;
@@ -134,7 +134,7 @@ public:
 
 	/// Transform all contained properties into type T
 	bool transform( uint16_t dstID );
-	template<typename T> bool transform(){return transform(Value<T>::staticID());}
+	template<typename T> bool transform(){return transform(ValueNew::staticIndex<T>());}
 	
 	/**
 	 * Empty constructor.
@@ -179,37 +179,29 @@ public:
 	 * Equality to another Value-Object
 	 * \returns Value::operator== if the property has exactly one value, false otherwise.
 	 */
-	bool operator ==( const ValueBase &second )const;
+	bool operator ==( const ValueNew &second )const;
 	/**
 	 * Unequality to another Value-Object 
 	 * \returns Value::operator!= if the property has exactly one value, false otherwise.
 	 */
-	bool operator !=( const ValueBase &second )const;
+	bool operator !=( const ValueNew &second )const;
 	
 	/**
 	 * (re)set property to one specific value of a specific type
 	 * \note The needed flag won't be affected by that.
 	 * \note To prevent accidential use this can only be used explicetly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
 	 */
-	template<typename T> typename std::enable_if<knowType<T>::value,PropertyValue&>::type operator=( const T &ref){
+	template<typename T> typename std::enable_if<knownType<T>(),PropertyValue&>::type operator=( const T &ref){
 		container.clear();
-		container.push_back(new Value<T>(ref));
+		container.emplace_back(ValueNew(ref));
 		return *this;
 	}
-	PropertyValue& operator=( const ValueBase &ref){
+	PropertyValue& operator=( const ValueNew &ref){
 		container.clear();
 		push_back(ref);
 		return *this;
 	}
 
-	/**
-	 * Explicit cast to ValueReference.
-	 * \returns A ValueReference containing a copy of the first stored Value.
-	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
-	 * \note An exception is thrown if the PropertyValue is empty.
-	 */
-	ValueReference operator()()const;
-	
 	/**
 	 * creates a copy of the stored values using a type referenced by its ID
 	 * \returns a new PropertyValue containing all values converted to the requested type
@@ -259,23 +251,23 @@ public:
 	 */
 	unsigned short getTypeID()const;
 
-	/**
-	 * \copybrief ValueBase::castTo
-	 * hook for \link ValueBase::castTo \endlink
-	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
-	 * \note An exception is thrown if the PropertyValue is empty.
-	 */
-	template<typename T> T &castTo(){return front().castTo<T>();}
-	template<typename T> const T &castTo() const{return front().castTo<T>();}
-
-	/**
-	 * \copybrief ValueBase::castToType
-	 * hook for \link ValueBase::castToType \endlink
-	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
-	 * \note An exception is thrown if the PropertyValue is empty.
-	 */
-	template<typename T> Value<T>& castToType(){return front().castToType<T>();}
-	template<typename T> const Value<T>& castToType() const{return front().castToType<T>();}
+// 	/**
+// 	 * \copybrief ValueBase::castTo
+// 	 * hook for \link ValueBase::castTo \endlink
+// 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
+// 	 * \note An exception is thrown if the PropertyValue is empty.
+// 	 */
+// 	template<typename T> T &castTo(){return front().castTo<T>();}
+// 	template<typename T> const T &castTo() const{return front().castTo<T>();}
+// 
+// 	/**
+// 	 * \copybrief ValueBase::castToType
+// 	 * hook for \link ValueBase::castToType \endlink
+// 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
+// 	 * \note An exception is thrown if the PropertyValue is empty.
+// 	 */
+// 	template<typename T> ValueNew& castToType(){return front().castToType<T>();}
+// 	template<typename T> const Value<T>& castToType() const{return front().castToType<T>();}
 	
 	/**
 	 * \returns true if \link ValueBase::fitsInto \endlink is true for all values
@@ -349,7 +341,7 @@ public:
 	 * \warning This is using the more fuzzy Value::eq. So the type won't be compared and rounding might be done (which will send a warning to Debug).
 	 * \returns front().eq(second) if the property contains exactly one value, false otherwise
 	 */
-	template<typename T> typename std::enable_if<knowType<T>::value,bool>::type operator ==( const T &second )const{return size()==1 && front().eq(Value<T>(second));}
+	template<typename T> typename std::enable_if<knownType<T>(),bool>::type operator ==( const T &second )const{return size()==1 && front().eq(second);}
 	/**
 	 * Unequality to a basic value.
 	 * Properties are unequal to basic values if:
@@ -358,12 +350,12 @@ public:
 	 * \warning This is using the more fuzzy Value::eq. So the type won't be compared and rounding might be done (which will send a warning to Debug).
 	 * \returns !front().eq(second) if the property contains exactly one value, false otherwise
 	 */
-	template<typename T> typename std::enable_if<knowType<T>::value,bool>::type operator !=( const T &second )const{return size()==1 && !front().eq(Value<T>(second));}
+	template<typename T> typename std::enable_if<knownType<T>(),bool>::type operator !=( const T &second )const{return size()==1 && !front().eq(second);}
 	
-	template<typename T> PropertyValue& operator +=( const T &second ){front().add(Value<T>(second));return *this;}
-	template<typename T> PropertyValue& operator -=( const T &second ){front().substract(Value<T>(second));return *this;}
-	template<typename T> PropertyValue& operator *=( const T &second ){front().multiply_me(Value<T>(second));return *this;}
-	template<typename T> PropertyValue& operator /=( const T &second ){front().divide_me(Value<T>(second));return *this;}
+	template<typename T> PropertyValue& operator +=( const T &second ){front().add(second);return *this;}
+	template<typename T> PropertyValue& operator -=( const T &second ){front().substract(second);return *this;}
+	template<typename T> PropertyValue& operator *=( const T &second ){front().multiply_me(second);return *this;}
+	template<typename T> PropertyValue& operator /=( const T &second ){front().divide_me(second);return *this;}
 
 	template<typename T> PropertyValue operator+( const T &rhs )const {PropertyValue lhs(*this); return lhs+=rhs;}
 	template<typename T> PropertyValue operator-( const T &rhs )const {PropertyValue lhs(*this); return lhs-=rhs;}

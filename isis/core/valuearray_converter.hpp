@@ -22,7 +22,7 @@
 
 #include <memory>
 #include <map>
-#include "value_base.hpp"
+#include "value.hpp"
 
 /// @cond _internal
 
@@ -31,7 +31,7 @@ namespace isis
 namespace data
 {
 enum autoscaleOption {noscale, autoscale, noupscale, upscale};
-typedef std::pair<util::ValueReference, util::ValueReference> scaling_pair; //scale / offset
+typedef std::pair<util::ValueNew, util::ValueNew> scaling_pair; //scale / offset
 class ValueArrayBase;
 
 class ValueArrayConverterBase
@@ -41,7 +41,7 @@ public:
 	virtual void generate( const ValueArrayBase &src, std::unique_ptr<ValueArrayBase>& dst, const scaling_pair &scaling )const = 0;
 	/// Create a ValueArray based on the ID - if len==0 a pointer to NULL is created
 	virtual void create( std::unique_ptr<ValueArrayBase>& dst, size_t len )const = 0;
-	virtual scaling_pair getScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )const;
+	virtual scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )const;
 	static std::shared_ptr<const ValueArrayConverterBase> get() {return std::shared_ptr<const ValueArrayConverterBase>();}
 	virtual ~ValueArrayConverterBase() {}
 };

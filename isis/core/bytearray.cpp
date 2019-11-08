@@ -47,8 +47,8 @@ data::ValueArrayBase::ConstReference ByteArray::atByID( unsigned short ID, size_
 
 ByteArray::GeneratorMap::GeneratorMap()
 {
-	boost::mpl::for_each<util::_internal::types>( proc( this ) );
-	assert( !empty() );
+// 	boost::mpl::for_each<util::_internal::types>( proc( this ) );
+	assert( false );
 }
 }
 }

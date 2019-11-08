@@ -217,7 +217,7 @@ void Application::printHelp( bool withHidden )const
 				<< "\t\t" << iP->second.description() << pref << std::endl;
 
 		if ( iP->second.is<Selection>() ) {
-			const Selection &ref = iP->second.castTo<Selection>();
+			const Selection &ref = iP->second.as<Selection>();
 			const std::list< istring > entries = ref.getEntries();
 			std::list< istring >::const_iterator i = entries.begin();
 			std::cerr << "\t\tOptions are: \"" << *i << "\"";

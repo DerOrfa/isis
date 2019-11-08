@@ -19,9 +19,9 @@
 #ifndef TYPEPTRBASE_HPP
 #define TYPEPTRBASE_HPP
 
-#include "value_base.hpp"
 #include "valuearray_converter.hpp"
 #include "common.hpp"
+#include "generic_value.hpp"
 
 namespace isis
 {
@@ -34,22 +34,22 @@ class ConstValueAdapter
 {
 	template<bool BB> friend class GenericValueIterator; //allow the iterators (and only them) to create the adapter
 public:
-	typedef const util::ValueReference ( *Getter )( const void * );
-	typedef void ( *Setter )( void *, const util::ValueBase & );
+	typedef const util::ValueNew ( *Getter )( const void * );
+	typedef void ( *Setter )( void *, const util::ValueNew & );
 protected:
 	const Getter getter;
 	const uint8_t *const p;
 	ConstValueAdapter( const uint8_t *const _p, Getter _getValueFunc );
 public:
 	// to make some algorithms work
-	bool operator==( const util::ValueReference &val )const;
-	bool operator!=( const util::ValueReference &val )const;
+	bool operator==( const util::ValueNew &val )const;
+	bool operator!=( const util::ValueNew &val )const;
 
-	bool operator<( const util::ValueReference &val )const;
-	bool operator>( const util::ValueReference &val )const;
+	bool operator<( const util::ValueNew &val )const;
+	bool operator>( const util::ValueNew &val )const;
 
-	operator const util::ValueReference()const;
-	const util::ValueReference operator->() const;
+	operator const util::ValueNew()const;
+	const util::ValueNew operator->() const;
 	const std::string toString( bool label = false )const;
 };
 class WritingValueAdapter: public ConstValueAdapter
@@ -60,8 +60,7 @@ class WritingValueAdapter: public ConstValueAdapter
 protected:
 	WritingValueAdapter( uint8_t *const _p, Getter _getValueFunc, Setter _setValueFunc, size_t _size );
 public:
-	WritingValueAdapter operator=( const util::ValueReference &val );
-	WritingValueAdapter operator=( const util::ValueBase &val );
+	WritingValueAdapter operator=( const util::ValueNew &val );
 	void swapwith( const WritingValueAdapter &b )const; // the WritingValueAdapter is const not what its dereferencing
 };
 
@@ -131,7 +130,7 @@ template<> GenericValueIterator<false>::reference GenericValueIterator<false>::o
 } //namespace _internal
 /// @endcond _internal
 
-class ValueArrayBase : public util::_internal::GenericValue
+class ValueArrayBase : publuc util::ValueArrayTypes
 {
 	friend class util::_internal::GenericReference<ValueArrayBase>;
 	friend class util::_internal::GenericReference<const ValueArrayBase>;
@@ -224,7 +223,7 @@ public:
 
 	///get the scaling (and offset) which would be used in an conversion
 	virtual scaling_pair getScalingTo( unsigned short typeID, autoscaleOption scaleopt = autoscale )const = 0;
-	virtual scaling_pair getScalingTo( unsigned short typeID, const std::pair<util::ValueReference, util::ValueReference> &minmax, autoscaleOption scaleopt = autoscale )const;
+	virtual scaling_pair getScalingTo( unsigned short typeID, const std::pair<util::ValueNew, util::ValueNew> &minmax, autoscaleOption scaleopt = autoscale )const;
 
 	/**
 	 * Create new data in memory containg a (converted) copy of this.
@@ -361,13 +360,13 @@ public:
 	 * The computed min/max are of the same type as the stored data, but can be compared to other ValueReference without knowing this type via the lt/gt function of ValueBase.
 	 * The following code checks if the value range of ValueArray-object data1 is a real subset of data2:
 	 * \code
-	 * std::pair<util::ValueReference,util::ValueReference> minmax1=data1.getMinMax(), minmax2=data2.getMinMax();
+	 * std::pair<util::ValueNew,util::ValueNew> minmax1=data1.getMinMax(), minmax2=data2.getMinMax();
 	 * if(minmax1.first->gt(minmax2.second) && minmax1.second->lt(minmax2.second)
 	 *  std::cout << minmax1 << " is a subset of " minmax2 << std::endl;
 	 * \endcode
 	 * \returns a pair of ValueReferences referring to the found minimum/maximum of the data
 	 */
-	virtual std::pair<util::ValueReference, util::ValueReference> getMinMax()const = 0;
+	virtual std::pair<util::ValueNew, util::ValueNew> getMinMax()const = 0;
 
 	/**
 	 * Compare the data of two ValueArray.
@@ -400,7 +399,7 @@ namespace std
 	template<typename charT, typename traits> basic_ostream<charT, traits>&
 	operator<<( basic_ostream<charT, traits> &out, const isis::data::_internal::ConstValueAdapter &v )
 	{
-		return out << (isis::util::ValueReference)v;
+		return out << (isis::util::ValueNew)v;
 	}
 }
 #endif // TYPEPTRBASE_HPP
