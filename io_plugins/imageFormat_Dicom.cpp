@@ -652,9 +652,9 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 	
 		//we got a chunk from the file
 		sanitise( chunk, dialects );
-		const util::slist iType = chunk.getValueAs<util::slist>( util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/" + "ImageType" );
+		const auto iType = chunk.queryValueAs<util::slist>( util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/" + "ImageType");
 
-		if ( std::find( iType.begin(), iType.end(), "MOSAIC" ) != iType.end() ) { // if its a mosaic
+		if ( iType && std::find( iType->begin(), iType->end(), "MOSAIC" ) != iType->end() ) { // if we have an image type and its a mosaic
 			if( checkDialect(dialects, "keepmosaic") ) {
 				LOG( Runtime, info ) << "This seems to be an mosaic image, but dialect \"keepmosaic\" was selected";
 				ret.push_back( chunk );
