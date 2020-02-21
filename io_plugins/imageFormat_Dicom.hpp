@@ -66,7 +66,6 @@ class DicomElement{
 		ImplicitVrTag<boost::endian::order::little> *
 	> tag_types;
 	tag_types tag;
-	bool implicit_vr=false;
 	struct generator{value_generator scalar,list;uint8_t value_size;};
 	static std::map<std::string,generator> generator_map;
 	template<boost::endian::order Order> tag_types makeTag(){
@@ -88,6 +87,7 @@ class DicomElement{
 	bool extendedLength()const; 
 	uint_fast8_t tagLength()const;
 public:
+	bool implicit_vr=false;
 	bool next(size_t position);
 	bool next();
 	bool endian_swap()const;

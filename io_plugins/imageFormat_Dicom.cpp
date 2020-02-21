@@ -73,16 +73,20 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 					<< "Found " << inserted->second->getTypeName() << "-data for " << token.getIDString() << " at " << token.getPosition()
 					<< " it is " <<token.getLength() << " bytes long";
 			}
-		}else if(vr=="SQ"){ //explicit SQ (4 bytes tag-id + 2bytes "SQ" + 2bytes reserved)
-			//next 4 bytes are the length of the sequence
+		}else if(vr=="SQ"){ // http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_7.5.html
 			uint32_t len=token.getLength();
 			const auto name=token.getName();
 			
-			//we expect the sequence start token
-			token.next(token.getPosition()+8+4);
-			LOG_IF(len==0xffffffff,Debug,verbose_info) << "Sequence of undefined length found (" << name << "), looking for items at " << token.getPosition();
-			LOG_IF(len!=0xffffffff,Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << token.getPosition();
+			//get to first item
+			if(token.implicit_vr)
+				token.next(token.getPosition()+4+4);//implicit SQ (4 bytes tag-id + 4 bytes length)
+			else
+				token.next(token.getPosition()+4+2+2+4);//explicit SQ (4 bytes tag-id + 2bytes "SQ" + 2bytes reserved + 4 bytes length)
+			
 			size_t start=token.getPosition();
+			LOG_IF(len==0xffffffff,Debug,verbose_info) << "Sequence of undefined length found (" << name << "), looking for items at " << start;
+			LOG_IF(len!=0xffffffff,Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start;
+
 			//load items (which themself again are made of tags)
 			while(token.getPosition()-start<len && token.getID32()!=0xFFFEE0DD){ //break the loop when we find the sequence delimiter tag or reach the end
 				assert(token.getID32()==0xFFFEE000);//must be an item-tag
