@@ -49,7 +49,8 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00041510,{"UI","ReferencedSOPClassUIDInFile"}}, //DICOM
 	{0x00041511,{"UI","ReferencedSOPInstanceUIDInFile"}}, //DICOM
 	{0x00041512,{"UI","ReferencedTransferSyntaxUIDInFile"}}, //DICOM
-	{0x00080006,{"SQ","LanguageCodeSequence"}}, //DICOM
+    {0x00080005,{"CS","SpecificCharacterSet"}}, //DICOM
+    {0x00080006,{"SQ","LanguageCodeSequence"}}, //DICOM
 	{0x00080012,{"DA","InstanceCreationDate"}}, //DICOM
 	{0x00080013,{"TM","InstanceCreationTime"}}, //DICOM
 	{0x00080014,{"UI","InstanceCreatorUID"}}, //DICOM
@@ -139,7 +140,9 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00081049,{"SQ","PhysiciansOfRecordIdentificationSequence"}}, //DICOM
 	{0x00081052,{"SQ","PerformingPhysicianIdentificationSequence"}}, //DICOM
 	{0x00081062,{"SQ","PhysiciansReadingStudyIdentificationSequence"}}, //DICOM
+    {0x00081070,{"PN","OperatorsName"}},//DICOM
 	{0x00081072,{"SQ","OperatorIdentificationSequence"}}, //DICOM
+    {0x00081080,{"LO","AdmittingDiagnosesDescription"}},//DICOM
 	{0x00081084,{"SQ","AdmittingDiagnosesCodeSequence"}}, //DICOM
 	{0x00081090,{"LO","ManufacturerModelName"}}, //DICOM
 	{0x00081110,{"SQ","ReferencedStudySequence"}}, //DICOM
@@ -237,6 +240,7 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00100222,{"UC","GeneticModificationsDescription"}}, //DICOM
 	{0x00100223,{"LO","GeneticModificationsNomenclature"}}, //DICOM
 	{0x00100229,{"SQ","GeneticModificationsCodeSequence"}}, //DICOM
+    {0x00101001,{"PN","OtherPatientNames"}},//DICOM
 	{0x00101002,{"SQ","OtherPatientIDsSequence"}}, //DICOM
 	{0x00101005,{"PN","PatientBirthName"}}, //DICOM
 	{0x00101010,{"AS","PatientAge"}}, //DICOM
@@ -251,6 +255,8 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00101080,{"LO","MilitaryRank"}}, //DICOM
 	{0x00101081,{"LO","BranchOfService"}}, //DICOM
 	{0x00101100,{"SQ","ReferencedPatientPhotoSequence"}}, //DICOM
+    {0x00102000,{"LO","MedicalAlerts"}},//DICOM
+    {0x00102110,{"LO","Allergies"}},//DICOM
 	{0x00102150,{"LO","CountryOfResidence"}}, //DICOM
 	{0x00102152,{"LO","RegionOfResidence"}}, //DICOM
 	{0x00102155,{"LT","PatientTelecomInformation"}}, //DICOM
@@ -474,7 +480,10 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00180012,{"SQ","ContrastBolusAgentSequence"}}, //DICOM
 	{0x00180013,{"FL","ContrastBolusT1Relaxivity"}}, //DICOM
 	{0x00180014,{"SQ","ContrastBolusAdministrationRouteSequence"}}, //DICOM
-	{0x00180015,{"CS","BodyPartExamined"}}, //DICOM
+	{0x00180015,{"CS","BodyPartExamined"}},//DICOM
+	{0x00180020,{"CS","ScanningSequence"}},//DICOM
+	{0x00180021,{"CS","SequenceVariant"}},//DICOM
+	{0x00180022,{"CS","ScanOptions"}},//DICOM
 	{0x00180023,{"CS","MRAcquisitionType"}}, //DICOM
 	{0x00180024,{"SH","SequenceName"}}, //DICOM
 	{0x00180025,{"CS","AngioFlag"}}, //DICOM
@@ -505,6 +514,7 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00180083,{"DS","NumberOfAverages"}}, //DICOM
 	{0x00180084,{"DS","ImagingFrequency"}}, //DICOM
 	{0x00180085,{"SH","ImagedNucleus"}}, //DICOM
+	{0x00180086,{"IS","EchoNumbers"}},//DICOM
 	{0x00180087,{"DS","MagneticFieldStrength"}}, //DICOM
 	{0x00180088,{"DS","SpacingBetweenSlices"}}, //DICOM
 	{0x00180089,{"IS","NumberOfPhaseEncodingSteps"}}, //DICOM
@@ -528,6 +538,8 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00181014,{"TM","TimeOfSecondaryCapture"}}, //DICOM
 	{0x00181016,{"LO","SecondaryCaptureDeviceManufacturer"}}, //DICOM
 	{0x00181018,{"LO","SecondaryCaptureDeviceManufacturerModelName"}}, //DICOM
+	{0x00181019,{"LO","SecondaryCaptureDeviceSoftwareVersions"}},//DICOM
+	{0x00181020,{"LO","SoftwareVersions"}},//DICOM
 	{0x00181022,{"SH","VideoImageFormatAcquired"}}, //DICOM
 	{0x00181023,{"LO","DigitalImageFormatAcquired"}}, //DICOM
 	{0x00181030,{"LO","ProtocolName"}}, //DICOM
@@ -1553,6 +1565,7 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00281052,{"DS","RescaleIntercept"}}, //DICOM
 	{0x00281053,{"DS","RescaleSlope"}}, //DICOM
 	{0x00281054,{"LO","RescaleType"}}, //DICOM
+	{0x00281055,{"LO","WindowCenterWidthExplanation"}},//DICOM
 	{0x00281056,{"CS","VOILUTFunction"}}, //DICOM
 	{0x00281090,{"CS","RecommendedViewingMode"}}, //DICOM
 	{0x00281104,{"US","AlphaPaletteColorLookupTableDescriptor"}}, //DICOM
@@ -1590,6 +1603,8 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00282000,{"OB","ICCProfile"}}, //DICOM
 	{0x00282002,{"CS","ColorSpace"}}, //DICOM
 	{0x00282110,{"CS","LossyImageCompression"}}, //DICOM
+	{0x00282112,{"DS","LossyImageCompressionRatio"}},//DICOM
+	{0x00282114,{"CS","LossyImageCompressionMethod"}},//DICOM
 	{0x00283000,{"SQ","ModalityLUTSequence"}}, //DICOM
 	{0x00283003,{"LO","LUTExplanation"}}, //DICOM
 	{0x00283004,{"LO","ModalityLUTType"}}, //DICOM
@@ -3987,6 +4002,110 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x10000013,{"US","RETIRED_HuffmanTableTriplet"}}, //DICOM/retired
 	{0x10000014,{"US","RETIRED_ShiftTableSize"}}, //DICOM/retired
 	{0x10000015,{"US","RETIRED_ShiftTableTriplet"}}, //DICOM/retired
+	//philips
+	{0x20010010,{"LO","Private Creator Group 2001"}},//PrivateTag
+	{0x20010011,{"LO","Philips private Attribute"}},//PrivateTag
+	{0x20010090,{"LO","Private Creator Group 2001 (90)"}},//PrivateTag
+	{0x20011001,{"FL","ChemicalShift"}},//PrivateTag
+	{0x20011002,{"IS","ChemicalShiftNumberMR"}},//PrivateTag
+	{0x20011003,{"FL","DiffusionBFactor"}},//PrivateTag
+	{0x20011004,{"CS","DiffusionDirection"}},//PrivateTag
+	{0x20011006,{"CS","ImageEnhanced"}},//PrivateTag
+	{0x20011007,{"CS","ImageTypeEDES"}},//PrivateTag
+	{0x20011008,{"IS","PhaseNumber"}},//PrivateTag
+	{0x20011009,{"FL","ImagePrepulseDelay"}},//PrivateTag
+	{0x2001100a,{"IS","SliceNumberMR"}},//PrivateTag
+	{0x2001100b,{"CS","SliceOrientation"}},//PrivateTag
+	{0x2001100c,{"CS","ArrhythmiaRejection"}},//PrivateTag
+	{0x2001100e,{"CS","CardiacCycled"}},//PrivateTag
+	{0x2001100f,{"SS","CardiacGateWidth"}},//PrivateTag
+	{0x20011010,{"CS","CardiacSync"}},//PrivateTag
+	{0x20011011,{"FL","DiffusionEchoTime"}},//PrivateTag
+	{0x20011012,{"CS","DynamicSeries"}},//PrivateTag
+	{0x20011013,{"SL","EPIFactor"}},//PrivateTag
+	{0x20011014,{"SL","NumberOfEchoes"}},//PrivateTag
+	{0x20011015,{"SS","NumberOfLocations"}},//PrivateTag
+	{0x20011016,{"SS","NumberOfPCDirections"}},//PrivateTag
+	{0x20011017,{"SL","NumberOfPhasesMR"}},//PrivateTag
+	{0x20011018,{"SL","NumberOfSlicesMR"}},//PrivateTag
+	{0x20011019,{"CS","PartialMatrixScanned"}},//PrivateTag
+	{0x2001101a,{"FL","PCVelocity"}},//PrivateTag
+	{0x2001101b,{"FL","PrepulseDelay"}},//PrivateTag
+	{0x2001101c,{"CS","PrepulseType"}},//PrivateTag
+	{0x2001101d,{"IS","ReconstructionNumberMR"}},//PrivateTag
+	{0x2001101e,{"CS","Philips private Attribute"}},//PrivateTag
+	{0x2001101f,{"CS","RespirationSync"}},//PrivateTag
+	{0x20011020,{"LO","ScanningTechnique"}},//PrivateTag
+	{0x20011021,{"CS","SPIR"}},//PrivateTag
+	{0x20011022,{"FL","WaterFatShift"}},//PrivateTag
+	{0x20011023,{"DS","FlipAnglePhilips"}},//PrivateTag
+	{0x20011024,{"CS","SeriesIsInteractive"}},//PrivateTag
+	{0x20011025,{"SH","EchoTimeDisplayMR"}},//PrivateTag
+	{0x20011026,{"CS","PresentationStateSubtractionActive"}},//PrivateTag
+	{0x2001102d,{"SS","StackNumberOfSlices"}},//PrivateTag
+	{0x20011032,{"FL","StackRadialAngle"}},//PrivateTag
+	{0x20011033,{"CS","StackRadialAxis"}},//PrivateTag
+	{0x20011035,{"SS","StackSliceNumber"}},//PrivateTag
+	{0x20011036,{"CS","StackType"}},//PrivateTag
+	{0x2001103f,{"CS","ZoomMode"}},//PrivateTag
+	{0x2001104e,{"CS","Philips private Attribute"}},//PrivateTag
+	{0x20011058,{"UL","ContrastTransferTaste"}},//PrivateTag
+	{0x2001105f,{"SQ","StackSequence"}},//PrivateTag
+	{0x20011060,{"SL","NumberOfStacks"}},//PrivateTag
+	{0x20011061,{"CS","SeriesTransmitted"}},//PrivateTag
+	{0x20011062,{"CS","SeriesCommitted"}},//PrivateTag
+	{0x20011063,{"CS","ExaminationSource"}},//PrivateTag
+	{0x20011067,{"CS","LinearPresentationGLTrafoShapeSub"}},//PrivateTag
+	{0x20011068,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x20011077,{"CS","GLTrafoType"}},//PrivateTag
+	{0x2001107a,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x2001107b,{"IS","AcquisitionNumber"}},//PrivateTag
+	{0x20011081,{"IS","NumberOfDynamicScans"}},//PrivateTag
+	{0x20011082,{"IS","Philips private Attribute"}},//PrivateTag
+	{0x20011083,{"DS","Philips private Attribute"}},//PrivateTag
+	{0x20011084,{"DS","Philips private Attribute"}},//PrivateTag
+	{0x20011085,{"DS","Philips private Attribute"}},//PrivateTag
+	{0x20011086,{"IS","Philips private Attribute"}},//PrivateTag
+	{0x20011088,{"DS","Philips private Attribute"}},//PrivateTag
+	{0x20011089,{"DS","Philips private Attribute"}},//PrivateTag
+	{0x2001108a,{"DS","Philips private Attribute"}},//PrivateTag
+	{0x2001108b,{"SH","Philips private Attribute"}},//PrivateTag
+	{0x2001109f,{"US","PixelProcessingKernelSize"}},//PrivateTag
+	{0x200110a1,{"CS","IsRawImage"}},//PrivateTag
+	{0x200110f1,{"FL","ProspectiveMotionCorrection"}},//PrivateTag
+	{0x200110f2,{"FL","RetrospectiveMotionCorrection"}},//PrivateTag
+	{0x200110cc,{"ST","Philips private Attribute"}},//PrivateTag
+	{0x2001116b,{"LO","Philips private Attribute"}},//PrivateTag
+	{0x20019000,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x20050010,{"LO","Private Creator Group 2005"}},//PrivateTag
+	{0x20050011,{"LO","Philips private Attribute"}},//PrivateTag
+	{0x20050012,{"LO","Philips private Attribute"}},//PrivateTag
+	{0x20050013,{"LO","Philips private Attribute"}},//PrivateTag
+	{0x20050014,{"LO","Philips private Attribute"}},//PrivateTag
+	{0x20050015,{"LO","Philips private Attribute"}},//PrivateTag
+	{0x20051071,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051072,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051073,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051074,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051075,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051076,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051077,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051078,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051079,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x2005107a,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x2005107b,{"CS","Philips private Attribute"}},//PrivateTag
+	{0x2005107e,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051081,{"CS","Philips private Attribute"}},//PrivateTag
+	{0x20051083,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x20051084,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x20051085,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x20051389,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x20051402,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x2005140f,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x2005143c,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x2005143d,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x2005143e,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051580,{"SQ","Philips private sequence"}},//PrivateTag
 };
 
 	

@@ -43,9 +43,10 @@ struct tag_vr_visitor
 			return "OW"; //implicit pixel data are OW (http://dicom.nema.org/dicom/2013/output/chtml/part05/chapter_A.html)
 		else {
 			auto found=dicom_dict.find(id);
-			if(found==dicom_dict.end())
+			if(found==dicom_dict.end()){
+                LOG(Runtime,warning) << "Could not find tag " << id2Name(_tag->getID32()) << " in the dictionary and thus don't know its implicit VR";
 				return "--";
-			else
+            } else
 				return found->second.first;
 		}
 	}
@@ -141,9 +142,9 @@ util::ValueReference DicomElement::getValue(std::string vr){
 			assert(false);
 		}
 
-		LOG(Debug,verbose_info) << "Parsed " << getVR() << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << ret;
+		LOG(Debug,verbose_info) << "Parsed " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << ret;
 	} else {
-		LOG(Debug,error) << "Could not find an interpreter for the VR " << getVR() << " of " << getName() << "/" << getIDString() << " at " << position ;
+		LOG(Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
 	}
 	
 	return ret;
@@ -335,6 +336,27 @@ namespace _internal{
 		} else 
 			return util::ValueReference();
 	}
+	util::ValueReference bytes_as_strings(const DicomElement *e){
+		//@todo http://dicom.nema.org/Dicom/2013/output/chtml/part05/sect_6.2.html#note_6.1-2-1
+		if(e->getLength()){
+			const uint8_t *pos=e->data();
+			const uint8_t *end=pos+e->getLength();
+			util::slist ret_list;
+			
+			for(;pos<end;pos++){
+				std::stringstream stream;
+				stream << std::setfill ('0') << std::setw(2) << std::hex << *pos;
+				ret_list.push_back(stream.str());
+			}
+				
+
+			if(ret_list.size()>1)
+				return util::Value<util::slist>(ret_list);
+			else
+				return util::Value<std::string>(ret_list.front());
+		} else 
+			return util::ValueReference();
+	}
 	util::ValueReference parse_AS(const _internal::DicomElement *e){
 		util::ValueReference ret;
 		uint16_t duration = 0;
@@ -387,6 +409,7 @@ namespace _internal{
 		{"UL",{scalar_generate<uint32_t>,nullptr,                        sizeof(uint32_t)}},
 		//"normal" string types
 		{"LT",{string_generate,nullptr,0}},
+		{"UT",{string_generate,nullptr,0}},
 		{"LO",{string_generate,nullptr,0}},
 		{"UI",{string_generate,nullptr,0}},
 		{"ST",{string_generate,nullptr,0}},
@@ -401,8 +424,9 @@ namespace _internal{
 		{"DA",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::date>::staticID());},nullptr,0}},
 		{"TM",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::timestamp>::staticID());},nullptr,0}},
 		{"DT",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::timestamp>::staticID());},nullptr,0}},
-		{"AS",{parse_AS,nullptr,0}}
-
+		{"AS",{parse_AS,nullptr,0}},
+		//fallback for unknown
+		{"--",{bytes_as_strings,nullptr,0}}
 	};
 }
 }
