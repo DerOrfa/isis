@@ -5,7 +5,7 @@
 #include <typeindex>
 #include <array>
 
-#include "types.hpp"
+#include "valuetypes.hpp"
 #include "value_converter.hpp"
 
 namespace isis::util{
@@ -24,7 +24,7 @@ class ValueNew:public ValueTypes{
 public:
 	typedef _internal::ValueConverterMap::mapped_type::mapped_type Converter;
     
-	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
+    template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
 
 	template<typename T> ValueNew(T &&v):ValueTypes(v){}
     ValueNew(const ValueTypes &v);
@@ -34,7 +34,7 @@ public:
 	ValueNew();
     std::string typeName()const;
     template<typename T> static std::string staticName(){
-        return std::visit(_internal::name_visitor(),ValueTypes(T()));
+        return ValueNew(T()).typeName();
     }
     template<typename T> static constexpr std::size_t staticIndex(){
         return ValueTypes(T()).index();
