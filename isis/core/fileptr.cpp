@@ -76,7 +76,7 @@ void FilePtr::Closer::operator()( void *p )
 	}
 }
 
-bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const boost::filesystem::path &filename )
+bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const std::filesystem::path &filename )
 {
 	void *ptr = NULL;
 	FILE_HANDLE mmaph = 0;
@@ -119,9 +119,9 @@ bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const boost::filesy
 	}
 }
 
-size_t FilePtr::checkSize( bool write, FILE_HANDLE file, const boost::filesystem::path &filename, size_t size )
+size_t FilePtr::checkSize( bool write, FILE_HANDLE file, const std::filesystem::path &filename, size_t size )
 {
-	const boost::uintmax_t currSize = boost::filesystem::file_size( filename );
+	const boost::uintmax_t currSize = std::filesystem::file_size( filename );
 	if ( std::numeric_limits<size_t>::max() < currSize ) {
 		LOG( Runtime, error )
 			<< "Sorry cannot map files larger than " << std::numeric_limits<size_t>::max()
@@ -133,8 +133,8 @@ size_t FilePtr::checkSize( bool write, FILE_HANDLE file, const boost::filesystem
 		assert( size > 0 );
 
 		if( size > currSize ) { // and the file is shorter than requested, resize it
-			boost::system::error_code ec;
-			boost::filesystem::resize_file(filename,size,ec);
+			std::error_code ec;
+			std::filesystem::resize_file(filename,size,ec);
 			if(ec){
 				 LOG( Runtime, error )
 					<< "Failed to resize " << util::MSubject( filename )
@@ -142,7 +142,7 @@ size_t FilePtr::checkSize( bool write, FILE_HANDLE file, const boost::filesystem
 					return 0; // fail
 			}
 		}
-		return boost::filesystem::file_size(filename);
+		return std::filesystem::file_size(filename);
 	} else { // if we're reading
 		if( size == 0 )
 			return currSize; // automatically select size of the file
@@ -159,7 +159,7 @@ size_t FilePtr::checkSize( bool write, FILE_HANDLE file, const boost::filesystem
 FilePtr::FilePtr(): m_good( false ) {}
 
 
-FilePtr::FilePtr( const boost::filesystem::path &filename, size_t len, bool write ): m_good( false )
+FilePtr::FilePtr( const std::filesystem::path &filename, size_t len, bool write ): m_good( false )
 {
 #ifdef WIN32
 	const FILE_HANDLE invalid = INVALID_HANDLE_VALUE;

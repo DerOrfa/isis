@@ -4,9 +4,7 @@
 #include <isis/core/tmpfile.hpp>
 #include <isis/core/io_factory.hpp>
 
-#define BOOST_FILESYSTEM_VERSION 3
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/convenience.hpp>
+#include <filesystem>
 
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -94,19 +92,19 @@ public:
 
 		while( in.good() && read_header( in, size, next_header_in ) ) { //read the header block
 
-			boost::filesystem::path org_file;
+			std::filesystem::path org_file;
 
 			if( tar_header.typeflag == 'L' ) { // the filename of the next file is to long - so its stored in the next block (following this header)
 				char namebuff[size];
 				next_header_in -= tar_readstream( in, namebuff, size, "overlong filename for next entry" );
 				in.ignore( next_header_in ); // skip the remaining input until the next header
-				org_file = boost::filesystem::path( std::string( namebuff ) );
+				org_file = std::filesystem::path( std::string( namebuff ) );
 				LOG( Debug, verbose_info ) << "Got overlong name " << util::MSubject( org_file ) << " for next file.";
 
 				read_header( in, size, next_header_in ); //continue with the next header
 			} else {
 				//get the original filename (use substr, because these fields are not \0-terminated)
-				org_file = boost::filesystem::path( std::string( tar_header.prefix ).substr( 0, 155 ) + std::string( tar_header.name ).substr( 0, 100 ) );
+				org_file = std::filesystem::path( std::string( tar_header.prefix ).substr( 0, 155 ) + std::string( tar_header.name ).substr( 0, 100 ) );
 			}
 
 			if( size == 0 ) //if there is no content skip this entry (there are allways two "empty" blocks at the end of a tar)

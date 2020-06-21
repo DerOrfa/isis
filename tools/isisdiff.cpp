@@ -78,7 +78,7 @@ size_t doFit( const data::Image reference, std::list<data::Image> &org_images, s
 	return images.size();
 }
 
-boost::filesystem::path getCommonSource(const std::list<data::Image> &images){
+std::filesystem::path getCommonSource(const std::list<data::Image> &images){
 	
 	std::list<std::string> sources;
 	for(const data::Image &img:images){
@@ -87,7 +87,7 @@ boost::filesystem::path getCommonSource(const std::list<data::Image> &images){
 		std::list<std::string> s=img.getChunksValuesAs<std::string>("source",true);
 		sources.splice(sources.end(),s);
 	}
-	return util::getRootPath(std::list<boost::filesystem::path>(sources.begin(),sources.end()));
+	return util::getRootPath(std::list<std::filesystem::path>(sources.begin(),sources.end()));
 }
 
 std::list<data::Image> findFitting( const data::Image reference, std::list<data::Image> &org_images, const util::slist &props )
@@ -223,8 +223,8 @@ int main( int argc, char *argv[] )
 		dropWith( app.parameters["skipwith"], images2 );
 
 		util::slist src1 = app.parameters["in1"], src2 = app.parameters["in2"];
-		boost::filesystem::path sPath1 = ( src1.size() == 1 ) ? src1.front() : getCommonSource( images1 );
-		boost::filesystem::path sPath2 = ( src2.size() == 1 ) ? src2.front() : getCommonSource( images2 );
+		std::filesystem::path sPath1 = ( src1.size() == 1 ) ? src1.front() : getCommonSource( images1 ).native();
+		std::filesystem::path sPath2 = ( src2.size() == 1 ) ? src2.front() : getCommonSource( images2 ).native();
 
 
 		LOG( DiffLog, notice ) << "Comparing " << images1.size() << " images from \"" << sPath1 << "\" and " << images2.size() << " from \"" << sPath2 << "\"";

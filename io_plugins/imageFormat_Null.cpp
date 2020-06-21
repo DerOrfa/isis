@@ -49,7 +49,7 @@ public:
 	}
 
 	std::list<data::Chunk> 
-	load( const boost::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )
+	load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )
 	throw( std::runtime_error & ) override  {
 
 		size_t size = 50;

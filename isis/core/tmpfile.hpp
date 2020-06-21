@@ -19,8 +19,8 @@
 #ifndef TMPFILE_H
 #define TMPFILE_H
 #include <string>
-#define BOOST_FILESYSTEM_VERSION 3 
-#include <boost/filesystem/path.hpp>
+#include <filesystem>
+#include <boost/core/noncopyable.hpp>
 
 namespace isis
 {
@@ -30,9 +30,9 @@ namespace util
  * This can e.g. be used when writing plugins for image formats to have a mock object.
  * The file will be created by the constructor and deleted by the destructor.
  * If its not there anymore, a warning will be send.
- * This inherits from boost::filesystem::path and thus can be used as such.
+ * This inherits from std::filesystem::path and thus can be used as such.
  */
-class TmpFile: public boost::filesystem::path, boost::noncopyable
+class TmpFile: public std::filesystem::path, boost::noncopyable
 {
 private:
 	// dont do this
@@ -44,7 +44,7 @@ public:
 	 * The file will also be created to prevent any following calls from generating the same filename.
 	 * \param prefix string to be inserted between the path and the actual filename
 	 * \param suffix string to be appended to the filename
-	 * \note This uses boost::filesystem::unique_path and thus may block until sufficient entropy develops. (see http://www.boost.org/doc/libs/1_49_0/libs/filesystem/v3/doc/reference.html#unique_path)
+	 * \note This uses std::filesystem::unique_path and thus may block until sufficient entropy develops. (see http://www.boost.org/doc/libs/1_49_0/libs/filesystem/v3/doc/reference.html#unique_path)
 	 */
 	TmpFile( std::string prefix = "", std::string suffix = "" );
 	///Will delete the temporary file if its still there.

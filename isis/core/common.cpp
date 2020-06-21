@@ -32,7 +32,7 @@ std::string getLastSystemError()
 	return strerror( errno );
 #endif
 }
-boost::filesystem::path getRootPath(std::list< boost::filesystem::path > sources,bool sorted)
+std::filesystem::path getRootPath(std::list< std::filesystem::path > sources,bool sorted)
 {
 	if(!sorted)
 		sources.sort();
@@ -44,8 +44,8 @@ boost::filesystem::path getRootPath(std::list< boost::filesystem::path > sources
 		return *sources.begin();
 	else { // no unique path yet, try to shorten
 		bool abort=true;
-		for( boost::filesystem::path & ref : sources ){
-			if(ref.has_branch_path()){
+		for( std::filesystem::path & ref : sources ){
+			if(ref.has_parent_path()){
 				ref.remove_filename();
 				abort=false; //if at least one path can be shortened
 			}
@@ -54,10 +54,10 @@ boost::filesystem::path getRootPath(std::list< boost::filesystem::path > sources
 		if(!abort){//if shortening was possible, check again for unique
 			return getRootPath( sources,true );
 		} else { // no more shortening possible, abort
-			LOG( Runtime, error ) << "Failed to get root path for " << MSubject(sources);
+			LOG( Runtime, error ) << "Failed to get root path for " << sources;
 		}
 	}
-	return boost::filesystem::path();
+	return std::filesystem::path();
 }
 
 

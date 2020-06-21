@@ -41,7 +41,7 @@ protected:
 		}
 	};
 
-	template<typename T, typename DEST> bool extractNumberFromName( const boost::filesystem::path &name, DEST &property ) {
+	template<typename T, typename DEST> bool extractNumberFromName( const std::filesystem::path &name, DEST &property ) {
 		std::string filename=name.filename().native();
 		std::string::size_type end = filename.find_last_of( "0123456789" );
 
@@ -171,7 +171,7 @@ public:
 		return true;
 	}
 
-	data::Chunk read_png( const boost::filesystem::path &filename ) {
+	data::Chunk read_png( const std::filesystem::path &filename ) {
 		png_byte header[8]; // 8 is the maximum size that can be checked
 
 		/* open file and test for it being a png */
@@ -223,7 +223,7 @@ public:
 		fclose( fp );
 		return ret;
 	}
-	std::list<data::Chunk> load(const boost::filesystem::path &filename, std::list<util::istring> /*formatstack*/, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> /*feedback*/) override
+	std::list<data::Chunk> load(const std::filesystem::path &filename, std::list<util::istring> /*formatstack*/, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> /*feedback*/) override
 	{
 		data::Chunk ch = read_png( filename );
 

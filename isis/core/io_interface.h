@@ -81,7 +81,7 @@ protected:
 public:
 	static void throwGenericError( std::string desc );
 	static void throwSystemError( int err, std::string desc = "" );
-	boost::filesystem::path plugin_file;
+	std::filesystem::path plugin_file;
 
 	/// splits the suffix (and the ".") from the filename (or path) and returns a pair made of both parts
 	virtual std::pair<std::string, std::string> makeBasename( const std::string &filename )const;
@@ -119,7 +119,7 @@ public:
 	 * \returns the amount of loaded chunks.
 	 */
 	virtual std::list<data::Chunk> 
-	load( const boost::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ); //@todo should be locked
+	load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ); //@todo should be locked
 
 	/**
 	 * Load data from stream into the given chunk list.
