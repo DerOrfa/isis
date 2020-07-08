@@ -32,15 +32,14 @@ namespace data
 {
 enum autoscaleOption {noscale, autoscale, noupscale, upscale};
 typedef std::pair<util::ValueNew, util::ValueNew> scaling_pair; //scale / offset
-class ValueArrayBase;
+class ValueArrayNew;
 
 class ValueArrayConverterBase
 {
 public:
-	virtual void convert( const ValueArrayBase &src, ValueArrayBase &dst, const scaling_pair &scaling )const;
-	virtual void generate( const ValueArrayBase &src, std::unique_ptr<ValueArrayBase>& dst, const scaling_pair &scaling )const = 0;
-	/// Create a ValueArray based on the ID - if len==0 a pointer to NULL is created
-	virtual void create( std::unique_ptr<ValueArrayBase>& dst, size_t len )const = 0;
+	virtual void convert( const ValueArrayNew &src, ValueArrayNew &dst, const scaling_pair &scaling )const;
+	virtual ValueArrayNew generate( const ValueArrayNew &src, const scaling_pair &scaling )const = 0;//@todo replace by create+copy
+	virtual ValueArrayNew create(size_t len )const = 0;
 	virtual scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )const;
 	static std::shared_ptr<const ValueArrayConverterBase> get() {return std::shared_ptr<const ValueArrayConverterBase>();}
 	virtual ~ValueArrayConverterBase() {}

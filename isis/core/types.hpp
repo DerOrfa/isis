@@ -36,16 +36,19 @@ template<bool ENABLED> struct multiplicative{
 template<bool ENABLED> struct additive{
 	static const bool plus=ENABLED,minus=ENABLED,negate=ENABLED;
 };
+
+template<typename VariantType, typename T, std::size_t index = 0> constexpr std::size_t variant_index() {
+    if constexpr (index >= std::variant_size_v<VariantType>) {
+        return std::variant_npos;
+    } else if constexpr (std::is_same_v<std::variant_alternative_t<index, VariantType>, T>) {
+        return index;
+    } else {
+        return variant_index<VariantType, T, index + 1>();
+    }
 }
 
-/**
- * resolves to true if type is known, false if not
- */
-template< typename T > constexpr bool knownType(){ //@todo can we get rid of this?
-#warning implement me
-	return true;
-}
 
+}
 /**
  * Get a std::map mapping type IDs to type names.
  * \note the list is generated at runtime, so doing this excessively will be expensive.
@@ -53,7 +56,7 @@ template< typename T > constexpr bool knownType(){ //@todo can we get rid of thi
  * \param withValueArrays include data::ValueArray-s in the map
  * \returns a map, mapping util::Value::staticID() and data::ValueArray::staticID() to util::Value::staticName and data::ValueArray::staticName
  */
-std::map<unsigned short, std::string> getTypeMap( bool withValues = true, bool withValueArrays = true );
+std::map<size_t, std::string> getTypeMap( bool arrayTypesOnly = false );
 
 /**
  * Inverse of getTypeMap.

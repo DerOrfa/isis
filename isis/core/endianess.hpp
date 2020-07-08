@@ -64,7 +64,7 @@ template<> struct SwapImpl<8> {
 // gatekeeper for SwapImpl (do not allow swapping of types we do not know about)
 template<typename TYPE, bool IS_NUM> struct EndianSwapper {
 	static TYPE swap( const TYPE &src ) {
-		LOG( Runtime, error ) << "Sorry, endianess swap for " << util::Value<TYPE>::staticName() << " is not supportet";
+		LOG( Runtime, error ) << "Sorry, endianess swap for " << util::typeName<TYPE>() << " is not supportet";
 		return src;
 	}
 };

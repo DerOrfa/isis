@@ -1,4 +1,5 @@
 #include "value.hpp"
+#include "valuearray_iterator.hpp"
 
 #include <sstream>
 
@@ -51,10 +52,10 @@ ValueNew ValueNew::copyByID(unsigned short ID) const{
 	if ( conv ) {
 		switch ( conv->generate( *this, to ) ) {
 			case boost::numeric::cPosOverflow:
-				LOG( Runtime, error ) << "Positive overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap( true, false )[ID] ) << ".";
+				LOG( Runtime, error ) << "Positive overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
 				break;
 			case boost::numeric::cNegOverflow:
-				LOG( Runtime, error ) << "Negative overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap( true, false )[ID] ) << ".";
+				LOG( Runtime, error ) << "Negative overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
 				break;
 			case boost::numeric::cInRange:
 				break;
@@ -62,7 +63,7 @@ ValueNew ValueNew::copyByID(unsigned short ID) const{
 
 		return to; // return the generated Value-Object - wrapping it into Reference
 	} else {
-		LOG( Runtime, error ) << "I don't know any conversion from " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap( true, false )[ID] );
+		LOG( Runtime, error ) << "I don't know any conversion from " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] );
 		return createByID(ID); // return an empty Reference
 	}
 }
@@ -76,7 +77,7 @@ bool ValueNew::fitsInto(unsigned short ID) const { //@todo find a better way to 
 	} else {
 		LOG( Runtime, info )
 			<< "I dont know any conversion from "
-			<< MSubject( toString( true ) ) << " to " << MSubject( getTypeMap( true, false )[ID] );
+			<< MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] );
 		return false; // return an empty Reference
 	}
 }
@@ -105,10 +106,63 @@ bool ValueNew::convert(const ValueNew &from, ValueNew &to) {
 	return false;
 }
 
-bool TypeNew::gt( const TypeNew &ref )const {return operatorVisitor(_internal::type_greater<TYPE>(),ref,false );}
-bool lt( const ValueBase &ref )const {return operatorWrapper(_internal::type_less<TYPE>(),   ref,false );}
-bool eq( const ValueBase &ref )const {return operatorWrapper(_internal::type_eq<TYPE>(),     ref, false );}
+size_t ValueNew::typeID()const{return index();}
 
+bool ValueNew::gt( const ValueNew &ref )const {
+	auto op = [&](auto ptr){
+		return operatorWrapper(_internal::type_greater<decltype(ptr)>(),ref,false );
+	};
+	return std::visit(op,static_cast<const ValueTypes&>(*this));
+}
+bool ValueNew::lt( const ValueNew &ref )const {	
+	auto op=[&](auto ptr){
+		return operatorWrapper(_internal::type_less<decltype(ptr)>(),ref,false );
+	};
+	return std::visit(op,static_cast<const ValueTypes&>(*this));
+}
+bool ValueNew::eq( const ValueNew &ref )const {	
+	auto op=[&](auto ptr){
+		return operatorWrapper(_internal::type_eq<decltype(ptr)>(),ref,false );
+	};
+	return std::visit(op,static_cast<const ValueTypes&>(*this));
+}
 
+ValueNew& ValueNew::add( const ValueNew &ref )
+{
+	auto op=[&](auto ptr)->ValueNew&{
+		return operatorWrapper_me(_internal::type_plus<decltype(ptr)>(), ref );
+	};
+	return std::visit(op,static_cast<ValueTypes&>(*this));
+}
+
+ValueNew& ValueNew::substract( const ValueNew &ref )
+{
+	auto op=[&](auto ptr)->ValueNew&{
+		return operatorWrapper_me(_internal::type_minus<decltype(ptr)>(), ref );
+	};
+	return std::visit(op,static_cast<ValueTypes&>(*this));
+}
+
+ValueNew& ValueNew::multiply_me( const ValueNew &ref )
+{
+	auto op=[&](auto ptr)->ValueNew&{
+		return operatorWrapper_me(_internal::type_mult<decltype(ptr)>(), ref );
+	};
+	return std::visit(op,static_cast<ValueTypes&>(*this));
+}
+
+ValueNew& ValueNew::divide_me( const ValueNew &ref )
+{
+	auto op=[&](auto ptr)->ValueNew&{
+		return operatorWrapper_me(_internal::type_div<decltype(ptr)>(), ref );
+	};
+	return std::visit(op,static_cast<ValueTypes&>(*this));
+}
+
+bool ValueNew::apply(const isis::util::ValueNew& other){
+	return convert(other,*this);
+}
+
+ValueNew::ValueNew(const data::_internal::ConstValueAdapter& v):ValueNew(v.operator->()){}
 
 }

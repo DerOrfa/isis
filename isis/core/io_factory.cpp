@@ -394,7 +394,7 @@ std::list<Chunk> isis::data::IOFactory::loadPath(const std::filesystem::path& pa
 	std::list<Chunk> ret;
 	const size_t length = std::distance( std::filesystem::directory_iterator( path ), std::filesystem::directory_iterator() ); //@todo this will also count directories
 	if( m_feedback ) {
-		m_feedback->show( length, std::string( "Reading " ) + util::Value<std::string>( length ).toString( false ) + " files from " + path.native() );
+		m_feedback->show( length, std::string( "Reading " ) + std::to_string(length) + " files from " + path.native() );
 	}
 	
 	rlimit rlim;

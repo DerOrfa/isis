@@ -698,30 +698,14 @@ std::ostream &PropertyMap::print( std::ostream &out, bool label )const
 	return out;
 }
 
-PropertyValue& PropertyMap::setValue(const PropPath &path, const ValueBase &val, size_t at){
-	PropertyValue &ret = touchProperty( path );
-
-	if( ret.size() <= at ) {
-		LOG_IF(at, Debug, info ) << "Extending " << MSubject( std::make_pair( path, ret ) ) << " to fit length " << MSubject( at ); //dont tell about extending empty property
-		ret.resize( at + 1, val ); //resizing will insert the value
-	} else {
-		if( ret[at].apply( val ) ){ // override same type or convert if possible
-			LOG_IF( ret.getTypeID()!=val.getTypeID(), Debug, warning ) << "Storing " << val.toString( true ) << " as " << ret.toString( true ) << " as Property already has that type";
-		} else {
-			LOG( Runtime, error ) << "Property " << path << " is already set to " << ret.toString( true ) << " won't overwrite with " << val.toString( true );
-		}
-	}
-
-	return ret;
-}
-PropertyValue& PropertyMap::setValue( const PropPath &path, const ValueBase &val ) {
+PropertyValue& PropertyMap::setValue( const PropPath &path, const ValueNew &val ) {
 	PropertyValue &ret = touchProperty( path );
 
 	if( ret.isEmpty() ) { // set an empty property
 		ret = val;
 	} else if( ret.size() == 1 ) {
 		if( ret[0].apply( val ) ){ // override same type or convert if possible
-			LOG_IF( ret.getTypeID()!=val.getTypeID(), Debug, info ) << "Storing " << val.toString( true ) << " as " << ret.toString( true ) << " as Property already has that type";
+			LOG_IF( ret.getTypeID()!=val.typeID(), Debug, info ) << "Storing " << val.toString( true ) << " as " << ret.toString( true ) << " as Property already has that type";
 		} else {
 			LOG( Runtime, error ) << "Property " << path << " is already set to " << ret.toString( true ) << " won't overwrite with " << val.toString( true );
 		}
@@ -729,14 +713,6 @@ PropertyValue& PropertyMap::setValue( const PropPath &path, const ValueBase &val
 		LOG( Runtime, error ) << "Won't override multivalue property " << path << " with " << val.toString( true );
 
 	return ret;
-}
-
-
-PropertyValue& PropertyMap::setValueAs(const PropertyMap::PropPath& path, const char* val, size_t at){
-	return setValueAs<std::string>(path,val,at);
-}
-PropertyValue& PropertyMap::setValueAs(const PropertyMap::PropPath& path, const char* val){
-	return setValueAs<std::string>(path,val);
 }
 
 void PropertyMap::readPtree(const boost::property_tree::ptree &tree,bool skip_empty){

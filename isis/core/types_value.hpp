@@ -1,8 +1,6 @@
-#ifndef VALUETYPES_HPP
-#define VALUETYPES_HPP
+#pragma once
 
 #include "types.hpp"
-
 
 namespace isis::util{
 
@@ -18,6 +16,15 @@ typedef std::variant<
 , std::complex<float>, std::complex<double>
 , date, timestamp, duration
 > ValueTypes;
+
+template<typename T> static constexpr size_t typeID(){
+	return _internal::variant_index<ValueTypes,std::remove_cv_t<T>>();
+}
+template<typename T, typename TYPELIST=ValueTypes> static constexpr bool knownType(){
+	const auto id=_internal::variant_index<TYPELIST,std::remove_cv_t<T>>();
+	return id!=std::variant_npos;
+}
+
 
 
 /**
@@ -63,7 +70,7 @@ namespace std{
 	};
 	isis::util::date &operator+=(isis::util::date &x,const isis::util::duration &y);
 	isis::util::date &operator-=(isis::util::date &x,const isis::util::duration &y);
-
+	
 	template<> struct plus<isis::util::timestamp>:binary_function<isis::util::timestamp,isis::util::duration,isis::util::timestamp>{
 		isis::util::timestamp operator() (const isis::util::timestamp& x, const isis::util::duration& y) const {return x+y;}
 	};
@@ -116,5 +123,3 @@ namespace std{
 		return out<<std::put_time(std::localtime(&tme), "%x"); 
 	}
 }
-
-#endif // VALUETYPES_HPP

@@ -99,17 +99,9 @@ void IOApplication::addOutput( util::ParameterMap &parameters, const std::string
 	parameters[std::string( "wdialect" ) + suffix] = util::slist();
 	parameters[std::string( "wdialect" ) + suffix].needed() = false;
 	parameters[std::string( "wdialect" ) + suffix].setDescription( "Choose dialect(s) for writing" + desc + ". Use \"--help-io\" for a list of the plugins and their supported dialects" );
-	std::map<unsigned short, std::string> types = util::getTypeMap( false, true );
-	// remove some types which are useless as representation
-	// "(unsigned short)" is needed because otherwise erase would take the reference of a static constant which is only there during compile time
-	types.erase( ( unsigned short )data::ValueArray<util::Selection>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<std::string>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<util::date>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<util::ilist>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<util::dlist>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<util::slist>::staticID() );
+	auto types = util::getTypeMap( true );
 
-	for( std::map<unsigned short, std::string>::iterator i = types.begin(); i != types.end(); i++ ) {
+	for( auto i = types.begin(); i != types.end(); i++ ) {
 		i->second.resize( i->second.find_last_not_of( '*' ) + 1 );
 	}
 

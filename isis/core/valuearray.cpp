@@ -1,221 +1,311 @@
 #include "valuearray.hpp"
+#include "valuearray_converter.hpp"
+#include "endianess.hpp"
 
-namespace isis
+isis::data::_internal::DelProxy::DelProxy(const isis::data::ValueArrayNew& master)
 {
-namespace data
+	LOG( Debug, verbose_info ) << "Creating DelProxy for " << master.typeName() << " at " << this->get();
+}
+void isis::data::_internal::DelProxy::operator()(const void* at)
 {
-/// @cond _internal
-
-#ifdef __SSE2__
-
-#include <emmintrin.h>
-namespace _internal
-{
-
-API_EXCLUDE_BEGIN;
-
-///////////////////////////////////////////////////////////
-// some voodoo to get the vector types into the templates /
-//////////////////////////////////////////////////////////
-template<typename T> struct _VectorUnion {
-	union {__m128i reg; T elem[16 / sizeof( T )];} vec;
-	_VectorUnion( const T *el ) {std::copy( el, el + 16 / sizeof( T ), vec.elem );}
-	_VectorUnion( __m128i _reg ) {vec.reg = _reg;}
-	_VectorUnion() {}
-};
-template<typename T> struct _TypeVector;
-
-// mapping for signed types
-#define DEF_VECTOR_SI(TYPE,KEY)                              \
-	template<> struct _TypeVector<TYPE>{                         \
-		static __m128i gt(__m128i a,__m128i b){return _mm_cmpgt_epi ## KEY (a, b);}                                                        \
-		static __m128i lt(__m128i a,__m128i b){return _mm_cmplt_epi ## KEY (a, b);}                                                        \
-	}
-DEF_VECTOR_SI( int8_t, 8 );
-DEF_VECTOR_SI( int16_t, 16 );
-DEF_VECTOR_SI( int32_t, 32 );
-
-// value offset to compare unsigned int as signed (there is no compare for unsigned in SSE2)
-template<typename T> __m128i _getAddV()
-{
-	_VectorUnion<T> ret;
-	const T filler = 1 << ( sizeof( T ) * 8 - 1 );
-	std::fill( ret.vec.elem, ret.vec.elem + 16 / sizeof( T ), filler );
-	return ret.vec.reg;
+	LOG( Debug, verbose_info )
+	        << "Deletion for " << this->get() << " called from proxy at offset "
+	        << static_cast<const uint8_t *>( at ) - static_cast<const uint8_t *>( this->get() )
+	        << ", current use_count: " << this->use_count();
+	this->reset();//actually not needed, but we keep it here to keep obfuscation low
 }
 
-// mapping for unsigned types
-#define DEF_VECTOR_UI(TYPE,KEY)                                 \
-	template<> struct _TypeVector<TYPE>{                            \
-		static __m128i addv;                                        \
-		static inline __m128i gt(__m128i a,__m128i b){return _mm_cmpgt_epi ## KEY (_mm_add_epi ## KEY(a,addv), _mm_add_epi ## KEY(b,addv));} \
-		static inline __m128i lt(__m128i a,__m128i b){return _mm_cmplt_epi ## KEY (_mm_add_epi ## KEY(a,addv), _mm_add_epi ## KEY(b,addv));} \
-	};\
-	__m128i _TypeVector<TYPE>::addv=_getAddV<TYPE>()
-
-DEF_VECTOR_UI( uint8_t, 8 );
-DEF_VECTOR_UI( uint16_t, 16 );
-DEF_VECTOR_UI( uint32_t, 32 );
-
-
-
-////////////////////////////////////////////
-// optimized min/max function for integers /
-////////////////////////////////////////////
-
-// generic fallback using cmpgt and some bitmask voodoo
-template<typename T> std::pair<__m128i, __m128i> _getMinMaxBlockLoop( const __m128i *data, size_t blocks )
-{
-	std::pair<__m128i, __m128i> ret( _mm_loadu_si128( data ), _mm_loadu_si128( data ) );
-	LOG( Runtime, verbose_info ) << "using optimized min/max computation for " << util::Value<T>::staticName() << " (masked mode)";
-	static const __m128i one = _mm_set_epi16( -1, -1, -1, -1, -1, -1, -1, -1 );
-
-	while ( --blocks ) {
-		const __m128i at = _mm_loadu_si128( ++data );
-
-		const __m128i less_mask = _TypeVector<T>::lt( at, ret.first );
-		const __m128i greater_mask = _TypeVector<T>::gt( at, ret.second );
-
-		ret.first =
-			( ret.first & ( less_mask ^ one ) ) //remove bigger values from current min
-			| ( at & less_mask ); //put in the lesser values from at
-		ret.second =
-			( ret.second & ( greater_mask ^ one ) ) //remove lesser values from current max
-			| ( at & greater_mask ); //put in the bigger values from at
-	}
-
-	return ret;
+std::shared_ptr<const void> isis::data::ValueArrayNew::getRawAddress(size_t offset) const{
+	const std::shared_ptr<const void> b_ptr = std::visit(
+	    [](const auto &p){return std::static_pointer_cast<const void>(p);},
+	    static_cast<const ArrayTypes&>(*this)
+	);
+	if( offset ) {
+		_internal::DelProxy proxy( *this );
+		const uint8_t* o_ptr=std::static_pointer_cast<const uint8_t>(b_ptr).get();
+		return std::shared_ptr<const void>( o_ptr+offset, proxy );
+	} else
+		return b_ptr;
 }
 
-// specialiced versions using processor opcodes for min/max
-template<> std::pair<__m128i, __m128i> _getMinMaxBlockLoop<uint8_t>( const __m128i *data, size_t blocks ) //PMAXUB
-{
-	std::pair<__m128i, __m128i> ret( _mm_loadu_si128( data ), _mm_loadu_si128( data ) );
-	LOG( Runtime, verbose_info ) << "using optimized min/max computation for " << util::Value<uint8_t>::staticName() << " (direct mode)";
-
-	while ( --blocks ) {
-		const __m128i at = _mm_loadu_si128( ++data );
-		ret.first = _mm_min_epu8( ret.first, at );
-		ret.second = _mm_max_epu8( ret.second, at );
-	}
-
-	return ret;
-}
-template<> std::pair<__m128i, __m128i> _getMinMaxBlockLoop<int16_t>( const __m128i *data, size_t blocks ) //PMAXSW
-{
-	std::pair<__m128i, __m128i> ret( _mm_loadu_si128( data ), _mm_loadu_si128( data ) );
-	LOG( Runtime, verbose_info ) << "using optimized min/max computation for " << util::Value<int16_t>::staticName() << " (direct mode)";
-
-	while ( --blocks ) {
-		const __m128i at = _mm_loadu_si128( ++data );
-		ret.first = _mm_min_epi16( ret.first, at );
-		ret.second = _mm_max_epi16( ret.second, at );
-	}
-
-	return ret;
+std::shared_ptr<void> isis::data::ValueArrayNew::getRawAddress(size_t offset) { // use the const version and cast away the const
+	return std::const_pointer_cast<void>( this->getRawAddress( offset ) );
 }
 
-#ifdef __SSE4_1__
-#include <smmintrin.h>
-template<> std::pair<__m128i, __m128i> _getMinMaxBlockLoop<int8_t>( const __m128i *data, size_t blocks ) //PMAXSB
-{
-	std::pair<__m128i, __m128i> ret( _mm_loadu_si128( data ), _mm_loadu_si128( data ) );
-	LOG( Runtime, verbose_info ) << "using optimized min/max computation for " << util::Value<int8_t>::staticName() << " (direct mode)";
-
-	while ( --blocks ) {
-		const __m128i at = _mm_loadu_si128( ++data );
-		ret.first = _mm_min_epi8( ret.first, at );
-		ret.second = _mm_max_epi8( ret.second, at );
-	}
-
-	return ret;
+std::string isis::data::ValueArrayNew::typeName() const{
+	return std::visit(_internal::arrayname_visitor(),static_cast<const ArrayTypes&>(*this));
 }
-template<> std::pair<__m128i, __m128i> _getMinMaxBlockLoop<uint16_t>( const __m128i *data, size_t blocks ) //PMAXUW
-{
-	std::pair<__m128i, __m128i> ret( _mm_loadu_si128( data ), _mm_loadu_si128( data ) );
-	LOG( Runtime, verbose_info ) << "using optimized min/max computation for " << util::Value<uint16_t>::staticName() << " (direct mode)";
 
-	while ( --blocks ) {
-		const __m128i at = _mm_loadu_si128( ++data );
-		ret.first = _mm_min_epu16( ret.first, at );
-		ret.second = _mm_max_epu16( ret.second, at );
-	}
-
-	return ret;
+isis::data::ValueArrayNew::value_iterator isis::data::ValueArrayNew::beginGeneric() {
+	const size_t bytesize=bytesPerElem();
+	auto visitor = [bytesize](auto ptr)->value_iterator{
+		typedef typename decltype(ptr)::element_type element_type;
+		return value_iterator(
+		    ( uint8_t * )ptr.get(), ( uint8_t * )ptr.get(), bytesize,
+		    getValueFrom<element_type>, setValueInto<element_type>
+		);
+	};
+	return std::visit(visitor,static_cast<ArrayTypes&>(*this));
 }
-template<> std::pair<__m128i, __m128i> _getMinMaxBlockLoop<int32_t>( const __m128i *data, size_t blocks ) //PMAXSD
-{
-	std::pair<__m128i, __m128i> ret( _mm_loadu_si128( data ), _mm_loadu_si128( data ) );
-	LOG( Runtime, verbose_info ) << "using optimized min/max computation for " << util::Value<int32_t>::staticName() << " (direct mode)";
-
-	while ( --blocks ) {
-		const __m128i at = _mm_loadu_si128( ++data );
-		ret.first = _mm_min_epi32( ret.first, at );
-		ret.second = _mm_max_epi32( ret.second, at );
-	}
-
-	return ret;
+isis::data::ValueArrayNew::const_value_iterator isis::data::ValueArrayNew::beginGeneric() const {
+	return const_cast<ValueArrayNew*>(this)->beginGeneric();
 }
-template<> std::pair<__m128i, __m128i> _getMinMaxBlockLoop<uint32_t>( const __m128i *data, size_t blocks ) //PMAXSD
-{
-	std::pair<__m128i, __m128i> ret( _mm_loadu_si128( data ), _mm_loadu_si128( data ) );
-	LOG( Runtime, verbose_info ) << "using optimized min/max computation for " << util::Value<uint32_t>::staticName() << " (direct mode)";
 
-	while ( --blocks ) {
-		const __m128i at = _mm_loadu_si128( ++data );
-		ret.first = _mm_min_epu32( ret.first, at );
-		ret.second = _mm_max_epu32( ret.second, at );
-	}
-
-	return ret;
+isis::data::ValueArrayNew::value_iterator isis::data::ValueArrayNew::endGeneric() {
+	return beginGeneric()+m_length;
 }
-#endif
 
-template<typename T> std::pair<T, T> _getMinMax( const T *data, size_t len )
-{
-	size_t blocks = len / ( 16 / sizeof( T ) );
+isis::data::ValueArrayNew::const_value_iterator isis::data::ValueArrayNew::endGeneric() const {
+	return beginGeneric()+m_length;
+}
 
-	T bmin = std::numeric_limits<T>::max();
-	T bmax = std::numeric_limits<T>::min();
+std::string isis::data::ValueArrayNew::toString(bool labeled) const {
+	std::string ret;//@todo listToString
 
-	if( blocks ) { // if there are 16byte-blocks of values
-		std::pair<__m128i, __m128i> minmax = _getMinMaxBlockLoop<T>( reinterpret_cast<const __m128i *>( data ), blocks );
-		// compute the min/max of the blocks bmin/bmax
-		const _VectorUnion<T> smin = minmax.first;
-		const _VectorUnion<T> smax = minmax.second;
-		bmin = *std::min_element( smin.vec.elem, smin.vec.elem + 16 / sizeof( T ) );
-		bmax = *std::max_element( smax.vec.elem, smax.vec.elem + 16 / sizeof( T ) );
+	if ( m_length ) {
+		for ( auto i = beginGeneric(); i < endGeneric() - 1; i++ )
+			ret += util::ValueNew( *i ).toString( false ) + "|";
+
+
+		ret += util::ValueNew( *( endGeneric() - 1 ) ).toString( labeled );
 	}
 
-	// if there are some remaining elements
-	if( data + blocks * 16 / sizeof( T ) < data + len ) {
-		const T rmin = *std::min_element( data + blocks * 16 / sizeof( T ), data + len );
-		const T rmax = *std::max_element( data + blocks * 16 / sizeof( T ), data + len );
-		return std::pair<T, T>( std::min( bmin, rmin ), std::max( bmax, rmax ) );
+	return std::to_string( m_length ) + "#" + ret;
+}
+
+std::vector<isis::data::ValueArrayNew> isis::data::ValueArrayNew::splice(size_t size) const{
+	if ( size >= getLength() ) {
+		LOG( Debug, warning )
+		        << "splicing data of the size " << getLength() << " up into blocks of the size " << size << " is kind of useless ...";
+	}
+
+	const size_t fullSplices = getLength() / size;
+	const size_t lastSize = getLength() % size;//rest of the division - size of the last splice
+	const size_t splices = fullSplices + ( lastSize ? 1 : 0 );
+
+	_internal::DelProxy proxy( *this );
+
+	auto generator = [&](auto ptr){
+		std::vector<ValueArrayNew> ret( splices );
+
+		for ( size_t i = 0; i < fullSplices; i++ )
+			ret[i]=ValueArrayNew( ptr.get() + i * size, size, proxy );
+
+		if ( lastSize )
+			ret.back()= ValueArrayNew( ptr.get() + fullSplices * size, lastSize, proxy );
+
+		return ret;
+	};
+
+	return std::visit(generator,static_cast<const ArrayTypes&>(*this));
+}
+
+isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo(unsigned short typeID, isis::data::autoscaleOption scaleopt) const {
+	return getScalingTo(typeID, getMinMax(), scaleopt);
+}
+isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo(unsigned short typeID, const std::pair<util::ValueNew, util::ValueNew>& minmax, isis::data::autoscaleOption scaleopt) const
+{
+	if( typeID == index() && scaleopt == autoscale ) { // if id is the same and autoscale is requested
+		static const util::ValueNew one( uint8_t(1) );
+		static const util::ValueNew zero( uint8_t(0) );
+		return std::pair<util::ValueNew, util::ValueNew>( one, zero ); // the result is always 1/0
+	} else { // get min/max and compute the scaling
+		return ValueArrayNew::getScalingTo( typeID, minmax, scaleopt );
+	}
+}
+
+
+std::size_t isis::data::ValueArrayNew::bytesPerElem() const{
+	return std::visit([](auto ptr){return sizeof(typename decltype(ptr)::element_type);},static_cast<const ArrayTypes&>(*this));
+}
+
+void isis::data::ValueArrayNew::endianSwap() {
+	const size_t len=m_length;
+	if(bytesPerElem()>1){
+		std::visit([len](auto ptr){
+			data::endianSwapArray( ptr.get(), ptr.get()+len, ptr.get() );
+		},static_cast<const ArrayTypes&>(*this));
+	}
+
+}
+
+std::pair<isis::util::ValueNew, isis::util::ValueNew> isis::data::ValueArrayNew::getMinMax() const{
+	if ( getLength() == 0 ) {
+		LOG( Debug, error ) << "Skipping computation of min/max on an empty ValueArray";
+		return std::pair<util::ValueNew, util::ValueNew>();
 	} else {
-		return std::pair<T, T>( bmin, bmax );
+		_internal::getMinMaxVisitor visitor;
+		std::visit(visitor,static_cast<const ArrayTypes&>(*this));
+		return visitor.minmax;
 	}
 }
 
-API_EXCLUDE_END;
-
-////////////////////////////////////////////////
-// specialize calcMinMax for (u)int(8,16,32)_t /
-////////////////////////////////////////////////
-
-template<> std::pair< uint8_t,  uint8_t> calcMinMax< uint8_t, 1>( const  uint8_t *data, size_t len ) {return _getMinMax( data, len );}
-template<> std::pair<uint16_t, uint16_t> calcMinMax<uint16_t, 1>( const uint16_t *data, size_t len ) {return _getMinMax( data, len );}
-template<> std::pair<uint32_t, uint32_t> calcMinMax<uint32_t, 1>( const uint32_t *data, size_t len ) {return _getMinMax( data, len );}
-
-template<> std::pair< int8_t,  int8_t> calcMinMax< int8_t, 1>( const  int8_t *data, size_t len ) {return _getMinMax( data, len );}
-template<> std::pair<int16_t, int16_t> calcMinMax<int16_t, 1>( const int16_t *data, size_t len ) {return _getMinMax( data, len );}
-template<> std::pair<int32_t, int32_t> calcMinMax<int32_t, 1>( const int32_t *data, size_t len ) {return _getMinMax( data, len );}
-
-} //namepace _internal
-#else
-#warning Optimized min/max functions are not used because SSE2 is not enabled
-#endif
-/// @endcond
+const isis::data::_internal::ValueArrayConverterMap & isis::data::ValueArrayNew::converters(){
+	static const _internal::ValueArrayConverterMap map;
+	return map;
 }
+
+isis::data::ValueArrayNew::ValueArrayNew():m_length(0)
+{}
+
+bool isis::data::ValueArrayNew::isValid() const{
+	return index()!=std::variant_npos && std::visit([](auto ptr){return (bool)ptr;}, static_cast<const ArrayTypes&>(*this));
+}
+
+isis::data::ValueArrayNew isis::data::ValueArrayNew::copyByID(size_t ID, isis::data::scaling_pair scaling) const
+{
+	const Converter &conv = getConverterTo( ID );
+
+	if( conv ) {
+		return conv->generate( *this, scaling );
+	} else {
+		LOG( Runtime, error ) << "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true )[ID];
+		return ValueArrayNew(); // return an invalid array
+	}
+}
+bool isis::data::ValueArrayNew::copyTo(isis::data::ValueArrayNew& dst, isis::data::scaling_pair scaling) const
+{
+	const unsigned short dID = dst.getTypeID();
+	const Converter &conv = getConverterTo( dID );
+
+	if( conv ) {
+		conv->convert( *this, dst, scaling );
+		return true;
+	} else {
+		LOG( Runtime, error ) << "I don't know any conversion from " << toString( true ) << " to " << dst.typeName();
+		return false;
+	}
+}
+
+void isis::data::ValueArrayNew::copyRange(std::size_t start, std::size_t end, isis::data::ValueArrayNew& dst, std::size_t dst_start) const
+{
+	assert( start <= end );
+	const size_t len = end - start + 1;
+	LOG_IF( ! this->getTypeID()==dst.getTypeID(), Debug, error )
+			<< "Range copy into a ValueArray of different type is not supportet. Its " << dst.typeName() << " not " << typeName();
+
+	if( end > getLength() ) {
+		LOG( Runtime, error )
+				<< "End of the range (" << end << ") is behind the end of this ValueArray (" << getLength() << ")";
+	} else if( len + dst_start > dst.getLength() ) {
+		LOG( Runtime, error )
+				<< "End of the range (" << len + dst_start << ") is behind the end of the destination (" << dst.getLength() << ")";
+	} else {
+		std::shared_ptr<void> daddr = dst.getRawAddress();
+		const std::shared_ptr<const void> saddr = getRawAddress();
+		const size_t soffset = bytesPerElem() * start; //source offset in bytes
+		const int8_t *const  src = ( int8_t * )saddr.get();
+		const size_t doffset = bytesPerElem() * dst_start;//destination offset in bytes
+		int8_t *const  dest = ( int8_t * )daddr.get();
+		const size_t blength = len * bytesPerElem();//length in bytes
+		memcpy( dest + doffset, src + soffset, blength );
+	}
+}
+std::size_t isis::data::ValueArrayNew::getTypeID() const{
+	return std::visit(
+		[](auto ptr){return util::typeID<typename decltype(ptr)::element_type>();},
+		static_cast<const ArrayTypes&>(*this)
+	);
+}
+
+isis::data::ValueArrayNew isis::data::ValueArrayNew::convertByID(unsigned short ID, isis::data::scaling_pair scaling) const{
+	if( scaling.first.eq( 1 ) && scaling.second.eq( 0 ) && getTypeID() == ID ) { // if type is the same and scaling is 1/0
+		return *this; //cheap copy
+	} else {
+		return copyByID( ID, scaling ); // convert into new
+	}
+}
+isis::data::ValueArrayNew isis::data::ValueArrayNew::createByID(unsigned short ID, std::size_t len)
+{
+	const _internal::ValueArrayConverterMap::const_iterator f1 = converters().find( ID );
+	_internal::ValueArrayConverterMap::mapped_type::const_iterator f2;
+	ValueArrayNew ret;
+	// try to get a converter to convert the requested type into itself - they're there for all known types
+	if( f1 != converters().end() && ( f2 = f1->second.find( ID ) ) != f1->second.end() ) {
+		const ValueArrayConverterBase &conv = *( f2->second );
+		ret=conv.create( len );
+		LOG_IF(!ret.isValid(),Runtime,error) << "The created array is not valid, this is not going to end well..";
+	} else {
+		LOG( Debug, error ) << "There is no known creator for " << util::getTypeMap()[ID];
+	}
+	return ret;
+}
+
+std::size_t isis::data::ValueArrayNew::useCount() const
+{
+	return std::visit([](auto ptr){return ptr.use_count();},static_cast<const ArrayTypes&>(*this));
+}
+
+isis::data::ValueArrayNew isis::data::ValueArrayNew::cloneToNew(std::size_t length) const
+{
+	return createByID(getTypeID(),length);
+}
+
+std::size_t isis::data::ValueArrayNew::compare(std::size_t start, std::size_t end, const isis::data::ValueArrayNew& dst, std::size_t dst_start) const
+{
+	assert( start <= end );
+	size_t ret = 0;
+	size_t _length = end - start;
+
+	if ( dst.getTypeID() != getTypeID() ) {
+		LOG( Debug, error )
+				<< "Comparing to a ValueArray of different type(" << dst.typeName() << ", not " << typeName()
+				<< "). Assuming all voxels to be different";
+		return _length;
+	}
+
+	LOG_IF( end >= getLength(), Runtime, error )
+			<< "End of the range (" << end << ") is behind the end of this ValueArray (" << getLength() << ")";
+	LOG_IF( _length + dst_start >= dst.getLength(), Runtime, error )
+			<< "End of the range (" << _length + dst_start << ") is behind the end of the destination (" << dst.getLength() << ")";
+
+	// lock the memory so we can mem-compare the elements (use uint8_t because some compilers do not like arith on void*)
+	const std::shared_ptr<const uint8_t>
+	src_s = std::static_pointer_cast<const uint8_t>( getRawAddress() ),
+	dst_s = std::static_pointer_cast<const uint8_t>( dst.getRawAddress() );
+	const uint8_t *src_p = src_s.get(), *dst_p = dst_s.get();
+	const size_t el_size = bytesPerElem();
+
+	for ( size_t i = start; i < end; i++ ) {
+		if ( memcmp( src_p + ( i * el_size ), dst_p + ( i * el_size ), el_size ) != 0 )
+			ret++;
+	}
+
+	return ret;
+}
+
+const isis::data::ValueArrayNew::Converter & isis::data::ValueArrayNew::getConverterFromTo(unsigned short fromID, unsigned short toID)
+{
+	const _internal::ValueArrayConverterMap::const_iterator f1 = converters().find( fromID );
+	LOG_IF( f1 == converters().end(), Debug, error ) << "There is no known conversion from " << util::getTypeMap()[fromID];
+	const _internal::ValueArrayConverterMap::mapped_type::const_iterator f2 = f1->second.find( toID );
+	LOG_IF( f2 == f1->second.end(), Debug, error ) << "There is no known conversion from " << util::getTypeMap()[fromID] << " to " << util::getTypeMap()[toID];
+	return f2->second;
+}
+
+const isis::data::ValueArrayNew::Converter & isis::data::ValueArrayNew::getConverterTo(unsigned short ID) const
+{
+	return getConverterFromTo(getTypeID(),ID);
+}
+
+std::size_t isis::data::ValueArrayNew::getLength() const
+{
+	return m_length;
+}
+
+bool isis::data::ValueArrayNew::isFloat() const
+{
+	return std::visit( 
+	[](auto ptr){  
+		return std::is_floating_point_v<typename decltype(ptr)::element_type>;
+	},static_cast<const ArrayTypes&>(*this)); 
+}
+
+bool isis::data::ValueArrayNew::isInteger() const
+{
+	return std::visit( 
+	[](auto ptr){  
+		return std::is_integral_v<typename decltype(ptr)::element_type>;
+	},static_cast<const ArrayTypes&>(*this)); 
 }
 

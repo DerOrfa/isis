@@ -174,7 +174,7 @@ class ImageFormat_NiftiSa: public FileFormat
 	std::map<unsigned short, short> isis_type2nifti_type;
 	std::map<unsigned short, demuxer_type> prop_demuxer;
 	template<typename T, typename NEW_T> static unsigned short typeFallBack() {
-		LOG( Runtime, info ) << data::ValueArray<T>::staticName() <<  " is not supported by the dialects fsl and spm falling back to " << data::ValueArray<NEW_T>::staticName();
+		LOG( Runtime, info ) << util::typeName<T>() <<  " is not supported by the dialects fsl and spm falling back to " << data::ValueArray<NEW_T>::staticName();
 		return data::ValueArray<NEW_T>::staticID();
 	}
 	static void guessSliceOrdering( const data::Image img, char &slice_code, float &slice_duration );

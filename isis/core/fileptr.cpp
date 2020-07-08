@@ -106,7 +106,7 @@ bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const std::filesyst
 	if( ptr == nullptr || ptr == reinterpret_cast<void*>(-1) ) {
 		switch(errno){
 			case ENOMEM:
-				LOG( Runtime, error ) << "Excedet limit of mapping size or amount of mapped files";break;
+				LOG( Runtime, error ) << "Exceeded limit of mapping size or amount of mapped files";break;
 			default:
 				LOG( Runtime, error ) << "Failed to map " << util::MSubject( filename ) << ", error was " << util::getLastSystemError();
 		}
@@ -114,7 +114,7 @@ bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const std::filesyst
 	} else {
 		const Closer cl = {file, mmaph, len, filename, write};
 		writing = write;
-		static_cast<ByteArray&>( *this ) = ValueArray<uint8_t>( static_cast<uint8_t * const>( ptr ), len, cl );
+		static_cast<ByteArray&>( *this ) = ByteArray( std::shared_ptr<uint8_t>(static_cast<uint8_t * const>( ptr ),cl), len );
 		return true;
 	}
 }
@@ -196,7 +196,7 @@ bool FilePtr::good() {return m_good;}
 
 void FilePtr::release()
 {
-	static_cast<std::shared_ptr<uint8_t>&>( *this ).reset();
+	castTo<uint8_t>().reset();
 	m_good = false;
 }
 

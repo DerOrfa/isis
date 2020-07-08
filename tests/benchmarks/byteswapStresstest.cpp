@@ -13,7 +13,7 @@ template<typename T> void testEndianSwap( size_t size )
 	data::endianSwapArray( source.begin(), source.end(), target.begin() );
 
 	std::cout
-			<< "byteswapped " << size << " elements " << data::ValueArray<T>::staticName()
+			<< "byteswapped " << size << " elements " << util::typeName<T>()
 			<< " in " << timer.elapsed() << " seconds " << std::endl;
 
 }

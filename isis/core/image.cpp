@@ -56,8 +56,6 @@ struct splicer {
 };
 }
 
-ChunkOp::~ChunkOp() {}
-
 Image::Image ( ) : set( defaultChunkEqualitySet ), clean( false )
 {
 	util::Singletons::get<NeededsList<Image>, 0>().applyTo( *this );
@@ -122,22 +120,23 @@ bool Image::isClean()const
 
 void Image::swapDim( short unsigned int dim_a, short unsigned int dim_b, std::shared_ptr<util::ProgressFeedback> feedback )
 {
-	NDimensional<4>::swapDim( dim_a, dim_b, begin(), feedback ); // this runs through all chunks as the Iterator does that
-	for(auto pCh:lookup){ //but we still have to reshape the chunks
-		auto shape=pCh->getSizeAsVector();
-		std::swap(shape[dim_a],shape[dim_b]);
-		pCh->init(shape);
-	}
-	
-	//swap voxel sizes
-	auto voxel_size_query=queryValueAs<util::fvector3>("voxelSize");
-	if(voxel_size_query && dim_a<data::timeDim && dim_b<data::timeDim){
-		util::fvector3 &voxel_size=*voxel_size_query;
-		std::swap(voxel_size[dim_a],voxel_size[dim_b]);
-	}
-		
-	//voxelsize is needed to be equal inside Images so there should be no voxelSize in the chunks
-	assert(!getChunkAt(0,false).hasProperty("voxelSize"));
+#pragma warning implement me
+// 	NDimensional<4>::swapDim( dim_a, dim_b, begin(), feedback ); // this runs through all chunks as the Iterator does that
+// 	for(auto pCh:lookup){ //but we still have to reshape the chunks
+// 		auto shape=pCh->getSizeAsVector();
+// 		std::swap(shape[dim_a],shape[dim_b]);
+// 		pCh->init(shape);
+// 	}
+// 	
+// 	//swap voxel sizes
+// 	auto voxel_size_query=queryValueAs<util::fvector3>("voxelSize");
+// 	if(voxel_size_query && dim_a<data::timeDim && dim_b<data::timeDim){
+// 		util::fvector3 &voxel_size=*voxel_size_query;
+// 		std::swap(voxel_size[dim_a],voxel_size[dim_b]);
+// 	}
+// 		
+// 	//voxelsize is needed to be equal inside Images so there should be no voxelSize in the chunks
+// 	assert(!getChunkAt(0,false).hasProperty("voxelSize"));
 }
 
 
@@ -394,10 +393,11 @@ bool Image::reIndex(optional< util::slist& > rejected)
 				util::fvector3 &voxelGap = refValueAsOr( "voxelGap", util::fvector3{0, 0, inf} ); //if there is no voxelGap yet, we create it as (0,0,inf)
 
 				if ( voxelGap[2] != inf ) {
-					if(! util::fuzzyEqual( voxelGap[2], sliceDist, 500 ))
+					if(! util::fuzzyEqual( voxelGap[2], sliceDist, 500 )){
 						LOG(Runtime, warning )
 								<< "The existing slice distance (voxelGap[2]) " << util::MSubject( voxelGap[2] )
 								<< " differs from the distance between chunk 0 and 1, which is " << util::MSubject( sliceDist );
+					}
 				} else {
 					voxelGap[2] = sliceDist;
 					LOG( Debug, info )
@@ -498,7 +498,7 @@ const Chunk Image::getChunk ( size_t first, size_t second, size_t third, size_t 
 	return getChunkAt( index, copy_metadata );
 }
 
-void Image::copyToValueArray( ValueArrayBase &dst, scaling_pair scaling ) const
+void Image::copyToValueArray( ValueArrayNew &dst, scaling_pair scaling ) const
 {
 	if( getVolume() > dst.getLength() ) {
 		LOG( Runtime, error ) << "Image wont fit into the ValueArray, wont copy..";
@@ -506,11 +506,9 @@ void Image::copyToValueArray( ValueArrayBase &dst, scaling_pair scaling ) const
 	}
 
 	if ( clean ) {
-		if ( scaling.first.isEmpty() || scaling.second.isEmpty() ) {
-			scaling = getScalingTo ( dst.getTypeID() );
-		}
+		scaling = getScalingTo ( dst.getTypeID() );
 
-		std::vector< ValueArrayReference > targets;
+		std::vector< ValueArrayNew > targets;
 
 		if( lookup.size() > 1 ) { //if there are more than 1 chunks
 			//splice target to have the same parts as the image
@@ -520,12 +518,12 @@ void Image::copyToValueArray( ValueArrayBase &dst, scaling_pair scaling ) const
 			targets.push_back( dst );
 		}
 
-		std::vector< ValueArrayReference >::iterator target = targets.begin();
+		auto target = targets.begin();
 		for( const std::shared_ptr<Chunk> &ref :  lookup ) { // copy chunks into the parts
-			if ( !ref->getValueArrayBase().copyTo ( **target, scaling ) ) {
+			if ( !ref->copyTo ( *target, scaling ) ) {
 				LOG ( Runtime, error )
-						<< "Failed to copy raw data of type " << ref->getTypeName() << " from " << getSizeAsString() << "-image into ValueArray of type "
-						<< dst.getTypeName() << " and length " << dst.getLength();
+						<< "Failed to copy raw data of type " << ref->typeName() << " from " << getSizeAsString() << "-image into ValueArray of type "
+						<< dst.typeName() << " and length " << dst.getLength();
 			}
 
 			target++;
@@ -541,18 +539,14 @@ Image Image::copyByID( short unsigned int ID, scaling_pair scaling ) const
 
 	//we want deep copies of the chunks, and we want them to be of type ID
 	struct : _internal::SortedChunkList::chunkPtrOperator {
-		std::pair<util::ValueReference, util::ValueReference> scale;
+		std::pair<util::ValueNew, util::ValueNew> scale;
 		unsigned short ID;
 		std::shared_ptr<Chunk> operator() ( const std::shared_ptr< Chunk >& ptr ) {
 			return std::make_shared<Chunk> ( ptr->copyByID( ID, scale ) );
 		}
 	} conv_op;
 
-	if( ID && ( scaling.first.isEmpty() || scaling.second.isEmpty() ) ) // if we have an ID but no scaling, compute it
-		conv_op.scale = getScalingTo( ID );
-	else
-		conv_op.scale = scaling;
-
+	conv_op.scale = scaling;
 	conv_op.ID = ID;
 
 	ret.set.transform ( conv_op );
@@ -679,21 +673,21 @@ size_t Image::getMaxBytesPerVoxel() const
 	return bytes;
 }
 
-std::pair<util::ValueReference, util::ValueReference> Image::getMinMax () const
+std::pair<util::ValueNew, util::ValueNew> Image::getMinMax () const
 {
-	std::pair<util::ValueReference, util::ValueReference> ret;
+	std::pair<util::ValueNew, util::ValueNew> ret;
 
 	if( !lookup.empty() ) {
 		std::vector<std::shared_ptr<Chunk> >::const_iterator i = lookup.begin();
 		ret = ( *i )->getMinMax();
 
 		for( ++i; i != lookup.end(); ++i ) {
-			std::pair<util::ValueReference, util::ValueReference> current = ( *i )->getMinMax();
+			std::pair<util::ValueNew, util::ValueNew> current = ( *i )->getMinMax();
 
-			if( ret.first->gt( *current.first ) )
+			if( ret.first.gt( current.first ) )
 				ret.first = current.first;
 
-			if( ret.second->lt( *current.second ) )
+			if( ret.second.lt( current.second ) )
 				ret.second = current.second;
 		}
 	}
@@ -702,22 +696,18 @@ std::pair<util::ValueReference, util::ValueReference> Image::getMinMax () const
 }
 
 // @todo this wont work with images of more 2 two different data types
-std::pair< util::ValueReference, util::ValueReference > Image::getScalingTo( short unsigned int targetID, autoscaleOption scaleopt ) const
+std::pair< util::ValueNew, util::ValueNew > Image::getScalingTo( short unsigned int targetID, autoscaleOption scaleopt ) const
 {
 	LOG_IF( !clean, Debug, error ) << "You should run reIndex before running this";
-	std::pair<util::ValueReference, util::ValueReference> minmax = getMinMax();
+	std::pair<util::ValueNew, util::ValueNew> minmax = getMinMax();
 
 	for( const std::shared_ptr<const Chunk> &ref :  lookup ) { //find a chunk which would be converted
 		if( targetID != ref->getTypeID() ) {
 			const scaling_pair scale = ref->getScalingTo( targetID, minmax, scaleopt );
-			LOG_IF( scale.first.isEmpty() || scale.second.isEmpty(), Debug, error ) << "Returning an invalid scaling. This is bad!";
 			return scale; // and ask that for the scaling
 		}
 	}
-	return std::make_pair( //ok seems like no conversion is needed - return 1/0
-			   util::ValueReference( util::Value<uint8_t>( 1 ) ),
-			   util::ValueReference( util::Value<uint8_t>( 0 ) )
-		   );
+	return {1,0}; //ok seems like no conversion is needed - return 1/0
 }
 
 size_t Image::compare( const isis::data::Image &comp ) const
@@ -753,7 +743,7 @@ size_t Image::compare( const isis::data::Image &comp ) const
 		LOG( Debug, verbose_info )
 				<< "Start positions are " << c1pair1.second << " and " << c2pair1.second
 				<< " and the length is " << c1pair2.second - c1pair1.second;
-		ret += c1.getValueArrayBase().compare( c1pair1.second, c1pair2.second, c2.getValueArrayBase(), c2pair1.second );
+		ret += static_cast<const ValueArrayNew&>(c1).compare( c1pair1.second, c1pair2.second, c2, c2pair1.second );
 	}
 
 	return ret;
@@ -806,28 +796,28 @@ Image::orientation Image::getMainOrientation()const
 	return axial; //will never be reached
 }
 
-unsigned short Image::getMajorTypeID() const
+size_t Image::getMajorTypeID() const
 {
 	switch( getChunk( 0 ).getTypeID() ) { // dont do smart typeID detection for types who cant do minmax
-	case data::ValueArray<util::color24>::staticID():
-	case data::ValueArray<util::color48>::staticID():
-	case data::ValueArray<std::complex< float >  >::staticID():
-	case data::ValueArray<std::complex< double > >::staticID():
-		LOG( Debug, info ) << "Using flat typeID for " << getChunk( 0 ).getTypeName() << " because I cannot compute min/max";
+	case util::typeID<util::color24>():
+	case util::typeID<util::color48>():
+	case util::typeID<std::complex< float >  >():
+	case util::typeID<std::complex< double > >():
+		LOG( Debug, info ) << "Using flat typeID for " << getChunk( 0 ).typeName() << " because I cannot compute min/max";
 		return getChunk( 0 ).getTypeID();
 		break;
 	default:
-		std::pair<util::ValueReference, util::ValueReference> minmax = getMinMax();
+		std::pair<util::ValueNew, util::ValueNew> minmax = getMinMax();
 		LOG( Debug, info ) << "Determining  datatype of image with the value range " << minmax;
 
-		if( minmax.first->getTypeID() == minmax.second->getTypeID() ) { // ok min and max are the same type - trivial case
-			return minmax.first->getTypeID() << 8; // btw: we do the shift, because min and max are Value - but we want the ID's ValueArray
-		} else if( minmax.first->fitsInto( minmax.second->getTypeID() ) ) { // if min fits into the type of max, use that
-			return minmax.second->getTypeID() << 8; //@todo maybe use a global static function here instead of a obscure shit operation
-		} else if( minmax.second->fitsInto( minmax.first->getTypeID() ) ) { // if max fits into the type of min, use that
-			return minmax.first->getTypeID() << 8;
+		if( minmax.first.typeID() == minmax.second.typeID() ) { // ok min and max are the same type - trivial case
+			return minmax.first.typeID(); // btw: we do the shift, because min and max are Value - but we want the ID's ValueArray
+		} else if( minmax.first.fitsInto( minmax.second.typeID() ) ) { // if min fits into the type of max, use that
+			return minmax.second.typeID(); //@todo maybe use a global static function here instead of a obscure shit operation
+		} else if( minmax.second.fitsInto( minmax.first.typeID() ) ) { // if max fits into the type of min, use that
+			return minmax.first.typeID();
 		} else {
-			LOG( Runtime, error ) << "Sorry I dont know which datatype I should use. (" << minmax.first->getTypeName() << " or " << minmax.second->getTypeName() << ")";
+			LOG( Runtime, error ) << "Sorry I dont know which datatype I should use. (" << minmax.first.typeName() << " or " << minmax.second.typeName() << ")";
 			std::stringstream o;
 			o << "Type selection failed. Range was: " << minmax;
 			throw( std::logic_error( o.str() ) );
@@ -855,9 +845,9 @@ bool Image::convertToType( short unsigned int ID, scaling_pair scale )
 	auto windowMax = queryProperty("window/max");
 	auto windowMin = queryProperty("window/min");
 	if(windowMax)
-		(*windowMax) = windowMax->multiply(*scale.first).add(*scale.second);
+		(*windowMax) = windowMax->multiply(scale.first).add(scale.second);
 	if(windowMin)
-		(*windowMin) = windowMin->multiply(*scale.first).add(*scale.second);
+		(*windowMin) = windowMin->multiply(scale.first).add(scale.second);
 
 	return retVal;
 }
@@ -929,31 +919,31 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 	return lookup.size();
 }
 
-size_t Image::foreachChunk( ChunkOp &op, bool copyMetaData )
-{
-	size_t err = 0;
-
-	if( checkMakeClean() ) {
-		util::vector4<size_t> imgSize = getSizeAsVector();
-		util::vector4<size_t> chunkSize = getChunk( 0, 0, 0, 0 ).getSizeAsVector();
-		util::vector4<size_t> pos;
-
-		for( pos[timeDim] = 0; pos[timeDim] < imgSize[timeDim]; pos[timeDim] += chunkSize[timeDim] ) {
-			for( pos[sliceDim] = 0; pos[sliceDim] < imgSize[sliceDim]; pos[sliceDim] += chunkSize[sliceDim] ) {
-				for( pos[columnDim] = 0; pos[columnDim] < imgSize[columnDim]; pos[columnDim] += chunkSize[columnDim] ) {
-					for( pos[rowDim] = 0; pos[rowDim] < imgSize[rowDim]; pos[rowDim] += chunkSize[rowDim] ) {
-						Chunk ch = getChunk( pos[rowDim], pos[columnDim], pos[sliceDim], pos[timeDim], copyMetaData );
-
-						if( op( ch, pos ) == false )
-							err++;
-					}
-				}
-			}
-		}
-	}
-
-	return err;
-}
+// size_t Image::foreachChunk( ChunkOp &op, bool copyMetaData )
+// {
+// 	size_t err = 0;
+// 
+// 	if( checkMakeClean() ) {
+// 		util::vector4<size_t> imgSize = getSizeAsVector();
+// 		util::vector4<size_t> chunkSize = getChunk( 0, 0, 0, 0 ).getSizeAsVector();
+// 		util::vector4<size_t> pos;
+// 
+// 		for( pos[timeDim] = 0; pos[timeDim] < imgSize[timeDim]; pos[timeDim] += chunkSize[timeDim] ) {
+// 			for( pos[sliceDim] = 0; pos[sliceDim] < imgSize[sliceDim]; pos[sliceDim] += chunkSize[sliceDim] ) {
+// 				for( pos[columnDim] = 0; pos[columnDim] < imgSize[columnDim]; pos[columnDim] += chunkSize[columnDim] ) {
+// 					for( pos[rowDim] = 0; pos[rowDim] < imgSize[rowDim]; pos[rowDim] += chunkSize[rowDim] ) {
+// 						Chunk ch = getChunk( pos[rowDim], pos[columnDim], pos[sliceDim], pos[timeDim], copyMetaData );
+// 
+// 						if( op( ch, pos ) == false )
+// 							err++;
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// 
+// 	return err;
+// }
 
 size_t Image::getNrOfColumns() const
 {
@@ -994,48 +984,48 @@ util::fvector3 Image::getFoV() const
 	return util::fvector3( {ret[0], ret[1], ret[2]} );
 }
 
-Image::iterator Image::begin()
+// Image::iterator Image::begin()
+// {
+// 	if( checkMakeClean() ) {
+// 		boost::shared_array<Chunk *> vec( new Chunk*[lookup.size()] );
+// 
+// 		for( size_t i = 0; i < lookup.size(); i++ )
+// 			vec[i] = lookup[i].get();
+// 
+// 		return iterator( vec, lookup.size() );
+// 	} else {
+// 		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
+// 		return iterator();
+// 	}
+// }
+// Image::iterator Image::end() {return begin() + getVolume();}
+// Image::const_iterator Image::begin()const
+// {
+// 	if( isClean() ) {
+// 		boost::shared_array<Chunk *> vec( new Chunk*[lookup.size()] );
+// 
+// 		for( size_t i = 0; i < lookup.size(); i++ )
+// 			vec[i] = lookup[i].get();
+// 
+// 		return const_iterator( vec, lookup.size() );
+// 	} else {
+// 		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
+// 		return const_iterator();
+// 	}
+// }
+// Image::const_iterator Image::end()const {return begin() + getVolume();}
+
+const util::ValueNew Image::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
 {
-	if( checkMakeClean() ) {
-		boost::shared_array<Chunk *> vec( new Chunk*[lookup.size()] );
-
-		for( size_t i = 0; i < lookup.size(); i++ )
-			vec[i] = lookup[i].get();
-
-		return iterator( vec, lookup.size() );
-	} else {
-		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
-		return iterator();
-	}
+// 	LOG_IF( !isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
+// 			<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << " is out of range (" << getSizeAsString() << ")";
+// 	return begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )];
 }
-Image::iterator Image::end() {return begin() + getVolume();}
-Image::const_iterator Image::begin()const
+void Image::setVoxelValue ( const util::ValueNew &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
 {
-	if( isClean() ) {
-		boost::shared_array<Chunk *> vec( new Chunk*[lookup.size()] );
-
-		for( size_t i = 0; i < lookup.size(); i++ )
-			vec[i] = lookup[i].get();
-
-		return const_iterator( vec, lookup.size() );
-	} else {
-		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
-		return const_iterator();
-	}
-}
-Image::const_iterator Image::end()const {return begin() + getVolume();}
-
-const util::ValueReference Image::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
-{
-	LOG_IF( !isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
-			<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << " is out of range (" << getSizeAsString() << ")";
-	return begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )];
-}
-void Image::setVoxelValue ( const util::ValueReference &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
-{
-	LOG_IF( !isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
-			<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << " is out of range (" << getSizeAsString() << ")";
-	begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )] = val;
+// 	LOG_IF( !isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
+// 			<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << " is out of range (" << getSizeAsString() << ")";
+// 	begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )] = val;
 }
 
 std::string Image::identify ( bool withpath, bool withdate )const

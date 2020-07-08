@@ -5,43 +5,120 @@
 #include <typeindex>
 #include <array>
 
-#include "valuetypes.hpp"
+#include "types_value.hpp"
 #include "value_converter.hpp"
+#include <functional>
+
+namespace isis::data::_internal{
+	class ConstValueAdapter;
+}
 
 namespace isis::util{
 
-namespace _internal{
+API_EXCLUDE_BEGIN;
+/// @cond _internal
+namespace _internal
+{
+
 template<typename charT, typename traits> struct print_visitor{
-    std::basic_ostream<charT, traits> &out;
-    template<typename T> void operator()(const T &v){
-        out << v;
-    }
+	std::basic_ostream<charT, traits> &out;
+	template<typename T> void operator()(const T &v){
+		out << v;
+	}
 };
+
+/**
+ * Generic value operation class.
+ * This generic class does nothing, and the ()-operator will allways fail with an error send to the debug-logging.
+ * It has to be (partly) specialized for the regarding type.
+ */
+template<typename OPERATOR,bool modifying,bool enable> struct type_op
+{
+	typedef typename OPERATOR::result_type result_type;
+	typedef std::integral_constant<bool,enable> enabled;
+	typedef typename std::conditional<modifying,util::ValueNew,const util::ValueNew>::type lhs; //<typename OPERATOR::first_argument_type>
+
+	result_type operator()( lhs &first, const ValueNew &second )const {
+#pragma warning fix me
+//		LOG( Debug, error ) << "operator " << typeid(OPERATOR).name() << " is not supportet for " << first.typeName()  << " and "<< second.typeName();
+		throw std::domain_error("operation not available");
+	}
+};
+
+// compare operators (overflows are no error here)
+template<typename OPERATOR,bool enable> struct type_comp_base : type_op<OPERATOR,false,enable>{
+	typename OPERATOR::result_type posOverflow()const {return false;}
+	typename OPERATOR::result_type negOverflow()const {return false;}
+};
+template<typename T> struct type_eq   : type_comp_base<std::equal_to<T>,true>{};
+template<typename T> struct type_less : type_comp_base<std::less<T>,    has_op<T>::lt>
+{
+	//getting a positive overflow when trying to convert second into T, obviously means first is less
+	typename std::less<T>::result_type posOverflow()const {return true;}
+};
+template<typename T> struct type_greater : type_comp_base<std::greater<T>,has_op<T>::gt>
+{
+	//getting an negative overflow when trying to convert second into T, obviously means first is greater
+	typename std::greater<T>::result_type negOverflow()const {return true;}
+};
+
+// on-self operations .. we return void because the result won't be used anyway
+template<typename OP> struct op_base : std::binary_function <typename OP::first_argument_type,typename OP::second_argument_type,void>{};
+template<typename T> struct plus_op :  op_base<std::plus<T> >      {void operator() (typename std::plus<T>::first_argument_type& x,       typename std::plus<T>::second_argument_type const& y)       const {x+=y;}};
+template<typename T> struct minus_op : op_base<std::minus<T> >     {void operator() (typename std::minus<T>::first_argument_type& x,      typename std::minus<T>::second_argument_type const& y)      const {x-=y;}};
+template<typename T> struct mult_op :  op_base<std::multiplies<T> >{void operator() (typename std::multiplies<T>::first_argument_type& x, typename std::multiplies<T>::second_argument_type const& y) const {x*=y;}};
+template<typename T> struct div_op :   op_base<std::divides<T> >   {void operator() (typename std::divides<T>::first_argument_type& x,    typename std::divides<T>::second_argument_type const& y)    const {x/=y;}};
+
+template<typename T> struct type_plus :  type_op<plus_op<T>,true, has_op<T>::plus>{};
+template<typename T> struct type_minus : type_op<minus_op<T>,true,has_op<T>::minus>{};
+template<typename T> struct type_mult :  type_op<mult_op<T>,true, has_op<T>::mult>{};
+template<typename T> struct type_div :   type_op<div_op<T>,true,  has_op<T>::div>{};
+
 }
+/// @endcond _internal
+API_EXCLUDE_END;
+
+template<typename T> static std::string typeName();
 
 class ValueNew:public ValueTypes{
 	static const _internal::ValueConverterMap &converters();
+	template<typename OP, typename RET> RET operatorWrapper(const OP& op,const ValueNew &rhs,const RET &default_ret)const{
+		try{
+			return op(*this,rhs);
+		} catch(const std::domain_error &e){ // return default value on failure
+			LOG(Runtime,error) << "Operation " << MSubject( typeid(OP).name() ) << " on " << MSubject( typeName() ) << " and " << MSubject( rhs.typeName() ) << " failed with \"" << e.what()
+			<< "\", will return " << MSubject( ValueNew(default_ret).toString(true) );
+		return default_ret;
+		}
+	}
+	template<typename OP> ValueNew& operatorWrapper_me(const OP& op,const ValueNew &rhs){
+		try{
+			op(*this,rhs);
+		} catch(const std::domain_error &e){
+			LOG(Runtime,error) << "Operation " << MSubject( typeid(OP).name() ) << " on " << MSubject( typeName() ) << " and " << MSubject( rhs.typeName() ) << " failed with \"" << e.what()
+			<< "\", wont change value (" << MSubject( this->toString(true) ) << ")";
+		}
+		return *this;
+	}
+
 public:
 	typedef _internal::ValueConverterMap::mapped_type::mapped_type Converter;
-    
-    template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
 
-	template<typename T> ValueNew(T &&v):ValueTypes(v){}
-    ValueNew(const ValueTypes &v);
-    ValueNew(ValueTypes &&v);
+	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
+
+	template <typename T, std::enable_if_t<!std::is_same_v<isis::data::_internal::ConstValueAdapter,T>, int> = 0>//@clean up this mess
+	constexpr ValueNew(T &&v):ValueTypes(v){}
+	ValueNew(const isis::data::_internal::ConstValueAdapter &v);
+	ValueNew(const ValueTypes &v);
+	ValueNew(ValueTypes &&v);
 	template<typename T> ValueNew& operator=(const T& v){ValueTypes::operator=(v);return *this;}
 	template<typename T> ValueNew& operator=(T&& v){ValueTypes::operator=(v);return *this;}
 	ValueNew();
-    std::string typeName()const;
-    template<typename T> static std::string staticName(){
-        return ValueNew(T()).typeName();
-    }
-    template<typename T> static constexpr std::size_t staticIndex(){
-        return ValueTypes(T()).index();
-    }
+	std::string typeName()const;
+	size_t typeID()const;
 
 	template<typename charT, typename traits>
-    std::ostream &print(bool with_typename=true,std::basic_ostream<charT, traits> &out=std::cout)const{
+	std::ostream &print(bool with_typename=true,std::basic_ostream<charT, traits> &out=std::cout)const{
 		std::visit(_internal::print_visitor<charT,traits>{out},static_cast<const ValueTypes&>(*this));
 		if(with_typename)
 			out << "(" << typeName() << ")";
@@ -55,7 +132,7 @@ public:
 
 	const Converter &getConverterTo( unsigned short ID )const;
 
-    std::string toString(bool with_typename=true)const;
+	std::string toString(bool with_typename=true)const;
 
 	/// creates a copy of the stored value using a type referenced by its ID
 	ValueNew copyByID( unsigned short ID ) const;
@@ -98,18 +175,31 @@ public:
 			return std::get<T>(*this);
 
 		try{
-			ValueNew ret = copyByID( ValueNew::staticIndex<T>() );
+			ValueNew ret = copyByID( util::typeID<T>() );
 			return std::get<T>(ret);
 		} catch(...) {//@todo specify exception
 			LOG( Debug, error )
-					<< "Interpretation of " << toString( true ) << " as " << ValueNew::staticName<T>()
-					<< " failed. Returning " << ValueNew(T()).toString() << ".";
+			        << "Interpretation of " << toString( true ) << " as " << isis::util::typeName<T>()
+			        << " failed. Returning " << ValueNew(T()).toString() << ".";
 			return T();
-		} 
+		}
 	}
-	
-	bool isFloat()const;
-	bool isInteger()const;
+
+	bool isFloat()const
+	{
+		return std::visit( 
+		[](auto ptr){  
+			return std::is_floating_point_v<decltype(ptr)>;
+		},static_cast<const ValueTypes&>(*this)); 
+	}
+	bool isInteger()const
+	{
+		return std::visit( 
+		[](auto ptr){  
+			return std::is_integral_v<decltype(ptr)>;
+		},static_cast<const ValueTypes&>(*this)); 
+	}
+	bool isValid()const{return !ValueTypes::valueless_by_exception();}
 
 	/**
 	 * Check if the this value is greater to another value converted to this values type.
@@ -153,7 +243,7 @@ public:
 	ValueNew& substract( const ValueNew &ref );
 	ValueNew& multiply_me( const ValueNew &ref );
 	ValueNew& divide_me( const ValueNew &ref );
-	
+
 	/**
 	 * Set value to a new value but keep its type.
 	 * This will convert the applied value to the current type.
@@ -162,6 +252,57 @@ public:
 	 */
 	bool apply(const ValueNew &other);
 };
+
+template<typename T> static std::string typeName(){
+	return util::ValueNew(T()).typeName();
+}
+
+namespace _internal{
+/**
+ * Half-generic value operation class.
+ * This generic class does math operations on Values by converting the second Value-object to the type of the first Value-object. Then:
+ * - if the conversion was successfull (the second value can be represented in the type of the first) the "inRange"-operation is used
+ * - if the conversion failed with an positive or negative overflow (the second value is to high/low to fit into the type of the first) a info sent to the debug-logging and the posOverflow/negOverflow operation is used
+ * - if there is no known conversion from second to first an error is sent to the debug-logging and std::domain_error is thrown.
+ * \note The functions (posOverflow,negOverflow) here are only stubs and will allways throw std::domain_error.
+ * \note inRange will return OPERATOR()(first,second)
+ * These class can be further specialized for the regarding operation.
+ */
+template<typename OPERATOR,bool modifying> struct type_op<OPERATOR,modifying,true>
+{
+	virtual ~type_op(){}
+	typedef typename std::conditional<modifying,util::ValueNew,const util::ValueNew>::type lhs; //<typename OPERATOR::first_argument_type>
+	typedef typename util::ValueNew rhs; //<typename OPERATOR::second_argument_type>
+	typedef typename OPERATOR::result_type result_type;
+	typedef std::integral_constant<bool,true> enabled;
+
+	virtual result_type posOverflow()const {throw std::domain_error("positive overflow");}
+	virtual result_type negOverflow()const {throw std::domain_error("negative overflow");}
+	virtual result_type inRange( lhs &first, const util::ValueNew &second )const {
+		return OPERATOR()(std::get<typename OPERATOR::first_argument_type>(first),second.as<typename OPERATOR::second_argument_type>());
+	}
+	result_type operator()(lhs &first, const ValueNew &second )const {
+		// ask second for a converter from itself to Value<T>
+		const ValueNew::Converter conv = second.getConverterTo( util::typeID<typename OPERATOR::second_argument_type>() );
+
+		if ( conv ) {
+			//try to convert second into T and handle results
+			rhs buff;
+
+			switch ( conv->convert( second, buff ) ) {
+			    case boost::numeric::cPosOverflow:return posOverflow();
+			    case boost::numeric::cNegOverflow:return negOverflow();
+			    case boost::numeric::cInRange:
+				    LOG_IF(second.isFloat() && second.as<float>()!=buff.as<float>(), Debug,warning) //we can't really use Value<T> yet, so make it ValueBase
+					<< "Using " << second.toString( true ) << " as " << buff.toString( true ) << " for operation on " << first.toString( true )
+					<< " you might loose precision";
+				    return inRange( first, buff );
+			}
+		}
+		throw std::domain_error(util::typeName<typename OPERATOR::second_argument_type>()+" not convertible to "+second.typeName());
+	}
+};
+}
 
 }
 

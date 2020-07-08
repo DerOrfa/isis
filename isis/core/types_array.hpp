@@ -1,5 +1,4 @@
-#ifndef ARRAYTYPES_HPP
-#define ARRAYTYPES_HPP
+#pragma once
 
 #include "types.hpp"
 #include "color.hpp"
@@ -32,4 +31,3 @@ struct arrayname_visitor{
 }
 }
 
-#endif // ARRAYTYPES_HPP

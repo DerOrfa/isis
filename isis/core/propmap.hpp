@@ -242,7 +242,7 @@ protected:
 			if( !found->is<T>() ) {
 				if( !found->transform<T>() ) {// convert to requested type
 					LOG( Runtime, warning ) << "Conversion of Property " << path << " from " << util::MSubject( found->getTypeName() ) << " to "
-											<< util::MSubject( util::ValueNew::staticName<T>() ) << " failed";
+											<< util::MSubject( util::typeName<T>() ) << " failed";
 					return optional<T &>();
 				}
 			}
@@ -598,7 +598,7 @@ public:
 	 */
 	template<typename DST> bool transform( const PropPath &from, const PropPath &to) {
 		// checkType<DST>(); @todo maybe implement me
-		return transform( from, to, ValueNew::staticIndex<DST>());
+		return transform( from, to, typeID<DST>());
 	}
 
 	/**
@@ -797,13 +797,13 @@ public:
 			*fetched = def;
 		} else if( !fetched->is<T>() ) { // apparently it already has a value so lets try use that
 			if( !transform<T>( path, path ) ) {
-				throw std::logic_error(fetched->toString(true)+" cannot be transformed to "+util::ValueNew::staticName<T>() );
+				throw std::logic_error(fetched->toString(true)+" cannot be transformed to "+util::typeName<T>() );
 			}
 		}
 
 		assert( fetched->is<T>() );
 		assert( !fetched->isEmpty() );
-		return fetched->as<T>();
+		return fetched->castAs<T>();
 	}
 
 

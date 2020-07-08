@@ -18,32 +18,12 @@
  */
 
 #include "bytearray.hpp"
-#include <boost/mpl/for_each.hpp>
 
 namespace isis{
 namespace data{
 
-ByteArray::ByteArray(const std::shared_ptr<uint8_t>& ptr, size_t length):ValueArray<uint8_t>(ptr,length){}
-ByteArray::ByteArray(const ValueArray<uint8_t>& src):ValueArray<uint8_t>(src){}
-ByteArray::ByteArray(size_t length):ValueArray<uint8_t>(length){}
-ByteArray::ByteArray(uint8_t *const ptr, size_t length):ValueArray<uint8_t>(ptr,length){}
-
-
-ValueArrayReference ByteArray::atByID( short unsigned int ID, size_t offset, size_t len, bool swap_endianess )
-{
-	LOG_IF( static_cast<std::shared_ptr<uint8_t>&>( *this ).get() == 0, Debug, error )
-			<< "There is no mapped data for this FilePtr - I'm very likely gonna crash soon ..";
-	GeneratorMap &map = util::Singletons::get<GeneratorMap, 0>();
-	assert( !map.empty() );
-	const generator_type gen = map[ID];
-	assert( gen );
-	return gen( *this, offset, len, swap_endianess );
-}
-data::ValueArrayBase::ConstReference ByteArray::atByID( unsigned short ID, size_t offset, size_t len, bool swap_endianess)const{
-	ValueArrayBase::Reference ref=const_cast<ByteArray*>(this)->atByID(ID,offset,len,swap_endianess);
-	const ValueArrayBase &base=*ref;
-	return base.castToValueArray<uint8_t>();
-}
+ByteArray::ByteArray(const std::shared_ptr<uint8_t>& ptr, size_t length):TypedArray<uint8_t>(ValueArrayNew(ptr,length)){}
+ByteArray::ByteArray(size_t length):TypedArray<uint8_t>(make<uint8_t>(length)){}
 
 ByteArray::GeneratorMap::GeneratorMap()
 {

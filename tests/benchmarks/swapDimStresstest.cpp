@@ -8,7 +8,7 @@ template<typename T> void testChunk( )
 {
 	data::MemChunk<T> ch(200,100,50,25);
 	
-	std::cout << "dim-swapped " << data::ValueArray<T>::staticName() << " " << ch.getSizeAsVector() << "-Chunk to ";
+	std::cout << "dim-swapped " << util::typeName<T>() << " " << ch.getSizeAsVector() << "-Chunk to ";
 	
 	boost::timer timer;
 	ch.swapDim(data::sliceDim,data::timeDim);

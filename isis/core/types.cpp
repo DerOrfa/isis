@@ -1,4 +1,6 @@
 #include "types.hpp"
+#include "value.hpp"
+#include "types_array.hpp"
 
 namespace isis{
 namespace util{
@@ -46,5 +48,34 @@ setName( date, "date" );
 
 #undef setName
 
+namespace _internal{
+template<std::size_t index = std::variant_size_v<ValueTypes>-1> void insert_types(std::map<size_t, std::string> &map,bool arrayTypesOnly) {
+	typedef util::ValueNew::TypeByIndex<index> v_type;
+	if(!arrayTypesOnly || util::knownType<v_type,data::ArrayTypes>()) //if either we don't want "arrayTypesOnly" or v_type is an array type
+		map[index]=util::typeName<v_type>(); //notice we always use the values type list to map type ids to type names
+	insert_types<index-1>(map,arrayTypesOnly);
 }
+template<> void insert_types<0>(std::map<size_t, std::string> &map,bool arrayTypesOnly){
+	typedef util::ValueNew::TypeByIndex<0> v_type;
+	if(!arrayTypesOnly || util::knownType<v_type,data::ArrayTypes>()) //if either we don't want "arrayTypesOnly" or v_type is an array type
+		map[0]=util::typeName<v_type>(); //notice we always use the values type list to map type ids to type names
+}
+}
+
+}
+}
+
+std::map<size_t, std::string> isis::util::getTypeMap(bool arrayTypesOnly){
+	std::map<size_t, std::string> types;
+	_internal::insert_types(types,arrayTypesOnly);
+	return types;
+}
+
+isis::util::date& std::operator+=(isis::util::date& x, const isis::util::duration& y)
+{
+	return x+=chrono::duration_cast<chrono::days>(y);
+}
+isis::util::date& std::operator-=(isis::util::date& x, const isis::util::duration& y)
+{
+	return x-=chrono::duration_cast<chrono::days>(y);
 }

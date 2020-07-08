@@ -16,12 +16,12 @@
 isis::data::Chunk isis::math::fft(isis::data::Chunk data, bool inverse, double scale)
 {
 	switch(data.getTypeID()){
-	case data::ValueArray<uint8_t>::staticID():
-	case data::ValueArray<uint16_t>::staticID():
-	case data::ValueArray<int8_t>::staticID():
-	case data::ValueArray<int16_t>::staticID():
-	case data::ValueArray<float>::staticID():
-	case data::ValueArray<std::complex< float >>::staticID():
+	case util::typeID<uint8_t>():
+	case util::typeID<uint16_t>():
+	case util::typeID<int8_t>():
+	case util::typeID<int16_t>():
+	case util::typeID<float>():
+	case util::typeID<std::complex< float >>():
 		return fft_single(data,inverse,scale);
 	default:
 		return fft_double(data,inverse,scale);

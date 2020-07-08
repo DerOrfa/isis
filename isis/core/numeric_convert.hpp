@@ -35,7 +35,7 @@ template<typename T> T round( double x )
 template<typename SRC, typename DST> void numeric_convert_impl( const SRC *src, DST *dst, size_t count, double scale, double offset )
 {
 	LOG( Runtime, info )
-			<< "using generic scaling convert " << ValueArray<SRC>::staticName() << "=>" << ValueArray<DST>::staticName()
+			<< "using generic scaling convert " << util::typeName<SRC>() << "=>" << util::typeName<DST>()
 			<< " with scale/offset " << std::fixed << scale << "/" << offset;
 
 	static const std::pair<DST, DST> limits(
@@ -54,7 +54,7 @@ template<typename SRC, typename DST> void numeric_convert_impl( const SRC *src, 
 
 template<typename SRC, typename DST> void numeric_convert_impl( const SRC *src, DST *dst, size_t count )
 {
-	LOG( Runtime, verbose_info ) << "using generic convert " << ValueArray<SRC>::staticName() << " => " << ValueArray<DST>::staticName() << " without scaling";
+	LOG( Runtime, verbose_info ) << "using generic convert " << util::typeName<SRC>() << " => " << util::typeName<DST>() << " without scaling";
 
 	for ( size_t i = 0; i < count; i++ )
 		dst[i] = round<DST>( src[i] );
@@ -67,12 +67,12 @@ template<typename SRC, typename DST> void numeric_convert_impl( const std::compl
 
 template<typename T> void numeric_copy_impl( const T *src, T *dst, size_t count )
 {
-	LOG( Runtime, verbose_info )    << "using memcpy-copy of " << ValueArray<T>::staticName() << " without scaling";
+	LOG( Runtime, verbose_info )    << "using memcpy-copy of " << util::typeName<T>() << " without scaling";
 	memcpy( dst, src, count * sizeof( T ) );
 }
 template<typename T> void numeric_copy_impl( const T *src, T *dst, size_t count, double scale, double offset )
 {
-	LOG( Runtime, verbose_info )    << "using generic scaling copy of " << ValueArray<T>::staticName() << " with scale/offset " << std::fixed << scale << "/" << offset;
+	LOG( Runtime, verbose_info )    << "using generic scaling copy of " << util::typeName<T>() << " with scale/offset " << std::fixed << scale << "/" << offset;
 	numeric_convert_impl<T,T>(src,dst,count,scale,offset);
 }
 
@@ -218,14 +218,14 @@ API_EXCLUDE_END;
  * \param scaleopt enum to tweak the scaling strategy
  */
 template<typename SRC, typename DST> std::pair<double, double>
-getNumericScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )
+getNumericScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )
 {
 	double scale = 1.0;
 	double offset = 0.0;
 	bool doScale = ( scaleopt != noscale && std::numeric_limits<DST>::is_integer ); //only do scale if scaleopt!=noscale and the target is an integer (scaling into float is useless)
 
 	if ( scaleopt == autoscale && std::numeric_limits<SRC>::is_integer ) {
-		LOG( Debug, verbose_info ) << "Won't upscale, because the source datatype is discrete (" << util::Value<SRC>::staticName() << ")";
+		LOG( Debug, verbose_info ) << "Won't upscale, because the source datatype is discrete (" << util::typeName<SRC>() << ")";
 		scaleopt = noupscale; //dont scale up if SRC is an integer
 	}
 

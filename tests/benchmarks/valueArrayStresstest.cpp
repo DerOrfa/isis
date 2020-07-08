@@ -11,7 +11,7 @@ template<typename T> void testMinMax( size_t size )
 	timer.restart();
 	array.getMinMax();
 	std::cout
-			<< "found min/max of " << size / 1024 / 1024 << "MB of " << data::ValueArray<T>::staticName()
+			<< "found min/max of " << size / 1024 / 1024 << "MB of " << util::typeName<T>()
 			<< " in " << timer.elapsed() << " seconds " << std::endl;
 
 }
