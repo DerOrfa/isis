@@ -40,7 +40,6 @@ public:
 	bool operator<( const util::ValueNew &val )const;
 	bool operator>( const util::ValueNew &val )const;
 
-	operator const util::ValueNew()const;
 	const util::ValueNew operator->() const;
 	const std::string toString( bool label = false )const;
 };

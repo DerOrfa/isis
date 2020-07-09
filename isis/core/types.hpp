@@ -47,8 +47,12 @@ template<typename VariantType, typename T, std::size_t index = 0> constexpr std:
     }
 }
 
-
 }
+
+template<typename T> static std::string typeName(){
+	return _internal::name_visitor().operator()(T());
+}
+
 /**
  * Get a std::map mapping type IDs to type names.
  * \note the list is generated at runtime, so doing this excessively will be expensive.

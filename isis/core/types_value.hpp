@@ -25,8 +25,6 @@ template<typename T, typename TYPELIST=ValueTypes> static constexpr bool knownTy
 	return id!=std::variant_npos;
 }
 
-
-
 /**
  * Templated pseudo struct to check if a type supports an operation at compile time.
  * The compile-time flags are:

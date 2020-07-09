@@ -5,14 +5,13 @@
 
 namespace isis::util{
 
-namespace _internal{
-
+ValueNew::ValueNew(const ValueTypes &v):ValueTypes(v){
+	LOG(Debug,verbose_info) << "Value copy created from " << v;
 }
 
-ValueNew::ValueNew(const ValueTypes &v):ValueTypes(v){print(true,std::cout<<"Copy created ")<< std::endl;}
-
-ValueNew::ValueNew(ValueTypes &&v):ValueTypes(v){print(true,std::cout<<"Move created ")<< std::endl;}
-ValueNew::ValueNew():ValueTypes(){}
+ValueNew::ValueNew(ValueTypes &&v):ValueTypes(v){
+	LOG(Debug,verbose_info) << "Value move created from " << v;
+}
 
 std::string ValueNew::toString(bool with_typename)const{
 	std::stringstream o;
@@ -23,6 +22,7 @@ std::string ValueNew::toString(bool with_typename)const{
 std::string ValueNew::typeName() const {
 	return std::visit(_internal::name_visitor(),static_cast<const ValueTypes&>(*this));
 }
+size_t ValueNew::typeID()const{return index();}
 
 const _internal::ValueConverterMap &ValueNew::converters(){
 	static _internal::ValueConverterMap ret;
@@ -51,14 +51,14 @@ ValueNew ValueNew::copyByID(unsigned short ID) const{
 
 	if ( conv ) {
 		switch ( conv->generate( *this, to ) ) {
-			case boost::numeric::cPosOverflow:
-				LOG( Runtime, error ) << "Positive overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
-				break;
-			case boost::numeric::cNegOverflow:
-				LOG( Runtime, error ) << "Negative overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
-				break;
-			case boost::numeric::cInRange:
-				break;
+		    case boost::numeric::cPosOverflow:
+			    LOG( Runtime, error ) << "Positive overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
+			    break;
+		    case boost::numeric::cNegOverflow:
+			    LOG( Runtime, error ) << "Negative overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
+			    break;
+		    case boost::numeric::cInRange:
+			    break;
 		}
 
 		return to; // return the generated Value-Object - wrapping it into Reference
@@ -76,8 +76,8 @@ bool ValueNew::fitsInto(unsigned short ID) const { //@todo find a better way to 
 		return ( conv->generate( *this, to ) ==  boost::numeric::cInRange );
 	} else {
 		LOG( Runtime, info )
-			<< "I dont know any conversion from "
-			<< MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] );
+		    << "I dont know any conversion from "
+		    << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] );
 		return false; // return an empty Reference
 	}
 }
@@ -87,26 +87,44 @@ bool ValueNew::convert(const ValueNew &from, ValueNew &to) {
 
 	if ( conv ) {
 		switch ( conv->convert( from, to ) ) {
-			case boost::numeric::cPosOverflow:
-				LOG( Runtime, error ) << "Positive overflow when converting " << from.toString( true ) << " to " << to.typeName() << ".";
-				break;
-			case boost::numeric::cNegOverflow:
-				LOG( Runtime, error ) << "Negative overflow when converting " << from.toString( true ) << " to " << to.typeName() << ".";
-				break;
-			case boost::numeric::cInRange:
-				return true;
-				break;
+		    case boost::numeric::cPosOverflow:
+			    LOG( Runtime, error ) << "Positive overflow when converting " << from.toString( true ) << " to " << to.typeName() << ".";
+			    break;
+		    case boost::numeric::cNegOverflow:
+			    LOG( Runtime, error ) << "Negative overflow when converting " << from.toString( true ) << " to " << to.typeName() << ".";
+			    break;
+		    case boost::numeric::cInRange:
+			    return true;
+			    break;
 		}
 	} else {
 		LOG( Runtime, error )
-			<< "I don't know any conversion from "
-			<< MSubject( from.toString( true ) ) << " to " << MSubject( to.typeName() );
+		    << "I don't know any conversion from "
+		    << MSubject( from.toString( true ) ) << " to " << MSubject( to.typeName() );
 	}
 
 	return false;
 }
 
-size_t ValueNew::typeID()const{return index();}
+bool ValueNew::isFloat() const
+{
+	return std::visit(
+	            [](auto ptr){
+		return std::is_floating_point_v<decltype(ptr)>;
+	},static_cast<const ValueTypes&>(*this)
+	);
+}
+
+bool ValueNew::isInteger() const
+{
+	return std::visit(
+	            [](auto ptr){
+		return std::is_integral_v<decltype(ptr)>;
+	},static_cast<const ValueTypes&>(*this)
+	);
+}
+
+bool ValueNew::isValid() const{return !ValueTypes::valueless_by_exception();}
 
 bool ValueNew::gt( const ValueNew &ref )const {
 	auto op = [&](auto ptr){
@@ -114,13 +132,13 @@ bool ValueNew::gt( const ValueNew &ref )const {
 	};
 	return std::visit(op,static_cast<const ValueTypes&>(*this));
 }
-bool ValueNew::lt( const ValueNew &ref )const {	
+bool ValueNew::lt( const ValueNew &ref )const {
 	auto op=[&](auto ptr){
 		return operatorWrapper(_internal::type_less<decltype(ptr)>(),ref,false );
 	};
 	return std::visit(op,static_cast<const ValueTypes&>(*this));
 }
-bool ValueNew::eq( const ValueNew &ref )const {	
+bool ValueNew::eq( const ValueNew &ref )const {
 	auto op=[&](auto ptr){
 		return operatorWrapper(_internal::type_eq<decltype(ptr)>(),ref,false );
 	};

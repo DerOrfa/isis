@@ -26,9 +26,7 @@
 #include <math.h>
 #include <cmath>
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 namespace _internal {
 struct splicer {
@@ -1017,15 +1015,18 @@ util::fvector3 Image::getFoV() const
 
 const util::ValueNew Image::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
 {
-// 	LOG_IF( !isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
-// 			<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << " is out of range (" << getSizeAsString() << ")";
-// 	return begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )];
+	LOG_IF( !isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
+			<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << " is out of range (" << getSizeAsString() << ")";
+	const auto index = commonGet(nrOfColumns,nrOfRows,nrOfSlices,nrOfTimesteps);
+	const Chunk ch = getChunkAt(index.first,false);
+	const auto it = ch.beginGeneric()[index.second];
+	return it;
 }
 void Image::setVoxelValue ( const util::ValueNew &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
 {
-// 	LOG_IF( !isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
-// 			<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << " is out of range (" << getSizeAsString() << ")";
-// 	begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )] = val;
+	const auto index = commonGet(nrOfColumns,nrOfRows,nrOfSlices,nrOfTimesteps);
+	Chunk ch = getChunkAt(index.first,false);
+	ch.beginGeneric()[index.second]=val;
 }
 
 std::string Image::identify ( bool withpath, bool withdate )const
@@ -1037,5 +1038,4 @@ std::string Image::identify ( bool withpath, bool withdate )const
 }
 
 
-} // END namespace data
-} // END namespace isis
+} // END namespace isis::data

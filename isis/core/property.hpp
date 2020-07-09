@@ -38,16 +38,6 @@ public:
 	typedef std::list<ValueNew>::reference reference;
 	typedef std::list<ValueNew>::const_reference const_reference;
 	typedef PropertyValue value_type;
-	/**
-	 * Explicit constructor.
-	 * Creates a property and stores a value from any known type.
-	 * If the type is not known (there is no Value\<type\> available) an compiler error will be raised.
-	 * \param ref the value to be stored
-	 * \param _needed flag if this PropertyValue is needed an thus not allowed to be empty (a.k.a. undefined)
-	 */
-	template<typename T> explicit PropertyValue( const T &ref, bool _needed = false ):m_needed( _needed ) {
-		container.emplace_back(ValueNew(ref));
-	}
 	/// Create a property and store the given single value object.
 	PropertyValue( const ValueNew &ref, bool _needed = false ):m_needed( _needed ) {container.emplace_back(ref);}
 	/// Create a property and store the given single value object.
@@ -61,7 +51,7 @@ public:
 	void push_back(const ValueNew& ref);
 	template<typename T> typename std::enable_if<knownType<T>() >::type push_back(const T& ref){insert(end(),ref);}
 
-	iterator insert(iterator at,const PropertyValue& ref);
+	iterator insert(iterator at,const ValueNew& ref);
 
 	template<typename T> typename std::enable_if<knownType<T>(), iterator >::type insert(iterator at,const T& ref){
 		LOG_IF(!isEmpty() && getTypeID()!=typeID<T>(),Debug,error) << "Inserting inconsistent type " << MSubject(ValueNew(ref).toString(true)) << " in " << MSubject(*this);
@@ -187,7 +177,7 @@ public:
 	 * \note The needed flag won't be affected by that.
 	 * \note To prevent accidential use this can only be used explicetly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
 	 */
-	template<typename T> typename std::enable_if<knownType<T>(),PropertyValue&>::type operator=( const T &ref){
+	template<typename T> typename std::enable_if_t<knownType<T>(),PropertyValue&> operator=( const T &ref){
 	    container.clear();
 	    container.emplace_back(ValueNew(ref));
 	    return *this;
@@ -248,23 +238,13 @@ public:
 	 */
 	unsigned short getTypeID()const;
 
-// 	/**
-// 	 * \copybrief ValueBase::castTo
-// 	 * hook for \link ValueBase::castTo \endlink
-// 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
-// 	 * \note An exception is thrown if the PropertyValue is empty.
-// 	 */
-// 	template<typename T> T &castTo(){return front().castTo<T>();}
-// 	template<typename T> const T &castTo() const{return front().castTo<T>();}
-//
-// 	/**
-// 	 * \copybrief ValueBase::castToType
-// 	 * hook for \link ValueBase::castToType \endlink
-// 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
-// 	 * \note An exception is thrown if the PropertyValue is empty.
-// 	 */
-// 	template<typename T> ValueNew& castToType(){return front().castToType<T>();}
-// 	template<typename T> const Value<T>& castToType() const{return front().castToType<T>();}
+	/**
+	 * \copybrief ValueBase::castTo
+	 * hook for \link ValueBase::castTo \endlink
+	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
+	 * \note An exception is thrown if the PropertyValue is empty.
+	 */
+	template<typename T> const T &castTo() const{return std::get<T>(front());}
 
 	/**
 	 * \returns true if \link ValueBase::fitsInto \endlink is true for all values
@@ -349,21 +329,15 @@ public:
 	 */
 	template<typename T> typename std::enable_if<knownType<T>(),bool>::type operator !=( const T &second )const{return size()==1 && !front().eq(second);}
 
-	template<typename T> PropertyValue& operator +=( const T &second ){front().add(second);return *this;}
-	template<typename T> PropertyValue& operator -=( const T &second ){front().substract(second);return *this;}
-	template<typename T> PropertyValue& operator *=( const T &second ){front().multiply_me(second);return *this;}
-	template<typename T> PropertyValue& operator /=( const T &second ){front().divide_me(second);return *this;}
+	PropertyValue& operator +=( const ValueNew &second );
+	PropertyValue& operator -=( const ValueNew &second );
+	PropertyValue& operator *=( const ValueNew &second );
+	PropertyValue& operator /=( const ValueNew &second );
 
-	template<typename T> PropertyValue operator+( const T &rhs )const {PropertyValue lhs(*this); return lhs+=rhs;}
-	template<typename T> PropertyValue operator-( const T &rhs )const {PropertyValue lhs(*this); return lhs-=rhs;}
-	template<typename T> PropertyValue operator*( const T &rhs )const {PropertyValue lhs(*this); return lhs*=rhs;}
-	template<typename T> PropertyValue operator/( const T &rhs )const {PropertyValue lhs(*this); return lhs/=rhs;}
-
-	PropertyValue& operator +=( const PropertyValue &second );
-	PropertyValue& operator -=( const PropertyValue &second );
-	PropertyValue& operator *=( const PropertyValue &second );
-	PropertyValue& operator /=( const PropertyValue &second );
-
+	PropertyValue operator+( const ValueNew &second )const {PropertyValue lhs(*this); return lhs+=second;}
+	PropertyValue operator-( const ValueNew &second )const {PropertyValue lhs(*this); return lhs-=second;}
+	PropertyValue operator*( const ValueNew &second )const {PropertyValue lhs(*this); return lhs*=second;}
+	PropertyValue operator/( const ValueNew &second )const {PropertyValue lhs(*this); return lhs/=second;}
 };
 
 }

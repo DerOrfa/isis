@@ -72,18 +72,11 @@ bool PropertyValue::isEmpty() const{return container.empty();}
 const ValueNew &PropertyValue::operator()() const{return front();}
 ValueNew &PropertyValue::operator()(){return front();}
 
-void PropertyValue::push_back( const PropertyValue& ref ){insert(end(),ref);}
 void PropertyValue::push_back( const ValueNew& ref ){insert(end(),ref);}
 
-PropertyValue::iterator PropertyValue::insert( iterator at, const PropertyValue& ref ){
-	if(ref.isEmpty()){
-		LOG(Debug,warning) << "Not inserting empty Property";
-		return end();
-	} else {
-		LOG_IF(!isEmpty() && getTypeID()!=ref.getTypeID(),Debug,error) << "Inserting inconsistent type " << MSubject(ref.toString(true)) << " in " << MSubject(*this);
-		LOG_IF(container.size()!=1,Runtime,error) << "Inserting first element of one of " << MSubject(ref.toString(true)) << " in " << MSubject(*this);
-		return container.insert(at,ref.container.front() );
-	}
+PropertyValue::iterator PropertyValue::insert( iterator at, const ValueNew& ref ){
+	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting inconsistent type " << MSubject(ref.toString(true)) << " in " << MSubject(*this);
+	return container.insert(at,ref );
 }
 
 void PropertyValue::transfer(isis::util::PropertyValue::iterator at, PropertyValue& ref)
@@ -161,16 +154,6 @@ const ValueNew& PropertyValue::front() const{
 }
 
 size_t PropertyValue::size() const{return container.size();}
-// void PropertyValue::resize( size_t size, const ValueBase &clone ){ // the builtin resize wants non-const clone, so we do our own
-// 	size_t old_size = container.size();
-// 	if( old_size > size ){
-// 		erase( begin()+size, end() );
-// 	} else if( size > old_size ) {
-// 		for( ; old_size != size; ++old_size )
-// 			push_back( clone );
-// 	}
-// 	assert( container.size() == size );
-// }
 
 std::vector< PropertyValue > PropertyValue::splice( const size_t len )
 {
@@ -192,37 +175,50 @@ std::vector< PropertyValue > PropertyValue::splice( const size_t len )
 
 // ValueBase hooks
 bool PropertyValue::fitsInto( short unsigned int ID ) const{return front().fitsInto(ID);}
+
 std::string PropertyValue::getTypeName() const{
 	LOG_IF(isEmpty(),Debug,error) << "Doing getTypeName on an empty PropertyValue will raise an exception.";
 	return front().typeName();
 }
 short unsigned int PropertyValue::getTypeID() const{
 	LOG_IF(isEmpty(),Debug,error) << "Doing getTypeID on an empty PropertyValue will raise an exception.";
-	return front().index();
+	return front().typeID();
 }
 
 PropertyValue& PropertyValue::add( const PropertyValue& ref ){
 	LOG_IF(ref.isEmpty(),Debug,error) << "Adding an empty property, won't do anything";
-	for(size_t i=0;i<std::min(container.size(),ref.size());i++)
-		at(i).add(ref[i]);
+	auto mine_it=container.begin();
+	auto other_it=ref.container.begin();
+	
+	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
+		mine_it->add(*other_it);
 	return *this;
 }
 PropertyValue& PropertyValue::substract( const PropertyValue& ref ){
 	LOG_IF(ref.isEmpty(),Debug,error) << "Substracting an empty property, won't do anything";
-	for(size_t i=0;i<std::min(container.size(),ref.size());i++)
-		at(i).substract(ref[i]);
+	auto mine_it=container.begin();
+	auto other_it=ref.container.begin();
+	
+	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
+		mine_it->substract(*other_it);
 	return *this;
 }
 PropertyValue& PropertyValue::multiply_me( const PropertyValue& ref ){
 	LOG_IF(ref.isEmpty(),Debug,error) << "Multiplying with an empty property, won't do anything";
-	for(size_t i=0;i<std::min(container.size(),ref.size());i++)
-		at(i).multiply_me(ref[i]);
+	auto mine_it=container.begin();
+	auto other_it=ref.container.begin();
+	
+	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
+		mine_it->multiply_me(*other_it);
 	return *this;
 }
 PropertyValue& PropertyValue::divide_me( const PropertyValue& ref ){
 	LOG_IF(ref.isEmpty(),Debug,error) << "Dividing by an empty property, won't do anything";
-	for(size_t i=0;i<std::min(container.size(),ref.size());i++)
-		at(i).divide_me(ref[i]);
+	auto mine_it=container.begin();
+	auto other_it=ref.container.begin();
+	
+	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
+		mine_it->divide_me(*other_it);
 	return *this;
 }
 
@@ -235,7 +231,7 @@ PropertyValue PropertyValue::minus( const PropertyValue& ref ) const{
 	PropertyValue ret(*this);
 	ret.substract(ref);
 	return ret;
-	}
+}
 PropertyValue PropertyValue::multiply( const PropertyValue& ref ) const{
 	PropertyValue ret(*this);
 	ret.multiply_me(ref);
@@ -247,29 +243,39 @@ PropertyValue PropertyValue::divide( const PropertyValue& ref ) const{
 	return ret;
 }
 
+//@todo maybe use std::transform_reduce
 bool PropertyValue::eq( const PropertyValue& ref ) const{
-	bool ret=!ref.isEmpty();
-	for(size_t i=0;i<ref.size();i++)
-		ret&=at(i).eq(ref[i]);
+	bool ret=true;
+	if(ref.isEmpty() || ref.size()!=size())
+		return false;
+	auto mine_it=container.begin();
+	for(auto other:ref.container)
+		ret&=(mine_it++)->eq(other);
 	return ret;
 }
 bool PropertyValue::gt( const PropertyValue& ref ) const{
-	bool ret=!ref.isEmpty();
-	for(size_t i=0;i<ref.size();i++)
-		ret&=at(i).gt(ref[i]);
+	bool ret=true;
+	if(ref.isEmpty() || ref.size()!=size())
+		return false;
+	auto mine_it=container.begin();
+	for(auto other:ref.container)
+		ret&=(mine_it++)->gt(other);
 	return ret;
 }
 bool PropertyValue::lt( const PropertyValue& ref ) const{
-	bool ret=!ref.isEmpty();
-	for(size_t i=0;i<ref.size();i++)
-		ret&=at(i).lt(ref[i]);
+	bool ret=true;
+	if(ref.isEmpty() || ref.size()!=size())
+		return false;
+	auto mine_it=container.begin();
+	for(auto other:ref.container)
+		ret&=(mine_it++)->lt(other);
 	return ret;
 }
 
-PropertyValue& PropertyValue::operator +=( const PropertyValue &second ){front().add(second.front());return *this;}
-PropertyValue& PropertyValue::operator -=( const PropertyValue &second ){front().substract(second.front());return *this;}
-PropertyValue& PropertyValue::operator *=( const PropertyValue &second ){front().multiply_me(second.front());return *this;}
-PropertyValue& PropertyValue::operator /=( const PropertyValue &second ){front().divide_me(second.front());return *this;}
+PropertyValue& PropertyValue::operator +=( const ValueNew &second ){front().add(second);return *this;}
+PropertyValue& PropertyValue::operator -=( const ValueNew &second ){front().substract(second);return *this;}
+PropertyValue& PropertyValue::operator *=( const ValueNew &second ){front().multiply_me(second);return *this;}
+PropertyValue& PropertyValue::operator /=( const ValueNew &second ){front().divide_me(second);return *this;}
 
 }
 }

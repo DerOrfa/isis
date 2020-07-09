@@ -48,6 +48,9 @@ else(ISIS_USE_LIBORC)
 	set(LIBORC_LIB "")
 endif(ISIS_USE_LIBORC)
 
+#see also https://stackoverflow.com/questions/41676311
+set_source_files_properties( "valuearray_minmax.cpp" PROPERTIES COMPILE_FLAGS "-Wno-ignored-attributes")
+
 #add the core library
 add_lib(isis_core
 	"${CORE_SRC_FILES}"

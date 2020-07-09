@@ -23,9 +23,6 @@ bool ConstValueAdapter::operator>( const util::ValueNew &val )const {return gett
 
 const util::ValueNew ConstValueAdapter::operator->() const{ return getter(p);}
 const std::string ConstValueAdapter::toString( bool label ) const{ return getter(p).toString(label);}
-ConstValueAdapter::operator const util::ValueNew()const{return getter(p);}
-
-
 
 WritingValueAdapter::WritingValueAdapter( uint8_t*const _p, ConstValueAdapter::Getter _getValueFunc, ConstValueAdapter::Setter _setValueFunc, size_t _byteSize )
 : ConstValueAdapter( _p, _getValueFunc ), setValueFunc( _setValueFunc ), byteSize(_byteSize) {}

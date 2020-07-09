@@ -29,7 +29,8 @@ std::shared_ptr<const void> isis::data::ValueArrayNew::getRawAddress(size_t offs
 }
 
 std::shared_ptr<void> isis::data::ValueArrayNew::getRawAddress(size_t offset) { // use the const version and cast away the const
-	return std::const_pointer_cast<void>( this->getRawAddress( offset ) );
+	const std::shared_ptr<const void> ptr=const_cast<const ValueArrayNew*>(this)->getRawAddress( offset );
+	return std::const_pointer_cast<void>( ptr );
 }
 
 std::string isis::data::ValueArrayNew::typeName() const{
@@ -182,14 +183,14 @@ void isis::data::ValueArrayNew::copyRange(std::size_t start, std::size_t end, is
 	assert( start <= end );
 	const size_t len = end - start + 1;
 	LOG_IF( ! this->getTypeID()==dst.getTypeID(), Debug, error )
-			<< "Range copy into a ValueArray of different type is not supportet. Its " << dst.typeName() << " not " << typeName();
+	        << "Range copy into a ValueArray of different type is not supportet. Its " << dst.typeName() << " not " << typeName();
 
 	if( end > getLength() ) {
 		LOG( Runtime, error )
-				<< "End of the range (" << end << ") is behind the end of this ValueArray (" << getLength() << ")";
+		        << "End of the range (" << end << ") is behind the end of this ValueArray (" << getLength() << ")";
 	} else if( len + dst_start > dst.getLength() ) {
 		LOG( Runtime, error )
-				<< "End of the range (" << len + dst_start << ") is behind the end of the destination (" << dst.getLength() << ")";
+		        << "End of the range (" << len + dst_start << ") is behind the end of the destination (" << dst.getLength() << ")";
 	} else {
 		std::shared_ptr<void> daddr = dst.getRawAddress();
 		const std::shared_ptr<const void> saddr = getRawAddress();
@@ -203,8 +204,8 @@ void isis::data::ValueArrayNew::copyRange(std::size_t start, std::size_t end, is
 }
 std::size_t isis::data::ValueArrayNew::getTypeID() const{
 	return std::visit(
-		[](auto ptr){return util::typeID<typename decltype(ptr)::element_type>();},
-		static_cast<const ArrayTypes&>(*this)
+	    [](auto ptr){return util::typeID<typename decltype(ptr)::element_type>();},
+	    static_cast<const ArrayTypes&>(*this)
 	);
 }
 
@@ -249,15 +250,15 @@ std::size_t isis::data::ValueArrayNew::compare(std::size_t start, std::size_t en
 
 	if ( dst.getTypeID() != getTypeID() ) {
 		LOG( Debug, error )
-				<< "Comparing to a ValueArray of different type(" << dst.typeName() << ", not " << typeName()
-				<< "). Assuming all voxels to be different";
+		        << "Comparing to a ValueArray of different type(" << dst.typeName() << ", not " << typeName()
+		        << "). Assuming all voxels to be different";
 		return _length;
 	}
 
 	LOG_IF( end >= getLength(), Runtime, error )
-			<< "End of the range (" << end << ") is behind the end of this ValueArray (" << getLength() << ")";
+	        << "End of the range (" << end << ") is behind the end of this ValueArray (" << getLength() << ")";
 	LOG_IF( _length + dst_start >= dst.getLength(), Runtime, error )
-			<< "End of the range (" << _length + dst_start << ") is behind the end of the destination (" << dst.getLength() << ")";
+	        << "End of the range (" << _length + dst_start << ") is behind the end of the destination (" << dst.getLength() << ")";
 
 	// lock the memory so we can mem-compare the elements (use uint8_t because some compilers do not like arith on void*)
 	const std::shared_ptr<const uint8_t>
@@ -295,17 +296,19 @@ std::size_t isis::data::ValueArrayNew::getLength() const
 
 bool isis::data::ValueArrayNew::isFloat() const
 {
-	return std::visit( 
-	[](auto ptr){  
-		return std::is_floating_point_v<typename decltype(ptr)::element_type>;
-	},static_cast<const ArrayTypes&>(*this)); 
+	return std::visit(
+	    [](auto ptr){
+		    return std::is_floating_point_v<typename decltype(ptr)::element_type>;
+	    },static_cast<const ArrayTypes&>(*this)
+	);
 }
 
 bool isis::data::ValueArrayNew::isInteger() const
 {
-	return std::visit( 
-	[](auto ptr){  
-		return std::is_integral_v<typename decltype(ptr)::element_type>;
-	},static_cast<const ArrayTypes&>(*this)); 
+	return std::visit(
+	    [](auto ptr){
+		    return std::is_integral_v<typename decltype(ptr)::element_type>;
+	    },static_cast<const ArrayTypes&>(*this)
+	);
 }
 
