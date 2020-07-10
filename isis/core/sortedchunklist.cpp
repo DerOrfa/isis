@@ -63,9 +63,9 @@ SortedChunkList::chunkPtrOperator::~chunkPtrOperator() {}
 
 void SortedChunkList::getproplist::operator()(const util::PropertyMap& c)
 {
-	optional< const util::PropertyValue & > p=c.queryProperty(name);
+	auto p=c.queryProperty(name);
 	if(p && p->size()>1){ // if property holds many value, flatten it
-		util::PropertyValue dummy=p.get();
+		util::PropertyValue dummy=*p;
 		const std::vector< util::PropertyValue > splinters=dummy.splice(1);
 		insert(splinters.begin(),splinters.end());
 	} else if(p && p->size()==1) // otherwise just use it
@@ -111,11 +111,11 @@ SortedChunkList::SecondaryMap *SortedChunkList::primaryFind( const util::fvector
 std::pair<std::shared_ptr<Chunk>, bool> SortedChunkList::secondaryInsert( SecondaryMap &map, const Chunk &ch )
 {
 	util::PropertyMap::key_type propName = map.key_comp().propertyName;
-	const boost::optional< const util::PropertyValue & > found = ch.queryProperty( propName );
+	const auto found = ch.queryProperty( propName );
 
 	if( found ) {
 		//check, if there is already a chunk
-		std::shared_ptr<Chunk> &pos = map[found.get()];
+		std::shared_ptr<Chunk> &pos = map[*found];
 		bool inserted = false;
 
 		//if not. put ours there
@@ -300,7 +300,7 @@ std::set<size_t> SortedChunkList::getShape()
 	return images;
 }
 
-size_t SortedChunkList::makeRectangular(optional< util::slist& > rejected)
+size_t SortedChunkList::makeRectangular(util::slist* rejected)
 {
 	const std::set<size_t> images = getShape();//get lenghts of all primary sorted "columns" -- as set is sorted the smallest will be at begin
 	size_t dropped = 0;
@@ -325,7 +325,7 @@ size_t SortedChunkList::makeRectangular(optional< util::slist& > rejected)
 			assert( it.size() == resize );
 		}
 
-		LOG_IF( dropped, Runtime, warning ) << "Dropped " << dropped << " chunks to make " << identify(true,false) << " rectagular";
+		LOG_IF( dropped, Runtime, warning ) << "Dropped " << dropped << " chunks to make " << identify(true,false) << " rectangular";
 	}
 
 	return dropped;

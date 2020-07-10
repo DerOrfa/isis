@@ -289,7 +289,7 @@ IOFactory::FileFormatList IOFactory::getFileFormatList( std::list<util::istring>
 	return ret;
 }
 
-std::list< Image > IOFactory::chunkListToImageList( std::list<Chunk> &src, optional< util::slist& > rejected )
+std::list< Image > IOFactory::chunkListToImageList( std::list<Chunk> &src, util::slist* rejected )
 {
 	LOG_IF(src.empty(),Debug,warning) << "Calling chunkListToImageList with an empty chunklist";
 	// throw away invalid chunks
@@ -311,11 +311,14 @@ std::list< Image > IOFactory::chunkListToImageList( std::list<Chunk> &src, optio
 		LOG( Debug, info ) << src.size() << " Chunks left to be distributed.";
 		size_t before = src.size();
 
-		Image buff( src, rejected );
+		std::unique_ptr<util::slist> buff_rejected(rejected? new util::slist:nullptr);
+		Image buff( src, rowDim, buff_rejected.get() );
 
 		if ( buff.isClean() ) {
 			if( buff.isValid() ) { //if the image was successfully indexed and is valid, keep it
 				ret.push_back( buff );
+				if(rejected)
+					rejected->splice(rejected->begin(),*buff_rejected);
 				LOG( Runtime, info ) << "Image " << ret.size() << " with size " << util::MSubject( buff.getSizeAsString() ) << " done.";
 			} else {
 				LOG_IF( !buff.getMissing().empty(), Runtime, error )
@@ -339,7 +342,7 @@ std::list< Chunk > IOFactory::loadChunks( const load_source &v, std::list<util::
 }
 
 
-std::list< Image > IOFactory::load( const util::slist &paths, std::list<util::istring> formatstack, std::list<util::istring> dialects, optional< isis::util::slist& > rejected )
+std::list< Image > IOFactory::load( const util::slist &paths, std::list<util::istring> formatstack, std::list<util::istring> dialects, isis::util::slist* rejected )
 {
 	std::list<Chunk> chunks;
 	for( const std::string & path :  paths ) {
@@ -371,7 +374,7 @@ std::list< Image > IOFactory::load( const util::slist &paths, std::list<util::is
 	return images;
 }
 
-std::list<data::Image> IOFactory::load( const load_source &source, std::list<util::istring> formatstack, std::list<util::istring> dialects, optional< isis::util::slist& > rejected )
+std::list<data::Image> IOFactory::load( const load_source &source, std::list<util::istring> formatstack, std::list<util::istring> dialects, isis::util::slist* rejected )
 {
 	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &source );
 	if(filename)
@@ -389,7 +392,7 @@ std::list<data::Image> IOFactory::load( const load_source &source, std::list<uti
 	}
 }
 
-std::list<Chunk> isis::data::IOFactory::loadPath(const std::filesystem::path& path, std::list<util::istring> formatstack, std::list<util::istring> dialects, optional< isis::util::slist& > rejected )
+std::list<Chunk> isis::data::IOFactory::loadPath(const std::filesystem::path& path, std::list<util::istring> formatstack, std::list<util::istring> dialects, util::slist* rejected)
 {
 	std::list<Chunk> ret;
 	const size_t length = std::distance( std::filesystem::directory_iterator( path ), std::filesystem::directory_iterator() ); //@todo this will also count directories

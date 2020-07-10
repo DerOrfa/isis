@@ -27,8 +27,6 @@
 #include "image.hpp"
 #include <boost/variant.hpp>
 
-using boost::optional;
-
 namespace isis
 {
 namespace data
@@ -64,7 +62,7 @@ public:
 	 * @note the images a re created from all loaded files, so loading mutilple files can very well result in only one image
 	 */
 	static std::list<data::Image> 
-	load( const util::slist &paths, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, optional< util::slist& > rejected=optional< util::slist& >() );
+	load( const util::slist &paths, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, util::slist* rejected=nullptr);
 	/**
 	 * Load a data file or directory with given filename and dialect.
 	 * @param path file or directory to load
@@ -73,7 +71,7 @@ public:
 	 * @return list of images created from the loaded data
 	 */
 	static std::list<data::Image> 
-	load( const load_source &source, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, optional< util::slist& > rejected=optional< util::slist& >() );
+	load( const load_source &source, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, util::slist* rejected=nullptr);
 
 	/**
 	 * Load data from a given filename/stream/memory and dialect into a chunklist.
@@ -111,7 +109,7 @@ public:
 	 *  \param chunks list of chunks to be used for the new images.
 	 *  \returns a list of newly created images consisting off chunks out of the given chunk list.
 	 */
-	static std::list<data::Image> chunkListToImageList( std::list<Chunk> &chunks, optional< isis::util::slist& > rejected=optional< isis::util::slist& >() );
+	static std::list<data::Image> chunkListToImageList( std::list<Chunk> &chunks, isis::util::slist* rejected=nullptr);
 
 	/*
 	 * each ImageFormat will be registered in a map after plugin has been loaded
@@ -121,7 +119,7 @@ public:
 	 * */
 	static bool registerFileFormat( const FileFormatPtr plugin, bool front=false );
 protected:
-	std::list<Chunk> loadPath(const std::filesystem::path& path, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, optional< util::slist& > rejected=optional< util::slist& >());
+	std::list<Chunk> loadPath(const std::filesystem::path& path, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, util::slist *rejected=nullptr);
 
 	static IOFactory &get();
 	IOFactory();//shall not be created directly

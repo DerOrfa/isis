@@ -39,7 +39,7 @@ namespace image_io
 	 * \copydoc hasOrTell( const util::PropertyMap::key_type &name, const util::PropertyMap &object, LogLevel level )
 	 * \returns the property if it exists, boost::none otherwise
 	 */
-	boost::optional<util::PropertyValue> extractOrTell( const util::PropertyMap::key_type &name, util::PropertyMap &object, LogLevel level );
+	std::optional<util::PropertyValue> extractOrTell( const util::PropertyMap::key_type &name, util::PropertyMap &object, LogLevel level );
 
 	/**
 	 * Check if one of the given properties exists in the given PropMap.
@@ -52,7 +52,7 @@ namespace image_io
 	 * \copydoc hasOrTell( const std::initializer_list<util::PropertyMap::key_type> names, const util::PropertyMap &object, LogLevel level )
 	 * \returns the first found property, boost::none otherwise
 	 */
-	boost::optional<util::PropertyValue> extractOrTell( const std::initializer_list<util::PropertyMap::key_type> names, util::PropertyMap &object, LogLevel level );
+	std::optional<util::PropertyValue> extractOrTell( const std::initializer_list<util::PropertyMap::key_type> names, util::PropertyMap &object, LogLevel level );
 	
 	/**
 	 * Transform a given property into another and remove the original in the given PropMap.

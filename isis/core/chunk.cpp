@@ -16,8 +16,6 @@
 
 #include "chunk.hpp"
 
-using boost::optional;
-
 namespace isis
 {
 namespace data

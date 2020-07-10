@@ -24,8 +24,6 @@
 #include <stack>
 #include <memory>
 
-using boost::optional;
-
 /// @cond _internal
 namespace isis
 {
@@ -137,7 +135,7 @@ public:
 	 * Make image rectangular by dropping secondary sorted entries from all primary entries until their amount is equal.
 	 * \returns amount of dropped entries
 	 **/
-	size_t makeRectangular(optional< util::slist& > rejected=optional< util::slist& >());
+	size_t makeRectangular(util::slist* rejected=nullptr);
 
 	/// \returns the amount secondary sorted entries
 	size_t getHorizontalSize();

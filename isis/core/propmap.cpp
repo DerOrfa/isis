@@ -216,15 +216,15 @@ PropertyMap::mapped_type &PropertyMap::fetchEntry( container_type &root, const p
 	}
 }
 
-optional<const PropertyMap::mapped_type &> PropertyMap::findEntry( const PropPath &path  )const
+const PropertyMap::mapped_type& PropertyMap::findEntry( const PropPath &path  )const
 {
 	assert(!path.empty());
-	return findEntryImpl<const mapped_type,const container_type>( container, path.begin(), path.end() );
+	return findEntryImpl<true>( container, path.begin(), path.end() );
 }
-optional<PropertyMap::mapped_type &> PropertyMap::findEntry( const PropPath &path  )
+PropertyMap::mapped_type& PropertyMap::findEntry( const PropPath &path  )
 {
 	assert(!path.empty());
-	return findEntryImpl<mapped_type,container_type>( container, path.begin(), path.end() );
+	return findEntryImpl<false>( container, path.begin(), path.end() );
 }
 
 bool PropertyMap::recursiveRemove( container_type &root, const propPathIterator pathIt, const propPathIterator pathEnd )
@@ -262,40 +262,40 @@ bool PropertyMap::recursiveRemove( container_type &root, const propPathIterator 
 // Interface for accessing elements
 ////////////////////////////////////////////////////////////////////////////////////
 
-boost::optional< PropertyValue& > PropertyMap::queryProperty(const PropertyMap::PropPath& path)
+PropertyValue* PropertyMap::queryProperty(const PropertyMap::PropPath& path)
 {
 	return tryFindEntry<PropertyValue>( path );
 }
-boost::optional< const PropertyValue& > PropertyMap::queryProperty(const PropertyMap::PropPath& path) const
+const PropertyValue* PropertyMap::queryProperty(const PropertyMap::PropPath& path) const
 {
 	return tryFindEntry<PropertyValue>( path );
 }
 PropertyValue &PropertyMap::touchProperty( const PropertyMap::PropPath &path )
 {
-	return tryFetchEntry<PropertyValue>( path ).get();
+	return *tryFetchEntry<PropertyValue>( path );
 }
 const PropertyValue PropertyMap::property(const PropertyMap::PropPath& path) const
 {
-	const boost::optional< const PropertyValue& > prop = queryProperty(path);
-	return prop ? prop.get() : PropertyValue();
+	const auto prop = queryProperty(path);
+	return prop ? *prop : PropertyValue();
 }
 
-boost::optional< PropertyMap& > PropertyMap::queryBranch(const PropertyMap::PropPath& path)
+PropertyMap* PropertyMap::queryBranch(const PropertyMap::PropPath& path)
 {
 	return tryFindEntry<PropertyMap>( path );
 }
-boost::optional< const PropertyMap& > PropertyMap::queryBranch(const PropertyMap::PropPath& path) const
+const PropertyMap* PropertyMap::queryBranch(const PropertyMap::PropPath& path) const
 {
 	return tryFindEntry<PropertyMap>( path );
 }
 PropertyMap& PropertyMap::touchBranch(const PropertyMap::PropPath& path)
 {
-	return tryFetchEntry<PropertyMap>( path ).get();
+	return *tryFetchEntry<PropertyMap>( path );
 }
 const PropertyMap PropertyMap::branch( const PropertyMap::PropPath &path ) const
 {
-	const boost::optional< const PropertyMap& > branch=queryBranch( path );
-	return branch ? branch.get() : PropertyMap();
+	const auto branch=queryBranch( path );
+	return branch ? *branch : PropertyMap();
 }
 
 bool PropertyMap::remove( const PropPath &path )
@@ -312,7 +312,7 @@ bool PropertyMap::remove( const PathSet &removeList, bool keep_needed )
 {
 	bool ret = true;
 	for( PathSet::const_reference key :  removeList ) {
-		optional< PropertyValue& > found = tryFindEntry<PropertyValue>( key );
+		auto found = tryFindEntry<PropertyValue>( key );
 
 		if( found ) { // remove everything which is there
 			if( !(found->isNeeded() && keep_needed) ) { // if its not needed or keep_need is not true
@@ -467,7 +467,7 @@ PropertyMap::PathSet PropertyMap::transfer(PropertyMap& other, int overwrite)
 }
 PropertyMap::PathSet PropertyMap::transfer(PropertyMap& other, const PropPath &path, bool overwrite)
 {
-	optional< PropertyMap& > b=other.queryBranch(path);
+	auto b=other.queryBranch(path);
 	PathSet rejects;
 	if(b){
 		rejects=transfer(*b,overwrite);
@@ -517,7 +517,7 @@ PropertyMap::FlatMap PropertyMap::getFlatMap() const
 
 bool PropertyMap::transform( const PropPath &from,  const PropPath &to, uint16_t dstID)
 {
-	const boost::optional< PropertyValue& > src = queryProperty( from );
+	const auto src = queryProperty( from );
 	if(!src || src->isEmpty())
 		return false;
 
@@ -565,7 +565,7 @@ void PropertyMap::addNeeded( const PropPath &path )
 
 size_t PropertyMap::hasProperty( const PropPath &path ) const
 {
-	const optional< const PropertyValue& > ref = queryProperty( path );
+	const auto ref = queryProperty( path );
 	return ref ? ref->size():0;
 }
 
@@ -602,13 +602,14 @@ PropertyMap::PropPath PropertyMap::find( const key_type &key, bool allowProperty
 
 bool PropertyMap::hasBranch( const PropPath &path ) const
 {
-	const optional< const PropertyMap & > q=queryBranch( path );
+	const auto q=queryBranch( path );
 	return q && !q->isEmpty();
 }
 
 bool PropertyMap::rename( const PropPath &oldname,  const PropPath &newname, bool overwrite )
 {
-	optional<mapped_type &> old_e = findEntry( oldname );
+#pragma message test me
+	mapped_type& old_e = findEntry( oldname );
 
 	if ( !old_e ) {//abort if oldname is not there
 		LOG( Runtime, error ) << "Cannot rename " << oldname << " it does not exist";
@@ -622,10 +623,10 @@ bool PropertyMap::rename( const PropPath &oldname,  const PropPath &newname, boo
 			return false;
 		}
 		LOG_IF( !empty , Runtime, warning ) << "Overwriting " << std::make_pair( newname, new_e ) << " with " << *old_e;
-		new_e.swap(*old_e);
+		new_e.swap(old_e);
 		remove( oldname ); //can only fail if oldname is not there -- and if it wasn't we'd have aborted already
 	} else { //if its a lexical rename get the data out of the map
-		mapped_type buff;old_e->swap(buff);
+		mapped_type buff;old_e.swap(buff);
 		remove( oldname );
 		fetchEntry(newname).swap(buff);//and re-insert it with newname
 	}
@@ -660,7 +661,7 @@ bool PropertyMap::insert(const std::pair<PropPath,PropertyValue> &p){
 void PropertyMap::extract(const PropPath &p,PropertyMap &dst){
 	auto found=findEntry(p);
 	if(found){
-		dst.fetchEntry(p).swap(*found);
+		dst.fetchEntry(p).swap(found);
 		remove(p);
 	}
 }

@@ -20,7 +20,6 @@
 #include "vector.hpp"
 #include "property.hpp"
 #include <boost/token_iterator.hpp>
-#include <boost/optional/optional_io.hpp>
 
 #define _USE_MATH_DEFINES 1
 #include <math.h>
@@ -229,7 +228,7 @@ void Image::setIndexingDim( dimensions d )
 	}
 }
 
-bool Image::reIndex(optional< util::slist& > rejected)
+bool Image::reIndex(util::slist* rejected)
 {
 	if ( set.isEmpty() ) {
 		LOG( Debug, warning ) << "Reindexing an empty image is useless.";
@@ -314,9 +313,9 @@ bool Image::reIndex(optional< util::slist& > rejected)
 	int oneCnt = 0;
 
 	for( const util::PropertyMap::key_type & ref :  vectors ) {
-		const optional< util::fvector3& > found=queryValueAs<util::fvector3>( ref );
+		const auto found=queryValueAs<util::fvector3>( ref );
 		if ( found ) {
-			util::fvector3 &vec = found.get();
+			util::fvector3 &vec = *found;
 
 			if( util::sqlen(vec) == 0 ) {
 				util::fvector3  v_one{0,0,0};
@@ -333,9 +332,9 @@ bool Image::reIndex(optional< util::slist& > rejected)
 	}
 
 	if(!hasProperty("indexOrigin")){ // if there is no common indexOrigin
-		optional< const util::PropertyValue& > found =first.queryProperty("indexOrigin");
+		const util::PropertyValue* found =first.queryProperty("indexOrigin");
 		if(found) // get it from the first chunk - which than by definition should have one
-			touchProperty("indexOrigin")=found.get();
+			touchProperty("indexOrigin")=*found;
 		else{
 			LOG(Runtime,error) << "No indexOrigin found " << " falling back to " << util::fvector3();
 			setValueAs("indexOrigin",util::fvector3());
@@ -353,12 +352,12 @@ bool Image::reIndex(optional< util::slist& > rejected)
 
 
 	//if we have at least two slides (and have slides (with different positions) at all)
-	const optional< const util::PropertyValue& > firstV = first.queryProperty( "indexOrigin" );
+	const util::PropertyValue* firstV = first.queryProperty( "indexOrigin" );
 
 	if ( chunk_dims == 2 && structure_size[2] > 1 && firstV ) {
 		const Chunk &last = chunkAt( structure_size[2] - 1 );
 
-		optional< const util::PropertyValue& > lastV = last.queryProperty( "indexOrigin" );
+		const util::PropertyValue* lastV = last.queryProperty( "indexOrigin" );
 
 		if ( lastV ) {
 			//check the slice vector
@@ -367,11 +366,11 @@ bool Image::reIndex(optional< util::slist& > rejected)
 					<< "The distance between the the first and the last chunk is zero. Thats bad, because I'm going to normalize it.";
 			util::normalize(distVecNorm);
 
-			const optional< util::fvector3& > sliceVec = queryValueAs<util::fvector3>( "sliceVec" );
+			const auto sliceVec = queryValueAs<util::fvector3>( "sliceVec" );
 
 			if ( sliceVec ) {
 				LOG_IF( ! util::fuzzyEqualV( distVecNorm,*sliceVec ), Runtime, info )
-						<< "The existing sliceVec " << sliceVec
+						<< "The existing sliceVec " << *sliceVec
 						<< " differs from the distance vector between chunk 0 and " << structure_size[2] - 1
 						<< " " << distVecNorm;
 			} else {
@@ -407,7 +406,7 @@ bool Image::reIndex(optional< util::slist& > rejected)
 	}
 
 	//if we have row- and column- vector
-	const optional< util::fvector3& > rrow = queryValueAs<util::fvector3>( "rowVec" ),rcolumn = queryValueAs<util::fvector3>( "columnVec" );
+	auto rrow = queryValueAs<util::fvector3>( "rowVec" ),rcolumn = queryValueAs<util::fvector3>( "columnVec" );
 	if(rrow && rcolumn){
 		const util::fvector3 &row=*rrow,&column=*rcolumn;
 		LOG_IF( util::dot( row, column ) > 0.01, Runtime, warning ) << "The cosine between the columns and the rows of the image is bigger than 0.01";
@@ -416,7 +415,7 @@ bool Image::reIndex(optional< util::slist& > rejected)
 											row[2] * column[0] - row[0] * column[2],
 											row[0] * column[1] - row[1] * column[0]
 										});
-		optional< util::fvector3& > sliceVec = queryValueAs<util::fvector3>( "sliceVec" );
+		auto sliceVec = queryValueAs<util::fvector3>( "sliceVec" );
 
 		if ( sliceVec ) {
 			LOG_IF( std::acos( util::dot(crossVec, *sliceVec ) )  > 180 / M_PI, Runtime, warning ) //angle more than one degree
@@ -435,7 +434,7 @@ bool Image::reIndex(optional< util::slist& > rejected)
 	}
 
 
-	optional< util::fvector3 & > storedFoV = queryValueAs<util::fvector3>( "fov" );
+	auto storedFoV = queryValueAs<util::fvector3>( "fov" );
 
 	if ( storedFoV ) {
 		const util::fvector3 calcFoV = getFoV();
@@ -640,15 +639,15 @@ std::list<util::PropertyValue> Image::getChunksProperties( const util::PropertyM
 
 	if( clean ) {
 		for( const std::shared_ptr<const Chunk> &ref :  lookup ) {
-			const optional< const util::PropertyValue& > prop = ref->queryProperty( key );
+			const auto prop = ref->queryProperty( key );
 
 			if(unique){ // if unique
 				if( !prop || prop->isEmpty() || //if there is no (or an empty)  prop in ref skip it
-					(prop && !ret.empty() &&  prop.get() == ret.back()) // if there is a prop, skip if its the same as the one inserted before
+					(prop && !ret.empty() &&  *prop == ret.back()) // if there is a prop, skip if its the same as the one inserted before
 				) 
 					continue;
 			}
-			ret.push_back( prop ? prop.get() : util::PropertyValue() );
+			ret.push_back( prop ? *prop : util::PropertyValue() );
 		}
 	} else {
 		LOG( Runtime, error ) << "Cannot get chunk-properties from non clean images. Run reIndex first";
@@ -897,12 +896,12 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 	
 	//transfer properties needed for the chunk back into the chunk (if they're there but not lists)
 	for( util::PropertyMap::PathSet::const_reference need : needed ) { 
-		const boost::optional< util::PropertyValue& > foundNeed=queryProperty( need );
+		const auto foundNeed=queryProperty( need );
 		if(foundNeed){
 			for( std::shared_ptr<Chunk> &ref : lookup ) {
 				if( !ref->hasProperty( need ) ) {
 					LOG( Debug, verbose_info ) << "Copying " << std::make_pair(need, foundNeed) << " from the image to the chunk for splicing";
-					ref->touchProperty( need ) = foundNeed.get();
+					ref->touchProperty( need ) = *foundNeed;
 				} else 
 					LOG(Debug,error) << need << " was found in the chunk although it is in the image as well. It will be deleted in the image";
 			}

@@ -108,25 +108,26 @@ util::PropertyMap::key_type hasOrTell(const std::initializer_list< util::Propert
 	return util::PropertyMap::key_type();
 }
 
-optional< util::PropertyValue > extractOrTell(const util::PropertyMap::key_type &name, util::PropertyMap& object, LogLevel level)
+std::optional< util::PropertyValue > extractOrTell(const util::PropertyMap::key_type &name, util::PropertyMap& object, LogLevel level)
 {
-	optional< util::PropertyValue > ret;
-	boost::optional< util::PropertyValue& > found=object.queryProperty(name);
+	auto found=object.queryProperty(name);
 	if(found){ // if we found one, swap its contet with ret and remove it
-		ret.reset(util::PropertyValue());
-		found->swap(*ret);
+		util::PropertyValue ret;
+		found->swap(ret);
 		object.remove(name);
+		return ret;
+	} else {
+		LOG(Runtime, level ) << "Missing property " << name;
+		return std::optional< util::PropertyValue >();
 	}
-	LOG_IF(!ret, Runtime, level ) << "Missing property " << name;
-	return ret;
 }
-optional< util::PropertyValue > extractOrTell(const std::initializer_list< util::PropertyMap::key_type > names, util::PropertyMap& object, LogLevel level)
+std::optional< util::PropertyValue > extractOrTell(const std::initializer_list< util::PropertyMap::key_type > names, util::PropertyMap& object, LogLevel level)
 {
-	optional< util::PropertyValue > ret;
+	std::optional< util::PropertyValue > ret;
 	for(const util::PropertyMap::key_type &key:names){ // iterate through all props
-		boost::optional< util::PropertyValue& > found=object.queryProperty(key);
-		if(found){ // if we found one, swap its contet with ret and remove it
-			ret.reset(util::PropertyValue());
+		auto found=object.queryProperty(key);
+		if(found){ // if we found one, swap its content with ret and remove it
+			ret.emplace();
 			found->swap(*ret);
 			object.remove(key);
 			break;
@@ -203,7 +204,7 @@ std::string FileFormat::makeFilename( const util::PropertyMap &props, const std:
 		}
 		
 		util::PropertyMap::key_type prop( smatch.c_str() ); // use remaining string to look for property
-		const boost::optional< util::PropertyValue const& > found= props.queryProperty( prop );
+		const auto found= props.queryProperty( prop );
 		std::string pstring;
 		if( found && !found->isEmpty() ) {
 			if(formatting==none){

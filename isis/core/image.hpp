@@ -24,8 +24,6 @@
 #include "common.hpp"
 #include "progressfeedback.hpp"
 
-using boost::optional;
-
 namespace isis
 {
 namespace data
@@ -128,8 +126,10 @@ public:
 	/**
 	 * Create image from a list of Chunks or objects with the base Chunk.
 	 * Removes used chunks from the given list. So afterwards the list consists of the rejected chunks.
-	 */
-	template<typename T> Image ( std::list<T> &chunks, optional< util::slist& > rejected=optional< util::slist& >(), dimensions min_dim = rowDim ) : Image()
+	 */ 
+	//@todo why template
+	//@todo unify with concepts (or std::span)
+	template<typename T> Image ( std::list<T> &chunks, dimensions min_dim = rowDim, util::slist* rejected=nullptr ) : Image()
 	{
 		minIndexingDim = min_dim;
 		insertChunksFromList ( chunks, rejected );
@@ -138,11 +138,11 @@ public:
 	 * Create image from a vector of Chunks or objects with the base Chunk.
 	 * Removes used chunks from the given list. So afterwards the list consists of the rejected chunks.
 	 */
-	template<typename T> Image ( std::vector<T> &chunks, optional< util::slist& > rejected=optional< util::slist& >(), dimensions min_dim = rowDim ) : Image()
+	template<typename T> Image ( std::vector<T> &chunks, dimensions min_dim = rowDim,util::slist* rejected=nullptr  ) : Image()
 	{
 		minIndexingDim = min_dim;
 		std::list<T> tmp( chunks.begin(), chunks.end() );
-		insertChunksFromList ( tmp );
+		insertChunksFromList ( tmp, rejected );
 		chunks.assign( tmp.begin(), tmp.end() );
 	}
 
@@ -151,7 +151,7 @@ public:
 	 * Removes used chunks from the given sequence container. So afterwards the container consists of the rejected chunks.
 	 * \returns amount of successfully inserted chunks
 	 */
-	template<typename T> size_t insertChunksFromList ( std::list<T> &chunks, optional< util::slist& > rejected=optional< util::slist& >() ) {
+	template<typename T> size_t insertChunksFromList ( std::list<T> &chunks, util::slist* rejected=nullptr ) {
 		static_assert( std::is_base_of<Chunk, T>::value, "Can only insert objects derived from Chunks" );
 		size_t cnt = 0;
 
@@ -179,7 +179,6 @@ public:
 
 		return cnt;
 	}
-
 
 	/**
 	 * Create image from a single chunk.
@@ -342,7 +341,7 @@ public:
 	 * The image will be "clean" on success.
 	 * \returns true if the image was successfully reindexed and is valid, false otherwise.
 	 */
-	bool reIndex(optional< util::slist& > rejected=optional< util::slist& >());
+	bool reIndex(util::slist* rejected=nullptr);
 
 	/// \returns true if there is no chunk in the image
 	bool isEmpty() const;
@@ -372,7 +371,7 @@ public:
 
 		if( clean ) {
 			for( const std::shared_ptr<const Chunk> &ref :  lookup ) {
-				const optional< const util::PropertyValue& > prop = ref->queryProperty( key );
+				const auto prop = ref->queryProperty( key );
 
 				if(unique){ // if unique
 					if( ( prop && !ret.empty() &&  *prop == ret.back() ) || // if there is prop, skip if its equal
@@ -381,7 +380,7 @@ public:
 						continue;
 				}
 				ret.push_back(
-					prop ? prop.get().as<T>() : T()
+					prop ? prop->as<T>() : T()
 				);
 			}
 		} else {

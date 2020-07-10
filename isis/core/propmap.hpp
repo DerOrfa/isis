@@ -21,11 +21,7 @@
 #include "istring.hpp"
 #include <set>
 #include <algorithm>
-#include <boost/optional.hpp>
-#include <boost/optional/optional_io.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
-
-using boost::optional;
 
 namespace isis
 {
@@ -111,6 +107,7 @@ public:
 	};
 
 protected:
+	static Node &nullnode();
 	typedef PropPath::const_iterator propPathIterator;
 	container_type container;
 
@@ -149,7 +146,8 @@ API_EXCLUDE_END;
 	/// internal recursion-function for remove
 	static bool recursiveRemove( container_type &root, const propPathIterator pathIt, const propPathIterator pathEnd );
 
-	template <typename MAPPED,typename CONTAINER> static optional<MAPPED &> findEntryImpl( CONTAINER &root, const propPathIterator at, const propPathIterator pathEnd )
+	template <bool CONST> static std::conditional_t<CONST,const mapped_type,mapped_type>& 
+	findEntryImpl( std::conditional_t<CONST,const container_type,container_type> &root, const propPathIterator at, const propPathIterator pathEnd )
 	{
 		propPathIterator next = at;
 		next++;
@@ -157,44 +155,44 @@ API_EXCLUDE_END;
 
 		if ( next != pathEnd ) {//we are not at the end of the path (aka the leaf)
 			if ( found != root.end() ) {//and we found the entry
-				return findEntryImpl<MAPPED,CONTAINER>( std::get<PropertyMap>( found->second ).container, next, pathEnd ); //continue there
+				return findEntryImpl<CONST>( found->second.branch().container, next, pathEnd ); //continue there
 			}
 		} else if ( found != root.end() ) {// if its the leaf and we found the entry
 			return found->second; // return that entry
 		}
 
-		return optional<MAPPED &>();
+		return nullnode();
 	}
 
 protected:
 /// @cond _internal
-	template<typename T> optional<T &> queryValueAsImpl( const PropPath &path, const optional<size_t> &at ) {
-		const optional< PropertyValue & > found = queryProperty( path );
+	template<typename T> T* queryValueAsImpl( const PropPath &path, const std::optional<size_t> &at ) {
+		const auto &found = queryProperty( path );
 
-		if( found && found->size()>at.get_value_or(0) ) {// apparently it has a value so lets try use that
+		if( found && found->size()>at.value_or(0) ) {// apparently it has a value so lets try use that
 			if( !found->is<T>() ) {
 				if( !found->transform<T>() ) {// convert to requested type
 					LOG( Runtime, warning ) << "Conversion of Property " << path << " from " << util::MSubject( found->getTypeName() ) << " to "
 					                        << util::MSubject( util::typeName<T>() ) << " failed";
-					return optional<T &>();
+					return nullptr;
 				}
 			}
 			assert( found->is<T>() );
-			return std::get<T>(at ?
+			return &std::get<T>(at ?
 			    found->at(*at):
 			    found->front()
 			); // use single value ops, if at was not given
 		}
-		return optional<T &>();
+		return nullptr;
 	}
-	template<typename T> T getValueAsImpl( const PropPath &path, const optional<size_t> &at )const {
-		const optional< const PropertyValue & > ref = queryProperty( path );
+	template<typename T> T getValueAsImpl( const PropPath &path, const std::optional<size_t> &at )const {
+		const auto ref = queryProperty( path );
 
 		if( !ref ){
 			LOG( Runtime, warning ) << "Property " << MSubject( path ) << " doesn't exist returning " << MSubject( ValueNew(T()) );
 			return T();
-		} else if (ref->size()<=at.get_value_or(0)){
-			LOG_IF(at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " does exist, but index " << MSubject( at ) << " is out of bounds. returning " << MSubject( ValueNew(T()) );
+		} else if (ref->size()<=at.value_or(0)){
+			LOG_IF(at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " does exist, but index " << *at << " is out of bounds. returning " << MSubject( ValueNew(T()) );
 			LOG_IF(!at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " is empty. returning " << MSubject( ValueNew(T()) );
 			return T();
 		} else
@@ -223,12 +221,12 @@ protected:
 	 * If the "path" or the property does not exist NULL is returned.
 	 * \note this is the const version of \link fetchEntry( const PropPath &path ) \endlink, so it won't modify the map.
 	 */
-	optional<const PropertyMap::mapped_type &> findEntry( const PropPath &path )const;
-	optional<PropertyMap::mapped_type &> findEntry( const PropPath &path  );
+	const PropertyMap::mapped_type& findEntry( const PropPath &path )const;
+	PropertyMap::mapped_type& findEntry( const PropPath &path  );
 
-	template<typename T> optional<const T &> tryFindEntry( const PropPath &path )const;
-	template<typename T> optional<T &> tryFindEntry( const PropPath &path );
-	template<typename T> optional<T &> tryFetchEntry( const PropPath &path );
+	template<typename T> const T* tryFindEntry( const PropPath &path )const;
+	template<typename T> T* tryFindEntry( const PropPath &path );
+	template<typename T> T* tryFetchEntry( const PropPath &path );
 
 	/// create a list of keys for every entry for which the given scalar predicate is true.
 	template<class Predicate> PathSet genKeyList()const {
@@ -265,15 +263,15 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	/**
 	 * Access the property referenced by the path.
-	 * If the property does not exist false is returned.
+	 * If the property does not exist nullptr is returned.
 	 * As well as for accessing errors like the given path is a branch instead of a property.
 	 * \param path the path to the property
-	 * \returns boost::optional referencing the property or false
+	 * \returns pointer the property or nullptr
 	 */
-	optional< const PropertyValue & > queryProperty( const PropPath &path )const;
+	const PropertyValue* queryProperty( const PropPath &path )const;
 
 	/// @copydoc queryProperty( const PropPath &path )const
-	optional< PropertyValue & > queryProperty( const PropPath &path );
+	PropertyValue* queryProperty( const PropPath &path );
 
 	/**
 	 * Get the property at the path, or an empty one if there is none.
@@ -292,15 +290,15 @@ public:
 
 	/**
 	 * Access the property branch referenced by the path.
-	 * If the branch does not exist false is returned.
+	 * If the branch does not exist nullptr is returned.
 	 * As well as for accessing errors like the given path is a property instead of a branch.
 	 * \param path the path to the branch
-	 * \returns boost::optional referencing the branch or false
+	 * \returns pointer to the branch or nullptr
 	 */
-	optional< const PropertyMap & > queryBranch( const PropPath &path )const;
+	const PropertyMap* queryBranch( const PropPath &path )const;
 
 	/// @copydoc queryBranch( const PropPath &path )const
-	optional< PropertyMap & > queryBranch( const PropPath &path );
+	PropertyMap* queryBranch( const PropPath &path );
 
 	/**
 	 * Access the branch referenced by the path, create it if its not there.
@@ -594,7 +592,7 @@ public:
 	 * \returns the property with given type, if not set yet T() is returned.
 	 */
 	template<typename T> T getValueAs( const PropPath &path, size_t at )const {
-		return getValueAsImpl<T>(path,optional<size_t>(at));// uses single value ops, if at was not given
+		return getValueAsImpl<T>(path,std::optional<size_t>(at));// uses single value ops, if at was not given
 	}
 	/**
 	 * Request a property value via the given key in the given type.
@@ -609,21 +607,21 @@ public:
 	 * \returns the property with given type, if not set yet T() is returned.
 	 */
 	template<typename T> T getValueAs( const PropPath &path)const {
-		return getValueAsImpl<T>(path,optional<size_t>());
+		return getValueAsImpl<T>(path,std::optional<size_t>());
 	}
 
 	/**
 	 * Get a valid reference to the stored value in a given type at a given index.
 	 * This tries to access a property's stored value as reference.
 	 * If the stored type is not T, a transformation is done in place.
-	 * If that fails, false is returned.
-	 * If the property does not exist (or does not store enough values) false will be returned as well
+	 * If that fails, nullptr is returned.
+	 * If the property does not exist (or does not store enough values) nullptr will be returned as well
 	 * \param path the path to the property
 	 * \param at the index of the value to reference
-	 * \returns optional<T&> referencing the requested value or false
+	 * \returns pointer to the requested value or nullptr
 	 */
-	template<typename T> optional<T &> queryValueAs( const PropPath &path, size_t at ) {
-		return queryValueAsImpl<T>(path, optional<size_t>(at) );
+	template<typename T> T* queryValueAs( const PropPath &path, size_t at ) {
+		return queryValueAsImpl<T>(path, std::optional<size_t>(at) );
 	}
 	/**
 	 * Get a valid reference to the stored value in a given type at a given index.
@@ -636,22 +634,22 @@ public:
 	 * \returns T& referencing the requested value
 	 */
 	template<typename T> T& refValueAs( const PropPath &path, size_t at ) {
-		const optional<T &> query=queryValueAs<T>(path,at);
+		const auto query=queryValueAs<T>(path,at);
 		LOG_IF(!query,Runtime,error) << "Referencing unavailable value " << MSubject( path ) << " this will probably crash";
-		return query.get();
+		return *query;
 	}
 	/**
 	 * Get a valid reference to the stored single value in a given type.
 	 * This tries to access a property's stored value as reference.
 	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
 	 * If the stored type is not T, a transformation is done in place.
-	 * If that fails, false is returned.
-	 * If the property does not exist (or is empty) false will be returned as well
+	 * If that fails, nullptr is returned.
+	 * If the property does not exist (or is empty) nullptr will be returned as well
 	 * \param path the path to the property
-	 * \returns optional<T&> referencing the requested value or false
+	 * \returns pointer the requested value or nullptr
 	 */
-	template<typename T> optional<T &> queryValueAs( const PropPath &path) {
-		return queryValueAsImpl<T>(path, optional<size_t>() );
+	template<typename T> T* queryValueAs( const PropPath &path) {
+		return queryValueAsImpl<T>(path, std::optional<size_t>() );
 	}
 	/**
 	 * Get a valid reference to the stored single value in a given type.
@@ -664,9 +662,9 @@ public:
 	 * \returns T& referencing the requested value
 	 */
 	template<typename T> T& refValueAs( const PropPath &path) {
-		const optional<T &> query=queryValueAs<T>(path);
+		const auto &query=queryValueAs<T>(path);
 		LOG_IF(!query,Runtime,error) << "Referencing unavailable value " << MSubject( path ) << " this will probably crash";
-		return query.get();
+		return *query;
 	}
 
 	/**
@@ -677,10 +675,10 @@ public:
 	 * If the property does not exist (or is empty) it is created with def as first value.
 	 * \param path the path to the property
 	 * \param def the default value to be used when creating the property
-	 * \returns optional<T&> referencing the requested value or false
+	 * \returns pointer to the requested value or nullptr
 	 */
 	template<typename T> T& refValueAsOr( const PropPath &path, const T &def )  {
-		const optional< PropertyValue & > fetched = tryFetchEntry<PropertyValue>( path );
+		const auto fetched = tryFetchEntry<PropertyValue>( path );
 		if(!fetched)
 			throw std::invalid_argument(path.toString()+" is not available");
 
@@ -711,7 +709,7 @@ public:
 	 * \returns the property with given type, if not set yet def is returned.
 	 */
 	template<typename T> T getValueAsOr( const PropPath &path, const T &def )const {
-		optional< const PropertyValue & > ref = tryFindEntry<PropertyValue>( path );
+		auto ref = tryFindEntry<PropertyValue>( path );
 
 		if( ref && !ref->isEmpty() )
 			return ref->as<T>();
@@ -720,7 +718,7 @@ public:
 		}
 	}
 	template<typename T> T getValueAsOr( const PropPath &path, size_t at, const T &def )const {
-		const optional< const PropertyValue & > ref = tryFindEntry<PropertyValue>( path );
+		const auto &ref = tryFindEntry<PropertyValue>( path );
 
 		if( ref && ref->size() > at )
 			return ref->at( at ).as<T>();
@@ -787,6 +785,7 @@ public:
 	Node()=default;
 	bool operator==(const Node& other)const{return variant()==other.variant();}
 	bool operator!=(const Node& other)const{return variant()!=other.variant();}
+	explicit operator bool() const {return !is<std::monostate>();}
 	Node(const PropertyValue &val):std::variant<std::monostate, PropertyValue, PropertyMap>(val){}
 	Node(const PropertyMap &map):std::variant<std::monostate, PropertyValue, PropertyMap>(map){}
 	std::variant<std::monostate, PropertyValue, PropertyMap>& variant(){return *this;}
@@ -880,33 +879,33 @@ template<typename T> PropertyMap::PathSet PropertyMap::getLocal()const{
 	}
 	return ret;
 }
-template<typename T> optional<const T &> PropertyMap::tryFindEntry( const PropPath &path )const {
+template<typename T> const T* PropertyMap::tryFindEntry( const PropPath &path )const {
 	if(!path.empty()){
 		try {
-			const optional<const PropertyMap::mapped_type &> ref = findEntry( path );
+			const auto& ref = findEntry( path );
 
 			if( ref )
-				return std::get<T>( *ref );
+				return &std::get<T>( ref );
 		} catch ( const std::bad_variant_access &e ) {
 			LOG( Runtime, error ) << "Got errror " << e.what() << " when accessing " << MSubject( path );
 		}
 	} else {
 		LOG( Runtime, error ) << "Got empty path, will return nothing";
 	}
-	return  optional<const T &>();
+	return  nullptr;
 }
-template<typename T> optional<T &> PropertyMap::tryFindEntry( const PropPath &path ){
+template<typename T> T* PropertyMap::tryFindEntry( const PropPath &path ){
 	try {
-		optional<PropertyMap::mapped_type &> ref = findEntry( path );
+		auto &ref = findEntry( path );
 
 		if( ref )
-			return std::get<T>( *ref );
+			return &std::get<T>( ref );
 	} catch ( const std::bad_variant_access &e ) {
 		LOG( Runtime, error ) << "Got error " << e.what() << " when accessing " << MSubject( path );
 	}
-	return  optional<T &>();
+	return nullptr;
 }
-template<typename T> optional<T &> PropertyMap::tryFetchEntry( const PropPath &path ) {
+template<typename T> T* PropertyMap::tryFetchEntry( const PropPath &path ) {
 	try {
 		mapped_type &n = fetchEntry( path );
 		if(!n.is<T>()){
@@ -917,12 +916,12 @@ template<typename T> optional<T &> PropertyMap::tryFetchEntry( const PropPath &p
 				LOG( Runtime, error ) << "Content was " << n;
 			}
 		}
-		return std::get<T>( n );
+		return &std::get<T>( n );
 	} catch( const std::bad_variant_access &e ) {
 		LOG( Runtime, error ) << "Got error " << e.what() << " when accessing " << MSubject( path );
 	}
 
-	return  optional<T &>();
+	return nullptr;
 }
 
 
