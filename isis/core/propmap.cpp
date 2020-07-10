@@ -13,9 +13,7 @@
 
 #include "propmap.hpp"
 #include <boost/iostreams/stream.hpp>
-#include <boost/interprocess/streams/bufferstream.hpp>
 #include <boost/property_tree/xml_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 
 namespace isis
 {
@@ -26,13 +24,14 @@ API_EXCLUDE_BEGIN;
 namespace _internal
 {
 
-struct MapStrAdapter: boost::static_visitor<PropertyValue> {
+struct MapStrAdapter {
+	PropertyValue operator()( const std::monostate &val )const {return PropertyValue(std::string("<<invalid node>>"));}
 	PropertyValue operator()( const PropertyValue &val )const {return val;}
 	PropertyValue operator()( const PropertyMap &map )const {
 		return PropertyValue( std::string( "[[PropertyMap with " ) + std::to_string( map.container.size() ) + " entries]]" );
 	}
 };
-struct RemoveEqualCheck: boost::static_visitor<bool> {
+struct RemoveEqualCheck {
 	bool removeNeeded;
 	RemoveEqualCheck( bool _removeNeeded ): removeNeeded( _removeNeeded ) {}
 	bool operator()( PropertyValue &first, const PropertyValue &second )const { // if both are Values
@@ -47,17 +46,17 @@ struct RemoveEqualCheck: boost::static_visitor<bool> {
 	}
 	template<typename T1, typename T2> bool operator()( T1 &first, const T2 &second )const {return false;} // any other case
 };
-struct JoinTreeVisitor: boost::static_visitor<bool> {
+struct JoinTreeVisitor {
 	bool overwrite,delsource;
 	PropertyMap::PathSet &rejects;
 	const PropertyMap::PropPath &prefix, &name;
 	JoinTreeVisitor( bool _overwrite, bool _delsource, PropertyMap::PathSet &_rejects, const PropertyMap::PropPath &_prefix, const PropertyMap::PropPath &_name )
-		: overwrite( _overwrite ), delsource(_delsource), rejects( _rejects ), prefix( _prefix ), name( _name ) {}
+	    : overwrite( _overwrite ), delsource(_delsource), rejects( _rejects ), prefix( _prefix ), name( _name ) {}
 	bool operator()( PropertyValue &first, PropertyValue &second )const { // if both are Values
 		if( first.isEmpty() || overwrite ) { // if ours is empty or overwrite is enabled
 			//replace ours by the other
 			if(delsource)first.transfer(second,true);
-			else first = second; 
+			else first = second;
 			return true;
 		} else { // otherwise put the other into rejected if its unequal to ours
 			if( first != second && !second.isEmpty())
@@ -72,25 +71,30 @@ struct JoinTreeVisitor: boost::static_visitor<bool> {
 	template<typename T1, typename T2> bool operator()( T1 &first, const T2 &second )const {// reject any other case
 		rejects.insert( rejects.end(), prefix / name );
 		return false;
-	} 
+	}
 };
-struct FlatMapMaker: boost::static_visitor<void> {
+struct FlatMapMaker {
 	PropertyMap::FlatMap &out;
 	const PropertyMap::PropPath &name;
 	FlatMapMaker( PropertyMap::FlatMap &_out, const PropertyMap::PropPath &_name ): out( _out ), name( _name ) {}
+	void operator()( const std::monostate &value )const{}
 	void operator()( const PropertyValue &value )const {
 		out[name] = value;
 	}
 	void operator()( const PropertyMap &map )const {
 		for ( PropertyMap::container_type::const_iterator i = map.container.begin(); i != map.container.end(); i++ ) {
-			boost::apply_visitor( FlatMapMaker( out, name / i->first ), i->second );
+			const auto &key=i->first;
+			const PropertyMap::Node &node= i->second;
+			std::visit( FlatMapMaker( out, name / key ), node.variant() );
 		}
 	}
 };
-struct TreeInvalidCheck: boost::static_visitor<bool> {
+struct TreeInvalidCheck {
 	bool operator()( PropertyMap::container_type::const_reference ref ) const {
-		return boost::apply_visitor( *this, ref.second );
+		const PropertyMap::Node &node= ref.second;
+		return std::visit( *this, node.variant() );
 	}//recursion
+	bool operator()( const std::monostate &val )const {return false;}
 	bool operator()( const PropertyValue &val )const {
 		return PropertyMap::InvalidP()( val );
 	}
@@ -104,12 +108,13 @@ struct TreeInvalidCheck: boost::static_visitor<bool> {
  * Will return true, if whole tree is extractable, but will not extract.
  * Otherwise will extract all entries to "out" and return with false;
  */
-struct Extractor: boost::static_visitor<bool> {
+struct Extractor {
 	std::function<bool(const PropertyValue &prop)> &condition;
 	PropertyMap &out;
 	const PropertyMap::PropPath &name;
 	Extractor( PropertyMap &_out, const PropertyMap::PropPath &_name, std::function<bool(const PropertyValue &prop)> &_condition )
 	: out( _out ), name( _name ), condition(_condition) {}
+	bool operator()( const std::monostate & )const {return false;}
 	bool operator()( const PropertyValue &value )const {
 		return condition(value);
 	}
@@ -120,7 +125,8 @@ struct Extractor: boost::static_visitor<bool> {
 		// check if this whole map can be extracted
 		for ( util::PropertyMap::container_type::iterator i = map.container.begin(); i != map.container.end(); i++ ) {
 			const PropertyMap::PropPath path=name / i->first;
-			if(boost::apply_visitor( Extractor( out, name / i->first, condition ), i->second )==false){ // ..
+			PropertyMap::Node &node=i->second;
+			if(std::visit( Extractor( out, name / i->first, condition ), node.variant() )==false){ // ..
 				extract_me=false; // ok this must stay, so the tree must stay
 			} else {
 				to_extract.push_back(i->first); // memorize this as to be extracted (in case not the whole tree is to be extracted)
@@ -131,7 +137,7 @@ struct Extractor: boost::static_visitor<bool> {
 		else {
 			for (const PropertyMap::PropPath &p:to_extract) { // extract all memorized entries into branch "name" in out
 				LOG(Debug,verbose_info) << "Extracting " << p << " into " << name;
-				map.extract(p,name.empty()?out:out.touchBranch(name)); 
+				map.extract(p,name.empty()?out:out.touchBranch(name));
 			}
 			return false;
 		}
@@ -199,11 +205,11 @@ PropertyMap::mapped_type &PropertyMap::fetchEntry( container_type &root, const p
 	if ( next != pathEnd ) {//we are not at the end of the path (a proposed leaf in the PropMap)
 		const container_type::iterator found = root.find( *at );
 		if ( found != root.end() ) {//and we found the entry
-			return fetchEntry( boost::get<PropertyMap>( found->second ).container, next, pathEnd ); //continue there
+			return fetchEntry( std::get<PropertyMap>( found->second ).container, next, pathEnd ); //continue there
 		} else { // if we should create a sub-map
 			//insert a empty branch (aka PropMap) at "*at" (and fetch the reference of that)
 			LOG( Debug, verbose_info ) << "Creating an empty branch " << *at << " trough fetching";
-			return fetchEntry( boost::get<PropertyMap>( root[*at] = PropertyMap() ).container, next, pathEnd ); // and continue there (default value of the variant is PropertyValue, so init it to PropertyMap)
+			return fetchEntry( std::get<PropertyMap>( root[*at] = PropertyMap() ).container, next, pathEnd ); // and continue there (default value of the variant is PropertyValue, so init it to PropertyMap)
 		}
 	} else { //if its the leaf
 		return root[*at]; // (create and) return that entry
@@ -232,14 +238,14 @@ bool PropertyMap::recursiveRemove( container_type &root, const propPathIterator 
 
 		if ( found != root.end() ) {
 			if ( next != pathEnd ) {
-				PropertyMap &ref = boost::get<PropertyMap>( found->second );
+				PropertyMap &ref = std::get<PropertyMap>( found->second );
 				ret = recursiveRemove( ref.container, next, pathEnd );
 
 				if ( ref.isEmpty() )
 					root.erase( found ); // remove the now empty branch
 			} else {
-				LOG_IF( found->second.type() == typeid( PropertyMap ) && !boost::get<PropertyMap>( found->second ).isEmpty(), Debug, warning )
-						<< "Deleting non-empty branch " << MSubject( found->first );
+				LOG_IF( found->second.isBranch() && !found->second.branch().isEmpty(), Debug, warning )
+				        << "Deleting non-empty branch " << MSubject( found->first );
 				root.erase( found );
 				ret = true;
 			}
@@ -296,7 +302,7 @@ bool PropertyMap::remove( const PropPath &path )
 {
 	try {
 		return recursiveRemove( container, path.begin(), path.end() );
-	} catch( const boost::bad_get &e ) {
+	} catch( const std::bad_variant_access &e ) {
 		LOG( Runtime, error ) << "Got errror " << e.what() << " when removing " << path << ", aborting the removal.";
 		return false;
 	}
@@ -329,14 +335,14 @@ bool PropertyMap::remove( const PropertyMap &removeMap, bool keep_needed )
 	for ( container_type::const_iterator otherIt = removeMap.container.begin(); otherIt != removeMap.container.end(); otherIt++ ) {
 		//find the closest match for otherIt->first in this (use the value-comparison-functor of PropMap)
 		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first - so its the same property or propmap
-			if ( thisIt->second.type() == typeid( PropertyMap ) && otherIt->second.type() == typeid( PropertyMap ) ) { //both are a branch => recurse
-				PropertyMap &mySub = boost::get<PropertyMap>( thisIt->second );
-				const PropertyMap &otherSub = boost::get<PropertyMap>( otherIt->second );
+			if ( thisIt->second.isBranch() && otherIt->second.isBranch() ) { //both are a branch => recurse
+				PropertyMap &mySub = thisIt->second.branch();
+				const PropertyMap &otherSub = otherIt->second.branch();
 				ret &= mySub.remove( otherSub );
 
 				if( mySub.isEmpty() ) // delete my branch, if its empty
 					container.erase( thisIt++ );
-			} else if( thisIt->second.type() == typeid( PropertyValue ) && otherIt->second.type() == typeid( PropertyValue ) ) {
+			} else if( thisIt->second.isProperty() && otherIt->second.isProperty() ) {
 				container.erase( thisIt++ ); // so delete this (they are equal - kind of)
 			} else { // this is a leaf
 				LOG( Debug, warning ) << "Not deleting branch " << MSubject( thisIt->first ) << " because its no subtree on one side";
@@ -377,33 +383,33 @@ void PropertyMap::diffTree( const container_type& other, DiffMap& ret, const Pro
 	for ( container_type::const_iterator thisIt = container.begin(); thisIt != container.end(); thisIt++ ) {
 		//find the closest match for thisIt->first in other (use the value-comparison-functor of the container)
 		if ( continousFind( otherIt, other.end(), *thisIt, container.value_comp() ) ) { //otherIt->first == thisIt->first - so its the same property
-			if( thisIt->second.type() == typeid( PropertyMap ) && otherIt->second.type() == typeid( PropertyMap ) ) { // both are branches -- recursion step
-				const PropertyMap &thisMap = boost::get<PropertyMap>( thisIt->second ), &refMap = boost::get<PropertyMap>( otherIt->second );
+			if( thisIt->second.isBranch() && otherIt->second.isBranch() ) { // both are branches -- recursion step
+				const PropertyMap &thisMap = thisIt->second.branch(), &refMap = otherIt->second.branch();
 				thisMap.diffTree( refMap.container, ret, prefix / thisIt->first );
-			} else if( thisIt->second.type() == typeid( PropertyValue ) && otherIt->second.type() == typeid( PropertyValue ) ) { // both are PropertyValue
-				const PropertyValue &thisVal = boost::get<PropertyValue>( thisIt->second ), &otherVal = boost::get<PropertyValue>( otherIt->second );
+			} else if( thisIt->second.isProperty() && otherIt->second.isProperty() ) { // both are PropertyValue
+				const PropertyValue &thisVal = std::get<PropertyValue>( thisIt->second ), &otherVal = std::get<PropertyValue>( otherIt->second );
 				if( thisVal != otherVal ) // if they are different
 					ret.insert( // add (propertyname|(value1|value2))
-						ret.end(),      // we know it has to be at the end
-						std::make_pair(
-							prefix / thisIt->first,   //the key
-							std::make_pair( thisVal, otherVal ) //pair of both values
-						)
+					    ret.end(),      // we know it has to be at the end
+					    std::make_pair(
+					        prefix / thisIt->first,   //the key
+					        std::make_pair( thisVal, otherVal ) //pair of both values
+					    )
 					);
 			} else { // obviously different just stuff it in
 				ret.insert( ret.end(), std::make_pair( prefix / thisIt->first, std::make_pair(
-						boost::apply_visitor( _internal::MapStrAdapter(), thisIt->second ),
-						boost::apply_visitor( _internal::MapStrAdapter(), otherIt->second )
-													   ) ) );
+				        std::visit( _internal::MapStrAdapter(), thisIt->second.variant() ),
+				        std::visit( _internal::MapStrAdapter(), otherIt->second.variant() )
+				                                       ) ) );
 			}
-		} else { // if ref is not in the other map 
-			const PropertyValue firstVal = boost::apply_visitor( _internal::MapStrAdapter(), thisIt->second );
+		} else { // if ref is not in the other map
+			const PropertyValue firstVal = std::visit( _internal::MapStrAdapter(), thisIt->second.variant() );
 			ret.insert( // add (propertyname|(value1|[empty]))
-				ret.end(),      // we know it has to be at the end
-				std::make_pair(
-					prefix / thisIt->first,
-					std::make_pair( firstVal, PropertyValue() )
-				)
+			    ret.end(),      // we know it has to be at the end
+			    std::make_pair(
+			        prefix / thisIt->first,
+			        std::make_pair( firstVal, PropertyValue() )
+			    )
 			);
 		}
 	}
@@ -414,12 +420,12 @@ void PropertyMap::diffTree( const container_type& other, DiffMap& ret, const Pro
 	for ( otherIt = other.begin(); otherIt != other.end(); otherIt++ ) {
 		if ( ! continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //there is nothing in this which has the same key as ref
 
-			const PropertyValue secondVal = boost::apply_visitor( _internal::MapStrAdapter(), otherIt->second );
+			const PropertyValue secondVal = std::visit( _internal::MapStrAdapter(), otherIt->second.variant() );
 			ret.insert(
-				std::make_pair( // add (propertyname|([empty]|value2))
-					prefix / otherIt->first,
-					std::make_pair( PropertyValue(), secondVal )
-				)
+			    std::make_pair( // add (propertyname|([empty]|value2))
+			        prefix / otherIt->first,
+			        std::make_pair( PropertyValue(), secondVal )
+			    )
 			);
 		}
 	}
@@ -435,7 +441,7 @@ void PropertyMap::removeEqual ( const PropertyMap &other, bool removeNeeded )
 		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first  - so its the same property
 
 			//          if(thisIt->second.type()==typeid(PropertyValue) && otherIt->second.type()==typeid(PropertyValue)){ // if both are Values
-			if( boost::apply_visitor( _internal::RemoveEqualCheck( removeNeeded ), thisIt->second, otherIt->second ) ) {
+			if( std::visit( _internal::RemoveEqualCheck( removeNeeded ), thisIt->second.variant(), otherIt->second.variant() ) ) {
 				container.erase( thisIt++ ); // so delete this if both are empty _or_ equal
 				continue; // keep iterator from incrementing again
 			} else
@@ -478,16 +484,16 @@ void PropertyMap::joinTree( PropertyMap &other, bool overwrite, bool delsource, 
 	container_type::iterator thisIt = container.begin();
 
 	for ( container_type::iterator otherIt = other.container.begin(); otherIt != other.container.end(); ) { //iterate through the elements of other
-		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { // if the element is allready here
+		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { // if the element is already here
 			if(
-				boost::apply_visitor( _internal::JoinTreeVisitor( overwrite, delsource, rejects, prefix, thisIt->first ), thisIt->second, otherIt->second ) &&
-				delsource
+			    std::visit( _internal::JoinTreeVisitor( overwrite, delsource, rejects, prefix, thisIt->first ), thisIt->second.variant(), otherIt->second.variant() ) &&
+			    delsource
 			){// if the join was complete and delsource is true
 				other.container.erase(otherIt++); // remove the entry from the source
 			} else {
 				otherIt++;
 			}
-				
+
 		} else { // ok we dont have that - just insert it
 			if(delsource){ // if we don't need the source anymore
 				otherIt->second.swap(container[otherIt->first]); //swap it with the empty (because newly created) entry in the destination
@@ -514,7 +520,7 @@ bool PropertyMap::transform( const PropPath &from,  const PropPath &to, uint16_t
 	const boost::optional< PropertyValue& > src = queryProperty( from );
 	if(!src || src->isEmpty())
 		return false;
-	
+
 	if ( src->getTypeID() == dstID ) { //same type - just rename it
 		if( from != to ) // if its not at the same place anyway
 			return rename(from,to);
@@ -532,6 +538,10 @@ bool PropertyMap::transform( const PropPath &from,  const PropPath &to, uint16_t
 	}
 	return false;
 }
+
+bool PropertyMap::operator==(const PropertyMap &other) const {return container == other.container;}
+
+bool PropertyMap::operator!=(const PropertyMap &other) const {return container != other.container;}
 
 
 PropertyMap::PathSet PropertyMap::getKeys()const   {return genKeyList<TrueP>();}
@@ -556,7 +566,7 @@ void PropertyMap::addNeeded( const PropPath &path )
 size_t PropertyMap::hasProperty( const PropPath &path ) const
 {
 	const optional< const PropertyValue& > ref = queryProperty( path );
-	return ref ? ref->size():0; 
+	return ref ? ref->size():0;
 }
 
 PropertyMap::PropPath PropertyMap::find( const key_type &key, bool allowProperty, bool allowBranch ) const
@@ -573,13 +583,13 @@ PropertyMap::PropPath PropertyMap::find( const key_type &key, bool allowProperty
 	container_type::const_iterator found = container.find( name.back() );
 
 	if( found != container.end() &&
-		( ( found->second.type() == typeid( PropertyValue ) && allowProperty ) || ( found->second.type() == typeid( PropertyMap ) && allowBranch ) )
+	    ( ( found->second.isProperty() && allowProperty ) || ( found->second.isBranch() && allowBranch ) )
 	  ) {
 		return found->first;
 	} else { // otherwise search in the branches
 		for( container_type::const_reference ref :  container ) {
-			if( ref.second.type() == typeid( PropertyMap ) ) {
-				const PropPath found = boost::get<PropertyMap>( ref.second ).find( name.back(), allowProperty, allowBranch );
+			if( ref.second.isBranch() ) {
+				const PropPath found = ref.second.branch().find( name.back(), allowProperty, allowBranch );
 
 				if( !found.empty() ) // if the key is found abort search and return it with its branch-name
 					return PropPath( ref.first ) / found;
@@ -606,17 +616,17 @@ bool PropertyMap::rename( const PropPath &oldname,  const PropPath &newname, boo
 	}
 	if(newname != oldname){
 		mapped_type &new_e = fetchEntry( newname );
-		const bool empty=boost::apply_visitor(IsEmpty(), new_e);
+		const bool empty=std::visit(IsEmpty(), new_e.variant());
 		if(!empty && !overwrite){ //abort if we're no supposed to overwrite'
 			LOG(Runtime,warning) << "Not overwriting " << std::make_pair( newname, new_e ) << " with " << *old_e;
 			return false;
 		}
 		LOG_IF( !empty , Runtime, warning ) << "Overwriting " << std::make_pair( newname, new_e ) << " with " << *old_e;
 		new_e.swap(*old_e);
-		remove( oldname ); //can only fail if oldname is not there -- and if it wasn't we'd have aborted already 
+		remove( oldname ); //can only fail if oldname is not there -- and if it wasn't we'd have aborted already
 	} else { //if its a lexical rename get the data out of the map
 		mapped_type buff;old_e->swap(buff);
-		remove( oldname ); 
+		remove( oldname );
 		fetchEntry(newname).swap(buff);//and re-insert it with newname
 	}
 	return true;
@@ -625,7 +635,7 @@ bool PropertyMap::rename( const PropPath &oldname,  const PropPath &newname, boo
 void PropertyMap::removeUncommon( PropertyMap &common )const
 {
 #pragma message("getDifference is waste of time here")
-	const DiffMap difference = common.getDifference( *this ); 
+	const DiffMap difference = common.getDifference( *this );
 	for( const DiffMap::value_type & ref :  difference ) {
 		if ( ! ref.second.first.isEmpty() ) {
 			LOG( Debug, verbose_info ) << "Detected difference in " << ref << " removing from common";
@@ -665,7 +675,7 @@ PropertyMap PropertyMap::extract_if(std::function<bool(const PropertyValue &p)> 
 }
 
 void PropertyMap::deduplicate(std::list<std::shared_ptr<PropertyMap>> maps){
-	
+
 	assert(!maps.empty());
 
 	util::PropertyMap common=*maps.front();  //copy all props from the first chunk
@@ -674,11 +684,11 @@ void PropertyMap::deduplicate(std::list<std::shared_ptr<PropertyMap>> maps){
 	// common now has all props (from the first chunk)
 	for(++p;p!=maps.end();++p)
 		(*p)->removeUncommon( common );//remove everything which isn't common from common
-		
+
 	//then remove remaining common props from the chunks
-	for ( auto &p: maps ) 
+	for ( auto &p: maps )
 		p->remove( common, false ); //this _won't_ keep needed properties - so from here on the "maps" are invalid
-		
+
 	const PathSet rej = this->transfer(common);
 	LOG_IF(!rej.empty(),Debug,error) << "Some props where rejected when joining the commons into the me (" << rej << ")";
 }
@@ -722,31 +732,31 @@ void PropertyMap::readPtree(const boost::property_tree::ptree &tree,bool skip_em
 		if(entry.empty()){
 			if(!entry.data().empty() || !skip_empty){
 				mapped_type &n = fetchEntry( key.c_str() );
-				if(boost::apply_visitor(IsEmpty(),n)){
+				if(std::visit(IsEmpty(),n.variant())){
 					n=PropertyValue(entry.data());
-				} else if(n.type()==typeid(PropertyValue)){ //OK we got a property map all is good
-					boost::get<PropertyValue>(n)=entry.data();
+				} else if(n.isProperty()){ //OK we got a property map all is good
+					std::get<PropertyValue>(n)=entry.data();
 				} else {
 					LOG(Runtime,warning) << "Will not store " << key << " as PropertyValue as it already exists as branch " << n;
-				} 
+				}
 			}
 		} else {
 			mapped_type &n = fetchEntry( key.c_str() );
-			if(boost::apply_visitor(IsEmpty(),n)){
+			if(std::visit(IsEmpty(),n.variant())){
 				n=PropertyMap();
 			}
-			if(n.type()==typeid(PropertyMap)){ //OK we got a property map all is good
-				boost::get<PropertyMap>(n).readPtree(entry);
+			if(n.isBranch()){ //OK we got a property map all is good
+				n.branch().readPtree(entry);
 			} else  {
 				LOG(Runtime,warning) << "Will not store " << key << " as branch as it already exists as property " << n;
-			} 
+			}
 		}
 	}
 }
 
 void PropertyMap::readXML(const uint8_t* streamBegin, const uint8_t* streamEnd, int flags){
 	typedef  boost::iostreams::basic_array_source<std::streambuf::char_type> my_source_type; // must be compatible to std::streambuf
-	
+
 	boost::iostreams::stream<my_source_type> stream;
 	stream.open(my_source_type((const std::streambuf::char_type*)streamBegin,(const std::streambuf::char_type*)streamEnd));
 	readXML(stream,flags);
