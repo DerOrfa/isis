@@ -26,20 +26,6 @@ namespace data{
 
 class ByteArray : public TypedArray<uint8_t>
 {
-	typedef data::ValueArrayNew( *generator_type )( data::ByteArray &, size_t, size_t, bool );
-	struct GeneratorMap: public std::map<unsigned short, generator_type> {
-		GeneratorMap();
-		template<class T> static data::ValueArrayNew generator( data::ByteArray &bytes, size_t offset, size_t len, bool swap_endianess ) {
-			return bytes.at<T>( offset, len, swap_endianess );
-		}
-		struct proc {
-			std::map<unsigned short, generator_type> *m_map;
-			proc( std::map<unsigned short, generator_type> *map ): m_map( map ) {}
-			template<class T> void operator()( const T & ) {
-				m_map->insert( std::make_pair( util::typeID<T>(), &generator<T> ) );
-			}
-		};
-	};
 protected:
 	bool writing=false; // for derived classes to flag memory as actually writing to (mapped) file (disables endian swap)
 
@@ -54,17 +40,20 @@ public:
 	 */
 	ByteArray( size_t length );
 	ByteArray( const std::shared_ptr<uint8_t> &ptr, size_t length );
-	ByteArray( uint8_t *const ptr, size_t length );
+// 	ByteArray( uint8_t *const ptr, size_t length );
 
 
 	/**
-	 * Get a ValueArray representing the data in the file.
-	 * The resulting ValueArray will use a proxy deleter to keep track of the mapped file.
-	 * So the file will be unmapped and closed if, and only if all ValueArray created by this function and the FilePtr are closed.
+	 * Get ValueArray of the requested type.
+	 * The resulting ValueArray will use a proxy deleter to keep track of the source.
+	 * So the source data will be deleted if, and only if all ValueArray created by this function and the source are closed.
 	 *
-	 * If the FilePtr was opened writing, writing access to this ValueArray objects will result in writes to the file. Otherwise it will just write into memory.
+	 * If the source is a file that was opened writing, writing access to this ValueArray objects will result in writes to the file.
+	 * Otherwise it will just write into memory.
 	 *
-	 * Note that there is no conversion done, just reinterpretation of the raw data in the file.
+	 * If the source is a file that was opened reading and the assumed endianess of the file (see parameter) does not fit the endianess
+	 * of the system a (endianess-converted) deep copy is created.
+	 *
 	 * \param offset the position in the file to start from (in bytes)
 	 * \param len the requested length of the resulting ValueArray in elements (if that will go behind the end of the file, a warning will be issued).
 	 * \param swap_endianess if endianess should be swapped when reading data file (ignored when used on files opened for writing)
@@ -76,7 +65,7 @@ public:
 		if( len == 0 ) {
 			len = ( getLength() - offset ) / sizeof( T );
 			LOG_IF( ( getLength() - offset ) % sizeof( T ), Runtime, warning )
-			        << "The remaining filesize " << getLength() - offset << " does not fit the bytesize of the requested type "
+			        << "The remaining array size " << getLength() - offset << " does not fit the bytesize of the requested type "
 			        << util::typeName<T>();
 		}
 
@@ -86,14 +75,23 @@ public:
 		        << "Ignoring request to swap byte order for writing (the systems byte order is " << __BYTE_ORDER__ << " and that will be used)";
 
 		if( writing || !swap_endianess ) { // if not endianess swapping was requested or T is not float (or if we are writing)
-			return data::ValueArrayNew( ptr, len ); // return a cheap copy
+			return data::TypedArray<T>( ptr, len ); // return a cheap copy
 		} else { // flip bytes into a new ValueArray
 			LOG( Debug, verbose_info ) << "Byte swapping " <<  util::typeName<T>() << " for endianess";
-			ValueArrayNew ret=ValueArrayNew::make<T>( len );
-			data::endianSwapArray( ptr.get(), ptr.get() + std::min( len, getLength() / sizeof( T ) ), ret.beginTyped<T>() );
+			TypedArray<T> ret=ValueArrayNew::make<T>( len );
+			data::endianSwapArray( ptr.get(), ptr.get() + std::min( len, getLength() / sizeof( T ) ), ret.begin() );
 			return ret;
 		}
 	}
+	/**
+	 * \copybody atByID
+	 *
+	 * \param ID the requested type (note that there is no conversion done, just reinterpretation of the raw data in the file)
+	 * \param offset the position in the file to start from (in bytes)
+	 * \param len the requested length of the resulting ValueArray in elements (if that will go behind the end of the file, a warning will be issued).
+	 * \param swap_endianess if endianess should be swapped when reading data file (ignored when used on files opened for writing)
+	 */
+	data::ValueArrayNew atByID( unsigned short ID, size_t offset, size_t len = 0, bool swap_endianess = false );
 };
 }
 }

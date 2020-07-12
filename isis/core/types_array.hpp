@@ -16,9 +16,10 @@ typedef std::variant<
 , std::shared_ptr<int32_t>, std::shared_ptr<uint32_t>
 , std::shared_ptr<int64_t>, std::shared_ptr<uint64_t>
 , std::shared_ptr<float>, std::shared_ptr<double>
-, std::shared_ptr<std::string>
+, std::shared_ptr<util::fvector3>, std::shared_ptr<util::fvector4>
 , std::shared_ptr<std::complex<float>>, std::shared_ptr<std::complex<double>>
 , std::shared_ptr<util::color24>, std::shared_ptr<util::color48>
+, std::shared_ptr<std::string>
 > ArrayTypes;
 
 namespace _internal{

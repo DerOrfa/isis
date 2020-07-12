@@ -163,8 +163,7 @@ API_EXCLUDE_END;
 
 		return nullnode();
 	}
-
-protected:
+	
 /// @cond _internal
 	template<typename T> T* queryValueAsImpl( const PropPath &path, const std::optional<size_t> &at ) {
 		const auto &found = queryProperty( path );
@@ -182,8 +181,8 @@ protected:
 			    found->at(*at):
 			    found->front()
 			); // use single value ops, if at was not given
-		}
-		return nullptr;
+		} else 
+			return nullptr;
 	}
 	template<typename T> T getValueAsImpl( const PropPath &path, const std::optional<size_t> &at )const {
 		const auto ref = queryProperty( path );
@@ -526,8 +525,7 @@ public:
 	// Additional get/set - Functions
 	//////////////////////////////////////////////////////////////////////////////////////
 
-	PropertyValue &setValue(const PropPath &path, const ValueNew &val, size_t at);
-	PropertyValue &setValue(const PropPath &path, const ValueNew &val);
+	PropertyValue &setValue(const PropPath &path, const ValueNew &val, std::optional<size_t> at=std::optional<size_t>());
 
 	/**
 	 * Set the given property to a given value/type.
@@ -548,11 +546,10 @@ public:
 	 * \returns a reference to the PropertyValue (this can be used later, e.g. if a vector is filled step by step
 	 * the reference can be used to not ask for the Property each time)
 	 */
-	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val ) {
+	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, std::optional<size_t> at=std::optional<size_t>() ) {
 		static_assert(util::knownType<T>(),"invalid type");
-		return setValue(path,val);
-	}
-	PropertyValue &setValueAs( const PropPath &path, const char *val );
+		return setValue(path,val,at);
+	}//@todo maybe remove the templated version
 
 	/**
 	 * Set the given property to a given value/type at a specified index.
@@ -573,9 +570,10 @@ public:
 	 * \returns a reference to the PropertyValue (this can be used later, e.g. if a vector is filled step by step
 	 * the reference can be used to not ask for the Property each time)
 	 */
+	//@todo can't we get rid of this'
 	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, size_t at ) {
 		static_assert(util::knownType<T>(),"invalid type");
-		return setValue(path,Value( val ), at);
+		return setValue(path,ValueNew( val ), at);
 	}
 	PropertyValue &setValueAs( const PropPath &path, const char *val, size_t at );
 
@@ -639,8 +637,8 @@ public:
 		return *query;
 	}
 	/**
-	 * Get a valid reference to the stored single value in a given type.
-	 * This tries to access a property's stored value as reference.
+	 * Get a valid pointer to the stored single value in a given type.
+	 * This tries to get a pointer to a property's stored value.
 	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
 	 * If the stored type is not T, a transformation is done in place.
 	 * If that fails, nullptr is returned.

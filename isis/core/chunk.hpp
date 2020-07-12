@@ -161,7 +161,7 @@ public:
 	 * \return a new deep copied Chunk of the same size
 	 */
 	Chunk copyByID( unsigned short ID = 0, scaling_pair scaling = scaling_pair() )const;
-	template<typename T> TypedChunk<T> as(scaling_pair scaling = scaling_pair());
+	template<typename T> TypedChunk<T> as(scaling_pair scaling = scaling_pair())const;
 
 	/**
 	 * Copy data from a (smaller) chunk and insert it as a tile at a specified position.
@@ -256,7 +256,8 @@ public:
 	}
 };
 
-template<typename T> TypedChunk<T> Chunk::as(scaling_pair scaling){
+template<typename T> TypedChunk<T> Chunk::as(scaling_pair scaling)const
+{
 	//make a chunk from a typed ValueArray
 	const auto size=getSizeAsVector();
 	TypedChunk<T> ret( ValueArrayNew::as<T>(scaling), size[0], size[1], size[2], size[3], false, scaling);
@@ -290,7 +291,7 @@ public:
 	    MemChunk<TYPE>( nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid )
 	{
 		static_assert(util::knownType<T>(),"invalid type");
-		this->asValueArrayBase().copyFromMem( org, this->getVolume() );
+		this->copyFromMem( org, this->getVolume() );
 	}
 	/// Create a deep copy of a given Chunk (automatic conversion will be used if datatype does not fit)
 	MemChunk( const MemChunk<TYPE> &ref ):MemChunk( static_cast<const Chunk&>(ref), data::scaling_pair(1, 0 ) ){} // automatically built version would be cheap copy

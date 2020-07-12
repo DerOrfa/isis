@@ -145,6 +145,11 @@ bool ValueNew::eq( const ValueNew &ref )const {
 	return std::visit(op,static_cast<const ValueTypes&>(*this));
 }
 
+ValueNew ValueNew::plus( const ValueNew &ref )const{return ValueNew(*this).add(ref);}
+ValueNew ValueNew::minus( const ValueNew &ref )const{return ValueNew(*this).substract(ref);}
+ValueNew ValueNew::multiply( const ValueNew &ref )const{return ValueNew(*this).multiply_me(ref);}
+ValueNew ValueNew::divide( const ValueNew &ref )const{return ValueNew(*this).divide_me(ref);}
+
 ValueNew& ValueNew::add( const ValueNew &ref )
 {
 	auto op=[&](auto ptr)->ValueNew&{

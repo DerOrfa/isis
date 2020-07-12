@@ -30,6 +30,7 @@ public:
 
 	TypedArray(std::shared_ptr<TYPE> ptr, size_t length):ValueArrayNew(ptr,length),me(castTo<TYPE>()){}
 	TypedArray():TypedArray(std::shared_ptr<TYPE>(),0){}//creates an invalid array
+	
 	TYPE* begin(){return me.get();}
 	TYPE* end(){return me.get()+getLength();}
 	const TYPE* begin()const{return me.get();}
@@ -38,6 +39,15 @@ public:
 		ValueArrayNew::operator=(other);
 		//"me" will still reference my own ValueArrayNew::std::shared_ptr<TYPE> which got overwritten by the copy operation above
 		return *this;
+	}
+	
+	TYPE& operator[](size_t at){
+		LOG_IF(at>=getLength(),Debug,error) << "Index " << at << " is behind the arrays length (" << getLength() << ")";
+		return *(begin()+at);
+	}
+	const TYPE& operator[](size_t at)const{
+		LOG_IF(at>=getLength(),Debug,error) << "Index " << at << " is behind the arrays length (" << getLength() << ")";
+		return *(begin()+at);
 	}
 };
 }

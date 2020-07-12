@@ -167,12 +167,26 @@ public:
 	ValueNew& substract( const ValueNew &ref );
 	ValueNew& multiply_me( const ValueNew &ref );
 	ValueNew& divide_me( const ValueNew &ref );
+	
+	ValueNew operator+( const ValueNew &ref )const{return plus(ref);};
+	ValueNew operator-( const ValueNew &ref )const{return minus(ref);};
+	ValueNew operator*( const ValueNew &ref )const{return multiply(ref);};
+	ValueNew operator/( const ValueNew &ref )const{return divide(ref);};
+
+	ValueNew& operator+=( const ValueNew &ref ){return add(ref);};
+	ValueNew& operator-=( const ValueNew &ref ){return substract(ref);};
+	ValueNew& operator*=( const ValueNew &ref ){return multiply_me(ref);};
+	ValueNew& operator/=( const ValueNew &ref ){return divide_me(ref);};
+	
+	bool operator<( const ValueNew &ref )const{return lt(ref);};
+	bool operator>( const ValueNew &ref )const{return gt(ref);};
+	bool operator==( const ValueNew &ref )const{return eq(ref);};
 
 	/**
 	 * Set value to a new value but keep its type.
 	 * This will convert the applied value to the current type.
 	 * If this conversion fails nothing is done and false is returned.
-	 * \returns true if conversion was successfull (and the value was changed), false otherwise
+	 * \returns true if conversion was successful (and the value was changed), false otherwise
 	 */
 	bool apply(const ValueNew &other);
 };

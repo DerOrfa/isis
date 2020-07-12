@@ -608,7 +608,7 @@ bool PropertyMap::hasBranch( const PropPath &path ) const
 
 bool PropertyMap::rename( const PropPath &oldname,  const PropPath &newname, bool overwrite )
 {
-#pragma message test me
+#pragma message "test me"
 	mapped_type& old_e = findEntry( oldname );
 
 	if ( !old_e ) {//abort if oldname is not there
@@ -709,22 +709,24 @@ std::ostream &PropertyMap::print( std::ostream &out, bool label )const
 	return out;
 }
 
-PropertyValue& PropertyMap::setValue( const PropPath &path, const ValueNew &val ) {
+PropertyValue& PropertyMap::setValue(const PropPath &path, const ValueNew &val, std::optional<size_t> at){
 	PropertyValue &ret = touchProperty( path );
+	const auto index=at.value_or(0);
 
-	if( ret.isEmpty() ) { // set an empty property
-		ret = val;
-	} else if( ret.size() == 1 ) {
-		if( ret[0].apply( val ) ){ // override same type or convert if possible
-			LOG_IF( ret.getTypeID()!=val.typeID(), Debug, info ) << "Storing " << val.toString( true ) << " as " << ret.toString( true ) << " as Property already has that type";
+	if( ret.size() <= index ) {
+		LOG_IF(index, Debug, info ) << "Extending " << std::make_pair( path, ret ) << " to fit length " << at.value_or(0); //don't tell about extending empty property
+		ret.resize( index + 1, val ); //resizing will insert the value
+	} else {
+		if( ret[index].apply( val ) ){ // override same type or convert if possible
+			LOG_IF( ret.getTypeID()!=val.typeID(), Debug, warning ) << "Storing " << val.toString( true ) << " as " << ret.toString( true ) << " as Property already has that type";
 		} else {
 			LOG( Runtime, error ) << "Property " << path << " is already set to " << ret.toString( true ) << " won't overwrite with " << val.toString( true );
 		}
-	} else
-		LOG( Runtime, error ) << "Won't override multivalue property " << path << " with " << val.toString( true );
+	}
 
 	return ret;
 }
+
 
 void PropertyMap::readPtree(const boost::property_tree::ptree &tree,bool skip_empty){
 	for(const auto &p:tree){
@@ -768,7 +770,10 @@ void PropertyMap::readXML(std::basic_istream<char> &stream,int flags){
 // 	boost::property_tree::write_xml(std::cout,pt,boost::property_tree::xml_writer_settings<std::string>(' ',4));std::cout<<std::endl;
 	readPtree(pt,true);
 }
-
+PropertyMap::Node& PropertyMap::nullnode(){
+	static Node node;
+	return node;
+}
 /// @cond _internal
 bool PropertyMap::TrueP::operator()( const PropertyValue &/*ref*/ ) const {return true;}
 bool PropertyMap::InvalidP::operator()( const PropertyValue &ref ) const {return ref.isNeeded() && ref.isEmpty();}

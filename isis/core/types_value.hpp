@@ -20,8 +20,8 @@ typedef std::variant<
 template<typename T> static constexpr size_t typeID(){
 	return _internal::variant_index<ValueTypes,std::remove_cv_t<T>>();
 }
-template<typename T, typename TYPELIST=ValueTypes> static constexpr bool knownType(){
-	const auto id=_internal::variant_index<TYPELIST,std::remove_cv_t<T>>();
+template<typename T> static constexpr bool knownType(){
+	const auto id=_internal::variant_index<ValueTypes,std::remove_cv_t<T>>();
 	return id!=std::variant_npos;
 }
 

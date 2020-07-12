@@ -51,13 +51,19 @@ setName( date, "date" );
 namespace _internal{
 template<std::size_t index = std::variant_size_v<ValueTypes>-1> void insert_types(std::map<size_t, std::string> &map,bool arrayTypesOnly) {
 	typedef util::ValueNew::TypeByIndex<index> v_type;
-	if(!arrayTypesOnly || util::knownType<v_type,data::ArrayTypes>()) //if either we don't want "arrayTypesOnly" or v_type is an array type
+	if(
+		!arrayTypesOnly || 
+		_internal::variant_index<data::ArrayTypes,std::remove_cv_t<std::shared_ptr<v_type>>>()!=std::variant_npos
+	) //if either we don't want "arrayTypesOnly" or v_type is an array type
 		map[index]=util::typeName<v_type>(); //notice we always use the values type list to map type ids to type names
 	insert_types<index-1>(map,arrayTypesOnly);
 }
 template<> void insert_types<0>(std::map<size_t, std::string> &map,bool arrayTypesOnly){
 	typedef util::ValueNew::TypeByIndex<0> v_type;
-	if(!arrayTypesOnly || util::knownType<v_type,data::ArrayTypes>()) //if either we don't want "arrayTypesOnly" or v_type is an array type
+	if(
+		!arrayTypesOnly || 
+		_internal::variant_index<data::ArrayTypes,std::remove_cv_t<std::shared_ptr<v_type>>>()!=std::variant_npos
+	) //if either we don't want "arrayTypesOnly" or v_type is an array type
 		map[0]=util::typeName<v_type>(); //notice we always use the values type list to map type ids to type names
 }
 }

@@ -17,9 +17,13 @@ template<> GenericValueIterator<false>::reference GenericValueIterator<false>::o
 ConstValueAdapter::ConstValueAdapter( const uint8_t *const _p, Getter _getValueFunc ):getter(_getValueFunc), p( _p ) {}
 bool ConstValueAdapter::operator==( const util::ValueNew &val )const {return getter(p).eq( val );}
 bool ConstValueAdapter::operator!=( const util::ValueNew &val )const {return !operator==( val );}
+bool ConstValueAdapter::operator==( const ConstValueAdapter &val )const {return getter(p).eq( util::ValueNew(val) );}
+bool ConstValueAdapter::operator!=( const ConstValueAdapter &val )const {return !operator==( val );}
 
 bool ConstValueAdapter::operator<( const util::ValueNew &val )const {return getter(p).lt( val );}
 bool ConstValueAdapter::operator>( const util::ValueNew &val )const {return getter(p).gt( val );}
+bool ConstValueAdapter::operator<( const ConstValueAdapter &val )const {return getter(p).lt( util::ValueNew(val) );}
+bool ConstValueAdapter::operator>( const ConstValueAdapter &val )const {return getter(p).gt( util::ValueNew(val) );}
 
 const util::ValueNew ConstValueAdapter::operator->() const{ return getter(p);}
 const std::string ConstValueAdapter::toString( bool label ) const{ return getter(p).toString(label);}

@@ -212,9 +212,10 @@ public:
 	 */
 	template <typename T> T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 ) {
 		checkMakeClean();
+		static_assert(util::knownType<T>());
 		const std::pair<size_t, size_t> index = commonGet ( first, second, third, fourth );
 		auto &data = chunkAt ( index.first ).castTo<T>();
-		return data[index.second];
+		return *(data.get()+index.second);
 	}
 
 	void swapDim( unsigned short dim_a, unsigned short dim_b, std::shared_ptr<util::ProgressFeedback> feedback=std::shared_ptr<util::ProgressFeedback>() );
@@ -232,9 +233,12 @@ public:
 	 * \returns A reference to the addressed voxel value. Only reading access is provided
 	 */
 	template <typename T> const T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 ) const {
+		LOG_IF(!clean,  Debug, warning )  << "Accessing voxels of a not-clean image. Pleas run reIndex first";
+
+		static_assert(util::knownType<T,ArrayTypes>());
 		const std::pair<size_t, size_t> index = commonGet ( first, second, third, fourth );
 		const auto &data = chunkPtrAt ( index.first )->castTo<T>();
-		return data[index.second];
+		return data.get()+index.second;
 	}
 
 	const util::ValueNew getVoxelValue ( size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 ) const;
@@ -562,6 +566,8 @@ public:
  */
 template<typename T> class TypedImage: public Image
 {
+protected:
+	TypedImage ():Image(){}
 public:
 	/// cheap copy another Image and make sure all chunks have type T
 	TypedImage ( const Image &src ) : Image ( src ) { // ok we just copied the whole image

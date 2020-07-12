@@ -44,14 +44,14 @@ class ValueArrayNew: protected ArrayTypes
 // 	scaling_pair getScaling( const scaling_pair &scale, unsigned short ID )const;
 	/// delete-functor which does nothing (in case someone else manages the data).
 	struct NonDeleter {
-		template<typename T> void operator()( T *p ) {
+		template<typename T> void operator()( T *p )const {
 			//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
 			LOG( Debug, verbose_info ) << "Not freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") as automatic deletion was disabled for it";
 		};
 	};
 	/// Default delete-functor for c-arrays (uses free()).
 	struct BasicDeleter {
-		template<typename T> void operator()( T *p ) {
+		template<typename T> void operator()( T *p )const {
 			//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
 			LOG( Debug, verbose_info ) << "Freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") ";
 			free( p );
@@ -65,6 +65,12 @@ class ValueArrayNew: protected ArrayTypes
 	}
 
 	static const _internal::ValueArrayConverterMap &converters();
+protected:
+	template<typename T> constexpr static void checkType(){
+		const auto id=util::_internal::variant_index<ArrayTypes,std::shared_ptr<std::remove_cv_t<T>>>();
+		static_assert(id!=std::variant_npos,"invalid array type");
+	}
+
 public:
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ArrayTypes>::type;
 
@@ -85,6 +91,7 @@ public:
 	 */
 	template<typename T> ValueArrayNew( const std::shared_ptr<T> &ptr, size_t length ): ArrayTypes( ptr ), m_length(length) {
 		static_assert(!std::is_const<T>::value,"ValueArray type must not be const");
+		checkType<T>();
 		LOG_IF( length == 0, Debug, warning )
 		    << "Creating an empty (lenght==0) ValueArray of type " << util::typeName<T>()
 		    << " you should overwrite it with a useful pointer before using it";
@@ -107,12 +114,14 @@ public:
 	 * If the requested length is 0 no memory will be allocated and the pointer will be "empty".
 	 * \param length amount of elements in the new array
 	 */
-	template<typename T> static ValueArrayNew make( size_t length ){
-		return ValueArrayNew(( T * )calloc( length, sizeof( T ) ),  length );
-	}
+	template<typename T, typename DELETER=ValueArrayNew::BasicDeleter> 
+	static ValueArrayNew make( size_t length, const DELETER &deleter=DELETER() ){
+		return ValueArrayNew(( T * )calloc( length, sizeof( T ) ),  length, deleter );
+	} //@todo maybe make it TypedArray
 
 	/// \return true if the stored type is T
 	template<typename T> bool is()const{
+		checkType<T>();
 		return std::holds_alternative<std::shared_ptr<T>>(*this);
 	}
 
@@ -171,7 +180,7 @@ public:
 	 * \param scaling the scaling to be used if a conversion is necessary (computed automatically if not given)
 	 */
 	template<typename T> bool copyToMem( T *dst, size_t len, scaling_pair scaling = scaling_pair() )const {
-		ValueArrayNew cont( dst, len, false );
+		ValueArrayNew cont( dst, len, NonDeleter() );
 		return copyTo( cont, scaling );
 	}
 
@@ -186,7 +195,7 @@ public:
 	 * \param scaling the scaling to be used if a conversion is necessary (computed automatically if not given)
 	 */
 	template<typename T> bool copyFromMem( const T *const src, size_t len, scaling_pair scaling = scaling_pair() ) {
-		ValueArrayNew cont( const_cast<T *>( src ), len, false ); //its ok - we're not going to change it
+		ValueArrayNew cont( const_cast<T *>( src ), len, NonDeleter() ); //its ok - we're not going to change it
 		return cont.copyTo( *this, scaling );
 	}
 
@@ -205,6 +214,7 @@ public:
 	 * \returns a the newly created ValueArray
 	 */
 	template<typename T> ValueArrayNew copyAs( scaling_pair scaling = scaling_pair() )const {
+		checkType<T>();
 		return copyByID( util::typeID<T>(), scaling );;
 	}
 
@@ -236,6 +246,7 @@ public:
 	 * \returns eigther a cheap copy or a newly created ValueArray
 	 */
 	template<typename T> ValueArrayNew as( scaling_pair scaling = scaling_pair() )const {
+		checkType<T>();
 		return convertByID( util::typeID<T>(), scaling );
 	}
 
@@ -303,6 +314,7 @@ public:
 	* \returns a constant reference of the ValueArray.
 	*/
 	template<typename T> const std::shared_ptr<T>& castTo() const {
+		checkType<T>();
 		LOG_IF(!is<T>(),Debug,error) << "Trying to cast " << typeName() << " as " << util::typeName<T>() << " this will crash";
 		return std::get<std::shared_ptr<T>>(*this);
 	}
@@ -314,6 +326,7 @@ public:
 	 */
 	template<typename T> std::shared_ptr<T>& castTo() {
 		LOG_IF(!is<T>(),Debug,error) << "Trying to cast " << typeName() << " as " << util::typeName<T>() << " this will crash";
+		checkType<T>();
 		return std::get<std::shared_ptr<T>>(*this);
 	}
 
@@ -327,7 +340,8 @@ public:
 	template<typename T> T* beginTyped(){return castTo<T>().get();}
 	template<typename T> T* endTyped(){return castTo<T>().get()+m_length;}
 
-	template<typename T> T& at(size_t pos){return beginTyped<T>()+pos;}
+	template<typename T> T& at(size_t pos){return *(beginTyped<T>()+pos);}
+	template<typename T> const T& at(size_t pos)const{return *(beginTyped<T>()+pos);}
 
 	/// @copydoc util::Value::toString
 	std::string toString( bool labeled = false )const;

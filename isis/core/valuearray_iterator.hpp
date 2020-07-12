@@ -36,9 +36,15 @@ public:
 	// to make some algorithms work
 	bool operator==( const util::ValueNew &val )const;
 	bool operator!=( const util::ValueNew &val )const;
+	//@make ValueAdapter implicitly convertible to ValueNew
+	bool operator==( const ConstValueAdapter &val )const;
+	bool operator!=( const ConstValueAdapter &val )const;
 
 	bool operator<( const util::ValueNew &val )const;
 	bool operator>( const util::ValueNew &val )const;
+	//@make ValueAdapter implicitly convertible to ValueNew
+	bool operator<( const ConstValueAdapter &val )const;
+	bool operator>( const ConstValueAdapter &val )const;
 
 	const util::ValueNew operator->() const;
 	const std::string toString( bool label = false )const;

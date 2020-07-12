@@ -33,11 +33,11 @@ class PropertyValue
 	bool m_needed;
 	std::list<ValueNew> container;
 public:
-	typedef std::list<ValueNew>::iterator iterator;
-	typedef std::list<ValueNew>::const_iterator const_iterator;
-	typedef std::list<ValueNew>::reference reference;
-	typedef std::list<ValueNew>::const_reference const_reference;
-	typedef PropertyValue value_type;
+	typedef decltype(container)::iterator iterator;
+	typedef decltype(container)::const_iterator const_iterator;
+	typedef decltype(container)::reference reference;
+	typedef decltype(container)::const_reference const_reference;
+	typedef decltype(container)::value_type value_type;
 	/// Create a property and store the given single value object.
 	PropertyValue( const ValueNew &ref, bool _needed = false ):m_needed( _needed ) {container.emplace_back(ref);}
 	/// Create a property and store the given single value object.
@@ -47,9 +47,8 @@ public:
 	////////////////////////////////////////////////////////////////////////////
 	// List operations
 	////////////////////////////////////////////////////////////////////////////
-	void push_back(const PropertyValue& ref);
 	void push_back(const ValueNew& ref);
-	template<typename T> typename std::enable_if<knownType<T>() >::type push_back(const T& ref){insert(end(),ref);}
+	template<typename T> typename std::enable_if<knownType<T>() >::type push_back(const T& ref){insert(end(),ref);}//@why not just ValueNew
 
 	iterator insert(iterator at,const ValueNew& ref);
 
@@ -62,6 +61,18 @@ public:
 
 	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 	iterator erase( iterator first, iterator last );
+	
+	void resize(size_t size, ValueNew insert=ValueNew()){
+		LOG_IF(size>1, Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
+		const auto mysize=container.size();
+		if(mysize<size){ // grow
+			container.insert(container.end(), size-mysize, insert);
+		} else if(mysize>size){ // shrink
+			auto erasestart=container.begin();std::advance(erasestart,size);
+			erase(erasestart,container.end());
+		}
+	}
+
 
 // 	void reserve(size_t size);
 // 	void resize( size_t size, const ValueNew& clone );
