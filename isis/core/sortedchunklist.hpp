@@ -98,7 +98,7 @@ public:
 	// utils
 
 	///runs op on all entries of the list (the order is not defined) and replaces the entries by the return value
-	void transform( chunkPtrOperator &op );
+	void transform( chunkPtrOperator &op );//make it a functional
 	
 	///runs op on all entries of the list (the order is not defined)
 	template<typename T> void forall( T &func)const

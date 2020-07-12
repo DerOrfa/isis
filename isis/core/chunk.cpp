@@ -51,7 +51,7 @@ Chunk Chunk::cloneToNew( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices,
 	return createByID( getTypeID(), nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps );
 }
 
-Chunk Chunk::createByID ( unsigned short ID, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps, bool fakeValid )
+Chunk Chunk::createByID ( size_t ID, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps, bool fakeValid )
 {
 	const util::vector4<size_t> newSize( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} );
 	assert( util::product(newSize) != 0);
@@ -59,7 +59,7 @@ Chunk Chunk::createByID ( unsigned short ID, size_t nrOfColumns, size_t nrOfRows
 	return  Chunk( created, nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid );
 }
 
-bool Chunk::convertToType( short unsigned int ID, scaling_pair scaling )
+bool Chunk::convertToType( size_t ID, const scaling_pair &scaling )
 {
 	//get a converted ValueArray (will be a cheap copy if no conv was needed)
 	ValueArrayNew newPtr = ValueArrayNew::convertByID( ID, scaling );
@@ -72,7 +72,7 @@ bool Chunk::convertToType( short unsigned int ID, scaling_pair scaling )
 	return true;
 }
 
-Chunk Chunk::copyByID( short unsigned int ID, scaling_pair scaling ) const
+Chunk Chunk::copyByID( size_t ID, const scaling_pair &scaling ) const
 {
 	Chunk ret = *this; //make copy of the chunk
 	static_cast<ValueArrayNew&>( ret ) = ValueArrayNew::copyByID( ID, scaling ); // replace its data by the copy

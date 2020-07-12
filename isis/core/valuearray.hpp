@@ -9,7 +9,15 @@
 
 namespace isis::data{
 
-typedef std::pair<util::ValueNew,util::ValueNew> scaling_pair;
+struct scaling_pair {
+	scaling_pair()=default;
+	bool isRelevant()const{return valid && !(scale==1 && offset==0);}
+	scaling_pair(util::ValueNew _scale,util::ValueNew _offset):scale(_scale),offset(_offset),valid(true){}
+	util::ValueNew scale;
+	util::ValueNew offset;
+	bool valid=false;
+};
+
 class ValueArrayNew;
 
 namespace _internal{
@@ -41,7 +49,6 @@ public:
 class ValueArrayNew: protected ArrayTypes
 {
 	size_t m_length;
-// 	scaling_pair getScaling( const scaling_pair &scale, unsigned short ID )const;
 	/// delete-functor which does nothing (in case someone else manages the data).
 	struct NonDeleter {
 		template<typename T> void operator()( T *p )const {
@@ -69,6 +76,24 @@ protected:
 	template<typename T> constexpr static void checkType(){
 		const auto id=util::_internal::variant_index<ArrayTypes,std::shared_ptr<std::remove_cv_t<T>>>();
 		static_assert(id!=std::variant_npos,"invalid array type");
+	}
+	/**
+	* Helper to sanitise scaling.
+	* \retval scaling if !(scaling.first.isEmpty() || scaling.second.isEmpty())
+	* \retval 1/0 if current type is equal to the requested type
+	* \retval ValueArrayBase::getScalingTo elswise
+	*/
+	scaling_pair getScaling( const scaling_pair &scaling, short unsigned int ID )const
+	{
+		if( scaling.valid )
+			return scaling;//we already have a valid scaling, use that
+		else{ //validate scaling
+			isis::data::scaling_pair computed_scaling=getScalingTo( ID );
+			if(!computed_scaling.valid)
+				throw(std::logic_error("Invalid scaling"));
+			LOG_IF( computed_scaling.scale.lt(1), Runtime, warning ) << "Downscaling your values by Factor " << computed_scaling.scale.as<double>() << " you might lose information.";
+			return computed_scaling;
+		} 
 	}
 
 public:
@@ -146,8 +171,8 @@ public:
 	virtual std::vector<ValueArrayNew> splice( size_t size )const;
 
 	///get the scaling (and offset) which would be used in an conversion
-	virtual scaling_pair getScalingTo( unsigned short typeID, autoscaleOption scaleopt = autoscale )const;
-	virtual scaling_pair getScalingTo( unsigned short typeID, const std::pair<util::ValueNew, util::ValueNew> &minmax, autoscaleOption scaleopt = autoscale )const;
+	virtual scaling_pair getScalingTo( unsigned short typeID )const;
+	virtual scaling_pair getScalingTo( unsigned short typeID, const std::pair<util::ValueNew, util::ValueNew> &minmax )const;
 
 	/**
 	 * Create new data in memory containg a (converted) copy of this.
@@ -155,7 +180,7 @@ public:
 	 * \param ID the ID of the type the new ValueArray (referenced by the ValueArrayNew returned) should have (if not given, type of the source is used)
 	 * \param scaling the scaling to be used if a conversion is necessary (computed automatically if not given)
 	 */
-	ValueArrayNew copyByID( size_t ID, scaling_pair scaling ) const;
+	ValueArrayNew copyByID( size_t ID, const scaling_pair &scaling ) const;
 
 	/**
 	 * Copies elements from this into another ValueArray.
@@ -352,4 +377,14 @@ public:
 	void endianSwap();
 };
 
+}
+
+// streaming for scaling_pair
+namespace std
+{
+template<typename charT, typename traits>
+basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::data::scaling_pair &s )
+{
+	return out << std::make_pair(s.scale,s.offset);
+}
 }

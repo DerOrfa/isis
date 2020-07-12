@@ -30,9 +30,9 @@ namespace isis
 {
 namespace data
 {
-enum autoscaleOption {noscale, autoscale, noupscale, upscale};
-typedef std::pair<util::ValueNew, util::ValueNew> scaling_pair; //scale / offset
+
 class ValueArrayNew;
+struct scaling_pair;
 
 class ValueArrayConverterBase
 {
@@ -40,7 +40,7 @@ public:
 	virtual void convert( const ValueArrayNew &src, ValueArrayNew &dst, const scaling_pair &scaling )const;
 	virtual ValueArrayNew generate( const ValueArrayNew &src, const scaling_pair &scaling )const = 0;//@todo replace by create+copy
 	virtual ValueArrayNew create(size_t len )const = 0;
-	virtual scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )const;
+	virtual scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const;
 	static std::shared_ptr<const ValueArrayConverterBase> get() {return std::shared_ptr<const ValueArrayConverterBase>();}
 	virtual ~ValueArrayConverterBase() {}
 };

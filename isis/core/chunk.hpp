@@ -133,14 +133,14 @@ public:
 	Chunk cloneToNew( size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1 )const;
 
 	/// Creates a new empty Chunk without properties but of specified type and specified size.
-	static Chunk createByID( short unsigned int ID, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false );
+	static Chunk createByID( size_t ID, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false );
 
 	/**
 	 * Ensure, the chunk has the type with the requested ID.
 	 * If the typeID of the chunk is not equal to the requested ID, the data of the chunk is replaced by an converted version.
 	 * \returns false if there was an error
 	 */
-	bool convertToType( short unsigned int ID, scaling_pair scaling = scaling_pair() );
+	bool convertToType( size_t ID, const scaling_pair &scaling = scaling_pair() );
 
 	/**
 	 * Copy all voxel data of the chunk into memory.
@@ -150,7 +150,7 @@ public:
 	 * \param scaling the scaling to be used when converting the data (will be determined automatically if not given)
 	 * \return true if copying was (at least partly) successful
 	 */
-	template<typename T> bool copyToMem( T *dst, size_t len, scaling_pair scaling = scaling_pair() )const {
+	template<typename T> bool copyToMem( T *dst, size_t len, const scaling_pair &scaling = scaling_pair() )const {
 		return ValueArrayNew::copyToMem<T>( dst, len,  scaling ); // use copyToMem of ValueArrayBase
 	}
 	/**
@@ -160,8 +160,8 @@ public:
 	 * \param scaling the scaling to be used when converting the data (will be determined automatically if not given)
 	 * \return a new deep copied Chunk of the same size
 	 */
-	Chunk copyByID( unsigned short ID = 0, scaling_pair scaling = scaling_pair() )const;
-	template<typename T> TypedChunk<T> as(scaling_pair scaling = scaling_pair())const;
+	Chunk copyByID( size_t ID, const scaling_pair &scaling = scaling_pair() )const;
+	template<typename T> TypedChunk<T> as(const scaling_pair &scaling = scaling_pair())const;
 
 	/**
 	 * Copy data from a (smaller) chunk and insert it as a tile at a specified position.
@@ -238,8 +238,9 @@ protected:
 // protected:
 // 	TypedChunk():Chunk(ValueArrayNew(std::add_pointer_t<TYPE>(),0), 0, 0, 0, 0){}
 public:
-	TypedChunk( const ValueArrayNew &ref, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false, scaling_pair scaling = scaling_pair()  )
+	TypedChunk( const ValueArrayNew &ref, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false, const scaling_pair &scaling = scaling_pair()  )
 	: Chunk( ref.as<TYPE>(scaling), nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid ),me(castTo<TYPE>()) {}
+	
 	TypedChunk( const Chunk &ref, scaling_pair scaling = scaling_pair() ) : TypedChunk( ref.as<TYPE>(scaling) ) {}
 
 	TYPE* begin(){
@@ -256,7 +257,7 @@ public:
 	}
 };
 
-template<typename T> TypedChunk<T> Chunk::as(scaling_pair scaling)const
+template<typename T> TypedChunk<T> Chunk::as(const scaling_pair &scaling)const
 {
 	//make a chunk from a typed ValueArray
 	const auto size=getSizeAsVector();
@@ -294,17 +295,18 @@ public:
 		this->copyFromMem( org, this->getVolume() );
 	}
 	/// Create a deep copy of a given Chunk (automatic conversion will be used if datatype does not fit)
-	MemChunk( const MemChunk<TYPE> &ref ):MemChunk( static_cast<const Chunk&>(ref), data::scaling_pair(1, 0 ) ){} // automatically built version would be cheap copy
+	MemChunk( const MemChunk<TYPE> &ref ):MemChunk( static_cast<const Chunk&>(ref), data::scaling_pair(1, 0 ) )
+	{} 	// automatically built version would be cheap copy / we use 1/0-scaling as its the same type
 	/**
 	 * Create a deep copy of a given Chunk.
 	 * An automatic conversion is used if datatype does not fit
 	 * \param ref the source chunk
 	 * \param scaling the scaling (scale and offset) to be used if a conversion to the requested type is neccessary.
 	 */
-	MemChunk( const Chunk &ref, scaling_pair scaling = scaling_pair() )	
+	MemChunk( const Chunk &ref, const scaling_pair scaling = scaling_pair() )	
 	:TypedChunk<TYPE>(ValueArrayNew(std::add_pointer_t<TYPE>(),0),0,0,0,0)
 	{
-#pragma warning test me
+#pragma message "test me"
 		NDimensional<4>::init(ref.getSizeAsVector()); // initialize the shape
 		static_cast<util::PropertyMap&>(*this)=ref; // copy properties
 		//get rid of my ValueArray and make a new copying/converting the data of ref (use the reset-function of the scoped_ptr Chunk is made of)

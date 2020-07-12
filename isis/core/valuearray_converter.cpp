@@ -47,33 +47,28 @@ size_t getConvertSize( const ValueArrayNew &src, const ValueArrayNew &dst )
 	LOG_IF( src.getLength() < dst.getLength(), Debug, info ) << "Source is shorter than destination. Will only convert " << src.getLength() << " values";
 	return std::min( src.getLength(), dst.getLength() );
 }
-static bool checkScale( const scaling_pair &scaling )
-{
-	const double scale = scaling.first.as<double>(), offset = scaling.second.as<double>();
-	return ( scale != 1 || offset );
-}
 
 template<typename SRC, typename DST>
-scaling_pair getScalingToColor( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )
+scaling_pair getScalingToColor( const util::ValueNew &min, const util::ValueNew &max )
 {
 	double scalMin, scalMax;
 
-	if( min.isFloat() || min.isInteger() )scalMin = min.as<double>(); // if min is allready a scalar
+	if( min.isFloat() || min.isInteger() )scalMin = min.as<double>(); // if min is already a scalar
 	else { // of not, determine the scalar min from the elements
 		const util::color48 minCol = min.as<util::color48>(); //use the "biggest" known color type
 		scalMin = *std::min_element( &minCol.r, &minCol.b ); // take the lowest value
 	}
 
-	if( max.isFloat() || max.isInteger() )scalMax = max.as<double>(); // if max is allready a scalar
+	if( max.isFloat() || max.isInteger() )scalMax = max.as<double>(); // if max is already a scalar
 	else { // of not, determine the scalar min from the elements
 		const util::color48 maxCol = max.as<util::color48>(); //use the "biggest" known color type
 		scalMax = *std::max_element( &maxCol.r, &maxCol.b ); // take the lowest value
 	}
 
-	return getNumericScaling<SRC, DST>( scalMin, scalMax, scaleopt );;
+	return getNumericScaling<SRC, DST>( scalMin, scalMax );;
 }
 template<typename SRC, typename DST>
-scaling_pair getScalingToComplex( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )
+scaling_pair getScalingToComplex( const util::ValueNew &min, const util::ValueNew &max )
 {
 	double scalMin, scalMax;
 
@@ -89,32 +84,32 @@ scaling_pair getScalingToComplex( const util::ValueNew &min, const util::ValueNe
 		scalMax = std::max( maxCpl.real(), maxCpl.imag() );
 	}
 
-	return getNumericScaling<SRC, DST>( scalMin, scalMax, scaleopt );
+	return getNumericScaling<SRC, DST>( scalMin, scalMax );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // basic numeric conversion class
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct NumConvImplBase {
-	static scaling_pair getScaling( const util::ValueNew &/*min*/, const util::ValueNew &/*max*/, autoscaleOption /*scaleopt*/ ) {
+	static scaling_pair getScaling( const util::ValueNew &/*min*/, const util::ValueNew & ) {
 		return scaling_pair( 1, 0 );
 	}
 };
 // default generic conversion between numeric types
 template<typename SRC, typename DST, bool SAME> struct NumConvImpl: NumConvImplBase {
 	static void convert( const SRC *src, DST *dst, const scaling_pair &scaling, size_t size ) {
-		const double scale = scaling.first.as<double>(), offset = scaling.second.as<double>();
+		const double scale = scaling.scale.as<double>(), offset = scaling.offset.as<double>();
 		numeric_convert( src, dst, size, scale , offset );
 	}
-	static scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt ) {
-		return getNumericScaling<SRC, DST>( min, max, scaleopt );
+	static scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max ) {
+		return getNumericScaling<SRC, DST>( min, max );
 	}
 };
 // special generic conversion between equal numeric types (maybe we can copy / scaling will be 1/0)
 template<typename T> struct NumConvImpl<T, T, true>: NumConvImplBase {
 	static void convert( const T *src, T *dst, const scaling_pair &scaling, size_t size ) {
-		if( checkScale( scaling ) ) {
-			const double scale = scaling.first.as<double>(), offset = scaling.second.as<double>();
+		if( scaling.isRelevant() ) {
+			const double scale = scaling.scale.as<double>(), offset = scaling.offset.as<double>();
 			numeric_convert( src, dst, size, scale , offset );
 		} else { // if there is no scaling - we can copy
 			numeric_copy( src, dst, size );
@@ -125,8 +120,8 @@ template<typename T> struct NumConvImpl<T, T, true>: NumConvImplBase {
 // specialisation for bool (anything that is "<=0" after the scaling results in false)
 template<typename SRC> struct NumConvImpl<SRC, bool, false>: NumConvImplBase {
 	static void convert( const SRC *src, bool *dst, const scaling_pair &scaling, size_t size ) {
-		if( checkScale( scaling ) ) {
-			const double scale = scaling.first.as<double>(), offset = scaling.second.as<double>();
+		if( scaling.isRelevant() ) {
+			const double scale = scaling.scale.as<double>(), offset = scaling.offset.as<double>();
 			while( size-- )
 				*( dst++ ) = ( (*( src++ ) * scale) > -offset);
 		} else
@@ -158,8 +153,8 @@ template<typename S, typename D> struct scaling_op_base : copy_op_base<S, D> {
 	double scale, offset;
 	scaling_op_base( typename copy_op_base<S, D>::iter_type s ): copy_op_base<S, D>( s ) {}
 	void setScale( scaling_pair scaling ) {
-		scale = scaling.first.as<double>();
-		offset = scaling.second.as<double>();
+		scale = scaling.scale.as<double>();
+		offset = scaling.offset.as<double>();
 	}
 	D getScal() {
 		return round<D>( *( copy_op_base<S, D>::s++ ) * scale + offset );
@@ -172,9 +167,9 @@ template<typename S, typename D> struct scaling_op_base : copy_op_base<S, D> {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //default implementation of ValueArrayConverterBase::getScaling - allways returns scaling of 1/0 - should be overridden by real converters if they do use a scaling
-scaling_pair ValueArrayConverterBase::getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt ) const
+scaling_pair ValueArrayConverterBase::getScaling( const util::ValueNew &min, const util::ValueNew &max ) const
 {
-	return _internal::NumConvImplBase::getScaling( min, max, scaleopt );
+	return _internal::NumConvImplBase::getScaling( min, max );
 }
 void ValueArrayConverterBase::convert( const ValueArrayNew &src, ValueArrayNew &dst, const scaling_pair &/*scaling*/ ) const
 {
@@ -223,7 +218,7 @@ public:
 	void convert( const ValueArrayNew &src, ValueArrayNew &dst, const scaling_pair &scaling )const {
 		SRC *dstPtr = dst.castTo<SRC>().get();
 		const SRC *srcPtr = src.castTo<SRC>().get();
-		LOG_IF( checkScale( scaling ),  Runtime, error )  << "Scaling is ignored when copying data of type "  << src.typeName() << " to " << dst.typeName() ;
+		LOG_IF( scaling.isRelevant(),  Runtime, error )  << "Scaling is ignored when copying data of type "  << src.typeName() << " to " << dst.typeName() ;
 		memcpy( dstPtr, srcPtr, getConvertSize( src, dst )*src.bytesPerElem() );
 	}
 	virtual ~ValueArrayConverter() {}
@@ -248,8 +243,8 @@ public:
 		const SRC *srcPtr = src.castTo<SRC>().get();
 		NumConvImpl<SRC, DST, std::is_same<SRC, DST>::value>::convert( srcPtr, dstPtr, scaling, getConvertSize( src, dst ) );
 	}
-	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )const {
-		return NumConvImpl<SRC, DST, std::is_same<SRC, DST>::value >::getScaling( min, max, scaleopt );
+	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const {
+		return NumConvImpl<SRC, DST, std::is_same<SRC, DST>::value >::getScaling( min, max );
 	}
 	virtual ~ValueArrayConverter() {}
 };
@@ -279,8 +274,8 @@ public:
 
 		NumConvImpl<SRC, DST, std::is_same<SRC, DST>::value>::convert( sp, dp, scaling, getConvertSize( src, dst ) * 2 );
 	}
-	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )const {
-		return getScalingToComplex<SRC, DST>( min, max, scaleopt );
+	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const {
+		return getScalingToComplex<SRC, DST>( min, max );
 	}
 	virtual ~ValueArrayConverter() {}
 };
@@ -312,7 +307,7 @@ public:
 		auto s = src.beginTyped<SRC>();
 		auto d = dst.beginTyped<std::complex<DST> >();
 
-		if( checkScale( scaling ) ) {
+		if( scaling.isRelevant() ) {
 			num2complex<scaling_op_base<SRC, DST> > op( s );
 			op.setScale( scaling );
 			std::generate_n( d, size, op );
@@ -322,8 +317,8 @@ public:
 		}
 
 	}
-	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )const {
-		return getScalingToComplex<SRC, DST>( min, max, scaleopt );
+	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const {
+		return getScalingToComplex<SRC, DST>( min, max );
 	}
 	virtual ~ValueArrayConverter() {}
 };
@@ -348,8 +343,8 @@ public:
 		DST *dp = &dst.castTo<util::color<DST> >().get()->r;
 		NumConvImpl<SRC, DST, false>::convert( sp, dp, scaling, getConvertSize( src, dst ) * 3 );
 	}
-	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )const {
-		return getScalingToColor<SRC, DST>( min, max, scaleopt );
+	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const {
+		return getScalingToColor<SRC, DST>( min, max );
 	}
 
 	virtual ~ValueArrayConverter() {}
@@ -383,7 +378,7 @@ public:
 		auto s = src.beginTyped<SRC>();
 		auto d = dst.beginTyped<util::color<DST> >();
 
-		if( checkScale( scaling ) ) {
+		if( scaling.isRelevant() ) {
 			num2color<scaling_op_base<SRC, DST> > op( s );
 			op.setScale( scaling );
 			std::generate_n( d, size, op );
@@ -392,8 +387,8 @@ public:
 			std::generate_n( d, size, op );
 		}
 	}
-	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max, autoscaleOption scaleopt = autoscale )const {
-		return getScalingToColor<SRC, DST>( min, max, scaleopt );
+	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const {
+		return getScalingToColor<SRC, DST>( min, max );
 	}
 
 	virtual ~ValueArrayConverter() {}

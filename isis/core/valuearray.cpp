@@ -101,20 +101,21 @@ std::vector<isis::data::ValueArrayNew> isis::data::ValueArrayNew::splice(size_t 
 	return std::visit(generator,static_cast<const ArrayTypes&>(*this));
 }
 
-isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo(unsigned short typeID, isis::data::autoscaleOption scaleopt) const {
-	return getScalingTo(typeID, getMinMax(), scaleopt);
+isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo(unsigned short typeID) const {
+	return getScalingTo(typeID, getMinMax());
 }
-isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo(unsigned short typeID, const std::pair<util::ValueNew, util::ValueNew>& minmax, isis::data::autoscaleOption scaleopt) const
+isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo( unsigned short typeID, const std::pair<util::ValueNew, util::ValueNew> &minmax )const
 {
-	if( typeID == index() && scaleopt == autoscale ) { // if id is the same and autoscale is requested
-		static const util::ValueNew one( uint8_t(1) );
-		static const util::ValueNew zero( uint8_t(0) );
-		return std::pair<util::ValueNew, util::ValueNew>( one, zero ); // the result is always 1/0
-	} else { // get min/max and compute the scaling
-		return ValueArrayNew::getScalingTo( typeID, minmax, scaleopt );
+	const Converter &conv = getConverterTo( typeID );
+
+	if ( conv ) {
+		return conv->getScaling( minmax.first, minmax.second );
+	} else {
+		LOG( Runtime, error )
+				<< "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true )[typeID];
+		return {};//return invalid scaling
 	}
 }
-
 
 std::size_t isis::data::ValueArrayNew::bytesPerElem() const{
 	return std::visit([](auto ptr){return sizeof(typename decltype(ptr)::element_type);},static_cast<const ArrayTypes&>(*this));
@@ -153,12 +154,12 @@ bool isis::data::ValueArrayNew::isValid() const{
 	return index()!=std::variant_npos && std::visit([](auto ptr){return (bool)ptr;}, static_cast<const ArrayTypes&>(*this));
 }
 
-isis::data::ValueArrayNew isis::data::ValueArrayNew::copyByID(size_t ID, isis::data::scaling_pair scaling) const
+isis::data::ValueArrayNew isis::data::ValueArrayNew::copyByID(size_t ID, const scaling_pair &scaling) const
 {
 	const Converter &conv = getConverterTo( ID );
 
 	if( conv ) {
-		return conv->generate( *this, scaling );
+		return conv->generate( *this, getScaling( scaling, ID ) );
 	} else {
 		LOG( Runtime, error ) << "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true )[ID];
 		return ValueArrayNew(); // return an invalid array
@@ -170,7 +171,7 @@ bool isis::data::ValueArrayNew::copyTo(isis::data::ValueArrayNew& dst, isis::dat
 	const Converter &conv = getConverterTo( dID );
 
 	if( conv ) {
-		conv->convert( *this, dst, scaling );
+		conv->convert( *this, dst, getScaling( scaling, dID ));
 		return true;
 	} else {
 		LOG( Runtime, error ) << "I don't know any conversion from " << toString( true ) << " to " << dst.typeName();
@@ -209,13 +210,17 @@ std::size_t isis::data::ValueArrayNew::getTypeID() const{
 	);
 }
 
-isis::data::ValueArrayNew isis::data::ValueArrayNew::convertByID(unsigned short ID, isis::data::scaling_pair scaling) const{
-	if( scaling.first.eq( 1 ) && scaling.second.eq( 0 ) && getTypeID() == ID ) { // if type is the same and scaling is 1/0
+isis::data::ValueArrayNew isis::data::ValueArrayNew::convertByID(unsigned short ID, scaling_pair scaling) const{
+	scaling = getScaling(scaling, ID);
+	
+	assert(scaling.valid );
+	if( !scaling.isRelevant() && getTypeID() == ID ) { // if type is the same and scaling is 1/0
 		return *this; //cheap copy
 	} else {
 		return copyByID( ID, scaling ); // convert into new
 	}
 }
+
 isis::data::ValueArrayNew isis::data::ValueArrayNew::createByID(unsigned short ID, std::size_t len)
 {
 	const _internal::ValueArrayConverterMap::const_iterator f1 = converters().find( ID );

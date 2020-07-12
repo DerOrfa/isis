@@ -328,7 +328,7 @@ public:
 	}
 
 	///for each chunk get the scaling (and offset) which would be used in an conversion to the given type
-	scaling_pair getScalingTo ( unsigned short typeID, autoscaleOption scaleopt = autoscale ) const;
+	scaling_pair getScalingTo ( unsigned short typeID ) const;
 
 
 	/**
@@ -500,7 +500,7 @@ public:
 	 * \param dst ValueArray to copy into
 	 * \param scaling the scaling to be used when converting the data (will be determined automatically if not given)
 	 */
-	void copyToValueArray ( data::ValueArrayNew &dst,  scaling_pair scaling = scaling_pair() ) const;
+	void copyToValueArray ( data::ValueArrayNew &dst, scaling_pair scaling = scaling_pair() ) const;
 
 	/**
 	 * Create a new Image of consisting of deep copied chunks.
@@ -509,7 +509,7 @@ public:
 	 * \param scaling the scaling to be used when converting the data (will be determined automatically if not given)
 	 * \return a new deep copied Image of the same size
 	 */
-	Image copyByID( unsigned short ID = 0, scaling_pair scaling = scaling_pair() )const;
+	Image copyByID( unsigned short ID = 0, const scaling_pair &scaling = scaling_pair() )const;
 
 
 	/**
@@ -528,8 +528,7 @@ public:
 	 * The conversion is done using the value range of the image.
 	 * \returns false if there was an error
 	 */
-	bool convertToType ( short unsigned int ID, isis::data::autoscaleOption scaleopt = autoscale );
-	bool convertToType ( short unsigned int ID, scaling_pair scaling);
+	bool convertToType ( short unsigned int ID, scaling_pair scaling=scaling_pair() );
 
 	/**
 	 * Automatically splice the given dimension and all dimensions above.
@@ -570,9 +569,9 @@ protected:
 	TypedImage ():Image(){}
 public:
 	/// cheap copy another Image and make sure all chunks have type T
-	TypedImage ( const Image &src ) : Image ( src ) { // ok we just copied the whole image
+	TypedImage ( const Image &src, const scaling_pair &scaling=scaling_pair() ) : Image ( src ) { // ok we just copied the whole image
 		//but we want it to be of type T
-		convertToType ( util::typeID<T>() );
+		convertToType ( util::typeID<T>(), scaling );
 	}
 	/// cheap copy another TypedImage
 	TypedImage &operator= ( const TypedImage &ref ) { //its already of the given type - so just copy it
@@ -595,7 +594,7 @@ public:
 
 /**
  * An Image which always uses its own memory and a specific type.
- * Thus, creating this image from another Image allways does a deep copy (and maybe a conversion).
+ * Thus, creating this image from another Image always does a deep copy (and maybe a conversion).
  */
 template<typename T> class MemImage: public TypedImage<T>
 {
@@ -620,7 +619,7 @@ public:
 		
 		//we want deep copies of the chunks, and we want them to be of type T
 		struct : _internal::SortedChunkList::chunkPtrOperator {
-			std::pair<util::ValueNew, util::ValueNew> scale;
+			scaling_pair scale;
 			std::shared_ptr<Chunk> operator() ( const std::shared_ptr< Chunk >& ptr ) {
 				return std::shared_ptr<Chunk> ( new MemChunk<T> ( *ptr, scale ) );
 			}

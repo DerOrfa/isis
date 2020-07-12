@@ -59,7 +59,6 @@ public:
 	 * - \c -wf to override the file suffix used to select the plugin used for writing
 	 * - \c -wdialect selects a special dialect used for writing
 	 * - \c -repn selects a data type used for writing
-	 * - \c -scale_mode selects the scaling strategy when converting data type for writing
 	 * \param parameters the ParameterMap the parameters should be added to
 	 * \param needed if true, the -out parameter is marked as needed (init will fail, if this is not set)
 	 * \param suffix text to be appended to the parameters above (eg. "1" here results in "-out1" etc.) to distinguish multiple outputs

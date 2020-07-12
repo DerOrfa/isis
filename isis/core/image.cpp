@@ -498,12 +498,15 @@ const Chunk Image::getChunk ( size_t first, size_t second, size_t third, size_t 
 void Image::copyToValueArray( ValueArrayNew &dst, scaling_pair scaling ) const
 {
 	if( getVolume() > dst.getLength() ) {
-		LOG( Runtime, error ) << "Image wont fit into the ValueArray, wont copy..";
+		LOG( Runtime, error ) << "Image won't fit into the ValueArray, wont copy..";
 		return;
 	}
 
 	if ( clean ) {
-		scaling = getScalingTo ( dst.getTypeID() );
+		if(!scaling.valid)
+			scaling = getScalingTo ( dst.getTypeID() );
+			
+		assert(scaling.valid);
 
 		std::vector< ValueArrayNew > targets;
 
@@ -530,20 +533,20 @@ void Image::copyToValueArray( ValueArrayNew &dst, scaling_pair scaling ) const
 	}
 }
 
-Image Image::copyByID( short unsigned int ID, scaling_pair scaling ) const
+Image Image::copyByID( short unsigned int ID, const scaling_pair &scaling ) const
 {
 	Image ret( *this ); // ok we just cheap-copied the whole image
 
 	//we want deep copies of the chunks, and we want them to be of type ID
 	struct : _internal::SortedChunkList::chunkPtrOperator {
-		std::pair<util::ValueNew, util::ValueNew> scale;
+		scaling_pair scale;
 		unsigned short ID;
 		std::shared_ptr<Chunk> operator() ( const std::shared_ptr< Chunk >& ptr ) {
 			return std::make_shared<Chunk> ( ptr->copyByID( ID, scale ) );
 		}
 	} conv_op;
 
-	conv_op.scale = scaling;
+	conv_op.scale = scaling.valid?scaling:getScalingTo(ID);
 	conv_op.ID = ID;
 
 	ret.set.transform ( conv_op );
@@ -693,15 +696,16 @@ std::pair<util::ValueNew, util::ValueNew> Image::getMinMax () const
 }
 
 // @todo this wont work with images of more 2 two different data types
-std::pair< util::ValueNew, util::ValueNew > Image::getScalingTo( short unsigned int targetID, autoscaleOption scaleopt ) const
+scaling_pair Image::getScalingTo( short unsigned int targetID ) const
 {
 	LOG_IF( !clean, Debug, error ) << "You should run reIndex before running this";
 	std::pair<util::ValueNew, util::ValueNew> minmax = getMinMax();
 
 	for( const std::shared_ptr<const Chunk> &ref :  lookup ) { //find a chunk which would be converted
 		if( targetID != ref->getTypeID() ) {
-			const scaling_pair scale = ref->getScalingTo( targetID, minmax, scaleopt );
-			return scale; // and ask that for the scaling
+			// and ask that for the scaling / @todo what if there are more than one different chunk-types (and thus scalings)
+			const scaling_pair scale = ref->getScalingTo( targetID, minmax );
+			return scale; 
 		}
 	}
 	return {1,0}; //ok seems like no conversion is needed - return 1/0
@@ -830,39 +834,29 @@ std::string Image::getMajorTypeName() const
 	return util::getTypeMap()[getMajorTypeID()];
 }
 
-bool Image::convertToType( short unsigned int ID, scaling_pair scale )
+bool Image::convertToType( short unsigned int ID, scaling_pair scaling )
 {
 	bool retVal = true;
+	if(!scaling.valid){
+		scaling=getScalingTo(ID);
+		LOG( Debug, info ) << "Computed scaling of the original image data: [" << scaling << "]";
+	}
+
+
 	//we want all chunks to be of type ID - so tell them
 	for( std::shared_ptr<Chunk> &ref :  lookup ) {
-		retVal &= ref->convertToType( ID, scale );
+		retVal &= ref->convertToType( ID, scaling );
 	}
 
 	//apply scaling to the window if its there
 	auto windowMax = queryProperty("window/max");
 	auto windowMin = queryProperty("window/min");
 	if(windowMax)
-		(*windowMax) = windowMax->multiply(scale.first).add(scale.second);
+		(*windowMax) = windowMax->multiply(scaling.scale).add(scaling.offset);
 	if(windowMin)
-		(*windowMin) = windowMin->multiply(scale.first).add(scale.second);
+		(*windowMin) = windowMin->multiply(scaling.scale).add(scaling.offset);
 
 	return retVal;
-}
-bool Image::convertToType( short unsigned int ID, autoscaleOption scaleopt )
-{
-	bool retVal = true;
-	for( std::shared_ptr<Chunk> &ref :  lookup ) {
-		retVal &= ( ref->getTypeID() == ID );
-	}
-
-	if( retVal ) // if all chunks allready have the requested type we can skip the rest
-		return true;
-
-	// get value range of the image for the conversion
-	scaling_pair scale = getScalingTo( ID, scaleopt );
-
-	LOG( Debug, info ) << "Computed scaling of the original image data: [" << scale << "]";
-	return convertToType(ID,scale);
 }
 
 size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim, timeDim
