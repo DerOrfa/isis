@@ -37,11 +37,11 @@ BOOST_AUTO_TEST_CASE( sinus_fft_test )
 // 	);
 // 	data::IOFactory::write(data::Image(real),"/tmp/k_space.nii");
 
-	std::pair< util::ValueReference, util::ValueReference > min_max=k_space.getMinMax();
+	auto min_max=k_space.getMinMax();
 
 	BOOST_CHECK_EQUAL(
 		k_space.voxel<std::complex< float >>(xsize/2,ysize/2,zsize/2).real(),
-		min_max.second->as<std::complex< float >>().real()
+		min_max.second.as<std::complex< float >>().real()
 	);
 
 	BOOST_REQUIRE_CLOSE(

@@ -20,8 +20,8 @@ namespace test
 
 BOOST_AUTO_TEST_CASE( property_init_test )
 {
-	/*  ENABLE_LOG(CoreLog,util::DefaultMsgPrint,info);
-	    ENABLE_LOG(CoreDebug,util::DefaultMsgPrint,verbose_info);*/
+	ENABLE_LOG(CoreLog,util::DefaultMsgPrint,error);
+	ENABLE_LOG(CoreDebug,util::DefaultMsgPrint,error);
 	//  default constructor
 	PropertyValue propZero;
 	//  initializer
@@ -59,9 +59,11 @@ BOOST_AUTO_TEST_CASE( property_compare_test )
 	BOOST_CHECK_EQUAL( PropertyValue( 5 ), PropertyValue( 5 ));
 
 	PropertyValue fives16bit,fivesstr,fivesint;
-	std::fill_n( std::back_inserter(fives16bit),5,util::Value<uint16_t>(5));
-	std::fill_n( std::back_inserter(fivesint),5,util::Value<int>(5));
-	std::fill_n( std::back_inserter( fivesstr ),5,util::Value<std::string>("5"));
+	for(int i=0;i<5;i++){
+		fives16bit.push_back((uint16_t)5);
+		fivesint.push_back((int)5);
+		fivesstr.push_back("5");
+	}
 
 	BOOST_CHECK( fives16bit.eq(fivesint)); // not the same type
 	BOOST_CHECK( fives16bit.eq(fives16bit));
@@ -92,9 +94,11 @@ BOOST_AUTO_TEST_CASE( property_compare_test )
 BOOST_AUTO_TEST_CASE( property_operator_test )
 {
 	PropertyValue fivesint,tensint,twosint;
-	std::fill_n( std::back_inserter(twosint),5,util::Value<int>(2));
-	std::fill_n( std::back_inserter(fivesint),5,util::Value<int>(5));
-	std::fill_n( std::back_inserter(tensint),5,util::Value<int>(10));
+	for(size_t i=0;i<5;i++){
+		twosint.push_back(2);
+		fivesint.push_back(5);
+		tensint.push_back(10);
+	}
 	
 	PropertyValue onesix=fivesint;
 	onesix[0].apply(6);
@@ -128,7 +132,7 @@ BOOST_AUTO_TEST_CASE( direct_property_operator_test )
 
 BOOST_AUTO_TEST_CASE( property_list_creation )
 {
-	const util::Value<uint32_t> buff[]={0,1,2,3,4,5,6,7,8,9};
+	const util::ValueNew buff[]={0,1,2,3,4,5,6,7,8,9};
 	PropertyValue list;
 	list.insert(list.end(),buff,buff+10);
 	for(int i=0;i<10;i++){
@@ -138,7 +142,7 @@ BOOST_AUTO_TEST_CASE( property_list_creation )
 
 BOOST_AUTO_TEST_CASE( property_list_splice )
 {
-	const util::Value<uint32_t> buff[]={0,1,2,3,4,5,6,7,8,9};
+	const util::ValueNew buff[]={0,1,2,3,4,5,6,7,8,9};
 	PropertyValue list;
 	list.insert(list.end(),buff,buff+10);
 

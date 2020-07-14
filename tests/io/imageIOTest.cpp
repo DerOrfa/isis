@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE ( imageNameUseFormatTest )
 	util::PropertyMap props;
 
 	props.setValueAs<uint32_t>( "acquisitionNumber", 0 );
-	props.setValueAs( "subjectName", "doe" );
+	props.setValueAs( "subjectName", std::string("doe") );
 	props.setValueAs( "acquisitionTime", M_PI );
 	
 	// check uint32 property

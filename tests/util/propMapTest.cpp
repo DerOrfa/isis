@@ -11,6 +11,7 @@
 #include <isis/core/propmap.hpp>
 #include <isis/core/vector.hpp>
 #include <string>
+#include <iterator>
 
 namespace isis
 {
@@ -65,6 +66,8 @@ BOOST_AUTO_TEST_CASE( propMap_set_test )
 {
 	PropertyMap map1;
 	map1.setValueAs( "Test1", M_PI );
+	BOOST_CHECK( map1.property( "Test1" ).is<decltype(M_PI)>());
+	
 	BOOST_CHECK( !( map1.property( "Test1" ) == 7 ) );
 	BOOST_CHECK_EQUAL( map1.property( "Test1" ), M_PI );
 	map1.setValueAs( "Test1", 7. );
@@ -220,7 +223,7 @@ BOOST_AUTO_TEST_CASE( prop_list_test )
 {
 
 	PropertyMap map;
-	const util::Value<int> five[] = {1, 2, 3, 4, 5};
+	const int five[] = {1, 2, 3, 4, 5};
 	std::copy( five, five + 5, std::back_inserter( map.touchProperty( "test1" ) ) );
 
 	for( int i = 0; i < 5; i++ ) {
@@ -232,7 +235,7 @@ BOOST_AUTO_TEST_CASE( prop_list_test )
 	BOOST_CHECK_EQUAL( map.property( "test1" ), map.property( "test2" ) ); //so both should be equal
 
 	for( int i = 4; i >= 0; i-- ) { // filling / setting from the back
-		map.setValueAs<int>( "test1back", five[i], i );
+		map.setValue( "test1back", five[i], i );
 	}
 
 	BOOST_CHECK_EQUAL( map.property( "test1" ), map.property( "test1back" ) ); //again both should be equal
@@ -245,7 +248,7 @@ BOOST_AUTO_TEST_CASE( prop_list_splice_test )
 {
 
 	PropertyMap map,backup;
-	const util::Value<int> buff[] = {1, 2, 3, 4, 5, 6};
+	const util::ValueNew buff[] = {1, 2, 3, 4, 5, 6};
 	std::copy( buff, buff + 6, std::back_inserter( map.touchProperty( "test1" ) ) );
 	std::copy( buff, buff + 6, std::back_inserter( map.touchProperty( "test2" ) ) );
 
@@ -303,11 +306,12 @@ BOOST_AUTO_TEST_CASE( prop_value_ref_test )
 
 	BOOST_CHECK( map.queryValueAs<util::fvector3>( "Test1" ) ); //should be available as fvector3
 
-	optional< util::fvector4 & > vec4 = map.refValueAs<util::fvector4>( "Test1" );
-	BOOST_CHECK( vec4 ); //should be available as fvector4 (conversion available)
-
-	// changes should affect the property
-	vec4.get()[3] = 4;
+	//referneceing as another type should change type
+	util::fvector4 &vec4 = map.refValueAs<util::fvector4>( "Test1" );
+	BOOST_CHECK(map.property( "Test1" ).is<util::fvector4>());
+	
+	// changes to reference should affect the property
+	vec4[3] = 4;
 	BOOST_CHECK_EQUAL( map.getValueAs<util::fvector4>( "Test1" ), util::fvector4( {1, 2, 3, 4} ) );
 }
 

@@ -8,6 +8,7 @@
 #define BOOST_TEST_MODULE ChunkTest
 #include <boost/test/unit_test.hpp>
 #include <isis/core/chunk.hpp>
+#include <isis/core/valuearray_typed.hpp>
 
 namespace isis
 {
@@ -41,7 +42,10 @@ BOOST_AUTO_TEST_CASE ( chunk_index_test )
 {
 	data::MemChunk<float> ch( 4, 3, 2, 1 );
 	std::array<size_t,4> idx={1,1,1,0};
-	const size_t at = 3 * 4 + 4 + 1;
+	const size_t at =   1  //second voxel
+					  + 1*4 //second row (4 voxels per row)
+					  + 1*4*3 //second slice row (4*3 voxels per slice)
+					  + 0*4*3*2; //first volume (4*3*2 voxels per volume)
 
 	BOOST_CHECK_EQUAL( ch.getLinearIndex( idx ), at );
 	BOOST_CHECK_EQUAL( idx, ch.getCoordsFromLinIndex( at ) );
@@ -50,7 +54,7 @@ BOOST_AUTO_TEST_CASE ( chunk_index_test )
 BOOST_AUTO_TEST_CASE ( chunk_foreach_voxel_test )
 {
 	data::MemChunk<uint8_t> ch( 4, 3, 2, 1 );
-	memset( &ch.asValueArray<uint8_t>()[0], 1, ch.getVolume() );
+	memset( ch.beginTyped<uint8_t>(), 1, ch.getVolume() );
 
 	class : public data::VoxelOp<uint8_t>
 	{
@@ -81,7 +85,7 @@ BOOST_AUTO_TEST_CASE ( chunk_foreach_voxel_test )
 	};
 
 	BOOST_CHECK_EQUAL( ch.foreachVoxel( zero ), ch.getVolume() );
-	memset( &ch.asValueArray<uint8_t>()[0], 0, ch.getVolume() );
+	memset( ch.beginTyped<uint8_t>(), 0, ch.getVolume() );
 	BOOST_CHECK_EQUAL( ch.foreachVoxel( zero ), 0 );
 
 	checkIdx check( ch );
@@ -106,22 +110,20 @@ BOOST_AUTO_TEST_CASE ( chunk_mem_init_test )
 BOOST_AUTO_TEST_CASE ( chunk_iterator_test )
 {
 	const short data[3 * 3] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
-	//hack to get generic Chunk instead of typed MemChunk
-	//(MemChunk's storage is still ValueArray, so its shared/tracked anyway)
-	data::Chunk ch(data::MemChunk<short>( data, 3, 3 ));
+	data::MemChunk<short> ch( data, 3, 3 );
 
 	BOOST_CHECK_EQUAL( ch.getVolume(), 3 * 3 );
 
-	data::Chunk::const_iterator i = data::Chunk(ch).begin();
+	auto i = ch.beginGeneric();
 
-	for( ; i != ch.end(); ++i ) {
-		const util::Value<short> datVal( data[std::distance( const_cast<const data::Chunk&>( ch ).begin(), i )] );
+	for( ; i != ch.endGeneric(); ++i ) {
+		const util::ValueNew datVal( data[std::distance( ch.beginGeneric(), i )] );
 		BOOST_CHECK_EQUAL( *i, datVal );
 	}
 
 	const short *d=data;
 	for(auto v:ch){
-		BOOST_CHECK_EQUAL( v, util::Value<short>( *d++ ) );
+		BOOST_CHECK_EQUAL( v,  *d++ );
 	}
 }
 
@@ -133,8 +135,8 @@ BOOST_AUTO_TEST_CASE ( chunk_voxel_value_test )
 
 	for ( int i = 0; i < 3; i++ )
 		for ( int j = 0; j < 3; j++ ) {
-			BOOST_CHECK_EQUAL( ch.getVoxelValue( i, j )->as<int>(),  i + j * 3 );
-			ch.setVoxelValue( util::Value<int>( i + j * 3 + 42 ), i, j );
+			BOOST_CHECK_EQUAL( ch.getVoxelValue( i, j ).as<int>(),  i + j * 3 );
+			ch.setVoxelValue( util::ValueNew( i + j * 3 + 42 ), i, j );
 		}
 
 	for ( int i = 0; i < 3; i++ )
@@ -192,38 +194,41 @@ BOOST_AUTO_TEST_CASE ( chunk_scale_test )//Access Chunk elements via dimensional
 		ch.voxel<int16_t>( x, x, 1 ) = -50;
 	}
 
-	std::pair<util::ValueReference, util::ValueReference> minmax = ch.getMinMax();
+	auto minmax = ch.getMinMax();
 
-	data::scaling_pair scale = ch.getScalingTo( data::ValueArray<uint8_t>::staticID(), minmax );
-	const util::ValueBase &scale_s = *( scale.first );
-	const util::ValueBase &scale_o = *( scale.second );
-
-	BOOST_CHECK_EQUAL( scale_s.as<double>(), 1. / 10 );
-	BOOST_CHECK_EQUAL( scale_o.as<double>(), 5 );
+	data::scaling_pair scale = ch.getScalingTo( util::typeID<uint8_t>(), minmax );
+	BOOST_CHECK_EQUAL( scale.scale.as<double>(), 1. / 10 );
+	BOOST_CHECK_EQUAL( scale.offset.as<double>(), 5 );
 }
 
 BOOST_AUTO_TEST_CASE ( chunk_data_test2 )//Access Chunk elements via linear index (threat it as ValueArray)
 {
 	data::MemChunk<float> ch( 4, 3, 2, 1 );
-	std::ostringstream o;
+	data::TypedArray<float> ch_mirror(ch);//typed array, that uses the same memory as ch
+	std::ostringstream o1,o2;
 	const size_t vol = 4 * 3 * 2 * 1;
 	BOOST_REQUIRE_EQUAL( vol, ch.getVolume() );
 	unsigned short sample[vol];
 
 	for ( size_t i = 0; i < ch.getVolume(); i++ ) {
-		ch.asValueArray<float>()[i] = i;
+		ch_mirror[i] = i;
 		sample[i] = i;
 	}
 
 	for ( size_t i = 0; i < ch.getVolume(); i++ )
-		BOOST_CHECK( ch.getValueArray<float>()[i] == i );
+		BOOST_CHECK( ch_mirror[i] == i );
 
 	util::listToOStream(
-		sample, sample + ch.getVolume(), o,
+		sample, sample + ch.getVolume(), o1,
 		"|",
 		(std::to_string(ch.getVolume() ) + "#").c_str(), ""
 	);
-	BOOST_CHECK_EQUAL( o.str(), ch.getValueArray<float>().toString() );
+	util::listToOStream(
+		ch.begin(), ch.end(), o2,
+		"|",
+		(std::to_string(ch.getVolume() ) + "#").c_str(), ""
+	);
+	BOOST_CHECK_EQUAL( o1.str(), o2.str() );
 }
 
 BOOST_AUTO_TEST_CASE ( chunk_copy_test )//Copy chunks
@@ -232,23 +237,21 @@ BOOST_AUTO_TEST_CASE ( chunk_copy_test )//Copy chunks
 	ch1.setValueAs("test",1);
 
 	for ( size_t i = 0; i < ch1.getVolume(); i++ )
-		ch1.asValueArray<float>()[i] = i;
+		*(ch1.begin()+i) = i;
 
-	data::scaling_pair no_scale( util::Value<int>( 1 ), util::Value<int>( 0 ) );
-
-	data::Chunk ch2 = ch1;//This shall clone the underlying ValueArray-Object
+	data::Chunk ch2 = ch1;//This should clone the underlying ValueArray-Object
 
 	//make sure the properties are copied
 	BOOST_CHECK_EQUAL( ch2.getValueAs<int>("test"),1);
 
-	data::Chunk copyF = ch2.copyByID(); // this shall copy as the same as ch2 (float)
-	data::Chunk copyI = ch2.copyByID( data::ValueArray<uint32_t>::staticID(), no_scale ); // this shall copy as unsigned int (we need to set scale because float=>int always scales up)
+	data::MemChunk<float> copyF = ch2; // this should copy as the same as ch2 (float)
+	data::Chunk copyI = ch2.copyByID( util::typeID<uint32_t>(), data::scaling_pair( 1, 0 ) ); // this shall copy as unsigned int (we need to set scale because float=>int always scales up)
 
 	//but it should of course be of the same type and contain the same data
-	BOOST_CHECK( ch1.getValueArrayBase().is<float>() );
-	BOOST_CHECK( ch1.getValueArrayBase().isSameType( ch2.getValueArrayBase() ) );
-	BOOST_CHECK( copyF.getValueArrayBase().isSameType( ch2.getValueArrayBase() ) );
-	BOOST_CHECK( copyI.getValueArrayBase().is<uint32_t>() );
+	BOOST_CHECK( ch1.is<float>() );
+	BOOST_CHECK_EQUAL( ch1.getTypeID(),  ch2.getTypeID() );
+	BOOST_CHECK_EQUAL( copyF.getTypeID(),  ch2.getTypeID() );
+	BOOST_CHECK( copyI.is<uint32_t>() );
 
 	BOOST_CHECK_EQUAL( ch1.getVolume(), ch2.getVolume() );
 	BOOST_CHECK_EQUAL( ch1.getVolume(), copyF.getVolume() );
@@ -256,19 +259,19 @@ BOOST_AUTO_TEST_CASE ( chunk_copy_test )//Copy chunks
 
 	// all entries should be the same as for ch1
 	for ( size_t i = 0; i < ch2.getVolume(); i++ ) {
-		BOOST_CHECK_EQUAL( ch2.getValueArray<float>()[i], i );
-		BOOST_CHECK_EQUAL( copyF.getValueArray<float>()[i], i );
-		BOOST_CHECK_EQUAL( copyI.getValueArray<uint32_t>()[i], i );
+		BOOST_CHECK_EQUAL( *(ch2.beginTyped<float>()+i), i );
+		BOOST_CHECK_EQUAL( *(copyF.beginTyped<float>()+i), i );
+		BOOST_CHECK_EQUAL( *(copyI.beginTyped<uint32_t>()+i), i );
 	}
 
 
 	for ( size_t i = 0; i < ch2.getVolume(); i++ ) {
 		//cloning chunks is a cheap copy, thus any copied chunk shares data
-		ch1.asValueArray<float>()[i] = 0;
-		BOOST_CHECK_EQUAL( ch2.getValueArray<float>()[i], 0 );
+		*(ch1.begin()+i) = 0;
+		BOOST_CHECK_EQUAL( *(ch2.beginTyped<float>()+i), 0 );
 		// but deep copies should not be changed
-		BOOST_CHECK_EQUAL( copyF.getValueArray<float>()[i], i );
-		BOOST_CHECK_EQUAL( copyI.getValueArray<uint32_t>()[i], i );
+		BOOST_CHECK_EQUAL( *(copyF.begin()+i), i );
+		BOOST_CHECK_EQUAL( *(copyI.beginTyped<uint32_t>()+i), i );
 	}
 }
 
@@ -283,10 +286,12 @@ BOOST_AUTO_TEST_CASE ( memchunk_copy_test )//Copy chunks
 	ch1.setValueAs( "indexOrigin", util::fvector3( {1, 2, 3} ) );
 
 	for ( size_t i = 0; i < ch1.getVolume(); i++ )
-		ch1.asValueArray<float>()[i] = i;
+		*(ch1.beginTyped<float>()+i) = i;
 
 	data::MemChunk<short> ch2( ch1 );//This shall deep copy the chunk and convert the float data to short
 	data::MemChunk<short> ch3( ch2 );//This shall deep copy the chunk without converting it
+	BOOST_CHECK_NE(ch2.begin(),ch3.begin());//so they should occupy different memory
+
 	//it should of course have the same size
 	BOOST_CHECK_EQUAL( ch1.getVolume(), ch2.getVolume() );
 	BOOST_CHECK_EQUAL( ch2.getVolume(), ch3.getVolume() );
@@ -295,11 +300,12 @@ BOOST_AUTO_TEST_CASE ( memchunk_copy_test )//Copy chunks
 	BOOST_REQUIRE( ch3.hasProperty( "indexOrigin" ) );
 	BOOST_CHECK_EQUAL( ch1.property( "indexOrigin" ), ch2.property( "indexOrigin" ) );
 	BOOST_CHECK_EQUAL( ch2.property( "indexOrigin" ), ch3.property( "indexOrigin" ) );
+	
+	//data should be the same though
 	const float scale = float( std::numeric_limits< short >::max() ) / ( ch2.getVolume() - 1 );
-
 	for ( size_t i = 0; i < ch2.getVolume(); i++ ) {
-		BOOST_CHECK_EQUAL( ch2.asValueArray<short>()[i], converter( i * scale ) );
-		BOOST_CHECK_EQUAL( ch3.asValueArray<short>()[i], converter( i * scale ) );
+		BOOST_CHECK_EQUAL( *(ch2.begin()+i), converter( i * scale ) );
+		BOOST_CHECK_EQUAL( *(ch3.begin()+i), converter( i * scale ) );
 	}
 
 	data::MemChunk<short> ch4( 1, 1 );
@@ -308,10 +314,11 @@ BOOST_AUTO_TEST_CASE ( memchunk_copy_test )//Copy chunks
 
 	//because MemChunk does deep copy changing ch3 should not change ch2
 	for ( size_t i = 0; i < ch3.getVolume(); i++ ) {
-		ch3.asValueArray<short>()[i] = 200;
-		BOOST_CHECK_EQUAL( ch2.asValueArray<short>()[i], converter( i * scale ) );
-		BOOST_CHECK_EQUAL( ch4.asValueArray<short>()[i], converter( i * scale ) );
+		*(ch3.begin()+i) = 200;
+		BOOST_CHECK_EQUAL( *(ch2.begin()+i), converter( i * scale ) );
+		BOOST_CHECK_EQUAL( *(ch4.begin()+i), converter( i * scale ) );//ch4 must have the same values as ch3
 	}
+	BOOST_CHECK_NE(ch3.begin(),ch4.begin());//but must be different memory
 }
 
 BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
@@ -324,12 +331,12 @@ BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
 	ch1.setValueAs( "voxelGap", util::fvector3( {1, 1, 1} ) );
 	ch1.setValueAs<uint32_t>( "acquisitionNumber", 0 );
 
-	const util::Value<int> buff[] = {0, 1, 2};
+	const util::ValueNew buff[] = {0, 1, 2};
 	std::copy( buff, buff + 3, std::back_inserter( ch1.touchProperty( "list_test" ) ) );
 
 
 	for ( size_t i = 0; i < ch1.getVolume(); i++ )
-		ch1.asValueArray<float>()[i] = i;
+		*(ch1.begin()+i) = i;
 
 	const std::list<data::Chunk> splices = ch1.autoSplice( 2 );
 	unsigned short cnt = 0;
@@ -446,8 +453,8 @@ BOOST_AUTO_TEST_CASE ( chunk_swapdim_test )
 	//(MemChunk's storage is still ValueArray, so its shared/tracked anyway)
 	data::Chunk ch(data::MemChunk<uint32_t>( 50, 40, 30, 20 ));
 	uint32_t cnt = 0;
-	for( data::Chunk::reference ref :  ch )
-	ref = util::Value<uint32_t>( cnt++ );
+	for( auto i=ch.beginGeneric();i!=ch.endGeneric();i++ )
+		*i = cnt++ ;
 
 	data::MemChunk<uint32_t> swapped( ch );
 	swapped.swapDim( data::columnDim, data::sliceDim );
@@ -469,28 +476,28 @@ BOOST_AUTO_TEST_CASE ( typed_chunk_test )//Copy chunks
 	ch1.setValueAs("test",1);
 
 	for ( size_t i = 0; i < ch1.getVolume(); i++ )
-		ch1.asValueArray<float>()[i] = i+1;
+		*(ch1.begin()+i) = i+1;
 
 	data::TypedChunk<float> ch2 = ch1;//This shall clone the underlying ValueArray-Object
 
 	//make sure the properties are copied
 	BOOST_CHECK_EQUAL( ch2.getValueAs<uint32_t>("test"),1);
 
-	data::scaling_pair no_scale( util::Value<int>( 1 ), util::Value<int>( 0 ) );
+	data::scaling_pair no_scale( 1, 0 );
 	data::TypedChunk<uint32_t> copyI(ch2,no_scale); //This shall convert the underlying ValueArray-Object (without scaling it)
 
 	//but it should of course be of the same type and contain the same data
-	BOOST_CHECK( ch1.getValueArrayBase().is<float>() );
-	BOOST_CHECK( ch1.getValueArrayBase().isSameType( ch2.getValueArrayBase() ) );
-	BOOST_CHECK( copyI.getValueArrayBase().is<uint32_t>() );
+	BOOST_CHECK( ch1.is<float>() );
+	BOOST_CHECK_EQUAL( ch1.getTypeID(), ch2.getTypeID() );
+	BOOST_CHECK( copyI.is<uint32_t>() );
 
 	BOOST_CHECK_EQUAL( ch1.getVolume(), ch2.getVolume() );
 	BOOST_CHECK_EQUAL( ch1.getVolume(), copyI.getVolume() );
 
 	// all entries should be the same as for ch1
 	for ( size_t i = 0; i < ch2.getVolume(); i++ ) {
-		BOOST_CHECK_EQUAL( ch2.getValueArray<float>()[i], i+1 );
-		BOOST_CHECK_EQUAL( copyI.getValueArray<uint32_t>()[i], i+1 );
+		BOOST_CHECK_EQUAL( *(ch2.begin()+i), i+1 );
+		BOOST_CHECK_EQUAL( *(copyI.begin()+i), i+1 );
 	}
 
 	float v_sum=0;
