@@ -30,7 +30,7 @@ const _internal::ValueConverterMap &ValueNew::converters(){
 }
 
 const ValueNew::Converter &ValueNew::getConverterTo(unsigned short ID) const {
-	const auto f1 = converters().find( index() );
+	const auto f1 = converters().find( typeID() );
 	assert( f1 != converters().end() );
 	const auto f2 = f1->second.find( ID );
 	assert( f2 != f1->second.end() );
@@ -61,7 +61,7 @@ ValueNew ValueNew::copyByID(unsigned short ID) const{
 			    break;
 		}
 
-		return to; // return the generated Value-Object - wrapping it into Reference
+		return to; // return the generated Value-Object
 	} else {
 		LOG( Runtime, error ) << "I don't know any conversion from " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] );
 		return createByID(ID); // return an empty Reference
@@ -185,7 +185,5 @@ ValueNew& ValueNew::divide_me( const ValueNew &ref )
 bool ValueNew::apply(const isis::util::ValueNew& other){
 	return convert(other,*this);
 }
-
-ValueNew::ValueNew(const data::_internal::ConstValueAdapter& v):ValueNew(v.operator->()){}
 
 }

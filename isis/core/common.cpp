@@ -32,12 +32,15 @@ std::string getLastSystemError()
 	return strerror( errno );
 #endif
 }
+///in a list of paths shorten those paths until they are equal
 std::filesystem::path getRootPath(std::list< std::filesystem::path > sources,bool sorted)
 {
+	//remove all entries of the list that are already equal
 	if(!sorted)
 		sources.sort();
 	sources.erase( std::unique( sources.begin(), sources.end() ), sources.end() );
 	
+	// thats to short
 	if( sources.empty() ) {
 		LOG( Runtime, error ) << "Failed to get root path (list is empty)";
 	} else if( sources.size() == 1 ) // ok, we got one unique path, return that
@@ -45,8 +48,8 @@ std::filesystem::path getRootPath(std::list< std::filesystem::path > sources,boo
 	else { // no unique path yet, try to shorten
 		bool abort=true;
 		for( std::filesystem::path & ref : sources ){
-			if(ref.has_parent_path()){
-				ref.remove_filename();
+			if(ref.has_parent_path()){//remove last element
+				ref=ref.parent_path();
 				abort=false; //if at least one path can be shortened
 			}
 		}

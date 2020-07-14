@@ -504,12 +504,19 @@ public:
 
 	/**
 	 * Create a new Image of consisting of deep copied chunks.
+	 * No conversion done, all chunks keep their type.
+	 * \return a new deep copied Image of the same size
+	 */
+	Image copy()const;
+
+	/**
+	 * Create a new Image of consisting of deep copied chunks.
 	 * If neccessary a conversion into the requested type is done using the given scale.
 	 * \param ID the ID of the requested type (type of the respective source chunk is used if not given)
 	 * \param scaling the scaling to be used when converting the data (will be determined automatically if not given)
 	 * \return a new deep copied Image of the same size
 	 */
-	Image copyByID( unsigned short ID = 0, const scaling_pair &scaling = scaling_pair() )const;
+	Image copyByID( unsigned short ID, const scaling_pair &scaling = scaling_pair() )const;
 
 
 	/**
@@ -571,7 +578,8 @@ public:
 	/// cheap copy another Image and make sure all chunks have type T
 	TypedImage ( const Image &src, const scaling_pair &scaling=scaling_pair() ) : Image ( src ) { // ok we just copied the whole image
 		//but we want it to be of type T
-		convertToType ( util::typeID<T>(), scaling );
+		bool result=convertToType ( util::typeID<T>(), scaling );
+		LOG_IF(result==false, Runtime, error) << "Conversion to " << util::MSubject( util::typeName<T>() ) << " failed.";
 	}
 	/// cheap copy another TypedImage
 	TypedImage &operator= ( const TypedImage &ref ) { //its already of the given type - so just copy it

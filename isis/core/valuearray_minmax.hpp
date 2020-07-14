@@ -53,6 +53,7 @@ template<> std::pair<int32_t, int32_t> calcMinMax<int32_t, 1>( const int32_t *da
 #endif //__SSE2__
 
 struct getMinMaxVisitor { 
+	getMinMaxVisitor(size_t len):length(len){}
 	std::pair<util::ValueNew,util::ValueNew> minmax;
 	size_t length;
 	// fallback for unsupported types

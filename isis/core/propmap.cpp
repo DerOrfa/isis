@@ -532,6 +532,7 @@ bool PropertyMap::transform( const PropPath &from,  const PropPath &to, uint16_t
 
 		if( !buff.isEmpty() ){
 			touchProperty( to ).swap(buff);
+			LOG_IF(!buff.isEmpty(), Runtime,warning) << "There already was a property " << std::make_pair(to,buff) << " it will be overwritten";
 			if(from!=to)remove( from );
 			return true;
 		}
@@ -709,7 +710,7 @@ std::ostream &PropertyMap::print( std::ostream &out, bool label )const
 	return out;
 }
 
-PropertyValue& PropertyMap::setValue(const PropPath &path, const ValueNew &val, std::optional<size_t> at){
+PropertyValue& PropertyMap::setValue(const PropPath &path, const ValueNew &val, const std::optional<size_t> &at){
 	PropertyValue &ret = touchProperty( path );
 	const auto index=at.value_or(0);
 

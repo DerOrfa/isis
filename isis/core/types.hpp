@@ -23,9 +23,8 @@ typedef timestamp::duration duration; // @todo float duration might be nice
 
 namespace _internal{
 struct name_visitor{
-	template<typename T> std::string operator()(const T &)const{
-		return std::string("unnamed_")+typeid(T).name();
-	}
+	//linking will fail if a setName( ... ); is missing in types.cpp
+	template<typename T> std::string operator()(const T &)const; 
 };
 template<bool ENABLED> struct ordered{
 	static const bool lt=ENABLED,gt=ENABLED;

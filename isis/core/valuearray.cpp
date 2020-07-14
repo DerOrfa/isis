@@ -3,14 +3,16 @@
 #include "endianess.hpp"
 
 isis::data::_internal::DelProxy::DelProxy(const isis::data::ValueArrayNew& master)
+:std::shared_ptr<const void>(master.getRawAddress())
 {
-	LOG( Debug, verbose_info ) << "Creating DelProxy for " << master.typeName() << " at " << this->get();
+	assert(get());
+	LOG( Debug, verbose_info ) << "Creating DelProxy for " << master.typeName() << " at " << get();
 }
 void isis::data::_internal::DelProxy::operator()(const void* at)
 {
 	LOG( Debug, verbose_info )
 	        << "Deletion for " << this->get() << " called from proxy at offset "
-	        << static_cast<const uint8_t *>( at ) - static_cast<const uint8_t *>( this->get() )
+	        << static_cast<const uint8_t *>( at ) - static_cast<const uint8_t *>( get() )
 	        << ", current use_count: " << this->use_count();
 	this->reset();//actually not needed, but we keep it here to keep obfuscation low
 }
@@ -136,7 +138,7 @@ std::pair<isis::util::ValueNew, isis::util::ValueNew> isis::data::ValueArrayNew:
 		LOG( Debug, error ) << "Skipping computation of min/max on an empty ValueArray";
 		return std::pair<util::ValueNew, util::ValueNew>();
 	} else {
-		_internal::getMinMaxVisitor visitor;
+		_internal::getMinMaxVisitor visitor(getLength());
 		std::visit(visitor,static_cast<const ArrayTypes&>(*this));
 		return visitor.minmax;
 	}

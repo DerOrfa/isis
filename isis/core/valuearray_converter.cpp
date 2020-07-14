@@ -402,29 +402,28 @@ public:
 typedef std::shared_ptr<const ValueArrayConverterBase> ConverterPtr;
 typedef std::map< int , std::map<int, ConverterPtr> > ConverterMap;
 
-// inner visitor templates over the DST type ("visits" SRC)
-template<typename DST_ARRAY> struct MakeConvVisitor{
-    template<typename SRC_ARRAY> std::shared_ptr<const ValueArrayConverterBase> operator()(const SRC_ARRAY &)const{
-		//create a converter based on the type traits and the types of SRC and DST
-		typedef typename SRC_ARRAY::element_type SRC;
-		typedef typename DST_ARRAY::element_type DST;
-		return ValueArrayConverter<std::is_arithmetic_v<SRC>, std::is_arithmetic_v<DST>, SRC, DST>::get();
-    }
-};
-
 // starting point for inner visitor recursion
-template<int I=0> constexpr void makeInnerConv(const ArrayTypes &src,ConverterMap &m_map){
-    MakeConvVisitor<ValueArrayNew::TypeByIndex<I>> vis;
-	m_map[src.index()][I]= std::visit(vis,src);
+template<int I=0> void makeInnerConv(const ValueArrayNew &src,ConverterMap &m_map){
+	typedef ValueArrayNew::TypeByIndex<I> dst_ptr_type;
+	ValueArrayNew dst(dst_ptr_type(),0);
+	auto vis=[](auto src_ptr_array){//visits the underlying std::shared_ptr-type of src while dst_ptr_type is fixed by I
+		//create a converter based on the type traits and the types of SRC and DST
+		typedef typename decltype(src_ptr_array)::element_type SRC;
+		typedef typename dst_ptr_type::element_type DST;
+		typedef ValueArrayConverter<std::is_arithmetic_v<SRC>, std::is_arithmetic_v<DST>, SRC, DST> ConverterType;
+		return ConverterType::get();
+    };
+
+	m_map[src.getTypeID()][dst.getTypeID()]= src.visit(vis);
     makeInnerConv<I+1>(src, m_map);
 }
 // terminator for inner visitor recursion
-template<> constexpr void makeInnerConv<std::variant_size<ArrayTypes>::value>(const ArrayTypes &src,ConverterMap &){}
+template<> void makeInnerConv<std::variant_size<ArrayTypes>::value>(const ValueArrayNew &,ConverterMap &){}
 
 // starting point for outer visitor recursion
-template<int I=0> constexpr void makeOuterConv(ConverterMap &m_map){
-	typedef ValueArrayNew::TypeByIndex<I> outer_type;
-    makeInnerConv(outer_type(),m_map);
+template<int I=0> void makeOuterConv(ConverterMap &m_map){
+	typedef ValueArrayNew::TypeByIndex<I> src_ptr_type;
+    makeInnerConv(ValueArrayNew(src_ptr_type(),0),m_map);
 	makeOuterConv<I+1>(m_map);
 }
 // terminator for outer visitor recursion

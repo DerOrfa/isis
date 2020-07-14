@@ -21,17 +21,20 @@ class ValueNew:public ValueTypes{
 		try{
 			return op(*this,rhs);
 		} catch(const std::domain_error &e){ // return default value on failure
-			LOG(Runtime,error) << "Operation " << MSubject( typeid(OP).name() ) << " on " << MSubject( typeName() ) << " and " << MSubject( rhs.typeName() ) << " failed with \"" << e.what()
-			<< "\", will return " << MSubject( ValueNew(default_ret).toString(true) );
-		return default_ret;
+			LOG(Runtime,error)
+			        << "Operation " << typeid(OP).name() << " on " << typeName() << " and " << rhs.typeName()
+			        << " failed with \"" << e.what() << "\", will return " << ValueNew(default_ret).toString(true);
+			return default_ret;
 		}
 	}
 	template<typename OP> ValueNew& operatorWrapper_me(const OP& op,const ValueNew &rhs){
 		try{
 			op(*this,rhs);
 		} catch(const std::domain_error &e){
-			LOG(Runtime,error) << "Operation " << MSubject( typeid(OP).name() ) << " on " << MSubject( typeName() ) << " and " << MSubject( rhs.typeName() ) << " failed with \"" << e.what()
-			<< "\", wont change value (" << MSubject( this->toString(true) ) << ")";
+			LOG(Runtime,error)
+			        << "Operation " << MSubject( typeid(OP).name() ) << " on " << MSubject( typeName() ) << " and "
+			        << MSubject( rhs.typeName() ) << " failed with " << e.what() << ", wont change value ("
+			        << MSubject( this->toString(true) ) << ")";
 		}
 		return *this;
 	}
@@ -41,9 +44,16 @@ public:
 
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
 
-	template <typename T, std::enable_if_t<!std::is_base_of_v<isis::data::_internal::ConstValueAdapter,T>, int> = 0>//@clean up this mess
+	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
 	constexpr ValueNew(T &&v):ValueTypes(v){}
-	ValueNew(const isis::data::_internal::ConstValueAdapter &v);
+
+	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
+	constexpr ValueNew(const T &v):ValueTypes(v){}
+	
+	//some overrides
+	ValueNew(const char text[]):ValueNew(std::string(text)){}
+
+	//copy
 	ValueNew(const ValueTypes &v);
 	ValueNew(ValueTypes &&v);
 	template<typename T> ValueNew& operator=(const T& v){ValueTypes::operator=(v);return *this;}
@@ -105,7 +115,7 @@ public:
 			return std::get<T>(ret);
 		} catch(...) {//@todo specify exception
 			LOG( Debug, error )
-			        << "Interpretation of " << toString( true ) << " as " << isis::util::typeName<T>()
+			        << "Interpretation of " << *this << " as " << isis::util::typeName<T>()
 			        << " failed. Returning " << ValueNew(T()).toString() << ".";
 			return T();
 		}
@@ -115,11 +125,11 @@ public:
 	bool isInteger()const;
 	bool isValid()const;
 
-	std::string toString(bool with_typename=true)const;
+	std::string toString(bool with_typename=false)const;
 
 	template<typename charT, typename traits>
 	std::ostream &print(bool with_typename=true,std::basic_ostream<charT, traits> &out=std::cout)const{
-		std::visit([&](auto val){out << val;},static_cast<const ValueTypes&>(*this));
+		out << as<std::string>();
 		if(with_typename)
 			out << "(" << typeName() << ")";
 		return out;
@@ -167,7 +177,7 @@ public:
 	ValueNew& substract( const ValueNew &ref );
 	ValueNew& multiply_me( const ValueNew &ref );
 	ValueNew& divide_me( const ValueNew &ref );
-	
+
 	ValueNew operator+( const ValueNew &ref )const{return plus(ref);};
 	ValueNew operator-( const ValueNew &ref )const{return minus(ref);};
 	ValueNew operator*( const ValueNew &ref )const{return multiply(ref);};
@@ -177,7 +187,7 @@ public:
 	ValueNew& operator-=( const ValueNew &ref ){return substract(ref);};
 	ValueNew& operator*=( const ValueNew &ref ){return multiply_me(ref);};
 	ValueNew& operator/=( const ValueNew &ref ){return divide_me(ref);};
-	
+
 	bool operator<( const ValueNew &ref )const{return lt(ref);};
 	bool operator>( const ValueNew &ref )const{return gt(ref);};
 	bool operator==( const ValueNew &ref )const{return eq(ref);};
@@ -266,22 +276,22 @@ template<typename OPERATOR,bool modifying> struct type_op<OPERATOR,modifying,tru
 	virtual result_type posOverflow()const {throw std::domain_error("positive overflow");}
 	virtual result_type negOverflow()const {throw std::domain_error("negative overflow");}
 	virtual result_type inRange( lhs &first, const util::ValueNew &second )const {
-		return OPERATOR()(std::get<typename OPERATOR::first_argument_type>(first),second.as<typename OPERATOR::second_argument_type>());
+		return OPERATOR()(std::get<typename OPERATOR::first_argument_type>(first),std::get<typename OPERATOR::second_argument_type>(second));
 	}
 	result_type operator()(lhs &first, const ValueNew &second )const {
-		// ask second for a converter from itself to Value<T>
+		// ask second for a converter from itself to lhs
 		const ValueNew::Converter conv = second.getConverterTo( util::typeID<typename OPERATOR::second_argument_type>() );
 
 		if ( conv ) {
 			//try to convert second into T and handle results
-			rhs buff;
+			ValueNew buff=typename OPERATOR::second_argument_type();
 
 			switch ( conv->convert( second, buff ) ) {
 			    case boost::numeric::cPosOverflow:return posOverflow();
 			    case boost::numeric::cNegOverflow:return negOverflow();
 			    case boost::numeric::cInRange:
 				    LOG_IF(second.isFloat() && second.as<float>()!=buff.as<float>(), Debug,warning)
-					<< "Using " << second.toString( true ) << " as " << buff.toString( true ) << " for operation on " << first.toString( true )
+					<< "Using " << second << " as " << buff << " for operation on " << first
 					<< " you might loose precision";
 				    return inRange( first, buff );
 			}

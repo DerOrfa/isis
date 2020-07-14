@@ -61,10 +61,12 @@ public:
 
 	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 	iterator erase( iterator first, iterator last );
-	
+
 	void resize(size_t size, ValueNew insert=ValueNew()){
-		LOG_IF(size>1, Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
 		const auto mysize=container.size();
+		if(size-mysize>1){
+			LOG(Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
+		}
 		if(mysize<size){ // grow
 			container.insert(container.end(), size-mysize, insert);
 		} else if(mysize>size){ // shrink
@@ -222,7 +224,7 @@ public:
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
 	template<class T> T as()const {return front().as<T>();}
-	
+
 	template<class T> T& castAs() {return std::get<T>(front());}
 
 	/**
@@ -362,7 +364,6 @@ namespace std
 	{
 		return out<<s.toString(true);
 	}
-	template<> void swap<isis::util::PropertyValue>(isis::util::PropertyValue &a,isis::util::PropertyValue &b);
 	template<> struct less<isis::util::PropertyValue> : binary_function <isis::util::PropertyValue,isis::util::PropertyValue,bool> {
 		bool operator() (const isis::util::PropertyValue& x, const isis::util::PropertyValue& y) const;
 	};

@@ -27,10 +27,10 @@ class DelProxy : public std::shared_ptr<const void>
 {
 public:
 	/**
-		* Create a proxy for a given master shared_ptr
-		* This increments the use_count of the master and thus keeps the
-		* master from being deleted while parts of it are still in use.
-		*/
+	 * Create a proxy for a given master shared_ptr
+	 * This increments the use_count of the master and thus keeps the
+	 * master from being deleted while parts of it are still in use.
+	 */
 	DelProxy( const ValueArrayNew &master );
 	/// decrement the use_count of the master when a specific part is not referenced anymore
 	void operator()( const void *at );
@@ -117,10 +117,6 @@ public:
 	template<typename T> ValueArrayNew( const std::shared_ptr<T> &ptr, size_t length ): ArrayTypes( ptr ), m_length(length) {
 		static_assert(!std::is_const<T>::value,"ValueArray type must not be const");
 		checkType<T>();
-		LOG_IF( length == 0, Debug, warning )
-		    << "Creating an empty (lenght==0) ValueArray of type " << util::typeName<T>()
-		    << " you should overwrite it with a useful pointer before using it";
-		LOG_IF(length != 0 && !ptr,Debug,error) << "Creating invalid ValueArray from null pointer";
 	}
 
 	/**
@@ -143,6 +139,16 @@ public:
 	static ValueArrayNew make( size_t length, const DELETER &deleter=DELETER() ){
 		return ValueArrayNew(( T * )calloc( length, sizeof( T ) ),  length, deleter );
 	} //@todo maybe make it TypedArray
+	
+	template<typename _Visitor> decltype(auto) visit(_Visitor&& visitor)
+	{
+		return std::visit(std::forward<_Visitor>(visitor),static_cast<ArrayTypes&>(*this));
+	}
+	template<typename _Visitor> decltype(auto) visit(_Visitor&& visitor)const
+	{
+		return std::visit(std::forward<_Visitor>(visitor),static_cast<const ArrayTypes&>(*this));
+	}
+
 
 	/// \return true if the stored type is T
 	template<typename T> bool is()const{
@@ -270,7 +276,7 @@ public:
 	 * \param scaling the scaling to be used (determined automatically if not given)
 	 * \returns eigther a cheap copy or a newly created ValueArray
 	 */
-	template<typename T> ValueArrayNew as( scaling_pair scaling = scaling_pair() )const {
+	template<typename T> ValueArrayNew as( const scaling_pair &scaling = scaling_pair() )const {
 		checkType<T>();
 		return convertByID( util::typeID<T>(), scaling );
 	}

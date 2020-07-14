@@ -191,7 +191,10 @@ bool Image::insertChunk ( const Chunk &chunk )
 		return false;
 	}
 
-	assert(chunk.isValid());
+	if ( !chunk.isValid() ) {
+		LOG( Runtime, error ) << "Cannot insert invalid Chunk.";
+		return false;
+	}
 
 	if( clean ) {
 		LOG( Runtime, warning ) << "Inserting into already indexed images is inefficient. You should not do that.";
@@ -531,6 +534,28 @@ void Image::copyToValueArray( ValueArrayNew &dst, scaling_pair scaling ) const
 	} else {
 		LOG ( Runtime, error ) << "Cannot copy from non clean images. Run reIndex first";
 	}
+}
+
+Image Image::copy()const{
+	Image ret( *this ); // ok we just cheap-copied the whole image
+
+	//we want deep copies of the chunks, and we want them to be of type ID
+	struct : _internal::SortedChunkList::chunkPtrOperator {
+		std::shared_ptr<Chunk> operator() ( const std::shared_ptr< Chunk >& ptr ) {
+			return std::make_shared<Chunk> ( ptr->copyByID( ptr->getTypeID(), scaling_pair(1,0) ) );
+		}
+	} conv_op;
+
+	ret.set.transform ( conv_op );
+
+	if ( ret.isClean() ) {
+		ret.lookup = ret.set.getLookup(); // the lookup table still points to the old chunks
+	} else {
+		LOG ( Debug, info ) << "Copied unclean image. Running reIndex on the copy.";
+		ret.reIndex();
+	}
+
+	return ret;
 }
 
 Image Image::copyByID( short unsigned int ID, const scaling_pair &scaling ) const

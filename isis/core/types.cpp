@@ -7,6 +7,8 @@ namespace util{
 
 #define setName(type,name) template<> std::string _internal::name_visitor::operator()<type>(const type&)const{return name;}
 
+setName( bool, "boolean" );
+
 setName( int8_t, "s8bit" );
 setName( uint8_t, "u8bit" );
 
@@ -38,6 +40,8 @@ setName( slist, "list<string>" );
 
 setName( std::complex<float>, "complex<float>" );
 setName( std::complex<double>, "complex<double>" );
+
+setName( util::Selection, "Selection" );
 
 setName( std::string, "string" );
 // setName( Selection, "selection" );

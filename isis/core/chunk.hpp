@@ -272,9 +272,17 @@ template<typename T> TypedChunk<T> Chunk::as(const scaling_pair &scaling)const
 template<typename TYPE> class MemChunk : public TypedChunk<TYPE>
 {
 public:
-	/// Create an empty MemChunk with the given size
+ 	MemChunk(const MemChunk<TYPE> &ref, const scaling_pair &scaling = scaling_pair()):MemChunk<TYPE>(static_cast<const Chunk&>(ref),scaling){}//enforce deep copy
+ 	//@todo get rid of overloading with concepts e.g. template<Chunklike T> MemChunk(const T &ref, const scaling_pair &scaling ...)
+	
+	/// Create a MemChunk with the given size
 	MemChunk( size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false )
-	:TypedChunk<TYPE>(ValueArrayNew::make<TYPE>(nrOfColumns*nrOfRows*nrOfSlices*nrOfTimesteps), nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid)
+	:TypedChunk<TYPE>(
+		ValueArrayNew::make<TYPE>(nrOfColumns*nrOfRows*nrOfSlices*nrOfTimesteps), 
+		nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, 
+		fakeValid, 
+		scaling_pair(1,0) // we just made that thing, no scaling needed
+	)
 	{}
 	/**
 	 * Create a MemChunk as copy of a given raw memory block
@@ -294,38 +302,35 @@ public:
 		static_assert(util::knownType<T>(),"invalid type");
 		this->copyFromMem( org, this->getVolume() );
 	}
-	/// Create a deep copy of a given Chunk (automatic conversion will be used if datatype does not fit)
-	MemChunk( const MemChunk<TYPE> &ref ):MemChunk( static_cast<const Chunk&>(ref), data::scaling_pair(1, 0 ) )
-	{} 	// automatically built version would be cheap copy / we use 1/0-scaling as its the same type
 	/**
 	 * Create a deep copy of a given Chunk.
 	 * An automatic conversion is used if datatype does not fit
 	 * \param ref the source chunk
 	 * \param scaling the scaling (scale and offset) to be used if a conversion to the requested type is neccessary.
 	 */
-	MemChunk( const Chunk &ref, const scaling_pair scaling = scaling_pair() )	
-	:TypedChunk<TYPE>(ValueArrayNew(std::add_pointer_t<TYPE>(),0),0,0,0,0)
+	MemChunk( const Chunk &ref, const scaling_pair &scaling = scaling_pair() )//initialize as an empty Chunk made of an empty ValueArray
+	:TypedChunk<TYPE>(
+		static_cast<const ValueArrayNew&>(ref).copyByID( util::typeID<TYPE>(), scaling ),//deep copy data of ref
+		ref.getSizeAsVector()[0],ref.getSizeAsVector()[1],ref.getSizeAsVector()[2],ref.getSizeAsVector()[3],//copy shape of ref
+		false, //we're going to copy the properties from ref, no need to fake "it"
+		scaling_pair(1,0)//we already scaled the data
+	)
 	{
-#pragma message "test me"
-		NDimensional<4>::init(ref.getSizeAsVector()); // initialize the shape
 		static_cast<util::PropertyMap&>(*this)=ref; // copy properties
-		//get rid of my ValueArray and make a new copying/converting the data of ref (use the reset-function of the scoped_ptr Chunk is made of)
-		ValueArrayNew arraycopy=static_cast<const ValueArrayNew&>(ref).copyByID( util::typeID<TYPE>(), scaling );
-		assert(TypedChunk<TYPE>::me.get()==nullptr);//should be null up to here
-		TypedChunk<TYPE>::me = arraycopy.castTo<TYPE>();
 	}
-	/// Create a deep copy of a given Chunk (automatic conversion will be used if datatype does not fit)
-	MemChunk &operator=( const Chunk &ref ) {
-		LOG_IF( this->useCount() > 1, Debug, warning )
-		        << "Not overwriting current chunk memory (which is still used by " << this->useCount() - 1 << " other chunk(s)).";
-		Chunk::operator=( ref ); //copy the chunk of ref
-		//get rid of my ValueArray and make a new copying/converting the data of ref (use the reset-function of the scoped_ptr Chunk is made of)
-		ValueArrayNew::operator=( ref.copyByID( util::typeID<TYPE>() ) );
+ 	//@todo get rid of overloading with concepts e.g. template<Chunklike T> operator=(const T &ref, const scaling_pair &scaling ...)
+	MemChunk<TYPE> &operator=( const MemChunk<TYPE> &ref ){return operator=(static_cast<const Chunk&>(ref));}
+	MemChunk<TYPE> &operator=( const TypedChunk<TYPE> &ref ){return operator=(static_cast<const Chunk&>(ref));}
+	MemChunk<TYPE> &operator=( const Chunk &ref ){
+		//copy shape
+		NDimensional<4>::operator=(ref);
+		//copy properties
+		util::PropertyMap::operator=(ref);
+		//copy data ()
+		ValueArrayNew newdata=ref.copyByID( util::typeID<TYPE>());
+		assert(newdata.is<TYPE>());
+		ValueArrayNew::operator=(std::move(newdata));//will call std::shared_ptr<TYPE>::operator=() as underlying stored types are the same (and thus "me" will still be valid)
 		return *this;
-	}
-	/// Create a deep copy of a given MemChunk (automatic conversion will be used if datatype does not fit)
-	MemChunk &operator=( const MemChunk<TYPE> &ref ) { //this is needed, to prevent generation of default-copy operator
-		return operator=( static_cast<const Chunk &>( ref ) );
 	}
 };
 

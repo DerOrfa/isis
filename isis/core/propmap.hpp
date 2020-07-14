@@ -485,7 +485,7 @@ public:
 	 * \returns true if the transformation was done, false if it failed
 	 */
 	template<typename DST> bool transform( const PropPath &from, const PropPath &to) {
-		// checkType<DST>(); @todo maybe implement me
+		static_assert(knownType<DST>(),"type must be known");
 		return transform( from, to, typeID<DST>());
 	}
 
@@ -525,31 +525,7 @@ public:
 	// Additional get/set - Functions
 	//////////////////////////////////////////////////////////////////////////////////////
 
-	PropertyValue &setValue(const PropPath &path, const ValueNew &val, std::optional<size_t> at=std::optional<size_t>());
-
-	/**
-	 * Set the given property to a given value/type.
-	 * The needed flag (if set) will be kept.
-	 * The property will be set to the one of the given value if
-	 * - the property is empty or
-	 * - the property is already set to one value of the same type (value will be overwritten)
-	 * - the property is already set to another value and the new value can be converted to that type (value will be overwritten but type will be kept)
-	 * The property will not be set and an error will be send to Runtime if
-	 * - the property is already set to one value of another type an and no conversion is available
-	 * - the property stores more that one value (use setValueAs( const PropPath &path, size_t at, const T &val ) instead)
-	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
-	 * \code
-	 * setValueAs("MyPropertyName", isis::util::fvector4(1,0,1,0))
-	 * \endcode
-	 * \param path the path to the property
-	 * \param val the value to set of type T
-	 * \returns a reference to the PropertyValue (this can be used later, e.g. if a vector is filled step by step
-	 * the reference can be used to not ask for the Property each time)
-	 */
-	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, std::optional<size_t> at=std::optional<size_t>() ) {
-		static_assert(util::knownType<T>(),"invalid type");
-		return setValue(path,val,at);
-	}//@todo maybe remove the templated version
+	PropertyValue &setValue(const PropPath &path, const ValueNew &val, const std::optional<size_t> &at=std::optional<size_t>());
 
 	/**
 	 * Set the given property to a given value/type at a specified index.
@@ -571,10 +547,10 @@ public:
 	 * the reference can be used to not ask for the Property each time)
 	 */
 	//@todo can't we get rid of this'
-	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, size_t at ) {
-		static_assert(util::knownType<T>(),"invalid type");
+	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, const std::optional<size_t> &at=std::optional<size_t>() ) {
+		static_assert(knownType<T>(),"invalid type");
 		return setValue(path,ValueNew( val ), at);
-	}
+	}//@todo maybe remove the templated version
 	PropertyValue &setValueAs( const PropPath &path, const char *val, size_t at );
 
 	/**
@@ -589,23 +565,8 @@ public:
 	 * \param at index of the value to return
 	 * \returns the property with given type, if not set yet T() is returned.
 	 */
-	template<typename T> T getValueAs( const PropPath &path, size_t at )const {
-		return getValueAsImpl<T>(path,std::optional<size_t>(at));// uses single value ops, if at was not given
-	}
-	/**
-	 * Request a property value via the given key in the given type.
-	 * If the requested type is not equal to type the property is stored with, an automatic conversion is done.
-	 * If that conversion failes an error is sent to Runtime.
-	 * If there is no value yet T() is returned and a warning is sent to Runtime
-	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
-	 * \code
-	 * getValueAs<fvector4>( "MyPropertyName" );
-	 * \endcode
-	 * \param path the path to the property
-	 * \returns the property with given type, if not set yet T() is returned.
-	 */
-	template<typename T> T getValueAs( const PropPath &path)const {
-		return getValueAsImpl<T>(path,std::optional<size_t>());
+	template<typename T> T getValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() )const {
+		return getValueAsImpl<T>(path,at);// uses single value ops, if at was not given
 	}
 
 	/**
@@ -618,8 +579,8 @@ public:
 	 * \param at the index of the value to reference
 	 * \returns pointer to the requested value or nullptr
 	 */
-	template<typename T> T* queryValueAs( const PropPath &path, size_t at ) {
-		return queryValueAsImpl<T>(path, std::optional<size_t>(at) );
+	template<typename T> T* queryValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() ) {
+		return queryValueAsImpl<T>(path, at );
 	}
 	/**
 	 * Get a valid reference to the stored value in a given type at a given index.
@@ -631,36 +592,8 @@ public:
 	 * \param at the index of the value to reference
 	 * \returns T& referencing the requested value
 	 */
-	template<typename T> T& refValueAs( const PropPath &path, size_t at ) {
+	template<typename T> T& refValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() ) {
 		const auto query=queryValueAs<T>(path,at);
-		LOG_IF(!query,Runtime,error) << "Referencing unavailable value " << MSubject( path ) << " this will probably crash";
-		return *query;
-	}
-	/**
-	 * Get a valid pointer to the stored single value in a given type.
-	 * This tries to get a pointer to a property's stored value.
-	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
-	 * If the stored type is not T, a transformation is done in place.
-	 * If that fails, nullptr is returned.
-	 * If the property does not exist (or is empty) nullptr will be returned as well
-	 * \param path the path to the property
-	 * \returns pointer the requested value or nullptr
-	 */
-	template<typename T> T* queryValueAs( const PropPath &path) {
-		return queryValueAsImpl<T>(path, std::optional<size_t>() );
-	}
-	/**
-	 * Get a valid reference to the stored single value in a given type.
-	 * This tries to access a property's stored value as reference.
-	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
-	 * If the stored type is not T, a transformation is done in place.
-	 * If that fails, an error will be sent to runtime and the following behaviour is UNDEFINED.
-	 * If the property does not exist (or is empty) an error will be sent to runtime and the following behaviour is UNDEFINED.
-	 * \param path the path to the property
-	 * \returns T& referencing the requested value
-	 */
-	template<typename T> T& refValueAs( const PropPath &path) {
-		const auto &query=queryValueAs<T>(path);
 		LOG_IF(!query,Runtime,error) << "Referencing unavailable value " << MSubject( path ) << " this will probably crash";
 		return *query;
 	}

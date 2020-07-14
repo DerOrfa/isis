@@ -171,7 +171,7 @@ bool SortedChunkList::insert( const Chunk &ch )
 {
 	LOG_IF( secondarySort.empty(), Debug, error ) << "Inserting will fail without any secondary sort. Use chunks.addSecondarySort at least once.";
 	LOG_IF( !ch.isValid(), Debug, error ) << "You're trying insert an invalid chunk. The missing properties are " << ch.getMissing();
-	LOG_IF( !ch.isValid(), Debug, error ) << "You should definitively check the chunks validity (use the function Chunk::valid) before calling this funktion. Aborting now..";
+	LOG_IF( !ch.isValid(), Debug, error ) << "You should definitively check the chunks validity (use the function Chunk::valid) before calling this function. Aborting now..";
 	assert( ch.isValid() );
 	
 	if(isEmpty()){ // find secondary Sort from first chunk
@@ -246,7 +246,7 @@ std::shared_ptr<Chunk> SortedChunkList::insert_impl(const Chunk &ch){
 
 		for(const util::PropertyMap::PropPath & ref :  equalProps ) { // check all properties which where given to the constructor of the list
 			// if at least one of them has the property and they are not equal - do not insert
-			if ( ( first.hasProperty( ref ) || ch.hasProperty( ref ) ) && first.queryProperty( ref ) != ch.queryProperty( ref ) ) {
+			if ( first.hasProperty( ref )  && !(first.property( ref ) == ch.property( ref ) )) { //"==" will be false if ch.property is empty or different
 				LOG( Debug, verbose_info )
 						<< "Ignoring chunk with different " << ref << ". Is " << util::MSubject( ch.queryProperty( ref ) )
 						<< " but chunks already in the list have " << util::MSubject( first.queryProperty( ref ) );
@@ -387,8 +387,8 @@ std::string SortedChunkList::identify(bool withpath, bool withdate, getproplist 
 			return v.as<std::string>();
 		});
 		ret+=
-			(ret.empty() ? std::string():std::string(" "))+( std::string( "from " ) + 
-			util::getRootPath(sources,true).native() );
+			(ret.empty() ? std::string():std::string(" "))+
+			( std::string( "from " ) + util::getRootPath(sources,true).native() );
 	}
 	if(withdate){
 		forall(seqStart);

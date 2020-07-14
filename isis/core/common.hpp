@@ -239,7 +239,7 @@ template<typename T> bool fuzzyEqual( T a, T b, unsigned short scale = 10 )
 {
 	static_assert( std::is_floating_point<T>::value, "must be called with floating point" );
 
-	static const T epsilon = std::numeric_limits<T>::epsilon(); // get the distange between 1 and the next representable value
+	static const T epsilon = std::numeric_limits<T>::epsilon(); // get the distance between 1 and the next representable value
 	T bigger, smaller;
 
 	a = std::abs( a );

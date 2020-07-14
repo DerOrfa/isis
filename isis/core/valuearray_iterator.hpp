@@ -48,6 +48,7 @@ public:
 
 	const util::ValueNew operator->() const;
 	const std::string toString( bool label = false )const;
+	operator util::ValueNew()const{return getter(p);}
 };
 class WritingValueAdapter: public ConstValueAdapter
 {

@@ -193,12 +193,12 @@ namespace util
 template<typename TYPE> using vector3 = std::array<TYPE, 3>;
 template<typename TYPE> using vector4 = std::array<TYPE, 4>;
 
-typedef std::array<float,4> fvector4;
-typedef std::array<double,4> dvector4;
-typedef std::array<int32_t,4> ivector4;
-typedef std::array<float,3> fvector3;
-typedef std::array<double,3> dvector3;
-typedef std::array<int32_t,3> ivector3;
+typedef vector4<float> fvector4;
+typedef vector4<double> dvector4;
+typedef vector4<int32_t> ivector4;
+typedef vector3<float> fvector3;
+typedef vector3<double> dvector3;
+typedef vector3<int32_t> ivector3;
 
 }
 }

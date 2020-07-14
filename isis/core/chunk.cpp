@@ -40,9 +40,9 @@ Chunk::Chunk( const ValueArrayNew &src, size_t nrOfColumns, size_t nrOfRows, siz
 {
 	LOG_IF(!src.isValid(),Runtime,error) << "Creating a chunk from an invalid ValueArray, thats not going to end well ...";
 	ValueArrayNew::operator=(src);
-	init( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} );
-	LOG_IF( NDimensional<4>::getVolume() == 0, Debug, warning )
-	        << "Size " << nrOfTimesteps << "|" << nrOfSlices << "|" << nrOfRows << "|" << nrOfColumns << " is invalid";
+	util::vector4<size_t> init_size={nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps};
+	init( init_size );
+	LOG_IF( NDimensional<4>::getVolume() == 0, Debug, warning ) << "Size " << init_size << " is invalid";
 	assert( ValueArrayNew::getLength() == getVolume() );
 }
 
@@ -64,12 +64,11 @@ bool Chunk::convertToType( size_t ID, const scaling_pair &scaling )
 	//get a converted ValueArray (will be a cheap copy if no conv was needed)
 	ValueArrayNew newPtr = ValueArrayNew::convertByID( ID, scaling );
 
-	if( newPtr.isValid() ) // if the reference is empty the conversion failed
+	if( newPtr.isValid() ){ // if the conversion is ok
+		ValueArrayNew::operator=(newPtr); 
+		return true;
+	} else
 		return false;
-	else
-		ValueArrayNew::operator=(newPtr); // otherwise replace my own ValueArray with the new one
-
-	return true;
 }
 
 Chunk Chunk::copyByID( size_t ID, const scaling_pair &scaling ) const

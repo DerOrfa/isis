@@ -37,7 +37,7 @@ namespace _internal
 {
 
 template<typename SRC,typename DST> constexpr bool is_num(){return std::is_arithmetic<SRC>::value && std::is_arithmetic<DST>::value;};
-template<typename SRC,typename DST> constexpr bool is_same(){return std::is_same<SRC, DST>::value;}
+template<typename SRC,typename DST> constexpr bool is_same(){return std::is_same_v<SRC, DST>;}
 
 template<typename T_DUR> bool parseTimeString(const std::string &src, const char *format,std::chrono::time_point<std::chrono::system_clock,T_DUR> &dst){
 	std::tm t = {0,0,0,1,0,70,0,0,-1,0,nullptr};
@@ -67,7 +67,7 @@ public:
 	}
 	boost::numeric::range_check_result generate( const ValueNew &src, ValueNew& dst )const override {
 		dst=create();
-		std::holds_alternative<DST>(dst);
+		assert(dst.is<DST>());
 		const boost::numeric::range_check_result result = convert( src, dst );
 		return result;
 	}
@@ -79,11 +79,11 @@ public:
 template<bool NUMERIC, bool SAME, typename SRC, typename DST> class ValueConverter : public ValueGenerator<SRC, DST>
 {
 public:
-	//uncomment this to see which conversions are not generated - be carefull, thats f***king much
 	static std::shared_ptr<const ValueConverterBase> get() {
-		std::cout <<
-			"There will be no " << (SAME?"copy":NUMERIC?"numeric":"non-numeric") <<  " conversion for " <<
-		typeName<SRC>() << " to " <<typeName<SRC>() << std::endl;
+//uncomment this to see which conversions are not generated - be carefull, thats f***king much
+// 		std::cout 
+// 			<< "There will be no " << (SAME?"copy":NUMERIC?"numeric":"non-numeric") <<  " conversion for " 
+// 			<< typeName<SRC>() << " to " <<typeName<DST>() << std::endl;
 		return std::shared_ptr<const ValueConverterBase>();
 	}
 	~ValueConverter() override = default;
@@ -324,10 +324,10 @@ template<typename SRC, typename DST> struct IterableSubValueConv: SubValueConv<S
 		typename SRC_LST::const_iterator srcAt = srcLst.begin(), srcEnd = srcLst.end();
 		typename DST_LST::iterator dstBegin = dstLst.begin(), dstEnd = dstLst.end();
 
+		ValueNew elem_dst=DST();
 		while( srcAt != srcEnd ) { //slow and ugly, but flexible
 
 			if( dstBegin != dstEnd ) {
-				ValueNew elem_dst;
 				const boost::numeric::range_check_result result = SubValueConv<SRC, DST>::sub_conv->convert( ValueNew( *srcAt ), elem_dst );
 
 				if ( ret == boost::numeric::cInRange && result != boost::numeric::cInRange )
@@ -383,6 +383,8 @@ public:
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
 	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+		assert(src.is<SRC>());
+		assert(dst.is<DST>());
 		return num2num( std::get<SRC>(src), std::get<DST>(dst) );
 	}
 	~ValueConverter() override = default;
@@ -454,7 +456,7 @@ public:
 	}
 	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
 		std::complex<DST> &dstVal = std::get<std::complex<DST> >(dst);
-		ValueNew real;
+		ValueNew real=DST();
 		boost::numeric::range_check_result ret = this->sub_conv->convert( src, real );
 
 		if( ret == boost::numeric::cInRange )

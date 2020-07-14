@@ -23,11 +23,11 @@ bool PropertyValue::isNeeded()const { return m_needed;}
 
 bool PropertyValue::operator== ( const util::PropertyValue &second )const
 {
-	return !second.isEmpty() && container==second.container;
+	return !isEmpty() && !second.isEmpty() && container==second.container;
 }
 bool PropertyValue::operator!= ( const util::PropertyValue &second )const
 {
-	return container!=second.container;
+	return !isEmpty() && !second.isEmpty() && container!=second.container;
 }
 
 bool PropertyValue::operator== ( const ValueNew &second )const
@@ -97,7 +97,7 @@ void PropertyValue::transfer(PropertyValue& ref, bool overwrite)
 		if(isEmpty() || overwrite){
 			container.clear();
 			swap(ref);
-		} else 
+		} else
 			LOG(Debug,warning) << "Not Transfering " << MSubject(ref.toString(true)) <<  " into non empty " << MSubject(*this);
 	}
 }
@@ -109,9 +109,9 @@ void PropertyValue::swap(PropertyValue &src)
 bool PropertyValue::transform(uint16_t dstID)
 {
 	PropertyValue ret,err;
-	for(ValueNew& ref : container){
-		#pragma warning test me (no error handling for failed convert)
-		ref=ref.copyByID( dstID );
+	for(const ValueNew& ref : container){
+        #pragma message "no error handling for failed convert"
+		ret.push_back(ref.copyByID( dstID ));
 	}
 
 	if(!err.isEmpty()){
@@ -145,7 +145,7 @@ ValueNew& PropertyValue::front(){
 	LOG_IF(size()>1,Debug,warning) << "Doing single value operation on a multi value Property";
 	LOG_IF(isEmpty(),Debug,error) << "Doing single value operation on an empy Property, exception ahead ..";
 	return container.front();
-	
+
 }
 const ValueNew& PropertyValue::front() const{
 	LOG_IF(size()>1,Debug,warning) << "Doing single value operation on a multi value Property (" << util::listToString(begin(),end()) << ")";
@@ -160,12 +160,11 @@ std::vector< PropertyValue > PropertyValue::splice( const size_t len )
 	assert(len);
 	size_t remain=size();//we use this to keep track of the number of remaining elements
 	std::vector<PropertyValue> ret(ceil(double(remain)/len));
-	
-	for(PropertyValue &dst:ret){ 
+
+	for(PropertyValue &dst:ret){
 		auto e=container.begin();std::advance(e,std::min(len,remain));//move either len elements, or all that is left
 		dst.container.splice(dst.begin(),container,container.begin(),e);
-		remain-=len;
-		assert(dst.container.size()==len);
+		remain-=dst.container.size();
 		assert(size()==remain);
 	}
 	assert(isEmpty());
@@ -174,22 +173,24 @@ std::vector< PropertyValue > PropertyValue::splice( const size_t len )
 
 
 // ValueBase hooks
-bool PropertyValue::fitsInto( short unsigned int ID ) const{return front().fitsInto(ID);}
+bool PropertyValue::fitsInto( short unsigned int ID ) const{
+	return begin()->fitsInto(ID);//use begin() instead of front() to avoid warning about single value operation on a multi value Property
+}
 
 std::string PropertyValue::getTypeName() const{
 	LOG_IF(isEmpty(),Debug,error) << "Doing getTypeName on an empty PropertyValue will raise an exception.";
-	return front().typeName();
+	return begin()->typeName();//use begin() instead of front() to avoid warning about single value operation on a multi value Property
 }
 short unsigned int PropertyValue::getTypeID() const{
 	LOG_IF(isEmpty(),Debug,error) << "Doing getTypeID on an empty PropertyValue will raise an exception.";
-	return front().typeID();
+	return begin()->typeID();//use begin() instead of front() to avoid warning about single value operation on a multi value Property
 }
 
 PropertyValue& PropertyValue::add( const PropertyValue& ref ){
 	LOG_IF(ref.isEmpty(),Debug,error) << "Adding an empty property, won't do anything";
 	auto mine_it=container.begin();
 	auto other_it=ref.container.begin();
-	
+
 	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
 		mine_it->add(*other_it);
 	return *this;
@@ -198,7 +199,7 @@ PropertyValue& PropertyValue::substract( const PropertyValue& ref ){
 	LOG_IF(ref.isEmpty(),Debug,error) << "Substracting an empty property, won't do anything";
 	auto mine_it=container.begin();
 	auto other_it=ref.container.begin();
-	
+
 	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
 		mine_it->substract(*other_it);
 	return *this;
@@ -207,7 +208,7 @@ PropertyValue& PropertyValue::multiply_me( const PropertyValue& ref ){
 	LOG_IF(ref.isEmpty(),Debug,error) << "Multiplying with an empty property, won't do anything";
 	auto mine_it=container.begin();
 	auto other_it=ref.container.begin();
-	
+
 	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
 		mine_it->multiply_me(*other_it);
 	return *this;
@@ -216,7 +217,7 @@ PropertyValue& PropertyValue::divide_me( const PropertyValue& ref ){
 	LOG_IF(ref.isEmpty(),Debug,error) << "Dividing by an empty property, won't do anything";
 	auto mine_it=container.begin();
 	auto other_it=ref.container.begin();
-	
+
 	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
 		mine_it->divide_me(*other_it);
 	return *this;
@@ -249,7 +250,7 @@ bool PropertyValue::eq( const PropertyValue& ref ) const{
 	if(ref.isEmpty() || ref.size()!=size())
 		return false;
 	auto mine_it=container.begin();
-	for(auto other:ref.container)
+	for(const ValueNew &other:ref.container)
 		ret&=(mine_it++)->eq(other);
 	return ret;
 }
@@ -281,7 +282,9 @@ PropertyValue& PropertyValue::operator /=( const ValueNew &second ){front().divi
 }
 
 namespace std{
-template<> void swap< isis::util::PropertyValue >(isis::util::PropertyValue& a, isis::util::PropertyValue& b){a.swap(b);}
-bool less< isis::util::PropertyValue >::operator()(const isis::util::PropertyValue& x, const isis::util::PropertyValue& y) const{return x.lt(y);}
+bool less< isis::util::PropertyValue >::operator()(const isis::util::PropertyValue& x, const isis::util::PropertyValue& y) const
+{
+	return x.lt(y);
+}
 
 }
