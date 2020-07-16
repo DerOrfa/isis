@@ -30,14 +30,6 @@ namespace data
 class Chunk;
 template<typename TYPE> class TypedChunk;
 
-/// Base class for operators used for foreachVoxel
-template <typename TYPE> class VoxelOp: std::unary_function<bool, TYPE>
-{
-public:
-	virtual bool operator()( TYPE &vox, const util::vector4<size_t> &pos ) = 0;
-	virtual ~VoxelOp() {}
-};
-
 /**
  * Main class for four-dimensional random-access data blocks.
  * Like in ValueArray, the copy of a Chunk will reference the same data. (cheap copy)
@@ -93,37 +85,31 @@ public:
 	void copySlice( size_t thirdDimS, size_t fourthDimS, Chunk &dst, size_t thirdDimD, size_t fourthDimD ) const;
 
 	/**
-	 * Run a functor on every Voxel in the chunk.
-	 * If the data of the chunk are not of type TYPE, behaviour is undefined.
-	 * (If _DEBUG_LOG is enabled you will get an error message before the progrmm will crash).
-	 * \param op a functor inheriting from VoxelOp
-	 * \param offset offset to be added to the voxel position before op is called
+	 * Run a function on every Voxel in the chunk.
+	 * This will try to instantiate func for all valid Chunk-datatypes. 
+	 * So this will only compile if func would be valid for all types.
+	 * You might want to look into TypedChunk::foreachVoxel.
+	 * And remember TypedChunk is a cheap copy if possible. So \code
+	 * TypedChunk<uint32_t>(ch).foreachVoxel([]((uint32_t &vox, const util::vector4<size_t> &pos)){});
+	 * \endcode is perfectly fine if the type of ch is uint32_t or convertible.
+	 * \param v a reference to the voxel
+	 * \param offset the position of the voxel inside the chunk
 	 * \returns amount of operations which returned false - so 0 is good!
 	 */
-	template <typename TYPE> size_t foreachVoxel( VoxelOp<TYPE> &op, util::vector4<size_t> offset ) {
-		const util::vector4<size_t> imagesize = getSizeAsVector();
-		util::vector4<size_t> pos;
-		TYPE *vox = castTo<TYPE>().get();
-		size_t ret = 0;
+	template <typename FUNC> void foreachVoxel( FUNC func ) 
+	{
+		std::visit([&](auto ptr){
+			auto vox_ptr = ptr.get();
+			const util::vector4<size_t> imagesize = getSizeAsVector();
+			util::vector4<size_t> pos;
 
-		for( pos[timeDim] = 0; pos[timeDim] < imagesize[timeDim]; pos[timeDim]++ )
-			for( pos[sliceDim] = 0; pos[sliceDim] < imagesize[sliceDim]; pos[sliceDim]++ )
-				for( pos[columnDim] = 0; pos[columnDim] < imagesize[columnDim]; pos[columnDim]++ )
-					for( pos[rowDim] = 0; pos[rowDim] < imagesize[rowDim]; pos[rowDim]++ ) {
-						if( op( *( vox++ ), pos + offset ) == false )
-							++ret;
-					}
-
-		return ret;
-	}
-
-	/**
-	 * Run a functor on every Voxel in the chunk.
-	 * \param op a functor inheriting from VoxelOp
-	 * \returns amount of operations which returned false - so 0 is good!
-	 */
-	template<typename TYPE> size_t foreachVoxel( VoxelOp<TYPE> &op ) {
-		return foreachVoxel<TYPE>( op, util::vector4<size_t>() );
+			for( pos[timeDim] = 0; pos[timeDim] < imagesize[timeDim]; pos[timeDim]++ )
+				for( pos[sliceDim] = 0; pos[sliceDim] < imagesize[sliceDim]; pos[sliceDim]++ )
+					for( pos[columnDim] = 0; pos[columnDim] < imagesize[columnDim]; pos[columnDim]++ )
+						for( pos[rowDim] = 0; pos[rowDim] < imagesize[rowDim]; pos[rowDim]++ ) {
+							func( *( vox_ptr++ ), pos );
+						}
+		},static_cast<ArrayTypes&>(*this));
 	}
 
 	/// \returns the number of cheap-copy-chunks using the same memory as this
@@ -238,6 +224,27 @@ protected:
 // protected:
 // 	TypedChunk():Chunk(ValueArrayNew(std::add_pointer_t<TYPE>(),0), 0, 0, 0, 0){}
 public:
+	/**
+	 * Run a function on every Voxel in the chunk.
+	 * \note This explicitly has writing access even if called from a const object. If you want it to be readonly make vox "const".
+	 * \param v a reference to the voxel
+	 * \param offset the position of the voxel inside the chunk
+	 */
+	void foreachVoxel( std::function<void(TYPE &vox, const util::vector4<size_t> &pos)> func )const 
+	{
+		auto vox_ptr = const_cast<TYPE*>(begin());
+		const util::vector4<size_t> imagesize = getSizeAsVector();
+		util::vector4<size_t> pos;
+
+		for( pos[timeDim] = 0; pos[timeDim] < imagesize[timeDim]; pos[timeDim]++ )
+			for( pos[sliceDim] = 0; pos[sliceDim] < imagesize[sliceDim]; pos[sliceDim]++ )
+				for( pos[columnDim] = 0; pos[columnDim] < imagesize[columnDim]; pos[columnDim]++ )
+					for( pos[rowDim] = 0; pos[rowDim] < imagesize[rowDim]; pos[rowDim]++ ) {
+						func( *( vox_ptr++ ), pos );
+					}
+	}
+
+
 	TypedChunk( const ValueArrayNew &ref, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false, const scaling_pair &scaling = scaling_pair()  )
 	: Chunk( ref.as<TYPE>(scaling), nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid ),me(castTo<TYPE>()) {}
 	

@@ -43,9 +43,9 @@ BOOST_AUTO_TEST_CASE ( chunk_index_test )
 	data::MemChunk<float> ch( 4, 3, 2, 1 );
 	std::array<size_t,4> idx={1,1,1,0};
 	const size_t at =   1  //second voxel
-					  + 1*4 //second row (4 voxels per row)
-					  + 1*4*3 //second slice row (4*3 voxels per slice)
-					  + 0*4*3*2; //first volume (4*3*2 voxels per volume)
+	                  + 1*4 //second row (4 voxels per row)
+	                  + 1*4*3 //second slice row (4*3 voxels per slice)
+	                  + 0*4*3*2; //first volume (4*3*2 voxels per volume)
 
 	BOOST_CHECK_EQUAL( ch.getLinearIndex( idx ), at );
 	BOOST_CHECK_EQUAL( idx, ch.getCoordsFromLinIndex( at ) );
@@ -54,45 +54,21 @@ BOOST_AUTO_TEST_CASE ( chunk_index_test )
 BOOST_AUTO_TEST_CASE ( chunk_foreach_voxel_test )
 {
 	data::MemChunk<uint8_t> ch( 4, 3, 2, 1 );
-	memset( ch.beginTyped<uint8_t>(), 1, ch.getVolume() );
 
-	class : public data::VoxelOp<uint8_t>
-	{
-	public:
-		bool operator()( uint8_t &vox, const util::vector4<size_t>& /*pos*/ ) {
-			return vox == 0;
-		}
-	} zero;
+	//check for zero on non zero chunk
+	memset( ch.begin(), 1, ch.getVolume() );
+	ch.foreachVoxel([](auto &vox, const util::vector4<size_t>&) {BOOST_CHECK_NE(vox, 0);});
 
-	class setIdx: public data::VoxelOp<uint8_t>
-	{
-		data::NDimensional<4> chunkGeometry;
-	public:
-		setIdx( data::NDimensional<4> geo ): chunkGeometry( geo ) {}
-		bool operator()( uint8_t &vox, const util::vector4<size_t>& pos ) {
-			vox = chunkGeometry.getLinearIndex( pos );
-			return true;
-		}
-	};
-	class checkIdx: public data::VoxelOp<uint8_t>
-	{
-		data::NDimensional<4> chunkGeometry;
-	public:
-		checkIdx( data::NDimensional<4> geo ): chunkGeometry( geo ) {}
-		bool operator()( uint8_t &vox, const util::vector4<size_t>& pos ) {
-			return vox == chunkGeometry.getLinearIndex( pos );
-		}
-	};
+	//check for zero on zero chunk
+	memset( ch.begin(), 0, ch.getVolume() );
+	ch.foreachVoxel([](auto &vox, const util::vector4<size_t>&) {BOOST_CHECK_EQUAL(vox, 0);});
 
-	BOOST_CHECK_EQUAL( ch.foreachVoxel( zero ), ch.getVolume() );
-	memset( ch.beginTyped<uint8_t>(), 0, ch.getVolume() );
-	BOOST_CHECK_EQUAL( ch.foreachVoxel( zero ), 0 );
 
-	checkIdx check( ch );
-	setIdx set( ch );
-	BOOST_CHECK_EQUAL( ch.foreachVoxel( check ), ch.getVolume() - 1 ); //the first index _is_ 0
-	ch.foreachVoxel( set );
-	BOOST_CHECK_EQUAL( ch.foreachVoxel( check ), 0 ); // now they all should be
+	//set each voxel to its index
+	ch.foreachVoxel( [&ch]( auto &vox, const util::vector4<size_t>& pos ) {vox = ch.getLinearIndex( pos );} );
+	//and check them
+	ch.foreachVoxel( [&ch]( auto &vox, const util::vector4<size_t>& pos ) {BOOST_CHECK_EQUAL(vox, ch.getLinearIndex( pos ));} );
+
 }
 
 BOOST_AUTO_TEST_CASE ( chunk_mem_init_test )
@@ -113,10 +89,11 @@ BOOST_AUTO_TEST_CASE ( chunk_iterator_test )
 	data::MemChunk<short> ch( data, 3, 3 );
 
 	BOOST_CHECK_EQUAL( ch.getVolume(), 3 * 3 );
+	
+	BOOST_CHECK_EQUAL(std::distance(ch.beginGeneric(),ch.endGeneric()),ch.getVolume());
+	BOOST_CHECK_EQUAL(std::distance(ch.beginTyped<short>(),ch.endTyped<short>()),ch.getVolume());
 
-	auto i = ch.beginGeneric();
-
-	for( ; i != ch.endGeneric(); ++i ) {
+	for(auto i = ch.beginGeneric(); i != ch.endGeneric(); ++i ) {
 		const util::ValueNew datVal( data[std::distance( ch.beginGeneric(), i )] );
 		BOOST_CHECK_EQUAL( *i, datVal );
 	}
@@ -219,14 +196,14 @@ BOOST_AUTO_TEST_CASE ( chunk_data_test2 )//Access Chunk elements via linear inde
 		BOOST_CHECK( ch_mirror[i] == i );
 
 	util::listToOStream(
-		sample, sample + ch.getVolume(), o1,
-		"|",
-		(std::to_string(ch.getVolume() ) + "#").c_str(), ""
+	    sample, sample + ch.getVolume(), o1,
+	    "|",
+	    (std::to_string(ch.getVolume() ) + "#").c_str(), ""
 	);
 	util::listToOStream(
-		ch.begin(), ch.end(), o2,
-		"|",
-		(std::to_string(ch.getVolume() ) + "#").c_str(), ""
+	    ch.begin(), ch.end(), o2,
+	    "|",
+	    (std::to_string(ch.getVolume() ) + "#").c_str(), ""
 	);
 	BOOST_CHECK_EQUAL( o1.str(), o2.str() );
 }
@@ -278,10 +255,10 @@ BOOST_AUTO_TEST_CASE ( chunk_copy_test )//Copy chunks
 BOOST_AUTO_TEST_CASE ( memchunk_copy_test )//Copy chunks
 {
 	static boost::numeric::converter <  short, double,
-		   boost::numeric::conversion_traits<short, double>,
-		   boost::numeric::def_overflow_handler,
-		   boost::numeric::RoundEven<double>
-		   > converter;
+	       boost::numeric::conversion_traits<short, double>,
+	       boost::numeric::def_overflow_handler,
+	       boost::numeric::RoundEven<double>
+	       > converter;
 	data::MemChunk<float> ch1( 4, 3, 2, 1 );
 	ch1.setValueAs( "indexOrigin", util::fvector3( {1, 2, 3} ) );
 
@@ -300,7 +277,7 @@ BOOST_AUTO_TEST_CASE ( memchunk_copy_test )//Copy chunks
 	BOOST_REQUIRE( ch3.hasProperty( "indexOrigin" ) );
 	BOOST_CHECK_EQUAL( ch1.property( "indexOrigin" ), ch2.property( "indexOrigin" ) );
 	BOOST_CHECK_EQUAL( ch2.property( "indexOrigin" ), ch3.property( "indexOrigin" ) );
-	
+
 	//data should be the same though
 	const float scale = float( std::numeric_limits< short >::max() ) / ( ch2.getVolume() - 1 );
 	for ( size_t i = 0; i < ch2.getVolume(); i++ ) {
@@ -351,44 +328,33 @@ BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
 
 BOOST_AUTO_TEST_CASE ( chunk_swap_test )
 {
-	class : public data::VoxelOp<int>
-	{
-		bool operator()( int &vox, const util::vector4<size_t> & ) {
-			vox = rand();
-			return true;
-		}
-	} randomize;
-	class SwapCheck: public data::VoxelOp<int>
-	{
-		size_t swapidx, sizeRange;
-	public:
-		data::MemChunk<int> orig;
-		SwapCheck( data::MemChunk<int> &_orig, size_t _swapidx, size_t _sizeRange ): swapidx( _swapidx ), sizeRange( _sizeRange ), orig( _orig ) {}
-		bool operator()( int &vox, const util::vector4<size_t> &pos ) {
-			util::vector4<size_t> opos = pos;
-			opos[swapidx] = sizeRange - 1 - opos[swapidx];
-			//          if(orig.voxel<int>(opos[0],opos[1],opos[2],opos[3])!=vox)
-			//              std::cout << "Comparing " << pos << " against " << opos
-			//                  << "(" << vox << "!=" << orig.voxel<int>(opos[0],opos[1],opos[2],opos[3])
-			//                  << ")" << std::endl;
-			return orig.voxel<int>( opos[0], opos[1], opos[2], opos[3] ) == vox;
-		}
-	};
+	auto randomize = []( auto &vox, const util::vector4<size_t> & ) {vox = rand();};
 
 	for ( int dim = data::rowDim; dim <= data::timeDim; dim++ ) { // for each dim
 		for( size_t sizeRange = 10; sizeRange < 21; sizeRange++ ) { // check with chunks of the size 10³-21³
 			//create chunk with random content
 			data::MemChunk<int> ch1( sizeRange, sizeRange, sizeRange, sizeRange );
 			ch1.foreachVoxel( randomize );
+			
+			//make a copy of that
+			data::MemChunk<int> orig=ch1;
+			
+			auto SwapCheck =[sizeRange,orig]( auto &vox, const util::vector4<size_t> &pos ) {
+				util::vector4<size_t> opos = pos;
+				opos[data::rowDim] = sizeRange - 1 - opos[data::rowDim];
+				//          if(orig.voxel<int>(opos[0],opos[1],opos[2],opos[3])!=vox)
+				//              std::cout << "Comparing " << pos << " against " << opos
+				//                  << "(" << vox << "!=" << orig.voxel<int>(opos[0],opos[1],opos[2],opos[3])
+				//                  << ")" << std::endl;
+				BOOST_CHECK_EQUAL(orig.voxel<int>( opos[0], opos[1], opos[2], opos[3] ),vox);
+			};
 
-			//store a copy of the original data and the rest in the checker
-			SwapCheck swap_check( ch1, data::rowDim, sizeRange );
-
+			//flip the chunk
 			ch1.flipAlong( data::rowDim );//swap ch1
-			BOOST_CHECK_EQUAL( ch1.foreachVoxel( swap_check ), 0 ); //run check for swapped ch1 and and original copy in swap_check
-
+			ch1.foreachVoxel( SwapCheck ); // and check the swap
+			
 			ch1.flipAlong( data::rowDim );//swap it back
-			BOOST_CHECK( ch1.compare( swap_check.orig ) == 0 ); //check for equality with the original copy in swap_check
+			BOOST_CHECK( ch1.compare( orig ) == 0 ); //check for equality with the original copy 
 		}
 	}
 }
@@ -501,10 +467,16 @@ BOOST_AUTO_TEST_CASE ( typed_chunk_test )//Copy chunks
 	}
 
 	float v_sum=0;
-	for ( auto v:ch2 ) {
+	for (const auto v:ch2 ) {
 		v_sum += v;
 	}
 	BOOST_CHECK_EQUAL(v_sum,ch2.getVolume()*(ch2.getVolume()+1)/2);
+	
+	data::Chunk dummy=ch2;//make non-typed
+	data::TypedChunk<float>(dummy).foreachVoxel([](float &v,const util::vector4<size_t> &){v=M_PI;});
+	//ch2 should all be M_PI. Check via iterator
+	for(auto i=ch2.beginTyped<float>();i!=ch2.endTyped<float>();i++)
+		BOOST_CHECK_EQUAL(*i,(float)M_PI);
 }
 
 
