@@ -25,7 +25,7 @@ bool ConstValueAdapter::operator>( const util::ValueNew &val )const {return gett
 bool ConstValueAdapter::operator<( const ConstValueAdapter &val )const {return getter(p).lt( util::ValueNew(val) );}
 bool ConstValueAdapter::operator>( const ConstValueAdapter &val )const {return getter(p).gt( util::ValueNew(val) );}
 
-const util::ValueNew ConstValueAdapter::operator->() const{ return getter(p);}
+const std::unique_ptr<util::ValueNew> ConstValueAdapter::operator->() const{return std::make_unique<util::ValueNew>(getter(p));}
 const std::string ConstValueAdapter::toString( bool label ) const{ return getter(p).toString(label);}
 
 WritingValueAdapter::WritingValueAdapter( uint8_t*const _p, ConstValueAdapter::Getter _getValueFunc, ConstValueAdapter::Setter _setValueFunc, size_t _byteSize )

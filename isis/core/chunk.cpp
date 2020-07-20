@@ -38,11 +38,15 @@ Chunk::Chunk(bool fakeValid )
 
 Chunk::Chunk( const ValueArrayNew &src, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps,bool fakeValid): Chunk(fakeValid)
 {
-	LOG_IF(!src.isValid(),Runtime,error) << "Creating a chunk from an invalid ValueArray, thats not going to end well ...";
-	ValueArrayNew::operator=(src);
-	util::vector4<size_t> init_size={nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps};
+	const util::vector4<size_t> init_size={nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps};
 	init( init_size );
-	LOG_IF( NDimensional<4>::getVolume() == 0, Debug, warning ) << "Size " << init_size << " is invalid";
+	if(!(src.isValid() || ValueArrayNew::getLength())){//creation of an zero-sized chunk from a zero sized Array was probably intentional
+		LOG(Debug,info) << "Creating a zero sized Chunk. Make sure you change that before using it";
+	} else {
+		LOG_IF(!src.isValid(),Runtime,error) << "Creating a chunk from an invalid ValueArray, thats not going to end well ...";
+		LOG_IF( NDimensional<4>::getVolume() == 0, Debug, warning ) << "Size " << init_size << " is invalid";
+	}
+	ValueArrayNew::operator=(src);
 	assert( ValueArrayNew::getLength() == getVolume() );
 }
 
@@ -65,7 +69,7 @@ bool Chunk::convertToType( size_t ID, const scaling_pair &scaling )
 	ValueArrayNew newPtr = ValueArrayNew::convertByID( ID, scaling );
 
 	if( newPtr.isValid() ){ // if the conversion is ok
-		ValueArrayNew::operator=(newPtr); 
+		ValueArrayNew::operator=(newPtr);
 		return true;
 	} else
 		return false;
@@ -307,7 +311,7 @@ void Chunk::flipAlong( const dimensions dim )
 
 void Chunk::swapDim( unsigned short dim_a,unsigned short dim_b, std::shared_ptr<util::ProgressFeedback> feedback)
 {
-	NDimensional<4>::swapDim(dim_a,dim_b,beginGeneric(),feedback);
+	NDimensional<4>::swapDim(dim_a,dim_b,begin(),feedback);
 	//swap voxel sizes
 	auto voxel_size_query=queryValueAs<util::fvector3>("voxelSize");
 	if(voxel_size_query && dim_a<data::timeDim && dim_b<data::timeDim){
@@ -322,7 +326,7 @@ const util::ValueNew Chunk::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows,
 	    << "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << nrOfTimesteps
 	    << " is out of range (" << getSizeAsString() << ")";
 
-	const auto iter=beginGeneric();
+	const auto iter=begin();
 	return util::ValueNew(iter[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )]);
 }
 void Chunk::setVoxelValue ( const util::ValueNew &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
@@ -331,7 +335,7 @@ void Chunk::setVoxelValue ( const util::ValueNew &val, size_t nrOfColumns, size_
 	        << "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << nrOfTimesteps
 	        << " is out of range (" << getSizeAsString() << ")";
 
-	beginGeneric()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )] = val;
+	begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )] = val;
 }
 
 

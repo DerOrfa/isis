@@ -39,38 +39,38 @@ std::string isis::data::ValueArrayNew::typeName() const{
 	return std::visit(_internal::arrayname_visitor(),static_cast<const ArrayTypes&>(*this));
 }
 
-isis::data::ValueArrayNew::value_iterator isis::data::ValueArrayNew::beginGeneric() {
+isis::data::ValueArrayNew::iterator isis::data::ValueArrayNew::begin() {
 	const size_t bytesize=bytesPerElem();
-	auto visitor = [bytesize](auto ptr)->value_iterator{
+	auto visitor = [bytesize](auto ptr)->iterator{
 		typedef typename decltype(ptr)::element_type element_type;
-		return value_iterator(
+		return iterator(
 		    ( uint8_t * )ptr.get(), ( uint8_t * )ptr.get(), bytesize,
 		    getValueFrom<element_type>, setValueInto<element_type>
 		);
 	};
 	return std::visit(visitor,static_cast<ArrayTypes&>(*this));
 }
-isis::data::ValueArrayNew::const_value_iterator isis::data::ValueArrayNew::beginGeneric() const {
-	return const_cast<ValueArrayNew*>(this)->beginGeneric();
+isis::data::ValueArrayNew::const_iterator isis::data::ValueArrayNew::begin() const {
+	return const_cast<ValueArrayNew*>(this)->begin();
 }
 
-isis::data::ValueArrayNew::value_iterator isis::data::ValueArrayNew::endGeneric() {
-	return beginGeneric()+m_length;
+isis::data::ValueArrayNew::iterator isis::data::ValueArrayNew::end() {
+	return begin()+m_length;
 }
 
-isis::data::ValueArrayNew::const_value_iterator isis::data::ValueArrayNew::endGeneric() const {
-	return beginGeneric()+m_length;
+isis::data::ValueArrayNew::const_iterator isis::data::ValueArrayNew::end() const {
+	return begin()+m_length;
 }
 
 std::string isis::data::ValueArrayNew::toString(bool labeled) const {
 	std::string ret;//@todo listToString
 
 	if ( m_length ) {
-		for ( auto i = beginGeneric(); i < endGeneric() - 1; i++ )
+		for ( auto i = begin(); i < end() - 1; i++ )
 			ret += util::ValueNew( *i ).toString( false ) + "|";
 
 
-		ret += util::ValueNew( *( endGeneric() - 1 ) ).toString( labeled );
+		ret += util::ValueNew( *( end() - 1 ) ).toString( labeled );
 	}
 
 	return std::to_string( m_length ) + "#" + ret;

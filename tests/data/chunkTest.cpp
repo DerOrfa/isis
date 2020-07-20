@@ -90,11 +90,11 @@ BOOST_AUTO_TEST_CASE ( chunk_iterator_test )
 
 	BOOST_CHECK_EQUAL( ch.getVolume(), 3 * 3 );
 	
-	BOOST_CHECK_EQUAL(std::distance(ch.beginGeneric(),ch.endGeneric()),ch.getVolume());
+	BOOST_CHECK_EQUAL(std::distance(ch.begin(),ch.end()),ch.getVolume());
 	BOOST_CHECK_EQUAL(std::distance(ch.beginTyped<short>(),ch.endTyped<short>()),ch.getVolume());
 
-	for(auto i = ch.beginGeneric(); i != ch.endGeneric(); ++i ) {
-		const util::ValueNew datVal( data[std::distance( ch.beginGeneric(), i )] );
+	for(auto i = ch.begin(); i != ch.end(); ++i ) {
+		const auto datVal = data[std::distance( ch.begin(), i )];
 		BOOST_CHECK_EQUAL( *i, datVal );
 	}
 
@@ -419,7 +419,7 @@ BOOST_AUTO_TEST_CASE ( chunk_swapdim_test )
 	//(MemChunk's storage is still ValueArray, so its shared/tracked anyway)
 	data::Chunk ch(data::MemChunk<uint32_t>( 50, 40, 30, 20 ));
 	uint32_t cnt = 0;
-	for( auto i=ch.beginGeneric();i!=ch.endGeneric();i++ )
+	for( auto i=ch.begin();i!=ch.end();i++ )
 		*i = cnt++ ;
 
 	data::MemChunk<uint32_t> swapped( ch );

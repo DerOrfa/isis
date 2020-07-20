@@ -45,8 +45,8 @@ protected:
 	Chunk(bool fakeValid=false);
 public:
 	static const char *neededProperties;
-	typedef ValueArrayNew::value_iterator iterator;
-	typedef ValueArrayNew::const_value_iterator const_iterator;
+	typedef ValueArrayNew::iterator iterator;
+	typedef ValueArrayNew::const_iterator const_iterator;
 
 	static Chunk makeByID(unsigned short typeID, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false);
 
@@ -90,8 +90,8 @@ public:
 	 * So this will only compile if func would be valid for all types.
 	 * You might want to look into TypedChunk::foreachVoxel.
 	 * And remember TypedChunk is a cheap copy if possible. So \code
-	 * TypedChunk<uint32_t>(ch).foreachVoxel([]((uint32_t &vox, const util::vector4<size_t> &pos)){});
-	 * \endcode is perfectly fine if the type of ch is uint32_t or convertible.
+	 * TypedChunk<uint32_t>(ch).foreachVoxel([](uint32_t &vox, const util::vector4<size_t> &pos){});
+	 * \endcode is perfectly fine if the type of ch is already uint32_t.
 	 * \param v a reference to the voxel
 	 * \param offset the position of the voxel inside the chunk
 	 * \returns amount of operations which returned false - so 0 is good!
@@ -220,17 +220,15 @@ public:
 
 template<typename TYPE> class TypedChunk : public Chunk{
 protected:
-	std::shared_ptr<TYPE> &me;
-// protected:
-// 	TypedChunk():Chunk(ValueArrayNew(std::add_pointer_t<TYPE>(),0), 0, 0, 0, 0){}
+	const std::shared_ptr<TYPE> &me;
 public:
 	/**
 	 * Run a function on every Voxel in the chunk.
-	 * \note This explicitly has writing access even if called from a const object. If you want it to be readonly make vox "const".
+	 * \note This always has writing access even if called from a const object. If you want it to be read-only make vox "const".
 	 * \param v a reference to the voxel
 	 * \param offset the position of the voxel inside the chunk
 	 */
-	void foreachVoxel( std::function<void(TYPE &vox, const util::vector4<size_t> &pos)> func )const 
+	void foreachVoxel( std::function<void(TYPE &vox, util::vector4<size_t> pos)> func )const 
 	{
 		auto vox_ptr = const_cast<TYPE*>(begin());
 		const util::vector4<size_t> imagesize = getSizeAsVector();
@@ -244,12 +242,23 @@ public:
 					}
 	}
 
+	//empty constructor making sure underlying ValueArrayNew has correct type
+	TypedChunk():Chunk(ValueArrayNew(std::add_pointer_t<TYPE>(),0), 0, 0, 0, 0),me(castTo<TYPE>()){}
+	
+	TypedChunk( const TypedChunk<TYPE> &ref):TypedChunk(){
+		//copy shape
+		NDimensional<4>::operator=(ref);
+		//copy properties
+		util::PropertyMap::operator=(ref);
+		//copy array
+		ValueArrayNew::operator=(ref.as<TYPE>());//will call std::shared_ptr<TYPE>::operator=() as underlying stored types are the same (and thus "me" will still be valid)
+	}
 
 	TypedChunk( const ValueArrayNew &ref, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false, const scaling_pair &scaling = scaling_pair()  )
 	: Chunk( ref.as<TYPE>(scaling), nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid ),me(castTo<TYPE>()) {}
 	
 	TypedChunk( const Chunk &ref, scaling_pair scaling = scaling_pair() ) : TypedChunk( ref.as<TYPE>(scaling) ) {}
-
+	
 	TYPE* begin(){
 		return me.get();
 	}

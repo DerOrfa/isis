@@ -419,21 +419,21 @@ BOOST_AUTO_TEST_CASE( ValueArray_generic_iterator_test )
 
 	// filling, using generic access
 	for( int i = 0; i < 1024; i++ )
-		array.beginGeneric()[i] = i + 1 ; //(miss)using the iterator for indexed access
+		array.begin()[i] = i + 1 ; //(miss)using the iterator for indexed access
 
 	// check the content
 	uint32_t cnt = 0;
 
-	for( auto i = array.beginGeneric(); i != array.endGeneric(); i++, cnt++ ) {
+	for( auto i = array.begin(); i != array.end(); i++, cnt++ ) {
 		BOOST_CHECK_EQUAL( *i, cnt + 1 ); //this is using ValueBase::eq
 	}
 
 	//check searching operations
-	BOOST_CHECK_EQUAL( *std::min_element( array.beginGeneric(), array.endGeneric() ), *array.beginGeneric() );
-	BOOST_CHECK_EQUAL( *std::max_element( array.beginGeneric(), array.endGeneric() ), *( array.endGeneric() - 1 ) );
-	BOOST_CHECK( std::find( array.beginGeneric(), array.endGeneric(),5 ) == array.beginGeneric() + 4 ); //"1+4"
+	BOOST_CHECK_EQUAL( *std::min_element( array.begin(), array.end() ), *array.begin() );
+	BOOST_CHECK_EQUAL( *std::max_element( array.begin(), array.end() ), *( array.end() - 1 ) );
+	BOOST_CHECK( std::find( array.begin(), array.end(),5 ) == array.begin() + 4 ); //"1+4"
 
-	BOOST_CHECK_EQUAL( std::distance( array.beginGeneric(), array.endGeneric() ), 1024 );
+	BOOST_CHECK_EQUAL( std::distance( array.begin(), array.end() ), 1024 );
 }
 }
 }

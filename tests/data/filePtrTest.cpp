@@ -37,8 +37,8 @@ BOOST_AUTO_TEST_CASE( FilePtr_write_test )
 			BOOST_REQUIRE( fptr.good() ); // it should be "good"
 			BOOST_REQUIRE_EQUAL( fptr.getLength(), 1024 );
 
-			data::TypedArray<uint8_t> ptr = fptr.at<uint8_t>( 5 );
-			strcpy( ( char * )ptr.begin(), "Hello_world!\n" ); // writing to a ValueArray created from a writing fileptr should write into the file
+			auto ptr = fptr.at<uint8_t>( 5 );
+			strcpy( ( char * )(uint8_t*)ptr.begin(), "Hello_world!\n" ); // writing to a ValueArray created from a writing fileptr should write into the file
 		}
 		std::ifstream in( testfile );
 		BOOST_REQUIRE( in.good() );
@@ -55,9 +55,9 @@ BOOST_AUTO_TEST_CASE( FilePtr_write_test )
 			data::FilePtr fptr( testfile ); // create a file for reading
 			BOOST_REQUIRE_EQUAL( fptr.getLength(), 1024 );
 			BOOST_REQUIRE( fptr.good() );
-			data::TypedArray<uint8_t> ptr = fptr.at<uint8_t>( 5 );
+			auto ptr = fptr.at<uint8_t>( 5 );
 			BOOST_CHECK_EQUAL( std::string( ( char * )&ptr[0] ), "Hello_world!\n" ); // reading should get the content of the file
-			strcpy( ( char * )ptr.begin(), "Hello_you!\n" ); // writing to a ValueArray created from a reading fileptr should _NOT_ trigger a copy-on-write
+			strcpy( ( char * )(uint8_t*)ptr.begin(), "Hello_you!\n" ); // writing to a ValueArray created from a reading fileptr should _NOT_ trigger a copy-on-write
 			BOOST_CHECK_EQUAL( std::string( ( char * )&ptr[0] ), "Hello_you!\n" ); // so next reading should get the new content of the memory
 		}
 		std::ifstream in( testfile );
@@ -76,8 +76,8 @@ BOOST_AUTO_TEST_CASE( FilePtr_write_test )
 			BOOST_REQUIRE( fptr.good() ); // it should be "good"
 			BOOST_REQUIRE_EQUAL( fptr.getLength(), 1024 );
 
-			data::TypedArray<uint8_t> ptr = fptr.at<uint8_t>( 5 );
-			strcpy( ( char * )ptr.begin(), "Hello_universe!\n" ); // writing to a ValueArray created from a writing fileptr should write into the file
+			auto ptr = fptr.at<uint8_t>( 5 );
+			strcpy( ( char * )(uint8_t*)ptr.begin(), "Hello_universe!\n" ); // writing to a ValueArray created from a writing fileptr should write into the file
 		}
 		std::ifstream in( testfile );
 		BOOST_REQUIRE( in.good() );
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE( FilePtr_at_test )
 	BOOST_REQUIRE( fptr.good() ); // it should be "good"
 	BOOST_REQUIRE_EQUAL( fptr.getLength(), sizeof( float ) * 8 + 5 );
 
-	data::TypedArray<util::fvector4> ptr1 = fptr.at<util::fvector4>( 5 );
+	auto ptr1 = fptr.at<util::fvector4>( 5 );
 	BOOST_CHECK_EQUAL( ptr1[0], util::fvector4( {1, 2, 3, 4} ) );
 	BOOST_CHECK_EQUAL( ptr1[1], util::fvector4( {5, 6, 7, 8} ) );
 

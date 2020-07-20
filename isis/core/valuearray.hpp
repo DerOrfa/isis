@@ -101,10 +101,10 @@ public:
 
 	typedef _internal::ValueArrayConverterMap::mapped_type::mapped_type Converter;
 
-	typedef _internal::GenericValueIterator<false> value_iterator;
-	typedef _internal::GenericValueIterator<true> const_value_iterator;
-	typedef value_iterator value_reference;
-	typedef const_value_iterator const_value_reference;
+	typedef _internal::GenericValueIterator<false> iterator;
+	typedef _internal::GenericValueIterator<true> const_iterator;
+	typedef iterator::reference reference;
+	typedef const_iterator::reference const_reference;
 
 	ValueArrayNew();//creates an invalid value array
 	/**
@@ -115,8 +115,9 @@ public:
 	 * this is just here for child classes which may want to check)
 	 */
 	template<typename T> ValueArrayNew( const std::shared_ptr<T> &ptr, size_t length ): ArrayTypes( ptr ), m_length(length) {
-		static_assert(!std::is_const<T>::value,"ValueArray type must not be const");
 		checkType<T>();
+		static_assert(!std::is_const<T>::value,"ValueArray type must not be const");
+		assert(beginTyped<T>()==ptr.get());
 	}
 
 	/**
@@ -361,10 +362,10 @@ public:
 		return std::get<std::shared_ptr<T>>(*this);
 	}
 
-	value_iterator beginGeneric();
-	const_value_iterator beginGeneric()const;
-	value_iterator endGeneric();
-	const_value_iterator endGeneric()const;
+	iterator begin();
+	const_iterator begin()const;
+	iterator end();
+	const_iterator end()const;
 
 	template<typename T> const T* beginTyped()const{return castTo<T>().get();}
 	template<typename T> const T* endTyped()const{return castTo<T>().get()+m_length;}

@@ -46,7 +46,7 @@ public:
 	bool operator<( const ConstValueAdapter &val )const;
 	bool operator>( const ConstValueAdapter &val )const;
 
-	const util::ValueNew operator->() const;
+	const std::unique_ptr<util::ValueNew> operator->() const; //maybe more trouble than worth it
 	const std::string toString( bool label = false )const;
 	operator util::ValueNew()const{return getter(p);}
 };
@@ -62,13 +62,7 @@ public:
 	void swapwith( const WritingValueAdapter &b )const; // the WritingValueAdapter is const not what its dereferencing
 };
 
-template<bool IS_CONST> class GenericValueIterator :
-    public std::iterator < std::random_access_iterator_tag,
-    typename std::conditional<IS_CONST, ConstValueAdapter, WritingValueAdapter>::type,
-    ptrdiff_t,
-    typename std::conditional<IS_CONST, ConstValueAdapter, WritingValueAdapter>::type,
-    typename std::conditional<IS_CONST, ConstValueAdapter, WritingValueAdapter>::type
-    >
+template<bool IS_CONST> class GenericValueIterator
 {
 	typedef typename std::conditional<IS_CONST, const uint8_t *, uint8_t *>::type ptr_type;
 	ptr_type p, start; //we need the starting position for operator[]
@@ -77,47 +71,55 @@ template<bool IS_CONST> class GenericValueIterator :
 	ConstValueAdapter::Setter setValueFunc;
 	friend class GenericValueIterator<true>; //yes, I'm my own friend, sometimes :-) (enables the constructor below)
 public:
-	GenericValueIterator( const GenericValueIterator<false> &src ): //will become additional constructor from non const if this is const, otherwise overrride the default copy contructor
+	using iterator_category = std::random_access_iterator_tag;
+	using value_type = typename std::conditional_t<IS_CONST, ConstValueAdapter, WritingValueAdapter>;
+	using difference_type = ptrdiff_t;
+	using pointer = std::conditional_t<IS_CONST, ConstValueAdapter, WritingValueAdapter>;
+	using reference = std::conditional_t<IS_CONST, ConstValueAdapter, WritingValueAdapter>;
+	using ThisType = GenericValueIterator<IS_CONST>;
+	
+	//will become additional constructor from non const if this is const, otherwise overrride the default copy contructor
+	GenericValueIterator( const GenericValueIterator<false> &src ): 
 	    p( src.p ), start( src.p ), byteSize( src.byteSize ), getValueFunc( src.getValueFunc ), setValueFunc( src.setValueFunc ) {}
 	GenericValueIterator(): p( NULL ), start( p ), byteSize( 0 ), getValueFunc( NULL ), setValueFunc( NULL ) {}
 	GenericValueIterator( ptr_type _p, ptr_type _start, size_t _byteSize, ConstValueAdapter::Getter _getValueFunc, ConstValueAdapter::Setter _setValueFunc ):
 	    p( _p ), start( _start ), byteSize( _byteSize ), getValueFunc( _getValueFunc ), setValueFunc( _setValueFunc )
 	{}
 
-	GenericValueIterator<IS_CONST>& operator++() {p += byteSize; return *this;}
-	GenericValueIterator<IS_CONST>& operator--() {p -= byteSize; return *this;}
+	ThisType& operator++() {p += byteSize; return *this;}
+	ThisType& operator--() {p -= byteSize; return *this;}
 
-	GenericValueIterator<IS_CONST> operator++( int ) {GenericValueIterator<IS_CONST> tmp = *this; ++*this; return tmp;}
-	GenericValueIterator<IS_CONST> operator--( int ) {GenericValueIterator<IS_CONST> tmp = *this; --*this; return tmp;}
+	ThisType operator++( int ) {ThisType tmp = *this; ++*this; return tmp;}
+	ThisType operator--( int ) {ThisType tmp = *this; --*this; return tmp;}
 
-	typename GenericValueIterator<IS_CONST>::reference operator*() const;
-	typename GenericValueIterator<IS_CONST>::pointer  operator->() const {return operator*();}
+	reference operator*() const;
+	pointer  operator->() const {return operator*();}
 
-	bool operator==( const GenericValueIterator<IS_CONST>& cmp )const {return p == cmp.p;}
-	bool operator!=( const GenericValueIterator<IS_CONST>& cmp )const {return !( *this == cmp );}
+	bool operator==( const ThisType& cmp )const {return p == cmp.p;}
+	bool operator!=( const ThisType& cmp )const {return !( *this == cmp );}
 
-	bool operator>( const GenericValueIterator<IS_CONST> &cmp )const {return p > cmp.p;}
-	bool operator<( const GenericValueIterator<IS_CONST> &cmp )const {return p < cmp.p;}
+	bool operator>( const ThisType &cmp )const {return p > cmp.p;}
+	bool operator<( const ThisType &cmp )const {return p < cmp.p;}
 
-	bool operator>=( const GenericValueIterator<IS_CONST> &cmp )const {return p >= cmp.p;}
-	bool operator<=( const GenericValueIterator<IS_CONST> &cmp )const {return p <= cmp.p;}
+	bool operator>=( const ThisType &cmp )const {return p >= cmp.p;}
+	bool operator<=( const ThisType &cmp )const {return p <= cmp.p;}
 
-	typename GenericValueIterator<IS_CONST>::difference_type operator-( const GenericValueIterator<IS_CONST> &cmp )const {return ( p - cmp.p ) / byteSize;}
+	difference_type operator-( const ThisType &cmp )const {return ( p - cmp.p ) / byteSize;}
 
-	GenericValueIterator<IS_CONST> operator+( typename GenericValueIterator<IS_CONST>::difference_type n )const
-	{return ( GenericValueIterator<IS_CONST>( *this ) += n );}
-	GenericValueIterator<IS_CONST> operator-( typename GenericValueIterator<IS_CONST>::difference_type n )const
-	{return ( GenericValueIterator<IS_CONST>( *this ) -= n );}
+	ThisType operator+( typename ThisType::difference_type n )const
+	{return ( ThisType( *this ) += n );}
+	ThisType operator-( typename ThisType::difference_type n )const
+	{return ( ThisType( *this ) -= n );}
 
 
-	GenericValueIterator<IS_CONST> &operator+=( typename GenericValueIterator<IS_CONST>::difference_type n )
+	ThisType &operator+=( typename ThisType::difference_type n )
 	{p += ( n * byteSize ); return *this;}
-	GenericValueIterator<IS_CONST> &operator-=( typename GenericValueIterator<IS_CONST>::difference_type n )
+	ThisType &operator-=( typename ThisType::difference_type n )
 	{p -= ( n * byteSize ); return *this;}
 
-	typename GenericValueIterator<IS_CONST>::reference operator[]( typename GenericValueIterator<IS_CONST>::difference_type n )const {
+	typename ThisType::reference operator[]( typename ThisType::difference_type n )const {
 		//the book says it has to be the n-th elements of the whole object, so we have to start from what is hopefully the beginning
-		return *( GenericValueIterator<IS_CONST>( start, start, byteSize, getValueFunc, setValueFunc ) += n );
+		return *( ThisType( start, start, byteSize, getValueFunc, setValueFunc ) += n );
 	}
 
 };
@@ -130,11 +132,18 @@ template<> GenericValueIterator<false>::reference GenericValueIterator<false>::o
  * This is a common iterator following the random access iterator model.
  * It is not part of the reference counting used in ValueArray. So make sure you keep the ValueArray you created it from while you use this iterator.
  */
-template<typename TYPE> class TypedArrayIterator: public std::iterator<std::random_access_iterator_tag, TYPE>
+template<typename TYPE> class TypedArrayIterator
 {
 	TYPE *p;
-	typedef typename std::iterator<std::random_access_iterator_tag, TYPE>::difference_type distance;
 public:
+	using iterator_category = std::random_access_iterator_tag;
+	using value_type = TYPE;
+	using difference_type = ptrdiff_t;
+	using pointer = TYPE*;
+	using reference = TYPE&;
+	
+	friend TypedArrayIterator<typename std::add_const_t<TYPE> >;
+
 	TypedArrayIterator(): p( NULL ) {}
 	TypedArrayIterator( TYPE *_p ): p( _p ) {}
 	TypedArrayIterator( const TypedArrayIterator<typename std::remove_const<TYPE>::type > &src ): p( src.p ) {}
@@ -145,8 +154,8 @@ public:
 	TypedArrayIterator<TYPE>  operator++( int ) {TypedArrayIterator<TYPE> tmp = *this; ++*this; return tmp;}
 	TypedArrayIterator<TYPE>  operator--( int ) {TypedArrayIterator<TYPE> tmp = *this; --*this; return tmp;}
 
-	TYPE &operator*() const { return *p; }
-	TYPE *operator->() const { return p; }
+	reference operator*() const { return *p; }
+	pointer operator->() const { return p; }
 
 	bool operator==( const TypedArrayIterator<TYPE> &cmp )const {return p == cmp.p;}
 	bool operator!=( const TypedArrayIterator<TYPE> &cmp )const {return !( *this == cmp );}
@@ -157,17 +166,17 @@ public:
 	bool operator>=( const TypedArrayIterator<TYPE> &cmp )const {return p >= cmp.p;}
 	bool operator<=( const TypedArrayIterator<TYPE> &cmp )const {return p <= cmp.p;}
 
-	TypedArrayIterator<TYPE> operator+( distance n )const {return TypedArrayIterator<TYPE>( p + n );}
-	TypedArrayIterator<TYPE> operator-( distance n )const {return TypedArrayIterator<TYPE>( p - n );}
+	TypedArrayIterator<TYPE> operator+( difference_type n )const {return TypedArrayIterator<TYPE>( p + n );}
+	TypedArrayIterator<TYPE> operator-( difference_type n )const {return TypedArrayIterator<TYPE>( p - n );}
 
-	distance operator-( const TypedArrayIterator<TYPE> &cmp )const {return p - cmp.p;}
+	difference_type operator-( const TypedArrayIterator<TYPE> &cmp )const {return p - cmp.p;}
 
-	TypedArrayIterator<TYPE> &operator+=( distance n ) {p += n; return *this;}
-	TypedArrayIterator<TYPE> &operator-=( distance n ) {p -= n; return *this;}
+	TypedArrayIterator<TYPE> &operator+=( difference_type n ) {p += n; return *this;}
+	TypedArrayIterator<TYPE> &operator-=( difference_type n ) {p -= n; return *this;}
 
-	TYPE &operator[]( distance n )const {return *( p + n );}
+	reference operator[]( difference_type n )const {return *( p + n );}
 
-	operator TYPE*(){return p;}
+	operator pointer(){return p;}
 };
 }
 
