@@ -18,11 +18,12 @@
 #include <set>
 #include <memory>
 #include <vector>
-#include <boost/shared_array.hpp>
 #include <stack>
 #include "sortedchunklist.hpp"
 #include "common.hpp"
 #include "progressfeedback.hpp"
+#include "image_iterator.hpp"
+#include "valuearray_typed.hpp"
 
 namespace isis
 {
@@ -45,6 +46,10 @@ public:
 	void setIndexingDim ( dimensions d = rowDim );
 	enum orientation {axial, reversed_axial, sagittal, reversed_sagittal, coronal, reversed_coronal};
 
+	typedef _internal::ImageIteratorTemplate<ValueArrayNew,false> iterator;
+	typedef _internal::ImageIteratorTemplate<ValueArrayNew,true> const_iterator;
+	typedef iterator::reference reference;
+	typedef const_iterator::reference const_reference;
 	static const char *neededProperties;
 protected:
 	_internal::SortedChunkList set;
@@ -74,11 +79,11 @@ private:
 	 */
 	inline std::pair<size_t, size_t> commonGet ( size_t first, size_t second, size_t third, size_t fourth ) const {
 		LOG_IF ( ! clean, Debug, error )
-				<< "Getting data from a non indexed image will result in undefined behavior. Run reIndex first.";
+		        << "Getting data from a non indexed image will result in undefined behavior. Run reIndex first.";
 		LOG_IF ( set.isEmpty(), Debug, error )
-				<< "Getting data from a empty image will result in undefined behavior.";
+		        << "Getting data from a empty image will result in undefined behavior.";
 		LOG_IF ( !isInRange ( {first, second, third, fourth} ), Debug, isis::error )
-				<< "Index " << util::vector4<size_t> ( {first, second, third, fourth} ) << " is out of range (" << getSizeAsString() << ")";
+		        << "Index " << util::vector4<size_t> ( {first, second, third, fourth} ) << " is out of range (" << getSizeAsString() << ")";
 		const size_t index = getLinearIndex ( {first, second, third, fourth} );
 		return std::make_pair ( index / chunkVolume, index % chunkVolume );
 	}
@@ -126,7 +131,7 @@ public:
 	/**
 	 * Create image from a list of Chunks or objects with the base Chunk.
 	 * Removes used chunks from the given list. So afterwards the list consists of the rejected chunks.
-	 */ 
+	 */
 	//@todo why template
 	//@todo unify with concepts (or std::span)
 	template<typename T> Image ( std::list<T> &chunks, dimensions min_dim = rowDim, util::slist* rejected=nullptr ) : Image()
@@ -171,7 +176,7 @@ public:
 				LOG ( Runtime, error ) << "Failed to create image from " << cnt << " chunks.";
 			} else {
 				LOG_IF ( !getMissing().empty(), Debug, warning )
-						<< "The created image is missing some properties: " << util::MSubject( getMissing() ) << ". It will be invalid.";
+				        << "The created image is missing some properties: " << util::MSubject( getMissing() ) << ". It will be invalid.";
 			}
 		} else {
 			LOG ( Debug, warning ) << "Image is empty after inserting chunks.";
@@ -243,6 +248,11 @@ public:
 
 	const util::ValueNew getVoxelValue ( size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 ) const;
 	void setVoxelValue ( const util::ValueNew &val, size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 );
+
+	iterator begin();
+	iterator end();
+	const_iterator begin() const;
+	const_iterator end() const;
 
 	/**
 	 * Get the type of the chunk with "biggest" type.
@@ -379,12 +389,12 @@ public:
 
 				if(unique){ // if unique
 					if( ( prop && !ret.empty() &&  *prop == ret.back() ) || // if there is prop, skip if its equal
-						!prop //if there is none skip anyway
+					    !prop //if there is none skip anyway
 					)
 						continue;
 				}
 				ret.push_back(
-					prop ? prop->as<T>() : T()
+				    prop ? prop->as<T>() : T()
 				);
 			}
 		} else {
@@ -553,6 +563,55 @@ public:
 	size_t getNrOfTimesteps() const;
 
 	util::fvector3 getFoV() const;
+	
+	/**
+	 * Run a function on every Chunk in the image.
+	 */
+	void foreachChunk( std::function<void(Chunk &ch, util::vector4<size_t> posInImage)> func ) 	
+	{
+		checkMakeClean();
+		const size_t chunkSize = lookup.front()->getVolume();
+		size_t index=0;
+
+		for(std::shared_ptr<Chunk> &ch:lookup){
+			func(*ch,getCoordsFromLinIndex(index));
+			index+=chunkSize;
+		}
+	}
+	void foreachChunk( std::function<void(const Chunk &ch, util::vector4<size_t> posInImage)> func )const	
+	{
+		if(clean){
+			const size_t chunkSize = lookup.front()->getVolume();
+			size_t index=0;
+			for(const std::shared_ptr<Chunk> &ch:lookup){
+				func(*ch,getCoordsFromLinIndex(index));
+				index+=chunkSize;
+			}
+		} else {
+			LOG(Runtime,error) << "Trying to run foreachChunk on an unclean image. Won't do anything ..";
+		}
+	}
+
+	/**
+	 * Run a function on every Voxel in the image.
+	 * This will try to instantiate func for all valid Chunk-datatypes. 
+	 * So this will only compile if func would be valid for all types.
+	 * You might want to look into TypedImage::foreachVoxel.
+	 * And remember TypedImage is a cheap copy if all chunks can be cheap-copied. So \code
+	 * TypedImage<uint32_t>(img).foreachVoxel([]((uint32_t &vox, const util::vector4<size_t> &pos)){});
+	 * \endcode is perfectly fine if the type of img is already uint32_t.
+	 * \param v a reference to the voxel
+	 * \param offset the position of the voxel inside the chunk
+	 * \returns amount of operations which returned false - so 0 is good!
+	 */
+	template <typename FUNC> void foreachVoxel( FUNC func ) 
+	{
+		foreachChunk([func](const Chunk &ch, util::vector4<size_t> posInImage){
+			ch.foreachVoxel([posInImage,func](auto &vox, const util::vector4<size_t> &pos){//capsule the func, so we can add posInImage
+				func(vox,pos+posInImage);
+			});
+		});
+	}
 
 	/**
 	 * Generate a string identifying the image
@@ -575,6 +634,11 @@ template<typename T> class TypedImage: public Image
 protected:
 	TypedImage ():Image(){}
 public:
+	using iterator=_internal::ImageIteratorTemplate<TypedArray<T>,false>;
+	using const_iterator=_internal::ImageIteratorTemplate<TypedArray<T>,true>;
+	using reference=typename iterator::reference;
+	using const_reference=typename const_iterator::reference ;
+
 	/// cheap copy another Image and make sure all chunks have type T
 	TypedImage ( const Image &src, const scaling_pair &scaling=scaling_pair() ) : Image ( src ) { // ok we just copied the whole image
 		//but we want it to be of type T
@@ -598,6 +662,85 @@ public:
 	void copyToMem ( void *dst ) const {
 		Image::copyToMem<T> ( ( T * ) dst );
 	}
+	iterator begin() {
+		if ( checkMakeClean() ) {
+			std::vector<TypedArray<T>> buff(lookup.size());
+			for(size_t i=0;i<lookup.size();i++){
+				assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
+				buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArrayNew (if its actually T)
+			}
+			return iterator( buff );
+		} else {
+			LOG ( Debug, error )  << "Image is not clean. Returning empty iterator ...";
+			return iterator();
+		}
+	}
+	iterator end() {
+		return begin() + getVolume();
+	};
+	const_iterator begin() const {
+		if ( isClean() ) {
+			std::vector<TypedArray<T>> buff(lookup.size());
+			for(size_t i=0;i<lookup.size();i++){
+				assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
+				buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArrayNew (if its actually T)
+				assert((float*)buff[i].begin()==lookup[i]->template beginTyped<T>()); //make sure it was a cheap copy
+			}
+			return const_iterator( buff );
+		} else {
+			LOG ( Debug, error )  << "Image is not clean. Returning empty iterator ...";
+			return const_iterator();
+		}
+	}
+	const_iterator end() const {
+		return begin() + getVolume();
+	};
+	
+	/**
+	 * Run a function on every Chunk in the image.
+	 */
+	void foreachChunk( std::function<void(TypedChunk<T> &ch, util::vector4<size_t> posInImage)> func ) 	
+	{
+		checkMakeClean();
+		const size_t chunkSize = lookup.front()->getVolume();
+		size_t index=0;
+
+		for(std::shared_ptr<Chunk> &ch:lookup){
+			assert(ch->is<T>());
+			func(*ch,getCoordsFromLinIndex(index));
+			index+=chunkSize;
+		}
+	}
+	void foreachChunk( std::function<void(const TypedChunk<T> &ch, util::vector4<size_t> posInImage)> func )const	
+	{
+		if(clean){
+			const size_t chunkSize = lookup.front()->getVolume();
+			size_t index=0;
+			for(const std::shared_ptr<Chunk> &ch:lookup){
+				assert(ch->is<T>());
+				func(*ch,getCoordsFromLinIndex(index));
+				index+=chunkSize;
+			}
+		} else {
+			LOG(Runtime,error) << "Trying to run foreachChunk on an unclean image. Won't do anything ..";
+		}
+	}
+	
+	/**
+	 * Run a function on every Voxel in the chunk.
+	 * \note This always has writing access even if called from a const object. If you want it to be read-only make vox "const".
+	 * \param v a reference to the voxel
+	 * \param offset the position of the voxel inside the chunk
+	 */
+	void foreachVoxel( std::function<void(T &vox, const util::vector4<size_t> &pos)> func )const 
+	{
+		foreachChunk([func](const TypedChunk<T> &ch, util::vector4<size_t> posInImage){
+			ch.foreachVoxel([posInImage,func](T &vox, const util::vector4<size_t> &pos){//capsule the func, so we can add posInImage
+				func(vox,pos+posInImage);
+			});
+		});
+	}
+
 };
 
 /**
@@ -624,7 +767,7 @@ public:
 	MemImage &operator= ( const Image &ref ) { // copy the image, and make sure its of the given type
 
 		Image::operator= ( ref ); // ok we just copied the whole image
-		
+
 		//we want deep copies of the chunks, and we want them to be of type T
 		struct : _internal::SortedChunkList::chunkPtrOperator {
 			scaling_pair scale;

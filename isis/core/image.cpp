@@ -117,23 +117,22 @@ bool Image::isClean()const
 
 void Image::swapDim( short unsigned int dim_a, short unsigned int dim_b, std::shared_ptr<util::ProgressFeedback> feedback )
 {
-#pragma warning implement me
-// 	NDimensional<4>::swapDim( dim_a, dim_b, begin(), feedback ); // this runs through all chunks as the Iterator does that
-// 	for(auto pCh:lookup){ //but we still have to reshape the chunks
-// 		auto shape=pCh->getSizeAsVector();
-// 		std::swap(shape[dim_a],shape[dim_b]);
-// 		pCh->init(shape);
-// 	}
-// 	
-// 	//swap voxel sizes
-// 	auto voxel_size_query=queryValueAs<util::fvector3>("voxelSize");
-// 	if(voxel_size_query && dim_a<data::timeDim && dim_b<data::timeDim){
-// 		util::fvector3 &voxel_size=*voxel_size_query;
-// 		std::swap(voxel_size[dim_a],voxel_size[dim_b]);
-// 	}
-// 		
-// 	//voxelsize is needed to be equal inside Images so there should be no voxelSize in the chunks
-// 	assert(!getChunkAt(0,false).hasProperty("voxelSize"));
+	NDimensional<4>::swapDim( dim_a, dim_b, begin(), feedback ); // this runs through all chunks as the Iterator does that
+	for(auto pCh:lookup){ //but we still have to reshape the chunks
+		auto shape=pCh->getSizeAsVector();
+		std::swap(shape[dim_a],shape[dim_b]);
+		pCh->init(shape);
+	}
+	
+	//swap voxel sizes
+	auto voxel_size_query=queryValueAs<util::fvector3>("voxelSize");
+	if(voxel_size_query && dim_a<data::timeDim && dim_b<data::timeDim){
+		util::fvector3 &voxel_size=*voxel_size_query;
+		std::swap(voxel_size[dim_a],voxel_size[dim_b]);
+	}
+		
+	//voxelsize is needed to be equal inside Images so there should be no voxelSize in the chunks
+	assert(!getChunkAt(0,false).hasProperty("voxelSize"));
 }
 
 
@@ -1000,36 +999,32 @@ util::fvector3 Image::getFoV() const
 	return util::fvector3( {ret[0], ret[1], ret[2]} );
 }
 
-// Image::iterator Image::begin()
-// {
-// 	if( checkMakeClean() ) {
-// 		boost::shared_array<Chunk *> vec( new Chunk*[lookup.size()] );
-// 
-// 		for( size_t i = 0; i < lookup.size(); i++ )
-// 			vec[i] = lookup[i].get();
-// 
-// 		return iterator( vec, lookup.size() );
-// 	} else {
-// 		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
-// 		return iterator();
-// 	}
-// }
-// Image::iterator Image::end() {return begin() + getVolume();}
-// Image::const_iterator Image::begin()const
-// {
-// 	if( isClean() ) {
-// 		boost::shared_array<Chunk *> vec( new Chunk*[lookup.size()] );
-// 
-// 		for( size_t i = 0; i < lookup.size(); i++ )
-// 			vec[i] = lookup[i].get();
-// 
-// 		return const_iterator( vec, lookup.size() );
-// 	} else {
-// 		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
-// 		return const_iterator();
-// 	}
-// }
-// Image::const_iterator Image::end()const {return begin() + getVolume();}
+Image::iterator Image::begin()
+{
+	if( checkMakeClean() ) {
+		std::vector<ValueArrayNew> buff(lookup.size());
+		for(size_t i=0;i<lookup.size();i++)
+			buff[i]=*lookup[i];//Chunk is derived from ValueArrayNew
+		return iterator( buff );
+	} else {
+		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
+		return iterator();
+	}
+}
+Image::iterator Image::end() {return begin() + getVolume();}
+Image::const_iterator Image::begin()const
+{
+	if( isClean() ) {
+		std::vector<ValueArrayNew> buff(lookup.size());
+		for(size_t i=0;i<lookup.size();i++)
+			buff[i]=*lookup[i];//Chunk is derived from ValueArrayNew
+		return iterator( buff );
+	} else {
+		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
+		return const_iterator();
+	}
+}
+Image::const_iterator Image::end()const {return begin() + getVolume();}
 
 const util::ValueNew Image::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
 {
@@ -1037,14 +1032,14 @@ const util::ValueNew Image::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows,
 			<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << " is out of range (" << getSizeAsString() << ")";
 	const auto index = commonGet(nrOfColumns,nrOfRows,nrOfSlices,nrOfTimesteps);
 	const Chunk ch = getChunkAt(index.first,false);
-	const auto it = ch.beginGeneric()[index.second];
+	const auto it = ch.begin()[index.second];
 	return it;
 }
 void Image::setVoxelValue ( const util::ValueNew &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
 {
 	const auto index = commonGet(nrOfColumns,nrOfRows,nrOfSlices,nrOfTimesteps);
 	Chunk ch = getChunkAt(index.first,false);
-	ch.beginGeneric()[index.second]=val;
+	ch.begin()[index.second]=val;
 }
 
 std::string Image::identify ( bool withpath, bool withdate )const
