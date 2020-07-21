@@ -182,7 +182,7 @@ template<typename SRC, typename DST> class ValueArrayGenerator: public ValueArra
 {
 public:
 	ValueArrayNew create(const size_t len )const override {
-		return ValueArrayNew( ( DST * )malloc( sizeof( DST )*len ), len );
+		return ValueArrayNew( ( DST * )calloc( len, sizeof( DST ) ), len );
 	}
 	ValueArrayNew generate( const ValueArrayNew &src, const scaling_pair &scaling )const override {
 		//Create new "stuff" in memory
@@ -205,7 +205,8 @@ public:
 /////////////////////////////////////////////////////////////////////////////
 // trivial version -- for conversion of the same non numeric type (scaling will fail)
 /////////////////////////////////////////////////////////////////////////////
-template<typename SRC, typename DST> class ValueArrayConverter<false, false, SRC, DST> : public ValueArrayGenerator<SRC, DST>
+template<typename SRC, typename DST> 
+class ValueArrayConverter<false, false, SRC, DST> : public ValueArrayGenerator<SRC, DST>
 {
 	ValueArrayConverter() {
 		LOG( Debug, verbose_info )  << "Creating trivial copy converter for " << util::typeName<SRC>();
@@ -241,10 +242,10 @@ public:
 	void convert( const ValueArrayNew &src, ValueArrayNew &dst, const scaling_pair &scaling )const {
 		DST *dstPtr = dst.castTo<DST>().get();
 		const SRC *srcPtr = src.castTo<SRC>().get();
-		NumConvImpl<SRC, DST, std::is_same<SRC, DST>::value>::convert( srcPtr, dstPtr, scaling, getConvertSize( src, dst ) );
+		NumConvImpl<SRC, DST, std::is_same_v<SRC, DST>>::convert( srcPtr, dstPtr, scaling, getConvertSize( src, dst ) );
 	}
 	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const {
-		return NumConvImpl<SRC, DST, std::is_same<SRC, DST>::value >::getScaling( min, max );
+		return NumConvImpl<SRC, DST, std::is_same_v<SRC, DST>>::getScaling( min, max );
 	}
 	virtual ~ValueArrayConverter() {}
 };
@@ -272,7 +273,7 @@ public:
 		const SRC *sp = reinterpret_cast<const SRC*>(src.castTo<std::complex<SRC>>().get());
 		      DST *dp = reinterpret_cast<      DST*>(dst.castTo<std::complex<DST>>().get());
 
-		NumConvImpl<SRC, DST, std::is_same<SRC, DST>::value>::convert( sp, dp, scaling, getConvertSize( src, dst ) * 2 );
+		NumConvImpl<SRC, DST, std::is_same_v<SRC, DST>>::convert( sp, dp, scaling, getConvertSize( src, dst ) * 2 );
 	}
 	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const {
 		return getScalingToComplex<SRC, DST>( min, max );
@@ -393,6 +394,39 @@ public:
 
 	virtual ~ValueArrayConverter() {}
 };
+/////////////////////////////////////////////////////////////////////////////
+// vector to vector version - using numeric_convert on each element with a global scaling
+/////////////////////////////////////////////////////////////////////////////
+template<typename SRC, typename DST, int NUM> class VectorArrayConverter : public ValueArrayGenerator<std::array<SRC,NUM>, std::array<DST,NUM> >
+{
+        VectorArrayConverter() {
+            if(std::is_same_v<SRC,DST>){
+                LOG(Debug, verbose_info ) << "Creating trivial copy converter for " << util::typeName<std::array<SRC,NUM>>();
+            } else {
+                LOG(Debug, verbose_info )
+                    << "Creating vector converter from "
+                    << util::typeName<std::array<SRC,NUM>>() << " to " << util::typeName<std::array<DST,NUM>>();
+            }
+	};
+public:
+	static std::shared_ptr<const ValueArrayConverterBase> get() {
+		auto *ret = new VectorArrayConverter<SRC,DST,NUM>;
+		return std::shared_ptr<const ValueArrayConverterBase>( ret );
+	}
+	void convert( const ValueArrayNew &src, ValueArrayNew &dst, const scaling_pair &scaling )const {
+		const SRC *sp = &src.castTo<std::array<SRC,NUM> >()->operator[](0);
+		DST *dp = &dst.castTo<std::array<DST,NUM> >()->operator[](0);
+		NumConvImpl<SRC, DST, std::is_same_v<SRC,DST>>::convert( sp, dp, scaling, getConvertSize( src, dst ) * NUM );
+	}
+	scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const {
+		return NumConvImpl<SRC, DST, std::is_same_v<SRC,DST>>::getScaling( min, max );
+	}
+
+	virtual ~VectorArrayConverter() {}
+};
+
+template<typename SRC, typename DST> class ValueArrayConverter<false, false, util::vector3<SRC>, util::vector3<DST>> : public VectorArrayConverter<SRC, DST, 3>{};
+template<typename SRC, typename DST> class ValueArrayConverter<false, false, util::vector4<SRC>, util::vector4<DST>> : public VectorArrayConverter<SRC, DST, 4>{};
 
 
 ////////////////////////////////////////////////////////////////////////

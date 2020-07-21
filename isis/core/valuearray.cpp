@@ -234,7 +234,7 @@ isis::data::ValueArrayNew isis::data::ValueArrayNew::createByID(unsigned short I
 		ret=conv.create( len );
 		LOG_IF(!ret.isValid(),Runtime,error) << "The created array is not valid, this is not going to end well..";
 	} else {
-		LOG( Debug, error ) << "There is no known creator for " << util::getTypeMap()[ID];
+		LOG( Debug, error ) << "There is no known array creator for " << util::getTypeMap()[ID];
 	}
 	return ret;
 }
