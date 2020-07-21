@@ -65,14 +65,14 @@ int main( int argc, char *argv[] )
 		data::FilePtr src( infiles.front() );
 		const unsigned short rrepn = app.parameters["read_repn"].as<util::Selection>();
 		util::ivector4 dims = app.parameters["rawdims"];
-		data::ValueArrayReference dat;
+		data::ValueArrayNew dat;
 
 		if( util::product(dims) == 0 ) {
-			data::ValueArrayReference dat = src.atByID( rrepn, offset, 0, app.parameters["byteswap"] );
+			data::ValueArrayNew dat = src.atByID( rrepn, offset, 0, app.parameters["byteswap"] );
 
-			const size_t sidelength = sqrt( dat->getLength() );
+			const size_t sidelength = sqrt( dat.getLength() );
 
-			if( sidelength *sidelength == dat->getLength() ) {
+			if( sidelength *sidelength == dat.getLength() ) {
 				LOG( RawLog, warning ) << "No or invalid dimensions given in rawdims, assuming squared 2D image";
 				dims.fill( 1 );
 				dims[data::rowDim] = dims[data::columnDim] = sidelength;
@@ -84,7 +84,7 @@ int main( int argc, char *argv[] )
 			dat = src.atByID( rrepn, offset, util::product(dims), app.parameters["byteswap"] );
 		}
 
-		LOG( RawLog, notice ) << "Reading " <<  dat->getLength()*dat->bytesPerElem() / ( 1024.*1024. ) << " MBytes from " << infiles.front();
+		LOG( RawLog, notice ) << "Reading " <<  dat.getLength()*dat.bytesPerElem() / ( 1024.*1024. ) << " MBytes from " << infiles.front();
 
 		data::Chunk ch( dat, dims[data::rowDim], dims[data::columnDim], dims[data::sliceDim], dims[data::timeDim], true );
 		ch.setValueAs<util::fvector3>( "indexOrigin", app.parameters["origin"] );
@@ -100,14 +100,14 @@ int main( int argc, char *argv[] )
 
 		for( const data::Image & img :  app.images ) {
 			const unsigned short sRepn = ( int )wrepn ? : img.getMajorTypeID(); // get repn eigther from the parameter, or from the image
-			size_t repnsize = data::ValueArrayBase::createByID( sRepn, 1 )->bytesPerElem(); //create a dummy ValueArray to determine the elementsize of the requested repn
+			size_t repnsize = data::ValueArrayNew::createByID( sRepn, 1 ).bytesPerElem(); //create a dummy ValueArray to determine the elementsize of the requested repn
 			const size_t imgsize = img.getVolume() * repnsize;
 			const std::string filename = *( iOut++ );
 
 			LOG( RawLog, notice ) << "Writing " << imgsize / ( 1024.*1024. ) << " MBytes from an " << img.getSizeAsString() << "-image as " << util::getTypeMap()[sRepn] << " to " << filename;
 			data::FilePtr f( filename, imgsize + offset, true );
-			data::ValueArrayReference dat = f.atByID( sRepn, offset ); //if repn is unset use the type of the image
-			img.copyToValueArray( *dat );
+			data::ValueArrayNew dat = f.atByID( sRepn, offset ); //if repn is unset use the type of the image
+			img.copyToValueArray( dat );
 		}
 	}
 

@@ -116,12 +116,6 @@ public:
 		std::shared_ptr< util::ProgressFeedback > feedback = IOApplication::feedback(),
 		util::slist* rejected=nullptr
 	);
-	static std::list< Image > autoload( 
-		const util::ParameterMap &parameters, 
-		bool exitOnError = false, 
-		const std::string &suffix = "", 
-		std::shared_ptr< util::ProgressFeedback > feedback = IOApplication::feedback()
-	);
 
 	/** Write data using the internal ParameterMap.
 	 * Uses autowrite(const util::ParameterMap &, Image, bool, const std::string &, std::shared_ptr< util::ConsoleFeedback >) with the ParameterMap of the application to write the given image.

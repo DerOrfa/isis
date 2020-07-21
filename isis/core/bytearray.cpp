@@ -49,6 +49,7 @@ struct GeneratorMap: public std::map<unsigned short, generator_fn> {
 
 ByteArray::ByteArray(const std::shared_ptr<uint8_t>& ptr, size_t length):TypedArray<uint8_t>(ValueArrayNew(ptr,length)){}
 ByteArray::ByteArray(size_t length):TypedArray<uint8_t>(make<uint8_t>(length)){}
+ByteArray::ByteArray(const TypedArray<uint8_t> &ref):TypedArray<uint8_t>(ref){}
 
 ValueArrayNew ByteArray::atByID(unsigned short ID, std::size_t offset, std::size_t len, bool swap_endianess)
 {

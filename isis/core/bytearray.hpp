@@ -40,6 +40,7 @@ public:
 	 */
 	ByteArray( size_t length );
 	ByteArray( const std::shared_ptr<uint8_t> &ptr, size_t length );
+	ByteArray(const TypedArray<uint8_t> &ref);
 // 	ByteArray( uint8_t *const ptr, size_t length );
 
 
