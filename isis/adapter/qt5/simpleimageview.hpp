@@ -51,13 +51,13 @@ Q_SIGNALS:
 };
 
 class TransferFunction{
-	data::ValueArrayBase::Converter c;
-	std::pair<util::ValueReference,util::ValueReference> minmax;
+	data::ValueArrayNew::Converter c;
+	std::pair<util::ValueNew,util::ValueNew> minmax;
 protected:
 	data::scaling_pair scale;
 public:
-	TransferFunction(std::pair<util::ValueReference,util::ValueReference> in_minmax);
-	virtual void operator()(uchar *dst, const data::ValueArrayBase &line)const=0;
+	TransferFunction(std::pair<util::ValueNew,util::ValueNew> in_minmax);
+	virtual void operator()(uchar *dst, const data::ValueArrayNew &line)const=0;
 	std::pair<double,double> updateScale(qreal bottom, qreal top);
 };
 
