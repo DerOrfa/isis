@@ -18,6 +18,57 @@ namespace isis
 namespace test
 {
 
+namespace _internal{
+struct Randomizer{
+	size_t length;
+	double rnd(){return double(std::rand())/RAND_MAX;}
+	template<typename T, size_t NUM> void set(std::array<T,NUM> *ptr,double fact){
+		constexpr T max = std::numeric_limits<T>::max();
+		for(size_t i=0;i<NUM;i++)
+			 (*ptr)[i]= fact == 1 ? max : T(max * fact);
+	}
+	template<typename T> void set(util::color<T> *ptr,double fact){
+		constexpr T max = std::numeric_limits<T>::max();
+		ptr->r = fact == 1 ? max : T(max * fact);
+		ptr->g = fact == 1 ? max : T(max * fact);
+		ptr->b = fact == 1 ? max : T(max * fact);
+	}
+	template<typename T> void set(std::complex<T> *ptr,double fact){
+		constexpr T max = std::sqrt(std::numeric_limits<T>::max());
+		*ptr = fact == 1 ?
+			std::polar<T>(max,0):
+			std::polar<T>(max * fact,M_PI * fact * 2);
+	}
+	template<typename T> void set(T* ptr, double fact, std::enable_if_t<std::is_arithmetic_v<T>> *p=nullptr){
+		constexpr T max = std::numeric_limits<T>::max();
+		*ptr = fact == 1 ? max : T(max*fact);
+	}
+	template<typename T> void operator()(std::shared_ptr<T> ptr){
+		for(size_t i=0;i<length;i++)
+			set(ptr.get()+i,rnd()) ;
+		set(ptr.get()+(int)std::floor(rnd()*length),1);
+		set(ptr.get()+(int)std::floor(rnd()*length),0);
+	}
+};
+struct Maxer{
+	template<typename T, size_t NUM> std::pair<util::ValueNew,util::ValueNew> minmax(std::array<T,NUM> *){
+		return {0,std::numeric_limits<T>::max()};
+	}
+	template<typename T> std::pair<util::ValueNew,util::ValueNew> minmax(util::color<T> *){
+		const auto limit=std::numeric_limits<T>::max();
+		return {util::color<T>(),util::color<T>{limit,limit,limit}};
+	}
+	template<typename T> std::pair<util::ValueNew,util::ValueNew> minmax(std::complex<T> *){
+		return {0,std::sqrt(std::numeric_limits<T>::max())};
+	}
+	template<typename T> std::pair<util::ValueNew,util::ValueNew> minmax(T*, std::enable_if_t<std::is_arithmetic_v<T>> *p=nullptr){
+		return {0,std::numeric_limits<T>::max()};
+	}
+	template<typename T> std::pair<util::ValueNew,util::ValueNew> operator()(std::shared_ptr<T> ptr){
+		return minmax(ptr.get());
+	}
+};
+
 struct Deleter {
 	static bool deleted;
 	void operator()( void *p ) {
@@ -25,6 +76,8 @@ struct Deleter {
 		deleted = true;
 	};
 };
+}
+
 
 // Handlers must not be local classes
 class TestHandler : public util::MessageHandlerBase
@@ -42,7 +95,7 @@ public:
 };
 int TestHandler::hit = 0;
 
-bool Deleter::deleted = false;
+bool _internal::Deleter::deleted = false;
 
 BOOST_AUTO_TEST_CASE( scaling_pair_test ){
 // 	ENABLE_LOG(DataLog,util::DefaultMsgPrint,verbose_info);
@@ -60,7 +113,7 @@ BOOST_AUTO_TEST_CASE( scaling_pair_test ){
 
 BOOST_AUTO_TEST_CASE( ValueArray_init_test )
 {
-	BOOST_CHECK( ! Deleter::deleted );
+	BOOST_CHECK( ! _internal::Deleter::deleted );
 	{
 		data::enableLog<util::DefaultMsgPrint>( error );
 		data::TypedArray<int32_t> outer;
@@ -70,7 +123,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_init_test )
 		BOOST_CHECK( ! outer.castTo<int32_t>() ); //the underlying pointer should evaluate to false (as its equal to nullptr);
 		BOOST_CHECK_EQUAL( outer.castTo<int32_t>().use_count(), 0 );
 		{
-			data::ValueArrayNew inner( ( int32_t * )calloc( 5, sizeof( int32_t ) ), 5, Deleter() );
+			data::ValueArrayNew inner( ( int32_t * )calloc( 5, sizeof( int32_t ) ), 5, _internal::Deleter() );
 			// for now we have only one pointer referencing the data
 			auto &dummy = inner.castTo<int32_t>(); //get the smart_pointer inside, because ValueArray does not have/need use_count
 			BOOST_CHECK_EQUAL( dummy.use_count(), 1 );
@@ -85,16 +138,28 @@ BOOST_AUTO_TEST_CASE( ValueArray_init_test )
 		BOOST_CHECK_EQUAL( dummy.use_count(), 1 );
 	}
 	//data should be deleted by now (outer is gone)
-	BOOST_CHECK( Deleter::deleted );
+	BOOST_CHECK( _internal::Deleter::deleted );
+}
+
+BOOST_AUTO_TEST_CASE( ValueArray_minmax_test ){
+	_internal::Randomizer randomizer{50};
+	for(const auto &t:util::getTypeMap(true)) {
+		if(t.first==util::typeID<bool>())
+			continue;
+		auto array=data::ValueArrayNew::createByID(t.first,randomizer.length);
+		array.visit(randomizer);
+		std::cout << array.typeName() << std::endl;
+		BOOST_CHECK_EQUAL(array.getMinMax(),array.visit(_internal::Maxer()));
+	}
 }
 
 BOOST_AUTO_TEST_CASE( ValueArray_clone_test )
 {
-	Deleter::deleted = false;
+	_internal::Deleter::deleted = false;
 	{
 		data::ValueArrayNew outer;
 		{
-			data::ValueArrayNew inner( ( int32_t * )calloc( 5, sizeof( int32_t ) ), 5, Deleter() );
+			data::ValueArrayNew inner( ( int32_t * )calloc( 5, sizeof( int32_t ) ), 5, _internal::Deleter() );
 			// for now we have only one ValueArray referencing the data
 			std::shared_ptr<int32_t> &dummy = inner.castTo<int32_t>(); //get the smart_pointer inside, because ValueArray does not have/need use_count
 			BOOST_CHECK_EQUAL( dummy.use_count(), 1 );
@@ -112,16 +177,16 @@ BOOST_AUTO_TEST_CASE( ValueArray_clone_test )
 		BOOST_CHECK_EQUAL( dummy.use_count(), 1 );
 	}
 	//data should be deleted by now (outer is gone)
-	BOOST_CHECK( Deleter::deleted );
+	BOOST_CHECK( _internal::Deleter::deleted );
 }
 
 BOOST_AUTO_TEST_CASE( ValueArray_splice_test )
 {
-	Deleter::deleted = false;
+	_internal::Deleter::deleted = false;
 	{
 		std::vector<data::ValueArrayNew> outer;
 		{
-			data::ValueArrayNew inner( ( int32_t * )calloc( 5, sizeof( int32_t ) ), 5, Deleter() );
+			data::ValueArrayNew inner( ( int32_t * )calloc( 5, sizeof( int32_t ) ), 5, _internal::Deleter() );
 			// for now we have only one pointer referencing the data
 			std::shared_ptr<int32_t> &dummy = inner.castTo<int32_t>(); //get the smart_pointer inside, because ValueArray does not have/need use_count
 			BOOST_CHECK_EQUAL( dummy.use_count(), 1 );
@@ -135,10 +200,10 @@ BOOST_AUTO_TEST_CASE( ValueArray_splice_test )
 		BOOST_CHECK_EQUAL( outer.back().getLength(), 1 );// the last slice shall be of the size 1 (5%2)
 		//we cannot ask for the use_count of the original because its hidden in DelProxy (outer[0].use_count will get the use_count of the splice)
 		//but we can check if it was allready deleted (it shouldn't, because the splices are still using that data)
-		BOOST_CHECK( ! Deleter::deleted );
+		BOOST_CHECK( ! _internal::Deleter::deleted );
 	}
 	//now that all splices are gone the original data shall be deleted
-	BOOST_CHECK( Deleter::deleted );
+	BOOST_CHECK( _internal::Deleter::deleted );
 }
 
 BOOST_AUTO_TEST_CASE( ValueArray_conv_scaling_test )
@@ -331,25 +396,25 @@ BOOST_AUTO_TEST_CASE( ValueArray_boolean_conversion_test )
 	}
 }
 
-BOOST_AUTO_TEST_CASE( ValueArray_minmax_test )
-{
-	const float init[] = {
-	    -std::numeric_limits<float>::infinity(),
-	    -1.8, -1.5, -1.3, -0.6, -0.2, 1.8, 1.5, 1.3,
-	    static_cast<float>( sqrt( -1 ) ),
-	    std::numeric_limits<float>::infinity(), 0.6, 0.2
-	};
-	auto floatArray = data::ValueArrayNew::make<float>( sizeof( init ) / sizeof( float ) );
-	//without scaling
-	floatArray.copyFromMem( init, sizeof( init ) / sizeof( float ) );
-	{
-		std::pair<util::ValueNew, util::ValueNew> minmax = floatArray.getMinMax();
-		BOOST_CHECK( minmax.first.is<float>() );
-		BOOST_CHECK( minmax.second.is<float>() );
-		BOOST_CHECK_EQUAL( minmax.first.as<float>(), -1.8f );
-		BOOST_CHECK_EQUAL( minmax.second.as<float>(), 1.8f );
-	}
-}
+//BOOST_AUTO_TEST_CASE( ValueArray_minmax_test )
+//{
+//	const float init[] = {
+//	    -std::numeric_limits<float>::infinity(),
+//	    -1.8, -1.5, -1.3, -0.6, -0.2, 1.8, 1.5, 1.3,
+//	    static_cast<float>( sqrt( -1 ) ),
+//	    std::numeric_limits<float>::infinity(), 0.6, 0.2
+//	};
+//	auto floatArray = data::ValueArrayNew::make<float>( sizeof( init ) / sizeof( float ) );
+//	//without scaling
+//	floatArray.copyFromMem( init, sizeof( init ) / sizeof( float ) );
+//	{
+//		std::pair<util::ValueNew, util::ValueNew> minmax = floatArray.getMinMax();
+//		BOOST_CHECK( minmax.first.is<float>() );
+//		BOOST_CHECK( minmax.second.is<float>() );
+//		BOOST_CHECK_EQUAL( minmax.first.as<float>(), -1.8f );
+//		BOOST_CHECK_EQUAL( minmax.second.as<float>(), 1.8f );
+//	}
+//}
 
 template<typename T> void minMaxInt()
 {

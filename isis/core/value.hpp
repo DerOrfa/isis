@@ -290,7 +290,7 @@ template<typename OPERATOR,bool modifying> struct type_op<OPERATOR,modifying,tru
 			    case boost::numeric::cPosOverflow:return posOverflow();
 			    case boost::numeric::cNegOverflow:return negOverflow();
 			    case boost::numeric::cInRange:
-				    LOG_IF(second.isFloat() && second.as<float>()!=buff.as<float>(), Debug,warning)
+				    LOG_IF(second.isFloat() && second.as<double>()!=buff.as<double>(), Debug,warning)
 					<< "Using " << second << " as " << buff << " for operation on " << first
 					<< " you might loose precision";
 				    return inRange( first, buff );

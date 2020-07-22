@@ -609,7 +609,6 @@ bool PropertyMap::hasBranch( const PropPath &path ) const
 
 bool PropertyMap::rename( const PropPath &oldname,  const PropPath &newname, bool overwrite )
 {
-#pragma message "test me"
 	mapped_type& old_e = findEntry( oldname );
 
 	if ( !old_e ) {//abort if oldname is not there

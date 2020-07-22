@@ -62,7 +62,6 @@ struct getMinMaxVisitor {
 	}
 	// generic min-max for numbers 
 	template<typename T> std::enable_if_t<std::is_arithmetic_v<T>> operator()( const std::shared_ptr<T> &ref ) {
-		#pragma warning test me
 		minmax=calcMinMax<T, 1>( ref.get(), length );
 	}
 	//specialization for color
@@ -75,8 +74,14 @@ struct getMinMaxVisitor {
 			*( &ret.first.r + i ) = buff.first;
 			*( &ret.second.r + i ) = buff.second;
 		}
-		#pragma warning test me
 		minmax=ret;
+	}
+	//specialization for vectors
+	template<typename T> std::enable_if_t<std::is_arithmetic_v<T>> operator()( const std::shared_ptr<util::vector3<T> > &ref ) {
+		minmax=calcMinMax<T, 1>( ref->data(), length*3 );;
+	}
+	template<typename T> std::enable_if_t<std::is_arithmetic_v<T>> operator()( const std::shared_ptr<util::vector4<T> > &ref ) {
+		minmax=calcMinMax<T, 1>( ref->data(), length*4 );;
 	}
 	//specialization for complex
 	template<typename T> std::enable_if_t<std::is_arithmetic_v<T>> operator()( const std::shared_ptr<std::complex<T> > &ref ) {
@@ -96,7 +101,6 @@ struct getMinMaxVisitor {
 					if(ret_max_sqmag<sqmag)ret_max_sqmag=sqmag;
 				}
 			}
-			#pragma warning test me
 			minmax=std::make_pair(std::sqrt(ret_min_sqmag),std::sqrt(ret_max_sqmag));
 		}
 	}
