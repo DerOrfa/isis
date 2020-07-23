@@ -703,11 +703,6 @@ std::pair<util::ValueNew, util::ValueNew> Image::getMinMax (bool unify) const
 		auto minmax_ch = getChunksMinMax();
 		auto minmax_pair = std::make_pair(minmax_ch.first.getMinMax(),minmax_ch.second.getMinMax());
 
-		//the smallest value of the max-values list should not be smaller than that of the min-values list
-		assert(!minmax_pair.second.first.lt(minmax_pair.first.first));
-		//the biggest value of the min-values list should not be bigger than that of the max-values list
-		assert(!minmax_pair.first.second.gt(minmax_pair.second.second));
-
 		auto ret=std::make_pair(minmax_pair.first.first,minmax_pair.second.second);
 		if(unify) { //try to make min and max of the same type
 			if (ret.first.typeID() == ret.second.typeID()) { // ok min and max are the same type - trivial case

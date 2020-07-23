@@ -107,12 +107,15 @@ class LinearTransfer : public TransferFunction{
 public:
 	LinearTransfer(std::pair<util::ValueNew,util::ValueNew> minmax):TransferFunction(minmax){}
 	void operator()(uchar * dst, const data::ValueArrayNew & line) const override{
-		if(line.is<util::color24>() || line.is<util::color48>()){
+		if(line.isFloat() || line.isInteger() ) {
+			line.copyToMem<uint8_t>(dst, line.getLength(), scale);
+		} else if(line.is<util::color24>() || line.is<util::color48>()){
 			auto *c_dst=reinterpret_cast<QRgb*>(dst);
 			for(const util::color24 &c:data::TypedArray<util::color24>(line,scale))
 				*(c_dst++)=qRgb(c.r,c.g,c.b);
-		} else 
-			line.copyToMem<uint8_t>(dst,line.getLength(),scale);
+		} else {
+			LOG(Runtime,error) << "Sorry " << line.typeName() << " data cannot be displayed";
+		}
 	}
 };
 
@@ -229,8 +232,8 @@ void SimpleImageView::setupUi(){
 
 SimpleImageView::SimpleImageView(data::Image img, QString title, QWidget *parent):QWidget(parent),m_img(img)
 {
-
-	switch(img.getChunkAt(0).getTypeID())
+	const data::Chunk &firstChunk=img.getChunkAt(0);
+	switch(firstChunk.getTypeID())//@todo a bit of a dirty trick to avoid expensive getMajorTypeID
 	{
 		case util::typeID<std::complex<float>>():
 		case util::typeID<std::complex<double>>():
@@ -244,7 +247,11 @@ SimpleImageView::SimpleImageView(data::Image img, QString title, QWidget *parent
 			type=mask;
 			break;
 		default:
-			type=normal;
+			if(firstChunk.isFloat() || firstChunk.isInteger() )
+				type=normal;
+			else
+				type=unsupported;
+
 			break;
 	}
 	
@@ -276,8 +283,10 @@ SimpleImageView::SimpleImageView(data::Image img, QString title, QWidget *parent
 		connect(transfer_function_group, SIGNAL(buttonToggled(int, bool)),SLOT(selectTransfer(int,bool)));
 	} else if(type==mask){
 		transfer_function.reset(new _internal::MaskTransfer());
-	} else {
+	} else if(type==normal){
 		transfer_function.reset(new _internal::LinearTransfer(minmax));
+	} else {
+		LOG(Runtime,error) << "Sorry " << firstChunk.typeName() << " images cannot be displayed";
 	}
 	
 	const std::array<size_t,4> img_size= img.getSizeAsVector();
@@ -333,7 +342,8 @@ void SimpleImageView::timeChanged(int time)
 void SimpleImageView::updateImage()
 {
 	graphicsView->scene()->clear();
-	assert(transfer_function);
+	if(!transfer_function) //@todo generate something to show to the user
+		return;
 	auto transfer=transfer_function; //lambdas cannot bind members ??
 	QImage qimage;
 	
