@@ -407,8 +407,8 @@ BOOST_AUTO_TEST_CASE ( image_foreach_chunk_test )
 
 	data::Image img( chunks );
 	
-	auto vox_set42 = []( uint8_t &vox, util::vector4<size_t> /*pos*/ ) {vox = 42;};
-	auto ch_set42 = [vox_set42]( data::Chunk &ch, util::vector4<size_t> /*posInImage*/ ) {data::TypedChunk<uint8_t>(ch).foreachVoxel( vox_set42 );};
+	auto vox_set42 = [](uint8_t &vox) {vox = 42;};
+	auto ch_set42 = [vox_set42]( data::Chunk &ch ) {data::TypedChunk<uint8_t>(ch).foreachVoxel( vox_set42 );};
 	
 	img.foreachChunk( ch_set42 );
 

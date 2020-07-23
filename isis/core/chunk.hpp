@@ -96,7 +96,7 @@ public:
 	 * \param offset the position of the voxel inside the chunk
 	 * \returns amount of operations which returned false - so 0 is good!
 	 */
-	template <typename FUNC> void foreachVoxel( FUNC func ) 
+	template <typename TYPE> void foreachVoxel( std::function<void(TYPE &vox, util::vector4<size_t> pos)> func )
 	{
 		std::visit([&](auto ptr){
 			auto vox_ptr = ptr.get();
@@ -109,6 +109,13 @@ public:
 						for( pos[rowDim] = 0; pos[rowDim] < imagesize[rowDim]; pos[rowDim]++ ) {
 							func( *( vox_ptr++ ), pos );
 						}
+		},static_cast<ArrayTypes&>(*this));
+	}
+
+	template <typename TYPE> void foreachVoxel( std::function<void(TYPE &vox)> func )
+	{
+		std::visit([&](auto ptr){
+			std::for_each(ptr.get(),ptr.get()+getLength(),func);
 		},static_cast<ArrayTypes&>(*this));
 	}
 
@@ -230,7 +237,7 @@ public:
 	 */
 	void foreachVoxel( std::function<void(TYPE &vox, util::vector4<size_t> pos)> func )const 
 	{
-		auto vox_ptr = const_cast<TYPE*>(begin());
+		auto vox_ptr = me.get();
 		const util::vector4<size_t> imagesize = getSizeAsVector();
 		util::vector4<size_t> pos;
 
@@ -240,6 +247,10 @@ public:
 					for( pos[rowDim] = 0; pos[rowDim] < imagesize[rowDim]; pos[rowDim]++ ) {
 						func( *( vox_ptr++ ), pos );
 					}
+	}
+	void foreachVoxel( std::function<void(TYPE &vox)> func )const
+	{
+		std::for_each(me.get(),me.get()+getLength(),func);
 	}
 
 	//empty constructor making sure underlying ValueArrayNew has correct type

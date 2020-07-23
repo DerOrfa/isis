@@ -57,11 +57,11 @@ BOOST_AUTO_TEST_CASE ( chunk_foreach_voxel_test )
 
 	//check for zero on non zero chunk
 	memset( ch.begin(), 1, ch.getVolume() );
-	ch.foreachVoxel([](auto &vox, const util::vector4<size_t>&) {BOOST_CHECK_NE(vox, 0);});
+	ch.foreachVoxel([](auto &vox) {BOOST_CHECK_NE(vox, 0);});
 
 	//check for zero on zero chunk
 	memset( ch.begin(), 0, ch.getVolume() );
-	ch.foreachVoxel([](auto &vox, const util::vector4<size_t>&) {BOOST_CHECK_EQUAL(vox, 0);});
+	ch.foreachVoxel([](auto &vox) {BOOST_CHECK_EQUAL(vox, 0);});
 
 
 	//set each voxel to its index
@@ -328,7 +328,7 @@ BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
 
 BOOST_AUTO_TEST_CASE ( chunk_swap_test )
 {
-	auto randomize = []( auto &vox, const util::vector4<size_t> & ) {vox = rand();};
+	auto randomize = [](auto &vox) {vox = rand();};
 
 	for ( int dim = data::rowDim; dim <= data::timeDim; dim++ ) { // for each dim
 		for( size_t sizeRange = 10; sizeRange < 21; sizeRange++ ) { // check with chunks of the size 10³-21³
@@ -473,7 +473,7 @@ BOOST_AUTO_TEST_CASE ( typed_chunk_test )//Copy chunks
 	BOOST_CHECK_EQUAL(v_sum,ch2.getVolume()*(ch2.getVolume()+1)/2);
 	
 	data::Chunk dummy=ch2;//make non-typed
-	data::TypedChunk<float>(dummy).foreachVoxel([](float &v,const util::vector4<size_t> &){v=M_PI;});
+	data::TypedChunk<float>(dummy).foreachVoxel([](float &v){v=M_PI;});
 	//ch2 should all be M_PI. Check via iterator
 	for(auto i=ch2.beginTyped<float>();i!=ch2.endTyped<float>();i++)
 		BOOST_CHECK_EQUAL(*i,(float)M_PI);

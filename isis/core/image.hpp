@@ -156,7 +156,8 @@ public:
 	 * Removes used chunks from the given sequence container. So afterwards the container consists of the rejected chunks.
 	 * \returns amount of successfully inserted chunks
 	 */
-	template<typename T> size_t insertChunksFromList ( std::list<T> &chunks, util::slist* rejected=nullptr ) {
+	template<typename T> size_t insertChunksFromList ( std::list<T> &chunks, util::slist* rejected=nullptr )
+	{
 		static_assert( std::is_base_of<Chunk, T>::value, "Can only insert objects derived from Chunks" );
 		size_t cnt = 0;
 
@@ -215,7 +216,8 @@ public:
 	 * \returns A reference to the addressed voxel value. Reading and writing access
 	 * is provided.
 	 */
-	template <typename T> T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 ) {
+	template <typename T> T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 )
+	{
 		checkMakeClean();
 		static_assert(util::knownType<T>());
 		const std::pair<size_t, size_t> index = commonGet ( first, second, third, fourth );
@@ -237,7 +239,8 @@ public:
 	 *
 	 * \returns A reference to the addressed voxel value. Only reading access is provided
 	 */
-	template <typename T> const T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 ) const {
+	template <typename T> const T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 ) const
+	{
 		LOG_IF(!clean,  Debug, warning )  << "Accessing voxels of a not-clean image. Pleas run reIndex first";
 
 		static_assert(util::knownType<T,ArrayTypes>());
@@ -499,11 +502,7 @@ public:
 	 * \note This is a deep copy, no data will be shared between the Image and the ValueArray. It will waste a lot of memory, use it wisely.
 	 * \returns a ValueArray containing the voxeldata of the Image (but not its Properties)
 	 */
-	ValueArrayNew copyAsValueArray() const {
-		ValueArrayNew ret=ValueArrayNew::createByID(getMajorTypeID(),getVolume());
-		copyToValueArray(ret);
-		return ret;
-	}
+	ValueArrayNew copyAsValueArray() const;
 	/**
 	 * Copy all voxel data of the image into an existing ValueArray using its type.
 	 * If neccessary a conversion into the datatype of the target is done using min/max of the image.
@@ -563,38 +562,18 @@ public:
 	size_t getNrOfTimesteps() const;
 
 	util::fvector3 getFoV() const;
-	
+
 	/**
 	 * Run a function on every Chunk in the image.
 	 */
-	void foreachChunk( std::function<void(Chunk &ch, util::vector4<size_t> posInImage)> func ) 	
-	{
-		checkMakeClean();
-		const size_t chunkSize = lookup.front()->getVolume();
-		size_t index=0;
-
-		for(std::shared_ptr<Chunk> &ch:lookup){
-			func(*ch,getCoordsFromLinIndex(index));
-			index+=chunkSize;
-		}
-	}
-	void foreachChunk( std::function<void(const Chunk &ch, util::vector4<size_t> posInImage)> func )const	
-	{
-		if(clean){
-			const size_t chunkSize = lookup.front()->getVolume();
-			size_t index=0;
-			for(const std::shared_ptr<Chunk> &ch:lookup){
-				func(*ch,getCoordsFromLinIndex(index));
-				index+=chunkSize;
-			}
-		} else {
-			LOG(Runtime,error) << "Trying to run foreachChunk on an unclean image. Won't do anything ..";
-		}
-	}
+	void foreachChunk( std::function<void(Chunk &ch, util::vector4<size_t> posInImage)> func );
+	void foreachChunk( std::function<void(Chunk &ch)> func );
+	void foreachChunk( std::function<void(const Chunk &ch, util::vector4<size_t> posInImage)> func )const;
+	void foreachChunk( std::function<void(const Chunk &ch)> func )const;
 
 	/**
 	 * Run a function on every Voxel in the image.
-	 * This will try to instantiate func for all valid Chunk-datatypes. 
+	 * This will try to instantiate func for all valid Chunk-datatypes.
 	 * So this will only compile if func would be valid for all types.
 	 * You might want to look into TypedImage::foreachVoxel.
 	 * And remember TypedImage is a cheap copy if all chunks can be cheap-copied. So \code
@@ -604,12 +583,18 @@ public:
 	 * \param offset the position of the voxel inside the chunk
 	 * \returns amount of operations which returned false - so 0 is good!
 	 */
-	template <typename FUNC> void foreachVoxel( FUNC func ) 
+	template <typename TYPE> void foreachVoxel(std::function<void(TYPE &vox, util::vector4<size_t> pos)> func )const
 	{
 		foreachChunk([func](const Chunk &ch, util::vector4<size_t> posInImage){
 			ch.foreachVoxel([posInImage,func](auto &vox, const util::vector4<size_t> &pos){//capsule the func, so we can add posInImage
 				func(vox,pos+posInImage);
 			});
+		});
+	}
+	template <typename TYPE> void foreachVoxel(std::function<void(TYPE &vox)> func )const
+	{
+		foreachChunk([func](const Chunk &ch){
+			ch.foreachVoxel(func);
 		});
 	}
 
@@ -695,11 +680,11 @@ public:
 	const_iterator end() const {
 		return begin() + getVolume();
 	};
-	
+
 	/**
 	 * Run a function on every Chunk in the image.
 	 */
-	void foreachChunk( std::function<void(TypedChunk<T> &ch, util::vector4<size_t> posInImage)> func ) 	
+	void foreachChunk( std::function<void(TypedChunk<T> &ch, util::vector4<size_t> posInImage)> func )
 	{
 		checkMakeClean();
 		const size_t chunkSize = lookup.front()->getVolume();
@@ -711,7 +696,15 @@ public:
 			index+=chunkSize;
 		}
 	}
-	void foreachChunk( std::function<void(const TypedChunk<T> &ch, util::vector4<size_t> posInImage)> func )const	
+	void foreachChunk( std::function<void(TypedChunk<T> &ch)> func )
+	{
+		checkMakeClean();
+		for(std::shared_ptr<Chunk> &ch:lookup){
+			assert(ch->is<T>());
+			func(*ch);
+		}
+	}
+	void foreachChunk( std::function<void(const TypedChunk<T> &ch, util::vector4<size_t> posInImage)> func )const
 	{
 		if(clean){
 			const size_t chunkSize = lookup.front()->getVolume();
@@ -725,19 +718,36 @@ public:
 			LOG(Runtime,error) << "Trying to run foreachChunk on an unclean image. Won't do anything ..";
 		}
 	}
-	
+	void foreachChunk( std::function<void(const TypedChunk<T> &ch)> func )const
+	{
+		if(clean){
+			for(const std::shared_ptr<Chunk> &ch:lookup){
+				assert(ch->is<T>());
+				func(*ch);
+			}
+		} else {
+			LOG(Runtime,error) << "Trying to run foreachChunk on an unclean image. Won't do anything ..";
+		}
+	}
+
 	/**
 	 * Run a function on every Voxel in the chunk.
 	 * \note This always has writing access even if called from a const object. If you want it to be read-only make vox "const".
 	 * \param v a reference to the voxel
 	 * \param offset the position of the voxel inside the chunk
 	 */
-	void foreachVoxel( std::function<void(T &vox, const util::vector4<size_t> &pos)> func )const 
+	void foreachVoxel( std::function<void(T &vox, const util::vector4<size_t> &pos)> func )const
 	{
 		foreachChunk([func](const TypedChunk<T> &ch, util::vector4<size_t> posInImage){
 			ch.foreachVoxel([posInImage,func](T &vox, const util::vector4<size_t> &pos){//capsule the func, so we can add posInImage
 				func(vox,pos+posInImage);
 			});
+		});
+	}
+	void foreachVoxel( std::function<void(T &vox)> func )const
+	{
+		foreachChunk([func](const TypedChunk<T> &ch){
+			ch.foreachVoxel(func);
 		});
 	}
 
