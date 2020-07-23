@@ -1107,6 +1107,7 @@ std::string Image::identify ( bool withpath, bool withdate )const
 std::pair<ValueArrayNew,ValueArrayNew> Image::getChunksMinMax()const
 {
 	LOG_IF(!clean, Debug, info )  << "Image is not clean, result will be faulty  ...";
+	assert(!lookup.empty());
 	//get all the minmax from all the chunks
 	std::list<util::ValueNew> min, max;
 	for(const auto ch_ptr:lookup){
@@ -1123,8 +1124,8 @@ std::pair<ValueArrayNew,ValueArrayNew> Image::getChunksMinMax()const
 			curtype = val.typeID();//use that as current type from now on
 	};
 
-	//have some Value to store the types (values don't interest right now)
-	size_t mintype(0),maxtype(0);
+	//start with the type IDs of the first chunk
+	size_t mintype(lookup.front()->getTypeID()),maxtype(lookup.front()->getTypeID());
 
 	//run the check with bound mintype/maxtype
 	std::for_each(min.begin(),min.end(),std::bind(typefind,std::ref(mintype),std::placeholders::_1));
