@@ -120,7 +120,7 @@ protected:
 	Chunk &chunkAt ( size_t at );
 	/// Creates an empty Image object.
 	Image();
-
+	std::pair<ValueArrayNew,ValueArrayNew> getChunksMinMax()const;
 public:
 	/**
 	 * Copy constructor.
@@ -430,7 +430,7 @@ public:
 	}
 
 	/// Get the maximum and the minimum voxel value of the image as a pair of ValueReference-objects.
-	std::pair<util::ValueNew, util::ValueNew> getMinMax() const;
+	std::pair<util::ValueNew, util::ValueNew> getMinMax(bool unify=true) const;
 
 	/**
 	 * Compares the voxel-values of this image to the given.

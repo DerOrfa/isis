@@ -906,8 +906,6 @@ BOOST_AUTO_TEST_CASE( typediamge_test )
 	BOOST_REQUIRE( chunks.empty() );
 	{
 		const auto minmax = img.getMinMax();
-		BOOST_CHECK( minmax.first.is<uint8_t>() );
-		BOOST_CHECK( minmax.second.is<int16_t>() );
 		BOOST_CHECK_EQUAL( minmax.first.as<int16_t>(), 0 );
 		BOOST_CHECK_EQUAL( minmax.second.as<int16_t>(), std::numeric_limits<int16_t>::max() );
 	}

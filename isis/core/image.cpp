@@ -697,26 +697,36 @@ size_t Image::getMaxBytesPerVoxel() const
 	return bytes;
 }
 
-std::pair<util::ValueNew, util::ValueNew> Image::getMinMax () const
+std::pair<util::ValueNew, util::ValueNew> Image::getMinMax (bool unify) const
 {
-	std::pair<util::ValueNew, util::ValueNew> ret;
-
 	if( !lookup.empty() ) {
-		std::vector<std::shared_ptr<Chunk> >::const_iterator i = lookup.begin();
-		ret = ( *i )->getMinMax();
+		auto minmax_ch = getChunksMinMax();
+		auto minmax_pair = std::make_pair(minmax_ch.first.getMinMax(),minmax_ch.second.getMinMax());
 
-		for( ++i; i != lookup.end(); ++i ) {
-			std::pair<util::ValueNew, util::ValueNew> current = ( *i )->getMinMax();
+		//the smallest value of the max-values list should not be smaller than that of the min-values list
+		assert(!minmax_pair.second.first.lt(minmax_pair.first.first));
+		//the biggest value of the min-values list should not be bigger than that of the max-values list
+		assert(!minmax_pair.first.second.gt(minmax_pair.second.second));
 
-			if( ret.first.gt( current.first ) )
-				ret.first = current.first;
-
-			if( ret.second.lt( current.second ) )
-				ret.second = current.second;
+		auto ret=std::make_pair(minmax_pair.first.first,minmax_pair.second.second);
+		if(unify) { //try to make min and max of the same type
+			if (ret.first.typeID() == ret.second.typeID()) { // ok min and max are the same type - trivial case
+			} else if (ret.first.fitsInto(ret.second.typeID())) { // if min fits into the type of max, use that
+				ret.first=ret.first.copyByID(ret.second.typeID());
+			} else if (ret.second.fitsInto(ret.first.typeID())) { // if max fits into the type of min, use that
+				ret.second=ret.second.copyByID(ret.first.typeID());
+			} else {
+				LOG(Runtime, warning)
+					<< "Sorry I don't know which datatype I should use. (" << ret.first.typeName()
+					<< " or " << ret.second.typeName() << ")";
+			}
 		}
-	}
+		return ret;
 
-	return ret;
+	} else {
+		LOG(Runtime,error) << "Won't run getMinMax on an empty image.";
+		return std::pair<util::ValueNew, util::ValueNew>();
+	}
 }
 
 // @todo this wont work with images of more 2 two different data types
@@ -832,13 +842,13 @@ size_t Image::getMajorTypeID() const
 		return getChunk( 0 ).getTypeID();
 		break;
 	default:
-		std::pair<util::ValueNew, util::ValueNew> minmax = getMinMax();
+		auto minmax = getMinMax();
 		LOG( Debug, info ) << "Determining  datatype of image with the value range " << minmax;
 
 		if( minmax.first.typeID() == minmax.second.typeID() ) { // ok min and max are the same type - trivial case
 			return minmax.first.typeID(); // btw: we do the shift, because min and max are Value - but we want the ID's ValueArray
 		} else if( minmax.first.fitsInto( minmax.second.typeID() ) ) { // if min fits into the type of max, use that
-			return minmax.second.typeID(); //@todo maybe use a global static function here instead of a obscure shit operation
+			return minmax.second.typeID();
 		} else if( minmax.second.fitsInto( minmax.first.typeID() ) ) { // if max fits into the type of min, use that
 			return minmax.first.typeID();
 		} else {
@@ -851,7 +861,7 @@ size_t Image::getMajorTypeID() const
 		break;
 	}
 
-	return 0; // id 0 is invalid
+	return 0; // @todo id 0 should be invalid
 }
 std::string Image::getMajorTypeName() const
 {
@@ -1049,6 +1059,40 @@ std::string Image::identify ( bool withpath, bool withdate )const
 	seqNum(*this);seqDesc(*this);seqStart(*this),source(*this);
 	return set.identify(withpath,withdate,source, seqNum,seqDesc,seqStart);
 }
+std::pair<ValueArrayNew,ValueArrayNew> Image::getChunksMinMax()const
+{
+	LOG_IF(!clean, Debug, info )  << "Image is not clean, result will be faulty  ...";
+	//get all the minmax from all the chunks
+	std::list<util::ValueNew> min, max;
+	for(const auto ch_ptr:lookup){
+		const auto minmax=ch_ptr->getMinMax();
+		min.push_back(minmax.first);
+		max.push_back(minmax.second);
+	}
+	//check to be run on all values
+	auto typefind = [](size_t &curtype,const util::ValueNew &val)->void
+	{
+		if (val.fitsInto(curtype))
+			return;// val fits into current type go on
+		else // val does not fit into current type
+			curtype = val.typeID();//use that as current type from now on
+	};
 
+	//have some Value to store the types (values don't interest right now)
+	size_t mintype(0),maxtype(0);
+
+	//run the check with bound mintype/maxtype
+	std::for_each(min.begin(),min.end(),std::bind(typefind,std::ref(mintype),std::placeholders::_1));
+	std::for_each(max.begin(),max.end(),std::bind(typefind,std::ref(maxtype),std::placeholders::_1));
+
+	//create ValueArrays
+	auto ret=std::make_pair(
+		ValueArrayNew::createByID(mintype,lookup.size()),
+		ValueArrayNew::createByID(maxtype,lookup.size())
+	);
+	std::copy(min.begin(),min.end(),ret.first.begin());
+	std::copy(max.begin(),max.end(),ret.second.begin());
+	return ret;
+}
 
 } // END namespace isis::data

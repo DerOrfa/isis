@@ -45,7 +45,7 @@ ValueNew ValueNew::createByID(unsigned short ID) {
 	return f2->second->create();//trivial conversion to itself should always be there
 }
 
-ValueNew ValueNew::copyByID(unsigned short ID) const{
+ValueNew ValueNew::copyByID(size_t ID) const{
 	const Converter &conv = getConverterTo( ID );
 	ValueNew to;
 
@@ -68,7 +68,7 @@ ValueNew ValueNew::copyByID(unsigned short ID) const{
 	}
 }
 
-bool ValueNew::fitsInto(unsigned short ID) const { //@todo find a better way to do this
+bool ValueNew::fitsInto(size_t ID) const { //@todo find a better way to do this
 	const Converter &conv = getConverterTo( ID );
 	ValueNew to = createByID(ID);
 

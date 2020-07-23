@@ -71,7 +71,7 @@ public:
 	const Converter &getConverterTo( unsigned short ID )const;
 
 	/// creates a copy of the stored value using a type referenced by its ID
-	ValueNew copyByID( unsigned short ID ) const;
+	ValueNew copyByID(size_t ID ) const;
 
 	/// creates a default constructed value using a type referenced by its ID
 	static ValueNew createByID( unsigned short ID );
@@ -80,7 +80,7 @@ public:
 	 * Check if the stored value would also fit into another type referenced by its ID
 	 * \returns true if the stored value would fit into the target type, false otherwise
 	 */
-	bool fitsInto( unsigned short ID ) const;
+	bool fitsInto(size_t ID ) const;
 
 	/**
 	 * Convert the content of one Value to another.
