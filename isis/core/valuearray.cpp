@@ -40,15 +40,13 @@ std::string isis::data::ValueArrayNew::typeName() const{
 }
 
 isis::data::ValueArrayNew::iterator isis::data::ValueArrayNew::begin() {
-	const size_t bytesize=bytesPerElem();
-	auto visitor = [bytesize](auto ptr)->iterator{
+	return visit([](auto ptr)->iterator{
 		typedef typename decltype(ptr)::element_type element_type;
 		return iterator(
-		    ( uint8_t * )ptr.get(), ( uint8_t * )ptr.get(), bytesize,
-		    getValueFrom<element_type>, setValueInto<element_type>
+			( uint8_t * )ptr.get(), ( uint8_t * )ptr.get(), sizeof(element_type),
+			getValueFrom<element_type>, setValueInto<element_type>
 		);
-	};
-	return std::visit(visitor,static_cast<ArrayTypes&>(*this));
+	});
 }
 isis::data::ValueArrayNew::const_iterator isis::data::ValueArrayNew::begin() const {
 	return const_cast<ValueArrayNew*>(this)->begin();
@@ -120,7 +118,7 @@ isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo( unsigned short
 }
 
 std::size_t isis::data::ValueArrayNew::bytesPerElem() const{
-	return std::visit([](auto ptr){return sizeof(typename decltype(ptr)::element_type);},static_cast<const ArrayTypes&>(*this));
+	return visit([](auto ptr){return sizeof(typename decltype(ptr)::element_type);});
 }
 
 void isis::data::ValueArrayNew::endianSwap() {

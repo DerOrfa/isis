@@ -648,34 +648,30 @@ public:
 		Image::copyToMem<T> ( ( T * ) dst );
 	}
 	iterator begin() {
-		if ( checkMakeClean() ) {
-			std::vector<TypedArray<T>> buff(lookup.size());
-			for(size_t i=0;i<lookup.size();i++){
-				assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
-				buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArrayNew (if its actually T)
-			}
-			return iterator( buff );
-		} else {
+		if ( !checkMakeClean() ) {
 			LOG ( Debug, error )  << "Image is not clean. Returning empty iterator ...";
-			return iterator();
 		}
+		std::vector<TypedArray<T>> buff(lookup.size());
+		for(size_t i=0;i<lookup.size();i++){
+			assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
+			buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArrayNew (if its actually T)
+		}
+		return iterator( buff );
 	}
 	iterator end() {
 		return begin() + getVolume();
 	};
 	const_iterator begin() const {
-		if ( isClean() ) {
-			std::vector<TypedArray<T>> buff(lookup.size());
-			for(size_t i=0;i<lookup.size();i++){
-				assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
-				buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArrayNew (if its actually T)
-				assert((float*)buff[i].begin()==lookup[i]->template beginTyped<T>()); //make sure it was a cheap copy
-			}
-			return const_iterator( buff );
-		} else {
-			LOG ( Debug, error )  << "Image is not clean. Returning empty iterator ...";
-			return const_iterator();
+		if ( !isClean() ) {
+			LOG ( Debug, error )  << "Image is not clean. Returning invalid iterator ...";
 		}
+		std::vector<TypedArray<T>> buff(lookup.size());
+		for(size_t i=0;i<lookup.size();i++){
+			assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
+			buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArrayNew (if its actually T)
+			assert((float*)buff[i].begin()==lookup[i]->template beginTyped<T>()); //make sure it was a cheap copy
+		}
+		return const_iterator( buff );
 	}
 	const_iterator end() const {
 		return begin() + getVolume();

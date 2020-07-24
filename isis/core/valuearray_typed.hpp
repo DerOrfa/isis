@@ -53,7 +53,11 @@ public:
 	iterator end(){return me.get()+getLength();}
 	const_iterator begin()const{return me.get();}
 	const_iterator end()const{return me.get()+getLength();}
-	
+
+    typename const_iterator::difference_type getDistanceTo(const const_iterator &it)const{
+        return std::distance(begin(),it);
+    }
+
 	TypedArray<TYPE>& operator=(const TypedArray<TYPE>& other){
 		ValueArrayNew::operator=(other);
 		//"me" will still reference my own ValueArrayNew::std::shared_ptr<TYPE> which got overwritten by the copy operation above

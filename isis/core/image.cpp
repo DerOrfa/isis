@@ -1056,28 +1056,24 @@ void Image::foreachChunk(std::function<void (const Chunk &)> func) const
 
 Image::iterator Image::begin()
 {
-	if( checkMakeClean() ) {
-		std::vector<ValueArrayNew> buff(lookup.size());
-		for(size_t i=0;i<lookup.size();i++)
-			buff[i]=*lookup[i];//Chunk is derived from ValueArrayNew
-		return iterator( buff );
-	} else {
-		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
-		return iterator();
+	if(! checkMakeClean() ) {
+		LOG( Debug, error )  << "Image is not clean. Returning invalid iterator ...";
 	}
+	std::vector<ValueArrayNew> buff(lookup.size());
+	for(size_t i=0;i<lookup.size();i++)
+		buff[i]=*lookup[i];//Chunk is derived from ValueArrayNew
+	return iterator( buff );
 }
 Image::iterator Image::end() {return begin() + getVolume();}
 Image::const_iterator Image::begin()const
 {
-	if( isClean() ) {
-		std::vector<ValueArrayNew> buff(lookup.size());
-		for(size_t i=0;i<lookup.size();i++)
-			buff[i]=*lookup[i];//Chunk is derived from ValueArrayNew
-		return iterator( buff );
-	} else {
-		LOG( Debug, error )  << "Image is not clean. Returning empty iterator ...";
-		return const_iterator();
+	if(! isClean() ) {
+		LOG( Debug, error )  << "Image is not clean. Returning invalid iterator ...";
 	}
+	std::vector<ValueArrayNew> buff(lookup.size());
+	for(size_t i=0;i<lookup.size();i++)
+		buff[i]=*lookup[i];//Chunk is derived from ValueArrayNew
+	return iterator( buff );
 }
 Image::const_iterator Image::end()const {return begin() + getVolume();}
 

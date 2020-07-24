@@ -372,7 +372,12 @@ public:
 	template<typename T> T* beginTyped(){return castTo<T>().get();}
 	template<typename T> T* endTyped(){return castTo<T>().get()+m_length;}
 
-	template<typename T> T& at(size_t pos){return *(beginTyped<T>()+pos);}
+    const_iterator::difference_type getDistanceTo(const const_iterator &it)const{
+        //actually generic iterators know their starting point better than we do
+        return it.getMyDistance();
+    }
+
+    template<typename T> T& at(size_t pos){return *(beginTyped<T>()+pos);}
 	template<typename T> const T& at(size_t pos)const{return *(beginTyped<T>()+pos);}
 
 	/// @copydoc util::Value::toString

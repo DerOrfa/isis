@@ -38,8 +38,7 @@ public:
 			return 0; // if we're behind the last chunk assume we are at the "start" of the "end"-chunk
 		else {
 			//because we're in a const function [] will get us a const array_type even if the iterator shouldn't. So we cast it back to the proper const-state
-			const inner_iterator chit_begin = const_cast<array_type&>(chunks->operator[](ch_idx)).begin();
-			const auto distance = std::distance ( chit_begin, current_it );
+			const auto distance = chunks->operator[](ch_idx).getDistanceTo(current_it);
 			assert(distance<ch_len);
 			return distance; 
 		}
@@ -54,7 +53,7 @@ public:
 	{}
 
 	// empty constructor
-	ImageIteratorTemplate() : ch_idx ( 0 ), ch_len ( 0 ) {}
+	ImageIteratorTemplate() = delete;
 
 
 	// normal constructor

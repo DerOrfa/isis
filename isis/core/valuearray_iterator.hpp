@@ -80,11 +80,15 @@ public:
 	
 	//will become additional constructor from non const if this is const, otherwise overrride the default copy contructor
 	GenericValueIterator( const GenericValueIterator<false> &src ): 
-	    p( src.p ), start( src.p ), byteSize( src.byteSize ), getValueFunc( src.getValueFunc ), setValueFunc( src.setValueFunc ) {}
-	GenericValueIterator(): p( NULL ), start( p ), byteSize( 0 ), getValueFunc( NULL ), setValueFunc( NULL ) {}
+	    p( src.p ), start( src.start ), byteSize( src.byteSize ), getValueFunc( src.getValueFunc ), setValueFunc( src.setValueFunc ) {}
+	GenericValueIterator() = delete;
 	GenericValueIterator( ptr_type _p, ptr_type _start, size_t _byteSize, ConstValueAdapter::Getter _getValueFunc, ConstValueAdapter::Setter _setValueFunc ):
 	    p( _p ), start( _start ), byteSize( _byteSize ), getValueFunc( _getValueFunc ), setValueFunc( _setValueFunc )
 	{}
+
+	difference_type getMyDistance()const{
+        return std::distance(start,p)/byteSize;
+	}
 
 	ThisType& operator++() {p += byteSize; return *this;}
 	ThisType& operator--() {p -= byteSize; return *this;}
