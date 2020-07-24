@@ -27,18 +27,18 @@ public:
 	using reference = typename inner_iterator::reference;
 
 	//we have to use the non-const here, otherwise the iterator would not be convertible into const_iterator
-	std::vector<array_type> chunks;
+	std::shared_ptr<std::vector<array_type>> chunks;
 
 	size_t ch_idx;
 	inner_iterator current_it;
 	typename inner_iterator::difference_type ch_len;
 
 	typename inner_iterator::difference_type currentDist() const {
-		if ( ch_idx >= chunks.size() )
+		if ( ch_idx >= chunks->size() )
 			return 0; // if we're behind the last chunk assume we are at the "start" of the "end"-chunk
 		else {
 			//because we're in a const function [] will get us a const array_type even if the iterator shouldn't. So we cast it back to the proper const-state
-			const inner_iterator chit_begin = const_cast<array_type&>(chunks[ch_idx]).begin(); 
+			const inner_iterator chit_begin = const_cast<array_type&>(chunks->operator[](ch_idx)).begin();
 			const auto distance = std::distance ( chit_begin, current_it );
 			assert(distance<ch_len);
 			return distance; 
@@ -59,9 +59,9 @@ public:
 
 	// normal constructor
 	explicit ImageIteratorTemplate (const std::vector<array_type>&_chunks) :
-		chunks ( _chunks ), ch_idx ( 0 ),
-		current_it ( chunks[0].begin() ),
-		ch_len ( chunks[0].getLength() )
+		chunks ( std::make_shared<std::vector<array_type>>(_chunks) ), ch_idx ( 0 ),
+		current_it ( chunks->operator[](0).begin() ),
+		ch_len ( chunks->operator[](0).getLength() )
 	{}
 
 	ThisType &operator++() {
@@ -139,10 +139,10 @@ public:
 		assert ( ( n / ch_len + static_cast<typename ThisType::difference_type> ( ch_idx ) ) >= 0 );
 		ch_idx += n / ch_len; //if neccesary jump to next chunk
 
-		if ( ch_idx < chunks.size() )
-			current_it = chunks[ch_idx].begin() + n % ch_len; //set new current iterator in new chunk plus the "rest"
+		if ( ch_idx < chunks->size() )
+			current_it = chunks->operator[](ch_idx).begin() + n % ch_len; //set new current iterator in new chunk plus the "rest"
 		else
-			current_it = chunks.back().end() ; //set current_it to the last chunks end iterator if we are behind it
+			current_it = chunks->back().end() ; //set current_it to the last chunks end iterator if we are behind it
 
 		//@todo will break if ch_cnt==0
 
