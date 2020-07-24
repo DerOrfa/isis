@@ -114,7 +114,7 @@ isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo( unsigned short
 		return conv->getScaling( minmax.first, minmax.second );
 	} else {
 		LOG( Runtime, error )
-				<< "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true )[typeID];
+		        << "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true )[typeID];
 		return {};//return invalid scaling
 	}
 }
@@ -185,7 +185,7 @@ void isis::data::ValueArrayNew::copyRange(std::size_t start, std::size_t end, is
 {
 	assert( start <= end );
 	const size_t len = end - start + 1;
-	LOG_IF( ! this->getTypeID()==dst.getTypeID(), Debug, error )
+	LOG_IF(this->getTypeID()!=dst.getTypeID(), Debug, error )
 	        << "Range copy into a ValueArray of different type is not supportet. Its " << dst.typeName() << " not " << typeName();
 
 	if( end > getLength() ) {
@@ -214,7 +214,7 @@ std::size_t isis::data::ValueArrayNew::getTypeID() const{
 
 isis::data::ValueArrayNew isis::data::ValueArrayNew::convertByID(unsigned short ID, scaling_pair scaling) const{
 	scaling = getScaling(scaling, ID);
-	
+
 	assert(scaling.valid );
 	if( !scaling.isRelevant() && getTypeID() == ID ) { // if type is the same and scaling is 1/0
 		return *this; //cheap copy

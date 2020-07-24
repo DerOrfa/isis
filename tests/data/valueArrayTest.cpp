@@ -34,10 +34,10 @@ struct Randomizer{
 		ptr->b = fact == 1 ? max : T(max * fact);
 	}
 	template<typename T> void set(std::complex<T> *ptr,double fact){
-		constexpr T max = std::sqrt(std::numeric_limits<T>::max());
+		const T max = std::sqrt(std::numeric_limits<T>::max());
 		*ptr = fact == 1 ?
-			std::polar<T>(max,0):
-			std::polar<T>(max * fact,M_PI * fact * 2);
+		    std::polar<T>(max,0):
+		    std::polar<T>(max * fact,M_PI * fact * 2);
 	}
 	template<typename T> void set(T* ptr, double fact, std::enable_if_t<std::is_arithmetic_v<T>> *p=nullptr){
 		constexpr T max = std::numeric_limits<T>::max();
@@ -100,7 +100,7 @@ bool _internal::Deleter::deleted = false;
 BOOST_AUTO_TEST_CASE( scaling_pair_test ){
 // 	ENABLE_LOG(DataLog,util::DefaultMsgPrint,verbose_info);
 // 	ENABLE_LOG(DataDebug,util::DefaultMsgPrint,verbose_info);
-// 
+//
 	// default constructed scaling_pair must be invalid
 	BOOST_CHECK( !data::scaling_pair().valid );
 	// 1/0-scaling_pair must be irrelevant

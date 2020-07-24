@@ -41,6 +41,7 @@ void WritingValueAdapter::swapwith(const WritingValueAdapter& other )const
 {
 	LOG_IF(setValueFunc != other.setValueFunc,Debug,error) << "Swapping ValueArray iterators with different set function. This is very likely an error";
 	assert(setValueFunc == other.setValueFunc);
+	assert(byteSize == other.byteSize);
 	uint8_t * const a=const_cast<uint8_t * const>( p );
 	uint8_t * const b=const_cast<uint8_t * const>( other.p );
 	
