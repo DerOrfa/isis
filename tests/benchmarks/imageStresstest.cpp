@@ -22,6 +22,7 @@ int main()
 			chunks.back().setValueAs( "indexOrigin", util::fvector3{0, 0, float(slice)} );
 			chunks.back().setValueAs( "acquisitionNumber", ++acq );
 			chunks.back().setValueAs( "voxelSize", util::fvector3{1, 1, 1} );
+			chunks.back().setValueAs( "sequenceNumber", 0 );
 		}
 	}
 
