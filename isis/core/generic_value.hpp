@@ -48,7 +48,9 @@ protected:
 	template<typename T> const T &m_cast_to()const {
 		LOG_IF( getTypeID() != T::staticID(), Debug, error ) << "using " << getTypeName() << " at " << this << " as " << T::staticName() << " aborting ...";
 		assert( getTypeID() == T::staticID() );
-		//      return *dynamic_cast<const T *>( this );// @todo Mac doesn't like that (http://www.cocoabuilder.com/archive/xcode/247376-rtti-dynamic-cast-across-shared-module-boundaries.html)
+		//      return *dynamic_cast<const T *>( this );
+		// @todo Mac doesn't like that (http://www.cocoabuilder.com/archive/xcode/247376-rtti-dynamic-cast-across-shared-module-boundaries.html)
+		// @todo maybe https://stackoverflow.com/questions/27878186/dynamic-cast-fails-depending-on-os-version
 		return *( reinterpret_cast<const T *>( this ) );
 	}
 

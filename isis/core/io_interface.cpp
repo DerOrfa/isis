@@ -6,7 +6,6 @@
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <boost/interprocess/streams/bufferstream.hpp>
 #include <fstream>
 #include <iomanip>
 #include <iostream>

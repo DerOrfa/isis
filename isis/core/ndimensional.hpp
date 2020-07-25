@@ -137,11 +137,11 @@ public:
 	std::array<float, DIMS> getFoV( const std::array<float, DIMS> &voxelSize, const std::array<float, DIMS> &voxelGap )const {
 		LOG_IF( getVolume() == 0, DataLog, warning ) << "Calculating FoV of empty data";
 		std::array<size_t, DIMS> voxels = getSizeAsVector();
-		for(size_t &v:voxels)
+		std::array<size_t, DIMS> gaps = voxels;
+		for(size_t &v:gaps)
 			--v;
 
-		const std::array<float, DIMS> gapSize = voxelGap * voxels;
-		return voxelSize * voxels + gapSize;
+		return voxelSize * voxels + voxelGap * gaps;
 	}
 	
 	template<typename ITER> void swapDim(size_t dim_a,size_t dim_b,ITER at, std::shared_ptr<util::ProgressFeedback> feedback=std::shared_ptr<util::ProgressFeedback>()){

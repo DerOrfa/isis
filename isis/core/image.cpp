@@ -411,7 +411,7 @@ bool Image::reIndex(util::slist* rejected)
 	auto rrow = queryValueAs<util::fvector3>( "rowVec" ),rcolumn = queryValueAs<util::fvector3>( "columnVec" );
 	if(rrow && rcolumn){
 		const util::fvector3 &row=*rrow,&column=*rcolumn;
-		LOG_IF( util::dot( row, column ) > 0.01, Runtime, warning ) << "The cosine between the columns and the rows of the image is bigger than 0.01";
+		LOG_IF( util::dot( row, column ) > 0.01f, Runtime, warning ) << "The cosine between the columns and the rows of the image is bigger than 0.01";
 		const util::fvector3 crossVec = util::fvector3({ //we could use their cross-product as sliceVector
 		                                    row[1] * column[2] - row[2] * column[1],
 		                                    row[2] * column[0] - row[0] * column[2],
@@ -991,7 +991,7 @@ size_t Image::getNrOfTimesteps() const
 
 util::fvector3 Image::getFoV() const
 {
-	util::fvector4 voxelGap;
+	util::fvector4 voxelGap{0,0,0,0};
 
 	if ( hasProperty( "voxelGap" ) ) {
 		voxelGap = getValueAs<util::fvector4>( "voxelGap" );
@@ -1097,7 +1097,7 @@ std::string Image::identify ( bool withpath, bool withdate )const
 {
 	LOG_IF(withpath && !(hasProperty("source")||getChunkAt(0).hasProperty("source")),Runtime,warning) << "Asking for the path in an image that has no \"source\"-property";
 	_internal::SortedChunkList::getproplist source("source"),seqNum("sequenceNumber"),seqDesc("sequenceDescription"),seqStart("sequenceStart");
-	seqNum(*this);seqDesc(*this);seqStart(*this),source(*this);
+	seqNum(*this);seqDesc(*this);seqStart(*this);source(*this);
 	return set.identify(withpath,withdate,source, seqNum,seqDesc,seqStart);
 }
 std::pair<ValueArrayNew,ValueArrayNew> Image::getChunksMinMax()const

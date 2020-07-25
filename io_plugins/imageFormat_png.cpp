@@ -268,7 +268,11 @@ public:
 
 		png_byte color_type, bit_depth; ;
 		data::scaling_pair scale;
-		if(image.hasProperty("window/max") && image.hasProperty("window/min")){
+		
+		if(
+			isis_data_type!=data::ValueArray<util::color24>::staticID() && isis_data_type!=data::ValueArray<util::color48>::staticID() &&
+			image.hasProperty("window/max") && image.hasProperty("window/min")
+		){
 			auto minmax=image.getMinMax();
 			const util::PropertyValue min = image.property("window/min"),max = image.property("window/max");
 			scale=data::ValueArrayBase::getConverterFromTo(data::ValueArray<double>::staticID(),isis_data_type)->getScaling(min.front(),max.front());

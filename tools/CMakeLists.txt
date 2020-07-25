@@ -31,12 +31,18 @@ target_link_libraries(isisraw ${isis_core_lib})
 set_target_properties(isisraw PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 build_manpage(isisraw "read or write raw data files from/to isis images")
 
+add_executable(isisunwrap isisunwrap.cpp)
+target_link_libraries(isisunwrap ${isis_core_lib})
+set_target_properties(isisunwrap PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+build_manpage(isisunwrap "read or write raw data files from/to isis images")
+
 # the install targets.
 install(TARGETS
   isisdump
   isisdiff
   isisconv
   isisflip
+  isisunwrap
   isisraw RUNTIME DESTINATION bin COMPONENT "CLI_Tools")
 
 if(ISIS_QT5)

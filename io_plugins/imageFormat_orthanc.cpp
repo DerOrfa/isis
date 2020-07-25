@@ -35,6 +35,7 @@
 #include <memory>
 
 #include <isis/core/io_factory.hpp>
+#include <isis/core/bytearray.hpp>
 
 namespace isis
 {
@@ -114,7 +115,10 @@ public:
 				LOG_IF(boost::get<Json::Value>(result).isNull(),Runtime,error)<<"Failed to parse application/json answer to " << url;
 			} else if(type=="application/dicom"){
 				try{ //catch any error on single instances and simply report it as warning
-					result=data::IOFactory::loadChunks( s.rdbuf(), {"dcm"}, {} );
+					auto len=resp.get_content_length();
+					data::ByteArray buffer(len);
+					s.read(std::static_pointer_cast<std::istream::char_type>(buffer.getRawAddress()).get(),len);
+					result=data::IOFactory::loadChunks( buffer, {"dcm"}, {} );
 				} catch(std::runtime_error &e){
 					LOG(Runtime,warning) << "Failed to load dicom data from " << req.get_URI() << " with error " << e.what();
 					result=std::list<data::Chunk>();
