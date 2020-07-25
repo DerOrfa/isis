@@ -188,8 +188,8 @@ std::list<Chunk> Chunk::autoSplice ( uint32_t acquisitionNumberStride )const
 	}
 
 	util::fvector3 offset;
-	const util::fvector3 voxelSize = getValueAs<util::fvector3>( "voxelSize" );
-	const util::fvector3 voxelGap = getValueAsOr( "voxelGap",util::fvector3());
+	const auto voxelSize = getValueAs<util::fvector3>( "voxelSize" );
+	const auto voxelGap = getValueAsOr( "voxelGap",util::fvector3());
 
 	const util::fvector3 distance = voxelSize + voxelGap;
 	const size_t atDim = getRelevantDims() - 1;
@@ -208,8 +208,8 @@ std::list<Chunk> Chunk::autoSplice ( uint32_t acquisitionNumberStride )const
 		if( svec ) {
 			offset = svec->as<util::fvector3>();
 		} else {
-			const util::fvector3 row = getValueAs<util::fvector3>( "rowVec" );
-			const util::fvector3 column = getValueAs<util::fvector3>( "columnVec" );
+			const auto row = getValueAs<util::fvector3>( "rowVec" );
+			const auto column = getValueAs<util::fvector3>( "columnVec" );
 			assert( util::fuzzyEqual<float>( util::sqlen(row), 1 ) );
 			assert( util::fuzzyEqual<float>( util::sqlen(column), 1 ) );
 			offset[0] = row[1] * column[2] - row[2] * column[1];
@@ -219,6 +219,7 @@ std::list<Chunk> Chunk::autoSplice ( uint32_t acquisitionNumberStride )const
 	}break;
 	case timeDim :
 		LOG_IF( acquisitionNumberStride == 0, Runtime, error ) << "Splicing at timeDim without acquisitionNumberStride will very likely make the next reIndex() fail";
+	default:;
 	}
 
 	// prepare some attributes

@@ -911,7 +911,7 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 
 	// get a list of needed properties (everything which is missing in a newly created chunk plus everything which is needed for autosplice)
 	const std::list<util::PropertyMap::key_type> splice_needed = util::stringToList<util::PropertyMap::key_type>( util::PropertyMap::key_type( "voxelSize,voxelGap,rowVec,columnVec,sliceVec,indexOrigin,acquisitionNumber" ), ',' );
-	util::PropertyMap::PathSet needed = MemChunk<short>( 1 ).getMissing();
+	static util::PropertyMap::PathSet needed = MemChunk<short>( 1 ).getMissing();
 	needed.insert( splice_needed.begin(), splice_needed.end() );
 	// reset the Chunk set, so we can insert new splices
 	set = _internal::SortedChunkList( defaultChunkEqualitySet );
@@ -920,7 +920,7 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 
 	clean = false; // mark the image for reIndexing
 
-	//splice existing lists into the current chunks -- they will be spliced further if neccessary
+	//splice existing lists into the current chunks -- they will be spliced further if necessary
 	PropertyMap::splice(lookup.begin(),lookup.end(),true);
 
 	//transfer properties needed for the chunk back into the chunk (if they're there but not lists)
@@ -929,7 +929,7 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 		if(foundNeed){
 			for( std::shared_ptr<Chunk> &ref : lookup ) {
 				if( !ref->hasProperty( need ) ) {
-					LOG( Debug, verbose_info ) << "Copying " << std::make_pair(need, foundNeed) << " from the image to the chunk for splicing";
+					LOG( Debug, verbose_info ) << "Copying " << std::make_pair(need, *foundNeed) << " from the image to the chunk for splicing";
 					ref->touchProperty( need ) = *foundNeed;
 				} else
 					LOG(Debug,error) << need << " was found in the chunk although it is in the image as well. It will be deleted in the image";

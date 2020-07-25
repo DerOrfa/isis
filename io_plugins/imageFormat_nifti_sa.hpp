@@ -132,16 +132,16 @@ struct nifti_1_header {
 
 } ;                   /**** 348 bytes total ****/
 
-class WriteOp: public data::ChunkOp, protected data::NDimensional<4>
+class WriteOp: protected data::NDimensional<4>
 {
 protected:
 	std::set<data::dimensions> flip_list;
 	data::FilePtr m_out;
 	size_t m_voxelstart, m_bpv;
 	WriteOp( const isis::data::Image &image, size_t bitsPerVoxel );
-	virtual bool doCopy( data::Chunk &ch, util::vector4<size_t> posInImage ) = 0;
+	virtual bool doCopy( const data::Chunk &ch, util::vector4<size_t> posInImage ) = 0;
 	void applyFlipToCoords ( util::vector4< size_t > &coords, data::dimensions blockdims );
-	void applyFlipToData ( data::ValueArrayReference &dat, util::vector4< size_t > chunkSize );
+	void applyFlipToData ( data::ValueArrayNew &dat, util::vector4< size_t > chunkSize );
 	void applyFlipToData ( data::Chunk &dat );
 public:
 	virtual ~WriteOp() {}
@@ -149,7 +149,7 @@ public:
 	virtual unsigned short getTypeId() = 0;
 	virtual size_t getDataSize();
 
-	bool operator()( data::Chunk &ch, util::vector4<size_t> posInImage );
+	void operator()(const data::Chunk &ch, util::vector4<size_t> posInImage );
 	bool setOutput( const std::string &filename, size_t voxelstart = 352 );
 	void addFlip( data::dimensions dim );
 };
@@ -174,8 +174,8 @@ class ImageFormat_NiftiSa: public FileFormat
 	std::map<unsigned short, short> isis_type2nifti_type;
 	std::map<unsigned short, demuxer_type> prop_demuxer;
 	template<typename T, typename NEW_T> static unsigned short typeFallBack() {
-		LOG( Runtime, info ) << util::typeName<T>() <<  " is not supported by the dialects fsl and spm falling back to " << data::ValueArray<NEW_T>::staticName();
-		return data::ValueArray<NEW_T>::staticID();
+		LOG( Runtime, info ) << util::typeName<T>() <<  " is not supported by the dialects fsl and spm falling back to " << util::typeName<NEW_T>();
+		return util::typeID<NEW_T>();
 	}
 	static void guessSliceOrdering( const data::Image img, char &slice_code, float &slice_duration );
 	   void parseSliceOrdering( const std::shared_ptr< isis::image_io::_internal::nifti_1_header >& head, isis::data::Chunk& current );
@@ -186,7 +186,7 @@ class ImageFormat_NiftiSa: public FileFormat
 	static float determinant( const util::Matrix3x3<float> &m );
 	void parseHeader( const std::shared_ptr< isis::image_io::_internal::nifti_1_header >& head, isis::data::Chunk &props, data::scaling_pair &scl );
 	std::unique_ptr<_internal::WriteOp> getWriteOp( const data::Image &src, std::list<util::istring> dialects );
-	data::ValueArray<bool> bitRead( isis::data::ValueArray< uint8_t > src, size_t length );
+	data::TypedArray<bool> bitRead( isis::data::TypedArray< uint8_t > src, size_t length );
 	bool checkSwapEndian ( std::shared_ptr<_internal::nifti_1_header > header );
 	void flipGeometry( data::Image &image, data::dimensions flipdim );
 

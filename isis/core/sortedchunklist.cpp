@@ -194,7 +194,7 @@ bool SortedChunkList::insert( const Chunk &ch )
 
 	size_t sort_prop_size=ch.queryProperty(secondarySort.top().propertyName)->size();
 	if(sort_prop_size>1){ // secondary sort is multi value, we have to splice the chunk and insert separately 
-		// @todo handle cases where first level of splcing won't be enough
+		// @todo handle cases where first level of splicing won't be enough
 		LOG(Runtime,info) << "Splicing chunk at top dim as secondary sorting property " << secondarySort.top().propertyName << " is a list of size " << sort_prop_size;
 		
 		// get rid of all not-to-be-splices props to save time
@@ -248,8 +248,8 @@ std::shared_ptr<Chunk> SortedChunkList::insert_impl(const Chunk &ch){
 			// if at least one of them has the property and they are not equal - do not insert
 			if ( first.hasProperty( ref )  && !(first.property( ref ) == ch.property( ref ) )) { //"==" will be false if ch.property is empty or different
 				LOG( Debug, verbose_info )
-						<< "Ignoring chunk with different " << ref << ". Is " << util::MSubject( ch.queryProperty( ref ) )
-						<< " but chunks already in the list have " << util::MSubject( first.queryProperty( ref ) );
+						<< "Ignoring chunk with different " << ref << ". Is " << util::MSubject( ch.property( ref ) )
+						<< " but chunks already in the list have " << util::MSubject( first.property( ref ) );
 				return nullptr;
 			}
 		}

@@ -9,8 +9,8 @@ namespace image_io
 namespace _internal{
 template<typename T> void setval(std::shared_ptr<T> ptr,uint32_t s, uint32_t t, uint32_t ypselon){
 	const T val=std::is_signed_v<T> ?
-						uint8_t(127 - s * 10):
-						uint8_t(255 - s * 10);
+	                    uint8_t(127 - s * 10):
+	                    uint8_t(255 - s * 10);
 	std::fill(ptr.get()+ypselon+10,ptr.get()+ypselon+40,val);
 	*ptr.get()=t*40;
 }
@@ -20,16 +20,16 @@ template<typename T> void setval(std::shared_ptr<util::color<T>> ptr,uint32_t s,
 	*ptr.get()=util::color<T>{uint8_t(t*40),uint8_t(t*40),uint8_t(t*40)};
 }
 template<typename T> void setval(std::shared_ptr<util::vector3<T>> ptr,uint32_t s, uint32_t t, uint32_t ypselon){
-	const util::vector3<T>  val{(255.f - s * 10),(255.f - s * 10),(255.f - s * 10)};
+	const util::vector3<T>  val{T(255.f - s * 10),T(255.f - s * 10),T(255.f - s * 10)};
 	std::fill(ptr.get()+ypselon+10,ptr.get()+ypselon+40,val);
-	*ptr.get()=util::vector3<T>{t*40.f,t*40.f,t*40.f};
+	*ptr.get()=util::vector3<T>{T(t*40.f),T(t*40.f),T(t*40.f)};
 }
 template<typename T> void setval(std::shared_ptr<util::vector4<T>> ptr,uint32_t s, uint32_t t, uint32_t ypselon){
-	const util::vector4<T> val{(255.f - s * 10),(255.f - s * 10),(255.f - s * 10),(255.f - s * 10)};
+	const util::vector4<T> val{T(255.f - s * 10),T(255.f - s * 10),T(255.f - s * 10),T(255.f - s * 10)};
 	std::fill(ptr.get()+ypselon+10,ptr.get()+ypselon+40,val);
-	*ptr.get()=util::vector4<T>{t*40.f,t*40.f,t*40.f,t*40.f};
+	*ptr.get()=util::vector4<T>{T(t*40.f),T(t*40.f),T(t*40.f),T(t*40.f)};
 }
-template<> void setval<bool>(std::shared_ptr<bool> ptr,uint32_t s, uint32_t t, uint32_t ypselon){
+template<> void setval<bool>(std::shared_ptr<bool> ptr,uint32_t, uint32_t t, uint32_t ypselon){
 	std::fill(ptr.get()+ypselon+10,ptr.get()+ypselon+40,true);
 }
 
@@ -37,7 +37,7 @@ template<> void setval<bool>(std::shared_ptr<bool> ptr,uint32_t s, uint32_t t, u
 class ImageFormat_Null: public FileFormat
 {
 	static const size_t timesteps = 20;
-	std::list<data::Chunk> makeImageByID(size_t ID, unsigned short size, uint16_t sequence_offset, std::string desc ) {
+	std::list<data::Chunk> makeImageByID(uint32_t ID, unsigned short size, uint16_t sequence_offset, std::string desc ) {
 		//##################################################################################################
 		//## standard null image
 		//##################################################################################################
@@ -55,16 +55,16 @@ class ImageFormat_Null: public FileFormat
 				ch.setValueAs( "voxelSize", util::fvector3{ 150.f / size, 150.f / size, 100.f / size } );
 				ch.setValueAs( "repetitionTime", 1234 );
 				ch.setValueAs( "sequenceDescription", desc );
-				
+
 				ch.setValueAs( "acquisitionNumber", s+size*t );
 				ch.setValueAs( "typeID", ID );
-				
+
 				ch.visit([s,t,size](auto ptr){
-						for ( int y = 10; y < 40; y++ ){
+					    for ( int y = 10; y < 40; y++ ){
 							const auto ypselon=y*size;
 							_internal::setval(ptr,s,t,ypselon);
 						}
-					}
+				    }
 				);
 
 				ret.push_back( ch );
@@ -80,24 +80,24 @@ public:
 		return "Null";
 	}
 
-	std::list<data::Chunk> 
+	std::list<data::Chunk>
 	load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override  {
 
 		size_t size = 50;
 
 		std::list<data::Chunk> ret;
-        const auto types=util::getTypeMap(true);
-        if(feedback)
-            feedback->show(types.size()*2,"Loading artificial images..");
-		
+		const auto types=util::getTypeMap(true);
+		if(feedback)
+			feedback->show(types.size()*2,"Loading artificial images..");
+
 		//sequential images
 		for(const auto &t:types){
-			ret.splice( ret.end(), 
-				makeImageByID(t.first, size, 0, std::string("sequencial ") + t.second + " Image" ) 
+			ret.splice( ret.end(),
+			    makeImageByID(t.first, size, 0, std::string("sequencial ") + t.second + " Image" )
 			);
-            if(feedback)feedback->progress();
+			if(feedback)feedback->progress();
 		}
-		
+
 		// interleaved images
 		for(const auto &t:types){
 			std::list<data::Chunk> loaded= makeImageByID(t.first, size, 100, std::string("interleaved ") + t.second + " Image" ) ;
@@ -138,7 +138,7 @@ public:
 		uint32_t s = 0;
 
 		auto seqNumber = image.getValueAs<int>( "sequenceNumber" );
-		
+
 		if(seqNumber<100){
 			//image 0 is a "normal" image
 			newChunks = makeImageByID(seqNumber, size, 0, "" ) ;
@@ -169,8 +169,8 @@ public:
 		for( size_t i = 0; i < oldChunks.size(); ++i, ++newCH ) {
 			// check for the orientation seperately
 			if(
-				util::fuzzyEqualV(newCH->getValueAs<util::fvector3>( "columnVec" ), oldChunks[i].getValueAs<util::fvector3>( "columnVec" ) ) == false ||
-				util::fuzzyEqualV(newCH->getValueAs<util::fvector3>( "rowVec" ), oldChunks[i].getValueAs<util::fvector3>( "rowVec" ) ) == false
+			    util::fuzzyEqualV(newCH->getValueAs<util::fvector3>( "columnVec" ), oldChunks[i].getValueAs<util::fvector3>( "columnVec" ) ) == false ||
+			    util::fuzzyEqualV(newCH->getValueAs<util::fvector3>( "rowVec" ), oldChunks[i].getValueAs<util::fvector3>( "rowVec" ) ) == false
 			) {
 				throwGenericError( "orientation is not equal" );
 			} else {
@@ -188,8 +188,8 @@ public:
 				throwGenericError( "differences in the metainformation found" );
 			}
 
-            if( newCH->getTypeID() != oldChunks[i].getTypeID() )
-                throwGenericError( std::string("Expected ") + newCH->typeName() + " but got " + oldChunks[i].typeName() );
+			if( newCH->getTypeID() != oldChunks[i].getTypeID() )
+				throwGenericError( std::string("Expected ") + newCH->typeName() + " but got " + oldChunks[i].typeName() );
 
 			if( newCH->compare( oldChunks[i] ) ) {
 				throwGenericError( "voxels do not fit" );
