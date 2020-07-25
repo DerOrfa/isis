@@ -19,7 +19,7 @@
 #endif
 
 #include <sys/resource.h>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -45,13 +45,13 @@ IOFactory::IOFactory()
 	const char *env_home = getenv( "HOME" );
 
 	if( env_path ) {
-		findPlugins( boost::filesystem::path( env_path ).native() );
+		findPlugins( std::filesystem::path( env_path ).native() );
 	}
 
 	if( env_home ) {
-		const boost::filesystem::path home = boost::filesystem::path( env_home ) / "isis" / "plugins";
+		const std::filesystem::path home = std::filesystem::path( env_home ) / "isis" / "plugins";
 
-		if( boost::filesystem::exists( home ) ) {
+		if( std::filesystem::exists( home ) ) {
 			findPlugins( home.native() );
 		} else {
 			LOG( Runtime, info ) << home << " does not exist. Won't check for plugins there";
@@ -67,9 +67,9 @@ IOFactory::IOFactory()
 		LOG( Runtime, error ) << "Failed to get the process name " << util::MSubject( util::getLastSystemError() );
 	} else if( lExeName < 2048 ) {
 		lpExeName[lExeName] = '\0';
-		boost::filesystem::path prog_name( lpExeName );
+		std::filesystem::path prog_name( lpExeName );
 
-		if( boost::filesystem::exists( prog_name ) ) {
+		if( std::filesystem::exists( prog_name ) ) {
 			w32_path_ok = true;
 			LOG( Runtime, info ) << "Determined the path of the executable as " << util::MSubject( prog_name.remove_filename().directory_string() ) << " will search for plugins there..";
 			findPlugins( prog_name.remove_filename().directory_string() );
@@ -106,14 +106,14 @@ bool IOFactory::registerFileFormat_impl( const FileFormatPtr plugin, bool front 
 
 unsigned int IOFactory::findPlugins( const std::string &path )
 {
-	boost::filesystem::path p( path );
+	std::filesystem::path p( path );
 
 	if ( !exists( p ) ) {
 		LOG( Runtime, warning ) << util::MSubject( p ) << " not found";
 		return 0;
 	}
 
-	if ( !boost::filesystem::is_directory( p ) ) {
+	if ( !std::filesystem::is_directory( p ) ) {
 		LOG( Runtime, warning ) << util::MSubject( p ) << " is no directory";
 		return 0;
 	}
@@ -123,8 +123,8 @@ unsigned int IOFactory::findPlugins( const std::string &path )
 	static const std::regex pluginFilter( pluginFilterStr, std::regex_constants::ECMAScript | std::regex_constants::icase);
 	unsigned int ret = 0;
 
-	for ( boost::filesystem::directory_iterator itr( p ); itr != boost::filesystem::directory_iterator(); ++itr ) {
-		if ( boost::filesystem::is_directory( *itr ) )continue;
+	for ( std::filesystem::directory_iterator itr( p ); itr != std::filesystem::directory_iterator(); ++itr ) {
+		if ( std::filesystem::is_directory( *itr ) )continue;
 
 		if ( std::regex_match( itr->path().filename().string(), pluginFilter ) ) {
 			const std::string pluginName = itr->path().native();
@@ -195,7 +195,7 @@ IOFactory &IOFactory::get()
 
 std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback){
 	bool overridden=true;
-	const boost::filesystem::path* filename = boost::get<boost::filesystem::path>( &v );
+	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &v );
 	if(formatstack.empty()){
 		if(filename){
 			overridden=false;
@@ -207,7 +207,7 @@ std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istr
 	}
 	FileFormatList readerList = getFileFormatList(formatstack);
 	if ( readerList.empty() ) {
-		if(filename && !boost::filesystem::exists( *filename ) ) { // if it actually is a filename, but does not exist
+		if(filename && !std::filesystem::exists( *filename ) ) { // if it actually is a filename, but does not exist
 			LOG( Runtime, error ) 
 				<< util::MSubject( *filename )
 				<< " does not exist as file, and no suitable plugin was found to generate data from "
@@ -264,7 +264,7 @@ std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istr
 }
 
 std::list<util::istring> IOFactory::getFormatStack( std::string filename ){
-	const boost::filesystem::path fname( filename );
+	const std::filesystem::path fname( filename );
 	std::list<util::istring> ret = util::stringToList<util::istring>( fname.filename().string(), '.' ); // get all suffixes (and the basename)
 	if( !ret.empty() )ret.pop_front(); // remove the basename
 	return ret;
@@ -332,9 +332,9 @@ std::list< Image > IOFactory::chunkListToImageList( std::list<Chunk> &src, optio
 
 std::list< Chunk > IOFactory::loadChunks( const load_source &v, std::list<util::istring> formatstack, std::list<util::istring> dialects)
 {
-	const boost::filesystem::path* filename = boost::get<boost::filesystem::path>( &v );
+	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &v );
 	if(filename)
-		assert(!boost::filesystem::is_directory( *filename ));
+		assert(!std::filesystem::is_directory( *filename ));
 	return get().load_impl( v, formatstack, dialects, get().m_feedback );
 }
 
@@ -344,7 +344,7 @@ std::list< Image > IOFactory::load( const util::slist &paths, std::list<util::is
 	std::list<Chunk> chunks;
 	for( const std::string & path :  paths ) {
 		std::list<Chunk> loaded;
-		if(boost::filesystem::is_directory( path )){
+		if(std::filesystem::is_directory( path )){
 			loaded=get().loadPath(path,formatstack,dialects,rejected);
 		} else {
 			try{
@@ -373,7 +373,7 @@ std::list< Image > IOFactory::load( const util::slist &paths, std::list<util::is
 
 std::list<data::Image> IOFactory::load( const load_source &source, std::list<util::istring> formatstack, std::list<util::istring> dialects, optional< isis::util::slist& > rejected )
 {
-	const boost::filesystem::path* filename = boost::get<boost::filesystem::path>( &source );
+	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &source );
 	if(filename)
 		return load( util::slist{filename->native()}, formatstack, dialects );
 	else {
@@ -389,10 +389,10 @@ std::list<data::Image> IOFactory::load( const load_source &source, std::list<uti
 	}
 }
 
-std::list<Chunk> isis::data::IOFactory::loadPath(const boost::filesystem::path& path, std::list<util::istring> formatstack, std::list<util::istring> dialects, optional< isis::util::slist& > rejected )
+std::list<Chunk> isis::data::IOFactory::loadPath(const std::filesystem::path& path, std::list<util::istring> formatstack, std::list<util::istring> dialects, optional< isis::util::slist& > rejected )
 {
 	std::list<Chunk> ret;
-	const size_t length = std::distance( boost::filesystem::directory_iterator( path ), boost::filesystem::directory_iterator() ); //@todo this will also count directories
+	const size_t length = std::distance( std::filesystem::directory_iterator( path ), std::filesystem::directory_iterator() ); //@todo this will also count directories
 	if( m_feedback ) {
 		m_feedback->show( length, std::string( "Reading " ) + util::Value<std::string>( length ).toString( false ) + " files from " + path.native() );
 	}
@@ -411,8 +411,8 @@ std::list<Chunk> isis::data::IOFactory::loadPath(const boost::filesystem::path& 
 		}
 	}
 
-	for ( boost::filesystem::directory_iterator i( path ); i != boost::filesystem::directory_iterator(); ++i )  {
-		if ( boost::filesystem::is_directory( *i ) )continue;
+	for ( std::filesystem::directory_iterator i( path ); i != std::filesystem::directory_iterator(); ++i )  {
+		if ( std::filesystem::is_directory( *i ) )continue;
 
 		try {
 			std::list<Chunk> loaded= load_impl( *i, formatstack, dialects, nullptr );//we already do progress feedback, don't let the plugins do it
@@ -422,7 +422,7 @@ std::list<Chunk> isis::data::IOFactory::loadPath(const boost::filesystem::path& 
 					c= c.copyByID(c.getTypeID());
 
 			if(rejected && loaded.empty()){
-				rejected->push_back(boost::filesystem::path(*i).native());
+				rejected->push_back(std::filesystem::path(*i).native());
 			}
 			ret.splice(ret.end(),loaded);
 		} catch(const io_error &e) {

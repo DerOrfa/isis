@@ -4,9 +4,7 @@
 #include <isis/core/tmpfile.hpp>
 #include <isis/core/io_factory.hpp>
 
-#define BOOST_FILESYSTEM_VERSION 3
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/convenience.hpp>
+#include <filesystem>
 
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -103,7 +101,7 @@ public:
 
 		return data::IOFactory::loadChunks( in->rdbuf(), formatstack, dialects );
 	}
-	std::list<data::Chunk> load( const boost::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override{
+	std::list<data::Chunk> load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override{
 		//try open file
 		std::ifstream file(filename.c_str());
 		file.exceptions(std::ios_base::badbit);
@@ -112,7 +110,7 @@ public:
 		bool set_up=false;
 		if( feedback && feedback->getMax() == 0 ) {
 			set_up=true;
-			feedback->show( boost::filesystem::file_size( filename ), std::string( "decompressing " ) + filename.native() );
+			feedback->show( std::filesystem::file_size( filename ), std::string( "decompressing " ) + filename.native() );
 		}
 		auto in=makeIStream(formatstack);
 
@@ -144,7 +142,7 @@ public:
 		if( !data::IOFactory::write( image, tmpFile.native(), formatstack, dialects ) ) {throwGenericError( tmpFile.native() + " failed to write" );}
 
 		// set up the compression stream
-		boost::filesystem::ifstream input( tmpFile, std::ios_base::binary );
+		std::ifstream input( tmpFile, std::ios_base::binary );
 		std::ofstream output( filename.c_str(), std::ios_base::binary );
 		input.exceptions( std::ios::badbit );
 		output.exceptions( std::ios::badbit );
@@ -152,7 +150,7 @@ public:
 		boost::iostreams::filtering_ostream out;
 
 		if( progress ) {
-			progress->show( boost::filesystem::file_size( tmpFile ), std::string( "compressing " ) + filename );
+			progress->show( std::filesystem::file_size( tmpFile ), std::string( "compressing " ) + filename );
 			out.push( _internal::progress_filter( *progress ) );
 		}
 

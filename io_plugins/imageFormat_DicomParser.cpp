@@ -43,9 +43,10 @@ struct tag_vr_visitor
 			return "OW"; //implicit pixel data are OW (http://dicom.nema.org/dicom/2013/output/chtml/part05/chapter_A.html)
 		else {
 			auto found=dicom_dict.find(id);
-			if(found==dicom_dict.end())
+			if(found==dicom_dict.end()){
+				LOG(Runtime,warning) << "Could not find tag " << id2Name(_tag->getID32()) << " in the dictionary and thus don't know its implicit VR";
 				return "--";
-			else
+			} else
 				return found->second.first;
 		}
 	}
@@ -62,15 +63,17 @@ bool DicomElement::extendedLength()const{
 	// those vr have a additional 32bit length after a 0x0000 where the length normaly is supposed to be
 	return vr=="OB" || vr=="OW" || vr== "OF" || vr== "SQ" || vr== "UT" || vr== "UN";
 }
-uint_fast8_t DicomElement::tagLength()const{ //the actual length of the tag itself 
+uint_fast8_t DicomElement::tagLength()const{ //the actual length of the tag itself
 	return extendedLength()?8+4:8;
 }
 size_t DicomElement::getLength()const{
-	if(extendedLength()){ 
+	if(getID32()==0xFFFEE000){
+		return source.at<uint16_t>(position+4,1,endian_swap())[0];
+	} else if(extendedLength()){
 		assert(boost::apply_visitor(tag_length_visitor(),tag)==0);
 		return source.at<uint32_t>(position+8,1,endian_swap())[0];
-	} 
-	else 
+	}
+	else
 		return boost::apply_visitor(tag_length_visitor(),tag);
 }
 size_t DicomElement::getPosition()const{
@@ -109,12 +112,12 @@ bool DicomElement::next(size_t _position){
 		return false;
 	position=_position;
 	switch(endian){
-		case boost::endian::order::big:
-			tag=makeTag<boost::endian::order::big>();
-			break;
-		case boost::endian::order::little:
-			tag=makeTag<boost::endian::order::little>();
-			break;
+	    case boost::endian::order::big:
+		    tag=makeTag<boost::endian::order::big>();
+		    break;
+	    case boost::endian::order::little:
+		    tag=makeTag<boost::endian::order::little>();
+		    break;
 	}
 	return true;
 }
@@ -132,7 +135,7 @@ util::ValueReference DicomElement::getValue(std::string vr){
 	if(found_generator!=generator_map.end()){
 		auto generator=found_generator->second;;
 		size_t mult=generator.value_size?getLength()/generator.value_size:1;
-		
+
 		if(mult==1)
 			ret=generator.scalar(this);
 		else if(generator.list)
@@ -141,11 +144,11 @@ util::ValueReference DicomElement::getValue(std::string vr){
 			assert(false);
 		}
 
-		LOG(Debug,verbose_info) << "Parsed " << getVR() << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << ret;
+		LOG(Debug,verbose_info) << "Parsed " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << ret;
 	} else {
-		LOG(Debug,error) << "Could not find an interpreter for the VR " << getVR() << " of " << getName() << "/" << getIDString() << " at " << position ;
+		LOG(Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
 	}
-	
+
 	return ret;
 }
 DicomElement DicomElement::next(boost::endian::order endian)const{
@@ -155,8 +158,8 @@ DicomElement DicomElement::next(boost::endian::order endian)const{
 }
 bool DicomElement::endian_swap()const{
 	switch(endian){
-		case boost::endian::order::big:   return (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
-		case boost::endian::order::little:return (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__);
+	    case boost::endian::order::big:   return (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
+	    case boost::endian::order::little:return (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__);
 	}
 	return false;//should never be reached
 }
@@ -201,7 +204,7 @@ size_t ImageFormat_Dicom::parseCSAEntry(const uint8_t *at, util::PropertyMap &ma
 	const int32_t nitems = ((boost::endian::little_int32_buf_t*)( at + pos ))->value();
 	pos += sizeof( int32_t );
 	static const std::string whitespaces( " \t\f\v\n\r" );
-	
+
 	if ( nitems ) {
 		pos += sizeof( int32_t ); //77
 		util::slist ret;
@@ -214,8 +217,8 @@ size_t ImageFormat_Dicom::parseCSAEntry(const uint8_t *at, util::PropertyMap &ma
 			if ( !len )continue;
 
 			if( (
-					std::string( "MrPhoenixProtocol" ) != name  && std::string( "MrEvaProtocol" ) != name && std::string( "MrProtocol" ) != name
-				) || checkDialect(dialects, "withExtProtocols") ) {
+			        std::string( "MrPhoenixProtocol" ) != name  && std::string( "MrEvaProtocol" ) != name && std::string( "MrProtocol" ) != name
+			    ) || checkDialect(dialects, "withExtProtocols") ) {
 				const std::string insert( ( char * )at + pos );
 				const std::string::size_type start = insert.find_first_not_of( whitespaces );
 
@@ -234,9 +237,9 @@ size_t ImageFormat_Dicom::parseCSAEntry(const uint8_t *at, util::PropertyMap &ma
 			}
 
 			pos += (
-					   ( len + sizeof( int32_t ) - 1 ) / sizeof( int32_t )
-				   ) *
-				   sizeof( int32_t );//increment pos by len aligned to sizeof(int32_t)*/
+			           ( len + sizeof( int32_t ) - 1 ) / sizeof( int32_t )
+			       ) *
+			       sizeof( int32_t );//increment pos by len aligned to sizeof(int32_t)*/
 		}
 
 		try {
@@ -307,18 +310,18 @@ bool ImageFormat_Dicom::parseCSAValueList( const util::slist &val, const util::P
 }
 
 namespace _internal{
-	template<typename T, typename LT> util::ValueReference list_generate(const DicomElement *e){
-		size_t mult=e->getLength()/sizeof(T);
+    template<typename T, typename LT> util::ValueReference list_generate(const DicomElement *e){
+	    size_t mult=e->getLength()/sizeof(T);
 		assert(float(mult)*sizeof(T) == e->getLength());
 		auto wrap=e->dataAs<T>(mult);
 		return util::Value<std::list<LT>>(std::list<LT>(wrap.begin(),wrap.end()));
-	}
-	template<typename T> util::ValueReference scalar_generate(const DicomElement *e){
-		assert(e->getLength()==sizeof(T));
+    }
+    template<typename T> util::ValueReference scalar_generate(const DicomElement *e){
+	    assert(e->getLength()==sizeof(T));
 		T *v=(T*)e->data();
 		return util::Value<T>(e->endian_swap() ? data::endianSwap(*v):*v);
-	}
-	util::ValueReference string_generate(const DicomElement *e){
+    }
+    util::ValueReference string_generate(const DicomElement *e){
 		//@todo http://dicom.nema.org/Dicom/2013/output/chtml/part05/sect_6.2.html#note_6.1-2-1
 		if(e->getLength()){
 			const uint8_t *start=e->data();
@@ -327,12 +330,33 @@ namespace _internal{
 				--end;
 			const std::string ret_s(start,end+1);
 			const util::slist ret_list=util::stringToList<std::string>(ret_s,'\\');
-			
+
 			if(ret_list.size()>1)
 				return util::Value<util::slist>(ret_list);
 			else
 				return util::Value<std::string>(ret_s);
-		} else 
+		} else
+			return util::ValueReference();
+	}
+	util::ValueReference bytes_as_strings(const DicomElement *e){
+		//@todo http://dicom.nema.org/Dicom/2013/output/chtml/part05/sect_6.2.html#note_6.1-2-1
+		if(e->getLength()){
+			const uint8_t *pos=e->data();
+			const uint8_t *end=pos+e->getLength();
+			util::slist ret_list;
+
+			for(;pos<end;pos++){
+				std::stringstream stream;
+				stream << std::setfill ('0') << std::setw(2) << std::hex << *pos;
+				ret_list.push_back(stream.str());
+			}
+
+
+			if(ret_list.size()>1)
+				return util::Value<util::slist>(ret_list);
+			else
+				return util::Value<std::string>(ret_list.front());
+		} else
 			return util::ValueReference();
 	}
 	util::ValueReference parse_AS(const _internal::DicomElement *e){
@@ -342,10 +366,10 @@ namespace _internal{
 
 		static boost::numeric::converter <
 		uint16_t, double,
-				boost::numeric::conversion_traits<uint16_t, double>,
-				boost::numeric::def_overflow_handler,
-				boost::numeric::RoundEven<double>
-				> double2uint16;
+		        boost::numeric::conversion_traits<uint16_t, double>,
+		        boost::numeric::def_overflow_handler,
+		        boost::numeric::RoundEven<double>
+		        > double2uint16;
 
 		if ( _internal::try_cast( buff.substr( 0, buff.find_last_of( "0123456789" ) + 1 ), duration ) ) {
 			switch ( buff.at( buff.size() - 1 ) ) {
@@ -366,43 +390,45 @@ namespace _internal{
 				break;
 			default:
 				LOG( Runtime, warning )
-						<< "Missing age-type-letter, assuming days";
+				        << "Missing age-type-letter, assuming days";
 			}
 			LOG( Debug, verbose_info )
-					<< "Parsed age for " << e->getName() << "(" <<  buff << ")" << " as " << duration << " days";
+			        << "Parsed age for " << e->getName() << "(" <<  buff << ")" << " as " << duration << " days";
 			ret=util::Value<uint16_t>(duration);
 		} else
 			LOG( Runtime, warning )
-					<< "Cannot parse age string \"" << buff << "\" in the field \"" << e->getName() << "\"";
+			        << "Cannot parse age string \"" << buff << "\" in the field \"" << e->getName() << "\"";
 		return ret;
 	}
 
 	std::map<std::string,DicomElement::generator> DicomElement::generator_map={
-		//"trivial" conversions
-		{"FL",{scalar_generate<float>,   list_generate<float,   double>, sizeof(float )}},
-		{"FD",{scalar_generate<double>,  list_generate<double,  double>, sizeof(double)}},
-		{"SS",{scalar_generate<int16_t>, list_generate<int16_t, int32_t>,sizeof(int16_t)}},
-		{"SL",{scalar_generate<int32_t>, list_generate<int32_t, int32_t>,sizeof(int32_t)}},
-		{"US",{scalar_generate<uint16_t>,list_generate<uint16_t,int32_t>,sizeof(uint16_t)}},
-		{"UL",{scalar_generate<uint32_t>,nullptr,                        sizeof(uint32_t)}},
-		//"normal" string types
-		{"LT",{string_generate,nullptr,0}},
-		{"LO",{string_generate,nullptr,0}},
-		{"UI",{string_generate,nullptr,0}},
-		{"ST",{string_generate,nullptr,0}},
-		{"SH",{string_generate,nullptr,0}},
-		{"CS",{string_generate,nullptr,0}},
-		{"PN",{string_generate,nullptr,0}},
-		{"AE",{string_generate,nullptr,0}},
-		//number strings (keep them as string, type-system will take care of the conversion if neccesary)
-		{"IS",{string_generate,nullptr,0}},
-		{"DS",{string_generate,nullptr,0}},
-		//time strings
-		{"DA",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::date>::staticID());},nullptr,0}},
-		{"TM",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::timestamp>::staticID());},nullptr,0}},
-		{"DT",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::timestamp>::staticID());},nullptr,0}},
-		{"AS",{parse_AS,nullptr,0}}
-
+	    //"trivial" conversions
+	    {"FL",{scalar_generate<float>,   list_generate<float,   double>, sizeof(float )}},
+	    {"FD",{scalar_generate<double>,  list_generate<double,  double>, sizeof(double)}},
+	    {"SS",{scalar_generate<int16_t>, list_generate<int16_t, int32_t>,sizeof(int16_t)}},
+	    {"SL",{scalar_generate<int32_t>, list_generate<int32_t, int32_t>,sizeof(int32_t)}},
+	    {"US",{scalar_generate<uint16_t>,list_generate<uint16_t,int32_t>,sizeof(uint16_t)}},
+	    {"UL",{scalar_generate<uint32_t>,nullptr,                        sizeof(uint32_t)}},
+	    //"normal" string types
+	    {"LT",{string_generate,nullptr,0}},
+	    {"UT",{string_generate,nullptr,0}},
+	    {"LO",{string_generate,nullptr,0}},
+	    {"UI",{string_generate,nullptr,0}},
+	    {"ST",{string_generate,nullptr,0}},
+	    {"SH",{string_generate,nullptr,0}},
+	    {"CS",{string_generate,nullptr,0}},
+	    {"PN",{string_generate,nullptr,0}},
+	    {"AE",{string_generate,nullptr,0}},
+	    //number strings (keep them as string, type-system will take care of the conversion if neccesary)
+	    {"IS",{string_generate,nullptr,0}},
+	    {"DS",{string_generate,nullptr,0}},
+	    //time strings
+	    {"DA",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::date>::staticID());},nullptr,0}},
+	    {"TM",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::timestamp>::staticID());},nullptr,0}},
+	    {"DT",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::timestamp>::staticID());},nullptr,0}},
+	    {"AS",{parse_AS,nullptr,0}},
+	    //fallback for unknown
+	    {"--",{bytes_as_strings,nullptr,0}}
 	};
 }
 }

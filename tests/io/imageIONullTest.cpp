@@ -12,8 +12,7 @@
 
 #define BOOST_TEST_MODULE "imageIONullTest"
 #include <boost/test/unit_test.hpp>
-#define BOOST_FILESYSTEM_VERSION 3
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <iostream>
 #include <string>
 

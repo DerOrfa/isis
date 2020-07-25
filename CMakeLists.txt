@@ -43,7 +43,7 @@ set(ISIS_QT_VERSION_API "0.0.0")
 STRING( REGEX MATCH "^[0-9]+" ISIS_QT_VERSION_SO ${ISIS_QT_VERSION_API})
 STRING( REGEX MATCH "^[0-9]+" ISIS_CORE_VERSION_SO ${ISIS_CORE_VERSION_API})
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED yes)
 
 ############################################################
@@ -97,9 +97,9 @@ endif(ISIS_DEBUG_LOG)
 # since ISIS stongly depends on the boost libraries we will configure them
 # globally.
 if(BUILD_TESTING)
-	find_package(Boost REQUIRED COMPONENTS filesystem system iostreams unit_test_framework)
+	find_package(Boost REQUIRED COMPONENTS system iostreams unit_test_framework)
 else(BUILD_TESTING)
-	find_package(Boost REQUIRED COMPONENTS filesystem system iostreams)
+	find_package(Boost REQUIRED COMPONENTS iostreams)
 endif(BUILD_TESTING)
 
 include_directories(${Boost_INCLUDE_DIR})

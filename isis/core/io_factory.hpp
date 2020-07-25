@@ -39,7 +39,7 @@ class IOFactory
 public:
 	typedef std::shared_ptr< image_io::FileFormat> FileFormatPtr;
 	typedef std::list<FileFormatPtr> FileFormatList;
-	typedef boost::variant<boost::filesystem::path,std::streambuf*,ByteArray> load_source;
+	typedef boost::variant<std::filesystem::path,std::streambuf*,ByteArray> load_source;
 	friend class util::Singletons;
 	class  io_error : public std::runtime_error{
 		FileFormatPtr p_format;
@@ -121,7 +121,7 @@ public:
 	 * */
 	static bool registerFileFormat( const FileFormatPtr plugin, bool front=false );
 protected:
-	std::list<Chunk> loadPath(const boost::filesystem::path& path, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, optional< util::slist& > rejected=optional< util::slist& >());
+	std::list<Chunk> loadPath(const std::filesystem::path& path, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, optional< util::slist& > rejected=optional< util::slist& >());
 
 	static IOFactory &get();
 	IOFactory();//shall not be created directly

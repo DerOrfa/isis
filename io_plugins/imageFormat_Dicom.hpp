@@ -1,19 +1,19 @@
 /*
-    <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) <year>  <name of author>
+	<one line to give the program's name and a brief idea of what it does.>
+	Copyright (C) <year>  <name of author>
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -60,13 +60,12 @@ class DicomElement{
 	size_t position;
 	boost::endian::order endian;
 	typedef boost::variant<
-		ExplicitVrTag<boost::endian::order::big> *,
-		ExplicitVrTag<boost::endian::order::little> *,
-		ImplicitVrTag<boost::endian::order::big> *,
-		ImplicitVrTag<boost::endian::order::little> *
+	    ExplicitVrTag<boost::endian::order::big> *,
+	    ExplicitVrTag<boost::endian::order::little> *,
+	    ImplicitVrTag<boost::endian::order::big> *,
+	    ImplicitVrTag<boost::endian::order::little> *
 	> tag_types;
 	tag_types tag;
-	bool implicit_vr=false;
 	struct generator{value_generator scalar,list;uint8_t value_size;};
 	static std::map<std::string,generator> generator_map;
 	template<boost::endian::order Order> tag_types makeTag(){
@@ -75,7 +74,8 @@ class DicomElement{
 			ret=(ImplicitVrTag<Order>*)&source[position];
 		} else {
 			Tag<Order> *probe=(Tag<Order>*)&source[position];
-			switch(probe->getID32()){
+			const auto id=probe->getID32();
+			switch(id){
 			case 0xfffee000: //sequence start
 			case 0xfffee00d: //sequence end
 				ret=(ImplicitVrTag<Order>*)&source[position];break;
@@ -85,9 +85,10 @@ class DicomElement{
 		}
 		return ret;
 	}
-	bool extendedLength()const; 
+	bool extendedLength()const;
 	uint_fast8_t tagLength()const;
 public:
+	bool implicit_vr=false;
 	bool next(size_t position);
 	bool next();
 	bool endian_swap()const;

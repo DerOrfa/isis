@@ -17,7 +17,7 @@ public:
 	explicit LogEvent(const util::Message &msg);
 	QString merge();
 	std::string m_object, m_module;
-	boost::filesystem::path m_file;
+	std::filesystem::path m_file;
 	std::list<std::string> m_subjects;
 	QDateTime m_timeStamp;
 	int m_line;

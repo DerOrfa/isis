@@ -207,7 +207,7 @@ class ImageFormat_orthanc: public FileFormat
 	_internal::AceSession session;
 public:
 	std::list< data::Chunk > load(
-	  const boost::filesystem::path &filename,
+	  const std::filesystem::path &filename,
 	  std::list<util::istring> /*formatstack*/,
 	  std::list<util::istring> dialects,
 	  std::shared_ptr<util::ProgressFeedback> feedback

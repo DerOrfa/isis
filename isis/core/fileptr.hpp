@@ -9,8 +9,7 @@
 #ifndef FILEPTR_HPP
 #define FILEPTR_HPP
 
-#define BOOST_FILESYSTEM_VERSION 3 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include "bytearray.hpp"
 #include "valuearray.hpp"
 #include "endianess.hpp"
@@ -40,13 +39,13 @@ class FilePtr: public ByteArray
 	struct Closer {
 		FILE_HANDLE file, mmaph;
 		size_t len;
-		boost::filesystem::path filename;
+		std::filesystem::path filename;
 		bool write;
 		void operator()( void *p );
 	};
-	bool map( FILE_HANDLE file, size_t len, bool write, const boost::filesystem::path &filename );
+	bool map( FILE_HANDLE file, size_t len, bool write, const std::filesystem::path &filename );
 
-	size_t checkSize( bool write, FILE_HANDLE file, const boost::filesystem::path &filename, size_t size = 0 );
+	size_t checkSize( bool write, FILE_HANDLE file, const std::filesystem::path &filename, size_t size = 0 );
 	bool m_good;
 public:
 	/// empty creator - result will not be usefull until filled
@@ -71,7 +70,7 @@ public:
 	 * \param len the requested length of the resulting ValueArray in bytes (automatically set if 0)
 	 * \param write the file be opened for writing (writing to the mapped memory will write to the file, otherwise it will cause a copy-on-write)
 	 */
-	FilePtr( const boost::filesystem::path &filename, size_t len = 0, bool write = false );
+	FilePtr( const std::filesystem::path &filename, size_t len = 0, bool write = false );
 
 	bool good();
 	void release();

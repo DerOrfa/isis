@@ -52,7 +52,7 @@ endif(ISIS_USE_LIBORC)
 add_lib(isis_core
 	"${CORE_SRC_FILES}"
 	"${Boost_LIBRARIES};${CURSES_LIBRARIES}" #deps
-	"${LIBORC_LIB};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads" #private deps
+	"${LIBORC_LIB};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads;-lstdc++fs" #private deps
 	${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API}
 )
 

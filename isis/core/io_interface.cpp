@@ -2,7 +2,7 @@
 #pragma warning(disable:4996)
 #endif
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -48,7 +48,7 @@ void FileFormat::write( const std::list< data::Image >& images, const std::strin
 	}
 }
 
-std::list<data::Chunk> FileFormat::load( const boost::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ){
+std::list<data::Chunk> FileFormat::load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ){
 	//try open file
 	data::FilePtr ptr(filename);
 	if( !ptr.good() ) {
@@ -63,7 +63,7 @@ std::list<data::Chunk> FileFormat::load( const boost::filesystem::path &filename
 	bool set_up=false;//TODO should this be here ?
 	if( feedback && feedback->getMax() == 0 ) {
 		set_up=true;
-		feedback->show( boost::filesystem::file_size( filename ), std::string( "loading " ) + filename.native() );
+		feedback->show( std::filesystem::file_size( filename ), std::string( "loading " ) + filename.native() );
 	}
 	std::list<data::Chunk> ret=load(ptr,formatstack,dialects,feedback);
 	if(set_up) // close progress bar
@@ -143,7 +143,7 @@ void FileFormat::throwGenericError( std::string desc )
 
 void FileFormat::throwSystemError( int err, std::string desc )
 {
-    throw( boost::system::system_error( err, boost::system::system_category(), desc ) );
+    throw( std::system_error( err, std::system_category(), desc ) );
 }
 
 std::list< util::istring > FileFormat::getSuffixes( io_modes mode )const

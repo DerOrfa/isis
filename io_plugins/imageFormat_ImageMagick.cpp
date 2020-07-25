@@ -24,7 +24,7 @@ protected:
 		return ret;
 	}
 
-	template<typename T, typename DEST> bool extractNumberFromName( const boost::filesystem::path &name, DEST &property ) {
+	template<typename T, typename DEST> bool extractNumberFromName( const std::filesystem::path &name, DEST &property ) {
 		std::string filename=name.filename().native();
 		std::string::size_type end = filename.find_last_of( "0123456789" );
 
@@ -110,7 +110,7 @@ public:
 	}
 	std::string getName()const override {return "ImageMagick";}
 	std::list<util::istring> dialects()const override {return {"middle","stacked"};}
-	std::list<data::Chunk> load( const boost::filesystem::path &filename, std::list<util::istring> /*formatstack*/, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> /*feedback*/ ) override
+	std::list<data::Chunk> load( const std::filesystem::path &filename, std::list<util::istring> /*formatstack*/, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> /*feedback*/ ) override
 	{
 		std::list<Magick::Image> imageList; 
 	

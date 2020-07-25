@@ -382,7 +382,7 @@ std::string SortedChunkList::identify(bool withpath, bool withdate, getproplist 
 		ret+= (ret.empty() ? std::string():std::string("_"))+seqDesc.begin()->toString();
 	if(withpath){
 		forall(source);
-		std::list<boost::filesystem::path> sources;
+		std::list<std::filesystem::path> sources;
 		std::transform(source.begin(),source.end(),std::back_inserter(sources),[](const util::PropertyValue &v){
 			return v.as<std::string>();
 		});
