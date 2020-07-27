@@ -388,7 +388,7 @@ void PropertyMap::diffTree( const container_type& other, DiffMap& ret, const Pro
 				thisMap.diffTree( refMap.container, ret, prefix / thisIt->first );
 			} else if( thisIt->second.isProperty() && otherIt->second.isProperty() ) { // both are PropertyValue
 				const PropertyValue &thisVal = std::get<PropertyValue>( thisIt->second ), &otherVal = std::get<PropertyValue>( otherIt->second );
-				if( thisVal != otherVal ) // if they are different
+				if(!(thisVal == otherVal) ) // if they are different
 					ret.insert( // add (propertyname|(value1|value2))
 					    ret.end(),      // we know it has to be at the end
 					    std::make_pair(
