@@ -49,13 +49,6 @@ public:
 class ValueArrayNew: protected ArrayTypes
 {
 	size_t m_length;
-	/// delete-functor which does nothing (in case someone else manages the data).
-	struct NonDeleter {
-		template<typename T> void operator()( T *p )const {
-			//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
-			LOG( Debug, verbose_info ) << "Not freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") as automatic deletion was disabled for it";
-		};
-	};
 	/// Default delete-functor for c-arrays (uses free()).
 	struct BasicDeleter {
 		template<typename T> void operator()( T *p )const {
@@ -99,12 +92,11 @@ protected:
 public:
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ArrayTypes>::type;
 
-	typedef _internal::ValueArrayConverterMap::mapped_type::mapped_type Converter;
-
-	typedef _internal::GenericValueIterator<false> iterator;
-	typedef _internal::GenericValueIterator<true> const_iterator;
-	typedef iterator::reference reference;
-	typedef const_iterator::reference const_reference;
+	using Converter = _internal::ValueArrayConverterMap::mapped_type::mapped_type;
+	using iterator =  _internal::GenericValueIterator<false>;
+	using const_iterator = _internal::GenericValueIterator<true>;
+	using reference = iterator::reference;
+	using const_reference = const_iterator::reference;
 
 	ValueArrayNew();//creates an invalid value array
 	/**
@@ -387,16 +379,39 @@ public:
 	bool isInteger() const;
 
 	void endianSwap();
+/// delete-functor which does nothing (in case someone else manages the data).
+struct NonDeleter {
+	template<typename T> void operator()( T *p )const {
+		//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
+		LOG( Debug, verbose_info ) << "Not freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") as automatic deletion was disabled for it";
+	};
+};
 };
 
 }
 
-// streaming for scaling_pair
 namespace std
 {
+// streaming for scaling_pair
 template<typename charT, typename traits>
 basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::data::scaling_pair &s )
 {
 	return out << std::make_pair(s.scale,s.offset);
+}
+// streaming for ValueArray
+template<typename charT, typename traits>
+basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::data::ValueArrayNew &s )
+{
+	assert(s.isValid());
+	if ( s.isValid() ){
+		out << "#" << s.getLength();
+		if(s.getLength()) {//@todo use list2stream
+			auto i = s.begin();
+			out << isis::util::ValueNew(*i).toString(false);
+			for (++i; i < s.end(); i++)
+				out << "|" << isis::util::ValueNew(*i).toString(false);
+		}
+	}
+	return out;
 }
 }

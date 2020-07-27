@@ -61,17 +61,9 @@ isis::data::ValueArrayNew::const_iterator isis::data::ValueArrayNew::end() const
 }
 
 std::string isis::data::ValueArrayNew::toString(bool labeled) const {
-	std::string ret;//@todo listToString
-
-	if ( m_length ) {
-		for ( auto i = begin(); i < end() - 1; i++ )
-			ret += util::ValueNew( *i ).toString( false ) + "|";
-
-
-		ret += util::ValueNew( *( end() - 1 ) ).toString( labeled );
-	}
-
-	return std::to_string( m_length ) + "#" + ret;
+	std::stringstream ret;
+	ret << *this;
+	return ret.str();
 }
 
 std::vector<isis::data::ValueArrayNew> isis::data::ValueArrayNew::splice(size_t size) const{

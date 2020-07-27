@@ -44,7 +44,7 @@ public:
 	TypedArray(size_t length):TypedArray(ValueArrayNew::make<TYPE>(length),scaling_pair(1,0)){} //this will call the constructor for creation from ValueArray but we know we won't need any conversion or scaling
 	/// Basic copy constructor
 	TypedArray(const TypedArray<TYPE> &ref):TypedArray(static_cast<const ValueArrayNew&>(ref),scaling_pair(1,0)){}//same as above
-	TypedArray(TypedArray<TYPE> &&ref)=delete;
+	TypedArray(TypedArray<TYPE> &&ref):ValueArrayNew(std::move(ref)),me(castTo<TYPE>()){};
 
 	/// Create an invalid array of the correct type.
 	TypedArray():TypedArray(std::shared_ptr<TYPE>(),0){}//(makes sure me is valid)

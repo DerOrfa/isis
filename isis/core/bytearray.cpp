@@ -53,7 +53,7 @@ ByteArray::ByteArray(const TypedArray<uint8_t> &ref):TypedArray<uint8_t>(ref){}
 
 ValueArrayNew ByteArray::atByID(unsigned short ID, std::size_t offset, std::size_t len, bool swap_endianess)
 {
-	LOG_IF(!isValid(), Debug, error ) << "There is no mapped data for this FilePtr - I'm very likely gonna crash soon ..";
+	LOG_IF(!isValid(), Debug, error ) << "There is no mapped data for this ByteArray - I'm very likely gonna crash soon ..";
 	_internal::GeneratorMap &map = util::Singletons::get<_internal::GeneratorMap, 0>();
 	assert( !map.empty() );
 	const _internal::generator_fn gen = map[ID];

@@ -84,7 +84,7 @@ public:
 			return ret;
 		}
 	}
-	template<typename T> const ValueArray<T> at( size_t offset, size_t len = 0, bool swap_endianess = false )const{
+	template<typename T> TypedArray<T> at( size_t offset, size_t len = 0, bool swap_endianess = false )const{
 		return const_cast<ByteArray*>(this)->at<T>(offset,len,swap_endianess);
 	}
 	/**

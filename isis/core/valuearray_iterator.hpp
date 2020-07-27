@@ -187,7 +187,7 @@ public:
 namespace std
 {
     void swap(const isis::data::_internal::WritingValueAdapter &a,const isis::data::_internal::WritingValueAdapter &b);
-	/// Streaming output for ConstValueAdapter (use it as a const ValueReference)
+	/// Streaming output for ConstValueAdapter (use it as a const Value)
 	template<typename charT, typename traits> basic_ostream<charT, traits>&
 	operator<<( basic_ostream<charT, traits> &out, const isis::data::_internal::ConstValueAdapter &v )
 	{
