@@ -424,9 +424,9 @@ private:
 					boost::cmatch timeResults;
 
 					if ( boost::regex_match( time.c_str(), timeResults, timeRegex ) ) {
-						hours = boost::lexical_cast<size_t>( timeResults[timeRef.first] );
-						minutes = boost::lexical_cast<size_t>( timeResults[timeRef.second] );
-						seconds = boost::lexical_cast<size_t>( timeResults[timeRef.third] );
+						util::stringTo( timeResults[timeRef.first], hours);
+						util::stringTo( timeResults[timeRef.second], minutes );
+						util::stringTo( timeResults[timeRef.third], seconds );
 						isisTimeDuration = boost::posix_time::time_duration( hours, minutes, seconds );
 					}
 				}

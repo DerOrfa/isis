@@ -30,7 +30,8 @@ protected:
 
 		if( end != std::string::npos ) {
 			std::string::size_type start = filename.find_last_not_of( "0123456789", end );
-			property = boost::lexical_cast<T>( filename.substr( start + 1, end - start ) );
+			T buffer;util::stringTo( filename.substr( start + 1, end - start ), buffer );
+			property = buffer;
 			return true;
 		} else {
 			return false;

@@ -121,7 +121,7 @@ bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const std::filesyst
 
 size_t FilePtr::checkSize( bool write, FILE_HANDLE file, const std::filesystem::path &filename, size_t size )
 {
-	const boost::uintmax_t currSize = std::filesystem::file_size( filename );
+	const auto currSize = std::filesystem::file_size( filename );
 	if ( std::numeric_limits<size_t>::max() < currSize ) {
 		LOG( Runtime, error )
 			<< "Sorry cannot map files larger than " << std::numeric_limits<size_t>::max()

@@ -190,15 +190,15 @@ BOOST_AUTO_TEST_CASE( ValueArray_splice_test )
 			// for now we have only one pointer referencing the data
 			std::shared_ptr<int32_t> &dummy = inner.castTo<int32_t>(); //get the smart_pointer inside, because ValueArray does not have/need use_count
 			BOOST_CHECK_EQUAL( dummy.use_count(), 1 );
-			//splicing up makes a references for every splice
+			//splicing up makes a references for every spliceAt
 			outer = inner.splice( 2 );
-			BOOST_CHECK_EQUAL( outer.size(), 5 / 2 + 1 );// 5/2 normal splices plus one halve  splice
+			BOOST_CHECK_EQUAL( outer.size(), 5 / 2 + 1 );// 5/2 normal splices plus one halve  spliceAt
 			//there shall be outer.size() references from the splices, plus one for the origin
 			BOOST_CHECK_EQUAL( dummy.use_count(), outer.size() + 1 );
 		}
 		BOOST_CHECK_EQUAL( outer.front().getLength(), 2 );// the first slices shall be of the size 2
 		BOOST_CHECK_EQUAL( outer.back().getLength(), 1 );// the last slice shall be of the size 1 (5%2)
-		//we cannot ask for the use_count of the original because its hidden in DelProxy (outer[0].use_count will get the use_count of the splice)
+		//we cannot ask for the use_count of the original because its hidden in DelProxy (outer[0].use_count will get the use_count of the spliceAt)
 		//but we can check if it was allready deleted (it shouldn't, because the splices are still using that data)
 		BOOST_CHECK( ! _internal::Deleter::deleted );
 	}

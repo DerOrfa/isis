@@ -73,7 +73,7 @@ std::vector<isis::data::ValueArrayNew> isis::data::ValueArrayNew::splice(size_t 
 	}
 
 	const size_t fullSplices = getLength() / size;
-	const size_t lastSize = getLength() % size;//rest of the division - size of the last splice
+	const size_t lastSize = getLength() % size;//rest of the division - size of the last spliceAt
 	const size_t splices = fullSplices + ( lastSize ? 1 : 0 );
 
 	_internal::DelProxy proxy( *this );

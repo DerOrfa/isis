@@ -11,18 +11,6 @@ namespace image_io
 
 namespace _internal
 {
-template<typename ST, typename DT> bool try_cast( const ST &source, DT &dest )
-{
-	bool ret = true;
-
-	try {
-		dest = boost::lexical_cast<DT>( source );
-	} catch ( boost::bad_lexical_cast e ) {
-		ret = false;
-	}
-
-	return ret;
-}
 struct tag_length_visitor
 {
 	template<boost::endian::order Order> size_t operator()(const ExplicitVrTag<Order> *_tag)const{
@@ -271,19 +259,19 @@ bool ImageFormat_Dicom::parseCSAValue( const std::string &val, const util::Prope
 	if ( vr == "IS" or vr == "SL" ) {
 		map.setValueAs( name, std::stoi( val ));
 	} else if ( vr == "UL" ) {
-		map.setValueAs( name, boost::lexical_cast<uint32_t>( val ));
+		util::stringTo( val, map.refValueAsOr( name, uint32_t()) );
 	} else if ( vr == "CS" or vr == "LO" or vr == "SH" or vr == "UN" or vr == "ST" or vr == "UT" ) {
 		map.setValueAs( name, val );
 	} else if ( vr == "DS" or vr == "FD" ) {
 		map.setValueAs( name, std::stod( val ));
 	} else if ( vr == "US" ) {
-		map.setValueAs( name, boost::lexical_cast<uint16_t>( val ));
+		util::stringTo( val, map.refValueAsOr( name, uint16_t()) );
 	} else if ( vr == "SS" ) {
-		map.setValueAs( name, boost::lexical_cast<int16_t>( val ));
+		util::stringTo( val, map.refValueAsOr( name, int16_t()) );
 	} else if ( vr == "UT" or vr == "LT" ) {
 		map.setValueAs( name, val);
 	} else {
-		LOG( Runtime, error ) << "Dont know how to parse CSA entry " << std::make_pair( name, val ) << " type is " << util::MSubject( vr );
+		LOG( Runtime, error ) << "Don't know how to parse CSA entry " << std::make_pair( name, val ) << " type is " << util::MSubject( vr );
 		return false;
 	}
 
@@ -292,13 +280,17 @@ bool ImageFormat_Dicom::parseCSAValue( const std::string &val, const util::Prope
 bool ImageFormat_Dicom::parseCSAValueList( const util::slist &val, const util::PropertyMap::PropPath &name, const util::istring &vr, util::PropertyMap &map )
 {
 	if ( vr == "IS" or vr == "SL" or vr == "US" or vr == "SS" ) {
-		map.setValueAs( name, util::listToList<int32_t>( val.begin(), val.end() ) );
+		auto &target=map.refValueAsOr(name,util::ilist());
+		for(const std::string &ref:val)
+			util::stringTo(ref,target.emplace_back());
 	} else if ( vr == "UL" ) {
 		map.setValueAs( name, val); // @todo we dont have an unsigned int list
 	} else if ( vr == "CS" or vr == "LO" or vr == "SH" or vr == "UN" or vr == "ST" or vr == "SL" ) {
 		map.setValueAs( name, val );
 	} else if ( vr == "DS" or vr == "FD" ) {
-		map.setValueAs( name, util::listToList<double>( val.begin(), val.end() ) );
+		auto &target=map.refValueAsOr(name,util::dlist());
+		for(const std::string &ref:val)
+			util::stringTo(ref,target.emplace_back());
 	} else if ( vr == "CS" ) {
 		map.setValueAs( name, val );
 	} else {
@@ -373,7 +365,7 @@ namespace _internal{
 		        boost::numeric::RoundEven<double>
 		        > double2uint16;
 
-		if ( _internal::try_cast( buff.substr( 0, buff.find_last_of( "0123456789" ) + 1 ), duration ) ) {
+		if ( util::stringTo( buff.substr( 0, buff.find_last_of( "0123456789" ) + 1 ), duration ) ) {
 			switch ( buff.at( buff.size() - 1 ) ) {
 			case 'D':
 			case 'd':

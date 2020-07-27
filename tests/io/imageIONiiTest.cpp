@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 			niiChunks[i].remove( "source" );
 			nullChunks[i].remove( "source" );
 
-			// @todo because of the splice we get a big rounding error in indexOrigin (from summing up voxelSize)
+			// @todo because of the spliceAt we get a big rounding error in indexOrigin (from summing up voxelSize)
 			niiChunks[i].remove( "indexOrigin" );
 			nullChunks[i].remove( "indexOrigin" );
 

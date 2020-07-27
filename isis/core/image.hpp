@@ -547,7 +547,7 @@ public:
 	bool convertToType ( short unsigned int ID, scaling_pair scaling=scaling_pair() );
 
 	/**
-	 * Automatically splice the given dimension and all dimensions above.
+	 * Automatically spliceAt the given dimension and all dimensions above.
 	 * e.g. spliceDownTo(sliceDim) will result in an image made of slices (aka 2d-chunks).
 	 */
 	size_t spliceDownTo ( dimensions dim );

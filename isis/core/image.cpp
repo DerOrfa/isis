@@ -37,7 +37,7 @@ struct splicer {
 	void operator()( Chunk &ch ) {
 		const size_t topDim = ch.getRelevantDims() - 1;
 
-		if( topDim >= ( size_t ) m_dim ) { // ok we still have to splice that
+		if( topDim >= ( size_t ) m_dim ) { // ok we still have to spliceAt that
 			const size_t subSize = m_image.getSizeAsVector()[topDim];
 			assert( !( m_amount % subSize ) ); // there must not be any "remaining"
 			splicer sub( m_dim, m_amount / subSize, m_image );
@@ -46,7 +46,7 @@ struct splicer {
 
 		} else { // seems like we're done - insert it into the image
 			assert( ch.getRelevantDims() == ( size_t ) m_dim ); // index of the higest dim>1 (ch.getRelevantDims()-1) shall be equal to the dim below the requested splicing (m_dim-1)
-			LOG( Debug, verbose_info ) << "Inserting splice result of size " << ch.getSizeAsVector() << " at " << ch.queryProperty( "indexOrigin" );
+			LOG( Debug, verbose_info ) << "Inserting spliceAt result of size " << ch.getSizeAsVector() << " at " << ch.queryProperty( "indexOrigin" );
 			m_image.insertChunk( ch );
 		}
 	}
@@ -513,7 +513,7 @@ void Image::copyToValueArray( ValueArrayNew &dst, scaling_pair scaling ) const
 		std::vector< ValueArrayNew > targets;
 
 		if( lookup.size() > 1 ) { //if there are more than 1 chunks
-			//splice target to have the same parts as the image
+			//spliceAt target to have the same parts as the image
 			targets = dst.splice( lookup.front()->getVolume() );
 		} else {
 			//just put that ValueArray into the list
@@ -897,7 +897,7 @@ bool Image::convertToType( short unsigned int ID, scaling_pair scaling )
 size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim, timeDim
 {
 	if( lookup[0]->getRelevantDims() < ( size_t ) dim ) {
-		LOG( Debug, error ) << "The dimensionality of the chunks of this image is already below " << dim << " cannot splice it.";
+		LOG( Debug, error ) << "The dimensionality of the chunks of this image is already below " << dim << " cannot spliceAt it.";
 		return 0;
 	} else if( lookup[0]->getRelevantDims() == ( size_t ) dim ) {
 		LOG( Debug, info ) << "Skipping useless splicing, relevantDims is already " << lookup[0]->getRelevantDims();
@@ -920,7 +920,7 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 
 	clean = false; // mark the image for reIndexing
 
-	//splice existing lists into the current chunks -- they will be spliced further if necessary
+	//spliceAt existing lists into the current chunks -- they will be spliced further if necessary
 	PropertyMap::splice(lookup.begin(),lookup.end(),true);
 
 	//transfer properties needed for the chunk back into the chunk (if they're there but not lists)

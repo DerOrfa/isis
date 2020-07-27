@@ -159,8 +159,8 @@ std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameter
 		data::IOFactory::setProgressFeedback( feedback );
 	}
 
-	std::list<util::istring> formatstack=util::listToList<util::istring>(rf.begin(),rf.end());
-		
+	std::list<util::istring> formatstack=util::makeIStringList(rf);
+
 	std::list< Image > tImages;
 	if(input.size()==1 && input.front()=="-"){
 		LOG( Runtime, info )
@@ -168,14 +168,14 @@ std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameter
 			<< util::NoSubject( rf.empty() ? "" : std::string( " using the format stack: " ) + util::listToString(rf.begin(),rf.end()) )
 			<< util::NoSubject( ( !rf.empty() && !dl.empty() ) ? " and" : "" )
 			<< util::NoSubject( dl.empty() ? "" : std::string( " using the dialect: " ) + util::listToString(dl.begin(),dl.end()) );
-		tImages = data::IOFactory::load( std::cin.rdbuf(), formatstack, util::listToList<util::istring>(dl.begin(),dl.end()),rejected );
+		tImages = data::IOFactory::load( std::cin.rdbuf(), formatstack, util::makeIStringList(dl),rejected );
 	} else {
 		LOG( Runtime, info )
 			<< "loading " << util::MSubject( input )
 			<< util::NoSubject( rf.empty() ? "" : std::string( " using the format stack: " ) + util::listToString(rf.begin(),rf.end()) )
 			<< util::NoSubject( ( !rf.empty() && !dl.empty() ) ? " and" : "" )
 			<< util::NoSubject( dl.empty() ? "" : std::string( " using the dialect: " ) + util::listToString(dl.begin(),dl.end()) );
-		tImages = data::IOFactory::load( input, formatstack, util::listToList<util::istring>(dl.begin(),dl.end()),rejected );
+		tImages = data::IOFactory::load( input, formatstack, util::makeIStringList(dl),rejected );
 	}
 
 	if ( tImages.empty() ) {
@@ -232,7 +232,7 @@ bool IOApplication::autowrite ( const util::ParameterMap &parameters, std::list<
 	if( feedback() )
 		data::IOFactory::setProgressFeedback( feedback() );
 
-	if ( ! IOFactory::write( out_images, output, util::listToList<util::istring>(wf.begin(),wf.end()), util::listToList<util::istring>(dl.begin(),dl.end()) ) ) {
+	if ( ! IOFactory::write( out_images, output, util::makeIStringList(wf), util::makeIStringList(dl) ) ) {
 		if ( exitOnError ) {
 			LOG( Runtime, notice ) << "Failed to write, exiting...";
 			exit( 1 );

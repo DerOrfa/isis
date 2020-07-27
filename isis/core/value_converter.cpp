@@ -24,7 +24,6 @@
 #include "value_converter.hpp"
 #include "value.hpp"
 #include <type_traits>
-#include <boost/algorithm/string/case_conv.hpp>
 
 #include <complex>
 #include <iomanip>
@@ -148,24 +147,13 @@ std::ios_base::iostate formattedTimeParse(std::istringstream &ss,std::tm t,const
 // if a converter from double is available first map to double and then convert that into DST
 template<typename DST> typename std::enable_if<std::is_arithmetic<DST>::value,boost::numeric::range_check_result>::type str2scalar( const std::string &src, DST &dst )
 {
-	double d;
-	try { 
-		d=std::stod( src );
-	} catch( std::out_of_range &) {
-		return boost::numeric::cPosOverflow; //-isch
-	} catch( const std::logic_error &e ) {
-		dst = DST();
-		LOG( Runtime, error ) << "Miserably failed to interpret " << MSubject( src ) << " as " <<typeName<DST>() << "(" << MSubject(e.what())<< ") returning " << MSubject( DST() );
-		return boost::numeric::cInRange;
-	} 
-	return num2num<double, DST>( d, dst );
+	return num2num<double, DST>( std::stod( src ), dst ); //@todo so we need an overflow-check here
 }
 // otherwise try direct mapping (rounding will fail)
 template<typename DST> typename std::enable_if<!std::is_arithmetic<DST>::value,boost::numeric::range_check_result>::type str2scalar( const std::string &src, DST &dst )
 {
-	LOG( Debug, warning ) << "using lexical_cast to convert from string to " <<typeName<DST>() << " no rounding can be done.";
-	try { dst = boost::lexical_cast<DST>( src );}
-	catch( const boost::bad_lexical_cast & ) {
+	LOG( Debug, warning ) << "using stringTo to convert from string to " <<typeName<DST>() << " no rounding can be done.";
+	if(!stringTo(src,dst)) {
 		dst = DST();
 		LOG( Runtime, error ) << "Miserably failed to interpret " << MSubject( src ) << " as " <<typeName<DST>() << " returning " << MSubject( DST() );
 	}
@@ -244,7 +232,7 @@ template<> boost::numeric::range_check_result str2scalar<duration>( const std::s
 // this as well (interpret everything like true/false yes/no y/n)
 template<> boost::numeric::range_check_result str2scalar<bool>( const std::string &src, bool &dst )
 {
-	const auto srcVal = boost::algorithm::to_lower_copy<std::string>( src );
+	const std::basic_string_view<char, _internal::ichar_traits> srcVal( src.c_str(), src.length() );
 
 	if (  srcVal == "true" || srcVal == "y" || srcVal == "yes" ) {
 		dst = true;
@@ -257,7 +245,6 @@ template<> boost::numeric::range_check_result str2scalar<bool>( const std::strin
 
 	return boost::numeric::cInRange;
 }
-//and this (lexical_cast doesnt work here, because it creates a temporary buffer which will screw our dst)
 template<> boost::numeric::range_check_result str2scalar<Selection>( const std::string &src, Selection &dst )
 {
 	if ( dst.set( src.c_str() ) )
@@ -646,7 +633,7 @@ public:
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-// string to scalar -- uses lexical_cast (and in some cases mumeric conversion) to convert from string
+// string to scalar -- uses stringTo (and in some cases mumeric conversion) to convert from string
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 template<typename DST> class ValueConverter<false, false, std::string, DST> : public ValueGenerator<std::string, DST>
 {
@@ -677,10 +664,10 @@ public:
 		return getFor<ValueConverter<false, false, std::string, std::complex<DST> >, std::complex<double>, std::complex<DST> >();
 	}
 	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
-		try {
-			const auto srcDbl= boost::lexical_cast<std::complex<double> >( std::get<std::string>(src) ); // make a double from the string
-			return num2num( srcDbl, std::get<std::complex<DST> >(dst) );
-		} catch( const boost::bad_lexical_cast & ) {
+		std::complex<double> buffer;
+		if(stringTo(std::get<std::string>(src),buffer)){// make a double from the string
+			return num2num( buffer, std::get<std::complex<DST> >(dst) );
+		} else {
 			dst = DST();
 			LOG( Runtime, error ) << "Miserably failed to interpret " << MSubject( src ) << " as " <<typeName<DST>() << " returning " << MSubject( DST() );
 		}

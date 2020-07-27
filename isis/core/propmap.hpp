@@ -765,7 +765,7 @@ template<typename ITER> struct PropertyMap::Splicer {
 	}
 	void operator()( const std::monostate &val )const {}
 	void operator()( PropertyValue &val )const {
-		if(val.isEmpty())return; // abort if there is nothing to splice
+		if(val.isEmpty())return; // abort if there is nothing to spliceAt
 		else if(lists_only && val.size() <= 1)return;  //abort if we don't want do move scalars
 
 		if( val.size() % blocks ) { // just copy all which cannot be properly spliced to the destination

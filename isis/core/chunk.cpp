@@ -183,7 +183,7 @@ size_t Chunk::compare( const isis::data::Chunk &dst ) const
 std::list<Chunk> Chunk::autoSplice ( uint32_t acquisitionNumberStride )const
 {
 	if ( !PropertyMap::isValid() ) {
-		LOG( Runtime, error ) << "Cannot splice invalid Chunk (missing properties are " << this->getMissing() << ")";
+		LOG( Runtime, error ) << "Cannot spliceAt invalid Chunk (missing properties are " << this->getMissing() << ")";
 		return std::list<Chunk>();
 	}
 
@@ -228,7 +228,7 @@ std::list<Chunk> Chunk::autoSplice ( uint32_t acquisitionNumberStride )const
 	const bool originWasList=queryProperty("indexOrigin")->size()==getDimSize(atDim);
 
 	LOG( Debug, info ) << "Splicing chunk at dimenstion " << atDim + 1 << " with indexOrigin stride " << indexOriginOffset << " and acquisitionNumberStride " << acquisitionNumberStride;
-	std::list<Chunk> ret = splice( ( dimensions )atDim ); // do low level splice - get the chunklist
+	std::list<Chunk> ret = spliceAt((dimensions) atDim); // do low level spliceAt - get the chunklist
 
 	std::list<Chunk>::iterator it = ret.begin();
 	it++;// skip the first one
@@ -248,7 +248,7 @@ std::list<Chunk> Chunk::autoSplice ( uint32_t acquisitionNumberStride )const
 	return ret;
 }
 
-std::list<Chunk> Chunk::splice ( dimensions atDim )const
+std::list<Chunk> Chunk::spliceAt (dimensions atDim )const
 {
 	std::list<Chunk> ret;
 
@@ -265,7 +265,7 @@ std::list<Chunk> Chunk::splice ( dimensions atDim )const
 		ret.push_back( Chunk( ref, spliceSize[0], spliceSize[1], spliceSize[2], spliceSize[3] ) );
 	}
 	PropertyMap dummyMap(*this);
-	dummyMap.splice(ret.begin(),ret.end(),false);//copy/splice properties into spliced chunks @todo why is this not const
+	dummyMap.splice(ret.begin(),ret.end(),false);//copy/spliceAt properties into spliced chunks @todo why is this not const
 	return ret;
 }
 

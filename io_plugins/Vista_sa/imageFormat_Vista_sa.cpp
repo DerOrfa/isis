@@ -294,7 +294,7 @@ std::list<data::Chunk> ImageFormat_VistaSa::load( data::ByteArray source, std::l
 
 	uint16_t sequence = 0;
 	if(feedback && ch_list.size()>10)
-		feedback->show(ch_list.size(),std::string("Loading ") + boost::lexical_cast<std::string>(groups.size()) + " image(s)" );
+		feedback->show(ch_list.size(),std::string("Loading ") + std::to_string(groups.size()) + " image(s)" );
 
 	for( _internal::VistaInputImage & group: groups ) {
 		if( group.isFunctional() )

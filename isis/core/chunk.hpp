@@ -209,10 +209,10 @@ public:
 
 	/**
 	 * Splices the chunk at the given dimension and all dimensions above.
-	 * E.g. splice\(columnDim\) on a chunk of the size 512x512x128 will result in 512*128 chunks of the size 512x1x1
+	 * E.g. spliceAt\(columnDim\) on a chunk of the size 512x512x128 will result in 512*128 chunks of the size 512x1x1
 	 * \attention As this will also move alle properties into the "splinters" this chunk will be invalid afterwards
 	 */
-	std::list<Chunk> splice( isis::data::dimensions atDim )const;
+	std::list<Chunk> spliceAt(isis::data::dimensions atDim )const;
 
 	/**
 	  * Flips the chunk along a dimension dim in image space.
