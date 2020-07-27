@@ -19,14 +19,14 @@ util::istring id2Name( const uint16_t group, const uint16_t element ){
 util::istring id2Name( const uint32_t id32 ){
 	return id2Name((id32&0xFFFF0000)>>16,id32&0xFFFF);
 }
-util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArrayReference> &data_elements);
-util::PropertyMap readItem(DicomElement &token,std::multimap<uint32_t,data::ValueArrayReference> &data_elements){
+util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArrayNew> &data_elements);
+util::PropertyMap readItem(DicomElement &token,std::multimap<uint32_t,data::ValueArrayNew> &data_elements){
 	assert(token.getID32()==0xFFFEE000);//must be an item-tag
 	size_t len=token.getLength();
 	token.next(token.getPosition()+8);
 	return readStream(token,len,data_elements);
 }
-void readDataItems(DicomElement &token,std::multimap<uint32_t,data::ValueArrayReference> &data_elements){
+void readDataItems(DicomElement &token, std::multimap<uint32_t, data::ValueArrayNew> &data_elements){
 	const uint32_t id=token.getID32();
 
 	bool wide= (token.getVR()=="OW");
@@ -44,7 +44,7 @@ void readDataItems(DicomElement &token,std::multimap<uint32_t,data::ValueArrayRe
 	}
 	assert(token.getID32()==0xFFFEE0DD);//we expect a sequence delimiter (will be eaten by the calling loop)
 }
-util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArrayReference> &data_elements){
+util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArrayNew> &data_elements){
 	size_t start=token.getPosition();
 	util::PropertyMap ret;
 
@@ -63,14 +63,14 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 			if(len==0xFFFFFFFF){ // itemized data of undefined length
 				readDataItems(token,data_elements);
 			} else {
-				std::multimap<uint32_t,data::ValueArrayReference>::iterator inserted;
+				std::multimap<uint32_t,data::ValueArrayNew>::iterator inserted;
 				if(vr=="OW")
 					inserted=data_elements.insert({token.getID32(),token.dataAs<uint16_t>()});
 				else
 					inserted=data_elements.insert({token.getID32(),token.dataAs<uint8_t>()});
 
 				LOG(Debug,info)
-				    << "Found " << inserted->second->getTypeName() << "-data for " << token.getIDString() << " at " << token.getPosition()
+				    << "Found " << inserted->second.typeName() << "-data for " << token.getIDString() << " at " << token.getPosition()
 				    << " it is " <<token.getLength() << " bytes long";
 			}
 		}else if(vr=="SQ"){ // http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_7.5.html
@@ -98,29 +98,31 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 			LOG(Debug,verbose_info) << "Sequence " << name << " finished, continuing at " << token.getPosition()+token.getLength()+8;
 		}else{
 			auto value=token.getValue(vr);
-			if(!value.isEmpty()){
+			if(value){
 				ret.touchProperty(token.getName())=*value;
 			}
 		}
 	}while(token.next() && token.getPosition()-start<stream_len);
 	return ret;
 }
-template<typename T> data::ValueArrayReference repackValueArray(data::ValueArrayBase &data){
-	//the VR of pxel data no neccesarly fits the actual pixel representation so we have to repack the raw byte data
+template<typename T>
+data::ValueArrayNew repackValueArray(data::ValueArrayNew &data){
+	//the VR of pixel data not necessarily fits the actual pixel representation so we have to repack the raw byte data
 	const auto new_ptr=std::static_pointer_cast<T>(data.getRawAddress());
 	const size_t bytes = data.getLength()*data.bytesPerElem();
-	return data::ValueArray<T>(new_ptr,bytes/sizeof(T));
+	return data::ValueArrayNew(new_ptr,bytes/sizeof(T));
 }
-template<typename T> data::ValueArrayReference repackValueArray(data::ValueArrayBase &data, bool invert){
-	data::ValueArrayReference ret=repackValueArray<T>(data);
+template<typename T>
+data::ValueArrayNew repackValueArray(data::ValueArrayNew &data, bool invert){
+	data::ValueArrayNew ret=repackValueArray<T>(data);
 
 	if(invert){
-		std::pair<util::ValueReference, util::ValueReference> minmax=ret->getMinMax();
-		const T min=minmax.first->as<T>();
-		const T max=minmax.second->as<T>();
-		for(T& v:ret->as<T>()){
-			const T dist_from_min=v-min;
-			v=max-1-dist_from_min;
+		auto minmax=ret.getMinMax();
+		const T min=minmax.first.as<T>();
+		const T max=minmax.second.as<T>();
+		for(auto it=ret.beginTyped<T>();it!=ret.endTyped<T>();++it){
+			const T dist_from_min=*it-min;
+			*it=max-1-dist_from_min;
 		}
 	}
 	return ret;
@@ -128,13 +130,13 @@ template<typename T> data::ValueArrayReference repackValueArray(data::ValueArray
 
 class DicomChunk : public data::Chunk
 {
-	data::Chunk getUncompressedPixel(data::ValueArrayBase &data,const util::PropertyMap &props){
+	data::Chunk getUncompressedPixel(data::ValueArrayNew &data,const util::PropertyMap &props){
 		auto rows=props.getValueAs<uint32_t>("Rows");
 		auto columns=props.getValueAs<uint32_t>("Columns");
 		//Number of Frames: 0028,0008
 
 		//repack the pixel data into proper type
-		data::ValueArrayReference pixel;
+		data::ValueArrayNew pixel;
 		auto color=props.getValueAs<std::string>("PhotometricInterpretation");
 		auto bits_allocated=props.getValueAs<uint8_t>("BitsAllocated");
 		auto signed_values=props.getValueAsOr<bool>("PixelRepresentation",false);
@@ -161,30 +163,27 @@ class DicomChunk : public data::Chunk
 		}
 
 		// create a chunk of the proper type
-		assert(pixel->getLength()==rows*columns);
+		assert(pixel.getLength()==rows*columns);
 		data::Chunk ret(pixel,columns,rows);
 		return ret;
 	}
 public:
-	DicomChunk(std::list<data::ValueArrayReference> &&data_elements,const std::string &transferSyntax,const util::PropertyMap &props)
+	DicomChunk(data::ValueArrayNew &data,const std::string &transferSyntax,const util::PropertyMap &props)
 	{
-		assert(data_elements.size()==1);
-		data::ValueArrayBase &data=*data_elements.front();
 #ifdef HAVE_OPENJPEG
 		if(transferSyntax=="1.2.840.10008.1.2.4.90"){ //JPEG 2K
-			assert(data_elements.front()->getTypeID()==data::ByteArray::staticID());
-			static_cast<data::Chunk&>(*this)=
-			        _internal::getj2k(data.castToValueArray<uint8_t>());
+			assert(data.getTypeID()==util::typeID<uint8_t>());
+			static_cast<data::Chunk&>(*this)=_internal::getj2k(data::ByteArray(data.castTo<uint8_t>(),data.getLength()));
 
 			LOG(Runtime,info)
-			    << "Created " << this->getSizeAsString() << "-Image of type " << this->getTypeName()
+			    << "Created " << this->getSizeAsString() << "-Image of type " << this->typeName()
 			    << " from a " << data.getLength() << " bytes j2k stream";
 		} else
 #endif //HAVE_OPENJPEG
 		{
 			static_cast<data::Chunk&>(*this)=getUncompressedPixel(data,props);
 			LOG(Runtime,info)
-			    << "Created " << this->getSizeAsString() << "-Image of type " << this->getTypeName()
+			    << "Created " << this->getSizeAsString() << "-Image of type " << this->typeName()
 			    << " from a " << data.getLength() << " bytes of raw data";
 		}
 		this->touchBranch(ImageFormat_Dicom::dicomTagTreeName)=props;
@@ -455,20 +454,20 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 	auto windowCenterQuery=dicomTree.queryProperty("WindowCenter");
 	auto windowWidthQuery=dicomTree.queryProperty("WindowWidth");
 	if( windowCenterQuery && windowWidthQuery){
-		util::ValueReference windowCenterVal=windowCenterQuery->front();
-		util::ValueReference windowWidthVal=windowWidthQuery->front();
+		util::ValueNew windowCenterVal=windowCenterQuery->front();
+		util::ValueNew windowWidthVal=windowWidthQuery->front();
 		double windowCenter,windowWidth;
-		if(windowCenterVal->isFloat()){
-			windowCenter=windowCenterVal->as<double>();
+		if(windowCenterVal.isFloat()){
+			windowCenter=windowCenterVal.as<double>();
 			dicomTree.remove("WindowCenter");
 		} else
-			windowCenter=windowCenterVal->as<util::dlist>().front(); // sometimes there are actually multiple windows, use the first
+			windowCenter=windowCenterVal.as<util::dlist>().front(); // sometimes there are actually multiple windows, use the first
 
-		if(windowWidthVal->isFloat()){
-			windowWidth=windowWidthVal->as<double>();
+		if(windowWidthVal.isFloat()){
+			windowWidth=windowWidthVal.as<double>();
 			dicomTree.remove("WindowWidth");
 		} else
-			windowWidth = windowWidthVal->as<util::dlist>().front();
+			windowWidth = windowWidthVal.as<util::dlist>().front();
 
 		object.setValueAs("window/min",windowCenter-windowWidth/2);
 		object.setValueAs("window/max",windowCenter+windowWidth/2);
@@ -585,7 +584,8 @@ std::list<data::Chunk> ImageFormat_Dicom::load ( std::streambuf *source, std::li
 	boost::iostreams::copy(*source,buff_stream);
 	const auto buff = buff_stream.str();
 
-	data::ValueArray<uint8_t> wrap((uint8_t*)buff.data(),buff.length(),data::ValueArray<uint8_t>::NonDeleter());
+	const std::shared_ptr<uint8_t> p((uint8_t*)buff.data(),data::ValueArrayNew::NonDeleter());
+	data::ByteArray wrap(p,buff.length());
 	return load(wrap,formatstack,dialects,progress);
 }
 
@@ -597,7 +597,7 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 		throwGenericError("Prefix \"DICM\" not found");
 
 	size_t meta_info_length = _internal::DicomElement(source,128+4,boost::endian::order::little,false).getValue()->as<uint32_t>();
-	std::multimap<uint32_t,data::ValueArrayReference> data_elements;
+	std::multimap<uint32_t,data::ValueArrayNew> data_elements;
 
 	LOG(Debug,info)<<"Reading Meta Info begining at " << 158 << " length: " << meta_info_length-14;
 	_internal::DicomElement m(source,158,boost::endian::order::little,false);
@@ -636,14 +636,14 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 			auto found = data_elements.find(csa_id);
 			if(found!=data_elements.end()){
 				util::PropertyMap &subtree=props.touchBranch(private_code->as<std::string>().c_str());
-				parseCSA(found->second->castToValueArray<uint8_t>(),subtree,dialects);
+				parseCSA(data::ByteArray(found->second.castTo<uint8_t>(),found->second.getLength()),subtree,dialects);
 				data_elements.erase(found);
 			}
 		}
 	}
 
 	//extract actual image data from data_elements
-	std::list<data::ValueArrayReference> img_data;
+	std::list<data::ValueArrayNew> img_data;
 	for(auto e_it=data_elements.find(0x7FE00010);e_it!=data_elements.end() && e_it->first==0x7FE00010;){
 		img_data.push_back(e_it->second);
 		data_elements.erase(e_it++);
@@ -652,7 +652,8 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 	if(img_data.empty()){
 		throwGenericError("No image data found");
 	} else {
-		data::Chunk chunk(_internal::DicomChunk(std::move(img_data),transferSyntax,props));
+		LOG_IF(img_data.size()>1,Runtime,error) << "There is more than one image in the source, will only use the first";
+		data::Chunk chunk(_internal::DicomChunk(img_data.front(),transferSyntax,props));
 
 		//we got a chunk from the file
 		sanitise( chunk, dialects );
@@ -665,13 +666,10 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 		float si = chunk.getValueAsOr<float>("DICOM/UnknownTag/(2005,100d)",0);
 		float ss = chunk.getValueAsOr<float>("DICOM/UnknownTag/(2005,100e)",1);
 
-		data::scaling_pair scale(
-		    util::Value<float>(1/ss),
-		    util::Value<float>(-si/ss)
-		);
+		data::scaling_pair scale(1/ss,-si/ss);
 
 		LOG( Runtime, info ) << "Applying Philips scaling of " << scale << " on data";
-		chunk.convertToType(data::ValueArray<float>::staticID(),scale);
+		chunk.convertToType(util::typeID<float>(),scale);
 
 		//handle siemens mosaic data
 		if ( iType && std::find( iType->begin(), iType->end(), "MOSAIC" ) != iType->end() ) { // if we have an image type and its a mosaic
