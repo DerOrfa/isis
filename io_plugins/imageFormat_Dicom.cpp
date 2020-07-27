@@ -350,7 +350,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 	}
 
 	if ( hasOrTell( prefix + "PatientsSex", object, info ) ) {
-		util::Selection isisGender( "male,female,other" );
+		util::Selection isisGender({"male", "female", "other"} );
 		bool set = false;
 
 		switch ( dicomTree.getValueAs<std::string>( "PatientsSex" )[0] ) {

@@ -131,8 +131,8 @@ BOOST_AUTO_TEST_CASE( type_comparison_test )
 	BOOST_CHECK( fucking_much.gt( _1000 ) );
 	BOOST_CHECK( fucking_much.lt( even_more ) );
 
-	ValueNew a(util::Selection("a,b,c","a")),b=a;
-	ValueNew other(util::Selection("aa,bb,cc","aa")),unset(util::Selection("x"));
+	ValueNew a(util::Selection({"a","b","c"},"a")),b=a;
+	ValueNew other(util::Selection({"aa","bb","cc"},"aa")),unset(util::Selection({"x"}));
 
 	BOOST_CHECK(  a.eq(b));
 	BOOST_CHECK( !a.lt(b));

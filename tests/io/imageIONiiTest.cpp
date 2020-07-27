@@ -22,7 +22,7 @@ namespace isis
 {
 namespace test
 {
-const util::Selection formCodes( "SCANNER_ANAT,ALIGNED_ANAT,TALAIRACH,MNI_152" );
+const util::Selection formCodes({"SCANNER_ANAT", "ALIGNED_ANAT", "TALAIRACH", "MNI_152"} );
 
 BOOST_AUTO_TEST_SUITE ( imageIONii_NullTests )
 

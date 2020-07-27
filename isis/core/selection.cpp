@@ -14,11 +14,11 @@ namespace isis
 namespace util
 {
 
-Selection::Selection( const char *entries, const char *init_val ): m_set( 0 )
+Selection::Selection(std::initializer_list<std::string> entries, const char *init_val ): m_set(0 )
 {
 	int ID = 1;
-	for( const util::istring & ref :  stringToList<util::istring>( entries ) ) {
-		const MapType::value_type pair( ref, ID++ );
+	for( const auto &ref : entries ) {
+		const MapType::value_type pair( ref.c_str(), ID++ );
 
 		if( ! ent_map.insert( pair ).second ) {
 			LOG( Debug, error ) << "Entry " << pair << " could not be inserted";

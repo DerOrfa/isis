@@ -16,16 +16,13 @@
 
  */
 
-
-#ifndef SELECTION_HPP_INCLUDED
-#define SELECTION_HPP_INCLUDED
+#pragma once
 #include <map>
 #include "common.hpp"
 #include "istring.hpp"
+#include <assert.h>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 /**
@@ -53,7 +50,7 @@ public:
 	 * \param init_val the string which should be selected after initialisation (must be one from entries)
 	 * \warning this is really only <b>comma</b> separated, so write "first,second,and,so,on" and not "first, second, and, so, on"
 	 */
-	Selection( const char *entries, const char *init_val = "" );
+	Selection(std::initializer_list<std::string> entries, const char *init_val = "" );
 	/**
 	 * Default constructor.
 	 * Creates a selection from a number-option map.
@@ -126,7 +123,6 @@ template<typename T> Selection::Selection( const std::map< T, std::string >& map
 }
 
 }
-}
 
 namespace std
 {
@@ -137,4 +133,3 @@ basic_ostream<charT, traits> &operator<<( basic_ostream<charT, traits> &out, con
 	return out << ( std::string )s;
 }
 }
-#endif //SELECTION_HPP_INCLUDED

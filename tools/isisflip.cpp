@@ -41,8 +41,8 @@ int main( int argc, char **argv )
 	std::map<std::string, unsigned int> alongMap = boost::assign::map_list_of
 			( "row", 0 ) ( "column", 1 ) ( "slice", 2 ) ( "x", 3 ) ( "y", 4 ) ( "z", 5 );
 	data::IOApplication app( "isisflip", true, true );
-	util::Selection along( "row,column,slice,x,y,z" );
-	util::Selection flip( "image,space,both" );
+	util::Selection along({"row", "column", "slice", "x", "y", "z"} );
+	util::Selection flip({"image", "space", "both"} );
 	along.set( "x" );
 	flip.set( "both" );
 	app.parameters["along"] = along;
