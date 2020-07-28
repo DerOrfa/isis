@@ -122,26 +122,6 @@ public:
 class FslRgbWriteOp: public WriteOp
 {
 	const data::scaling_pair m_scale;
-	struct VoxelCp { //@todo make a lambda
-		uint8_t mode;
-		uint8_t *ptr;
-		virtual bool operator()( util::color24 &vox, isis::util::vector4<size_t> /*pos*/ ) {
-			switch( mode ) {
-			case 0:
-				*ptr = vox.r;
-				break;
-			case 1:
-				*ptr = vox.g;
-				break;
-			case 2:
-				*ptr = vox.b;
-				break;
-			}
-
-			ptr++;
-			return true;
-		}
-	};
 public:
 	FslRgbWriteOp( const data::Image &image ):
 		WriteOp( image, 8 ), m_scale( 1, 0 ) {
@@ -153,16 +133,32 @@ public:
 
 	bool doCopy(const data::Chunk &src, util::vector4<size_t> posInImage )override {
 		data::TypedChunk<util::color24> ch = src;
-		VoxelCp cp;
+
 		assert( posInImage[data::timeDim] == 0 );
 
 		for( ; posInImage[data::timeDim] < 3; posInImage[data::timeDim]++ ) { //copy each color/timestep into m_out
 			const size_t offset = m_voxelstart + getLinearIndex( posInImage ) * m_bpv / 8;
 			auto out_data = m_out.at<uint8_t>( offset, ch.getVolume() );
-			cp.ptr = &out_data[0];
-			cp.mode = ( uint8_t )posInImage[data::timeDim]; //the "timesteps" represent the color thus there are just 3
-			ch.foreachVoxel( cp );
-			assert( cp.ptr == &out_data[0] + out_data.getLength() );
+			auto out_data_it = out_data.begin();
+			auto mode = ( uint8_t )posInImage[data::timeDim];//the "timesteps" represent the color thus there are just 3
+
+			ch.foreachVoxel([mode,&out_data_it](const util::color24 &vox ) {
+				switch( mode ) {
+					case 0:
+						*out_data_it = vox.r;
+						break;
+					case 1:
+						*out_data_it = vox.g;
+						break;
+					case 2:
+						*out_data_it = vox.b;
+						break;
+					default:
+						assert(false);//this should not happen
+				}
+				out_data_it++;
+			});
+			assert( out_data_it == out_data.end() );
 		}
 
 		return true;

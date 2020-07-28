@@ -628,7 +628,7 @@ public:
 	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<std::list<SRC> >(src), std::get<vector4<DST> >(dst) );
 	}
-	virtual ~ValueConverter() = default;
+	~ValueConverter() override = default;
 };
 
 
