@@ -16,9 +16,7 @@
 #include <boost/iostreams/categories.hpp>  // tags
 
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 
 class ImageFormat_Tar: public FileFormat{
@@ -121,9 +119,9 @@ public:
 
 				if( formats.empty() ) {
 					LOG( Runtime, notice ) << "Skipping " << org_file << " inside the tar file because no plugin was found to read it"; // skip if we found none
-					LOG( Runtime, notice ) << "You might want to define it with the \"-rf\" option (e.g. \"-rf dcm tar gz\" for dcm files inside a tar.gz)";
+					LOG( Runtime, notice ) << R"(You might want to define it with the "-rf" option (e.g. "-rf dcm tar gz" for dcm files inside a tar.gz))";
 				} else {
-					data::ValueArray<uint8_t> buffer(size);
+					data::ByteArray buffer(size);
 					size_t red = boost::iostreams::read( in, std::static_pointer_cast<char>(buffer.getRawAddress()).get(), size ); // read data from the stream into the memory
 					next_header_in -= red;
 
@@ -153,7 +151,6 @@ public:
 	}
 };
 
-}
 }
 isis::image_io::FileFormat *factory()
 {

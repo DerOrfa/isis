@@ -1395,7 +1395,7 @@ const util::Matrix4x4<float> ImageFormat_NiftiSa::nifti2isis{
 // ALIGNED_ANAT=2 coordinates aligned to another file's, or to anatomical "truth".
 // TALAIRACH    3 coordinates aligned to Talairach-Tournoux Atlas; (0,0,0)=AC, etc
 // MNI_152      4 MNI 152 normalized coordinates
-const util::Selection ImageFormat_NiftiSa::formCode({"SCANNER_ANAT", "ALIGNED_ANAT", "TALAIRACH,MNI_152"} );
+const util::Selection ImageFormat_NiftiSa::formCode({"SCANNER_ANAT", "ALIGNED_ANAT", "TALAIRACH","MNI_152"} );
 
 }
 }

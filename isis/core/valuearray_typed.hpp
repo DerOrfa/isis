@@ -68,6 +68,14 @@ public:
 		return *this;
 	}
 
+	std::vector<TypedArray<TYPE>> typed_splice(size_t size) const
+	{
+		std::vector<TypedArray<TYPE>> ret;
+		for(auto slice:ValueArrayNew::splice(size))//for each slice, create a typed one in ret
+			ret.emplace_back(slice,scaling_pair(1,0));//we know its TYPE => no conversion needed => no scaling needed
+		return ret;
+	}
+
 	value_reference operator[](size_t at){
 		LOG_IF(at>=getLength(),Debug,error) << "Index " << at << " is behind the arrays length (" << getLength() << ")";
 		return *(begin()+at);

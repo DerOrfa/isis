@@ -37,9 +37,7 @@
 #include <isis/core/io_factory.hpp>
 #include <isis/core/bytearray.hpp>
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 namespace _internal
 {
@@ -235,7 +233,6 @@ protected:
 	util::istring suffixes(isis::image_io::FileFormat::io_modes modes) const override{return ".orthanc";}
 };
 
-}
 }
 
 isis::image_io::FileFormat *factory()

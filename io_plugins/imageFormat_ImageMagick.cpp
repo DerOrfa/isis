@@ -44,25 +44,25 @@ protected:
 		if(img.monochrome()){
 			if(depth<=8){
 				data::MemChunk<uint8_t> ret(columns,rows,1,1,true);
-				img.write(0,0,columns,rows,"I",Magick::CharPixel,ret.asValueArrayBase().getRawAddress().get());
+				img.write(0,0,columns,rows,"I",Magick::CharPixel,ret.getRawAddress().get());
 				return ret;
 			} else if(depth<=16){
 				data::MemChunk<uint16_t> ret(columns,rows,1,1,true);
-				img.write(0,0,columns,rows,"I",Magick::ShortPixel,ret.asValueArrayBase().getRawAddress().get());
+				img.write(0,0,columns,rows,"I",Magick::ShortPixel,ret.getRawAddress().get());
 				return ret;
 			} else {
 				data::MemChunk<uint32_t> ret(columns,rows,1,1,true);
-				img.write(0,0,columns,rows,"I",Magick::IntegerPixel,ret.asValueArrayBase().getRawAddress().get());
+				img.write(0,0,columns,rows,"I",Magick::IntegerPixel,ret.getRawAddress().get());
 				return ret;
 			}
 		} else {
 			if(depth<=8){
 				data::MemChunk<util::color24> ret(columns,rows,1,1,true);
-				img.write(0,0,columns,rows,"RGB",Magick::CharPixel,ret.asValueArrayBase().getRawAddress().get());
+				img.write(0,0,columns,rows,"RGB",Magick::CharPixel,ret.getRawAddress().get());
 				return ret;
 			} else {
 				data::MemChunk<util::color48> ret(columns,rows,1,1,true);
-				img.write(0,0,columns,rows,"RGB",Magick::ShortPixel,ret.asValueArrayBase().getRawAddress().get());
+				img.write(0,0,columns,rows,"RGB",Magick::ShortPixel,ret.getRawAddress().get());
 				return ret;
 			}
 		}
@@ -70,7 +70,7 @@ protected:
 	}
 	bool normalize(data::Image &img){
 		data::scaling_pair scale;
-		std::pair<util::ValueReference, util::ValueReference> minmax;
+		std::pair<util::ValueNew, util::ValueNew> minmax;
 		
 		const short unsigned int isis_data_type = img.getMajorTypeID();
 		if(img.hasProperty("window/max") && img.hasProperty("window/min")){
@@ -80,17 +80,17 @@ protected:
 			minmax=img.getMinMax();
 
 		switch(isis_data_type){
-		case data::ValueArray<float>::staticID():
-		case data::ValueArray<double>::staticID():{//floating point images need to be between 0 and 1
-			double offset = -minmax.first->as<double>();
-			const double range_max = minmax.second->as<double>() + offset; //allways >=0
+		case util::typeID<float>():
+		case util::typeID<double>():{//floating point images need to be between 0 and 1
+			double offset = -minmax.first.as<double>();
+			const double range_max = minmax.second.as<double>() + offset; //allways >=0
 			const double scale_max =
 				range_max != 0 ? 1 / range_max : std::numeric_limits<double>::max();
 
 			double scale = scale_max ? scale_max : std::numeric_limits<double>::max() ;//get the smaller scaling factor which is not zero so the bigger range will fit into his domain
 			offset *= scale;//calc offset for dst
 			
-			const data::scaling_pair scaling{util::Value<double>(scale), util::Value<double>(offset)};
+			const data::scaling_pair scaling{util::ValueNew(scale), util::ValueNew(offset)};
 		
 			// will make copy if scaling is not 1/0 (image was not already normalized) -- so almost always
 			return img.convertToType(isis_data_type,scaling); 
@@ -98,6 +98,7 @@ protected:
 		default:
 			return img.convertToType(isis_data_type); 
 		}
+		return false;
 	}
 
 public:
@@ -169,31 +170,31 @@ public:
 		img.spliceDownTo(data::sliceDim);
 		std::list<Magick::Image> images;
 		for(const data::Chunk &ch:img.copyChunksToVector(false)){
-			auto data=ch.getValueArrayBase().getRawAddress();
+			auto data=ch.getRawAddress();
 			Magick::Image dst;
 
 			switch(ch.getTypeID()){
-				case data::ValueArray<float>::staticID():
+				case util::typeID<float>():
 					dst=Magick::Image(ch.getDimSize(0),ch.getDimSize(1),"I",Magick::FloatPixel,data.get());
 					break;
-				case data::ValueArray<uint32_t>::staticID():
+				case util::typeID<uint32_t>():
 					dst=Magick::Image(ch.getDimSize(0),ch.getDimSize(1),"I",Magick::IntegerPixel,data.get());
 					break;
-				case data::ValueArray<uint16_t>::staticID():
+				case util::typeID<uint16_t>():
 					dst=Magick::Image(ch.getDimSize(0),ch.getDimSize(1),"I",Magick::ShortPixel,data.get());
 					break;
-				case data::ValueArray<uint8_t>::staticID():
+				case util::typeID<uint8_t>():
 					dst=Magick::Image(ch.getDimSize(0),ch.getDimSize(1),"I",Magick::CharPixel,data.get());
 					break;
-				case data::ValueArray<util::color24>::staticID():
+				case util::typeID<util::color24>():
 					dst=Magick::Image(ch.getDimSize(0),ch.getDimSize(1),"RGB",Magick::CharPixel,data.get());
 					break;
-				case data::ValueArray<util::color48>::staticID():
+				case util::typeID<util::color48>():
 					dst=Magick::Image(ch.getDimSize(0),ch.getDimSize(1),"RGB",Magick::ShortPixel,data.get());
 					break;
 				default:
-					data=data::TypedChunk<double>(ch).getValueArrayBase().getRawAddress();//if type is not here default to double and let ImageMagic decide
-				case data::ValueArray<double>::staticID():
+					data=data::TypedChunk<double>(ch).getRawAddress();//if type is not here default to double and let ImageMagic decide
+				case util::typeID<double>():
 					dst=Magick::Image(ch.getDimSize(0),ch.getDimSize(1),"I",Magick::DoublePixel,data.get());
 					break;
 			}

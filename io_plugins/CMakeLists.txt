@@ -19,7 +19,6 @@ set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR})
 option(ISIS_IOPLUGIN_NIFTI_SA "Enable standalone Nifti-IO plugin" ON)
 option(ISIS_IOPLUGIN_TIFF_SA "Enable standalone TIFF-IO plugin" OFF)
 option(ISIS_IOPLUGIN_ZISRAW "Enable standalone Zeiss Integrated Software RAW plugin" OFF)
-option(ISIS_IOPLUGIN_MEAS "Enable standalone plugin for reading siemens RAW data files" OFF)
 option(ISIS_IOPLUGIN_ORTHANC "Enable standalone plugin for reading siemens RAW data files" OFF)
 option(ISIS_IOPLUGIN_VISTA_SA "Enable standalone Vista-IO plugin" OFF)
 option(ISIS_IOPLUGIN_NULL "Enable Null-IO plugin" OFF)
@@ -30,7 +29,6 @@ option(ISIS_IOPLUGIN_COMP "Enable proxy plugin for compressed data (gz, bzip2 an
 option(ISIS_IOPLUGIN_TAR "Enable proxy plugin for reading tar archives" ON)
 option(ISIS_IOPLUGIN_FDF "Enable plugin for reading fdf files" ON)
 option(ISIS_IOPLUGIN_FLIST "Enable proxy plugin which gets filenames from a file or stdin" ON)
-option(ISIS_IOPLUGIN_SIEMENSTCPIP "Enable plugin for Siemens data coming on TCP Port" OFF)
 
 ############################################################
 # the plugins ...
@@ -53,15 +51,6 @@ if(ISIS_IOPLUGIN_NIFTI_SA)
 	target_link_libraries(isisImageFormat_Nifti_sa ${isis_core_lib} ${isis_math_lib})
 	set(TARGETS ${TARGETS} isisImageFormat_Nifti_sa)
 endif(ISIS_IOPLUGIN_NIFTI_SA)
-
-############################################################
-# meas plugin
-############################################################
-if(ISIS_IOPLUGIN_MEAS)
-	add_library(isisImageFormat_meas SHARED imageFormat_meas.cpp )
-	target_link_libraries(isisImageFormat_meas ${isis_core_lib})
-	set(TARGETS ${TARGETS} isisImageFormat_meas)
-endif(ISIS_IOPLUGIN_MEAS)
 
 ############################################################
 # orthanc plugin
@@ -238,17 +227,6 @@ if(ISIS_IOPLUGIN_DICOM)
 	endif(OPENJPEG_INCLUDE_DIR AND OPENJPEG_INCLUDE_DIR)
 	set(TARGETS ${TARGETS} isisImageFormat_Dicom)
 endif(ISIS_IOPLUGIN_DICOM)
-
-#################################################################################################
-# Siemens TCPIP
-#################################################################################################
-
-if (ISIS_IOPLUGIN_SIEMENSTCPIP)
-	add_library(isisImageFormat_SiemensTcpIp SHARED imageFormat_SiemensTcpIp.cpp)
-	message(STATUS)
-	target_link_libraries(isisImageFormat_SiemensTcpIp ${isis_core_lib})
-	set(TARGETS ${TARGETS} isisImageFormat_SiemensTcpIp)
-endif(ISIS_IOPLUGIN_SIEMENSTCPIP)
 
 ###########################################################################
 # prepare all plugins for installation

@@ -161,7 +161,7 @@ void ImageFormat_VistaSa::sanitize( util::PropertyMap &obj )
 	transformOrTell<uint16_t>( "vista/MPIL_vista/MPIL_repetition_time", "repetitionTime", obj, info );
 
 	if( hasOrTell( "vista/sex", obj, warning ) ) {
-		util::Selection gender( "male,female,other" );
+		util::Selection gender({"male", "female", "other"} );
 		gender.set( obj.getValueAs<std::string>( "vista/sex" ).c_str() );
 
 		if( ( int )gender ) {
@@ -176,7 +176,7 @@ void ImageFormat_VistaSa::sanitize( util::PropertyMap &obj )
 		const auto timeQuery = obj.queryProperty("vista/time");
 
 		if(dateQuery && timeQuery){ // if we have time and date, try to parse it as combined string
-			util::Value<std::string> date_time=dateQuery->as<std::string>()+" "+timeQuery->as<std::string>();
+			util::ValueNew date_time=dateQuery->as<std::string>()+" "+timeQuery->as<std::string>();
 			obj.setValueAs("sequenceStart",date_time.as<util::timestamp>());
 			obj.remove("vista/date");
 			obj.remove("vista/time");
@@ -273,7 +273,7 @@ std::list<data::Chunk> ImageFormat_VistaSa::load( data::ByteArray source, std::l
 		LOG(Debug,info) << "Parsed global properties " << root << " from vista";
 	}
 	
-	data::ValueArray< uint8_t >::iterator data_start = source.begin() + stream.tellg();
+	auto data_start = source.begin() + stream.tellg();
 	LOG(Debug,info) << "Vista data offset is " << stream.tellg();
 
 	std::list<_internal::VistaInputImage> groups;

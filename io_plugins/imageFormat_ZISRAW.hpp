@@ -1,5 +1,4 @@
-#ifndef ZISRAW_HPP
-#define ZISRAW_HPP
+#pragma once
 
 #include <boost/property_tree/ptree.hpp>
 #include <isis/core/io_factory.hpp>
@@ -8,8 +7,7 @@
 #include <memory>
 #include <future>
 
-namespace isis{
-namespace image_io{
+namespace isis::image_io{
 	
 namespace _internal {
 	struct DimensionEntry{
@@ -35,9 +33,9 @@ namespace _internal {
 	
 	boost::property_tree::ptree getXML(data::ByteArray &data,size_t offset,size_t length, std::shared_ptr<std::ofstream> dump_stream=nullptr);
 	
-	template<typename D> data::ValueArray<util::color<D>> color_reshuffle(const data::ValueArray<D> &data){
+	template<typename D> data::TypedArray<util::color<D>> color_reshuffle(const data::TypedArray<D> &data){
 		assert(data.getLength()%3==0);
-		data::ValueArray<util::color<D>> ret(data.getLength()/3);
+		data::TypedArray<util::color<D>> ret(data.getLength()/3);
 		auto src_it=data.begin();
 		for(util::color<D> &dst:ret){
 			dst.b=*src_it;++src_it;
@@ -48,7 +46,7 @@ namespace _internal {
 		return ret;
 	}
 	
-	data::ValueArrayReference reinterpretData(const data::ByteArray &data,int32_t PixelType);
+	data::ValueArrayNew reinterpretData(const data::ByteArray &data, int32_t PixelType);
 	
 	struct bounds{
 		int32_t min=std::numeric_limits<int32_t>::max(),max=std::numeric_limits<int32_t>::min();
@@ -99,7 +97,7 @@ class ImageFormat_ZISRAW : public FileFormat{
 		data::ByteArray image_data;
 		static data::Chunk jxrRead(size_t xsize,size_t ysize,isis::data::ByteArray image_data,unsigned short isis_type,unsigned short pixel_size);
 	public:
-		SubBlock(data::ByteArray &source, const size_t offset, std::shared_ptr<std::ofstream> dump_stream);
+		SubBlock(data::ByteArray &source, size_t offset, std::shared_ptr<std::ofstream> dump_stream);
 		static std::map<std::string,_internal::bounds> getBoundaries(const std::list<SubBlock> &segments);
 	
 		_internal::DirectoryEntryDV DirectoryEntry;
@@ -113,7 +111,7 @@ class ImageFormat_ZISRAW : public FileFormat{
 	class Directory:public Segment{
 	public:
 		std::vector<_internal::DirectoryEntryDV> entries;
-		Directory(data::ByteArray &source, const size_t offset);
+		Directory(data::ByteArray &source, size_t offset);
 	};
 	data::Chunk transferFromMosaic(std::list<SubBlock> segments,unsigned short,std::shared_ptr<util::ProgressFeedback> feedback);
 public:
@@ -135,6 +133,4 @@ public:
 	}
 };
 
-}}
-
-#endif //ZISRAW_HPP
+}
