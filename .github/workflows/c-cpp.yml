@@ -17,6 +17,6 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Debug -DISIS_IOPLUGIN_FDF=off -DBUILD_TESTING=on
+        cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=on
     - name: test
       run: make test

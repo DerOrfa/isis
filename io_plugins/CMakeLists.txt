@@ -27,7 +27,7 @@ option(ISIS_IOPLUGIN_IMAGEMAGIC "Enable plugin for ImageMagic based IO" OFF)
 option(ISIS_IOPLUGIN_DICOM "Enable Dicom-IO plugin" OFF)
 option(ISIS_IOPLUGIN_COMP "Enable proxy plugin for compressed data (gz, bzip2 and Z)" ON)
 option(ISIS_IOPLUGIN_TAR "Enable proxy plugin for reading tar archives" ON)
-option(ISIS_IOPLUGIN_FDF "Enable plugin for reading fdf files" ON)
+option(ISIS_IOPLUGIN_FDF "Enable plugin for reading fdf files" OFF)
 option(ISIS_IOPLUGIN_FLIST "Enable proxy plugin which gets filenames from a file or stdin" ON)
 
 ############################################################
