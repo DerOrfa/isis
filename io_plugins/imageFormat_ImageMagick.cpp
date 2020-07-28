@@ -70,7 +70,7 @@ protected:
 	}
 	bool normalize(data::Image &img){
 		data::scaling_pair scale;
-		std::pair<util::ValueNew, util::ValueNew> minmax;
+		std::pair<util::Value, util::Value> minmax;
 		
 		const short unsigned int isis_data_type = img.getMajorTypeID();
 		if(img.hasProperty("window/max") && img.hasProperty("window/min")){
@@ -90,7 +90,7 @@ protected:
 			double scale = scale_max ? scale_max : std::numeric_limits<double>::max() ;//get the smaller scaling factor which is not zero so the bigger range will fit into his domain
 			offset *= scale;//calc offset for dst
 			
-			const data::scaling_pair scaling{util::ValueNew(scale), util::ValueNew(offset)};
+			const data::scaling_pair scaling{util::Value(scale), util::Value(offset)};
 		
 			// will make copy if scaling is not 1/0 (image was not already normalized) -- so almost always
 			return img.convertToType(isis_data_type,scaling); 

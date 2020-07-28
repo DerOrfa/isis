@@ -2,7 +2,7 @@
 #include "valuearray_converter.hpp"
 #include "endianess.hpp"
 
-isis::data::_internal::DelProxy::DelProxy(const isis::data::ValueArrayNew& master)
+isis::data::_internal::DelProxy::DelProxy(const isis::data::ValueArray& master)
 :std::shared_ptr<const void>(master.getRawAddress())
 {
 	assert(get());
@@ -17,7 +17,7 @@ void isis::data::_internal::DelProxy::operator()(const void* at)
 	this->reset();//actually not needed, but we keep it here to keep obfuscation low
 }
 
-std::shared_ptr<const void> isis::data::ValueArrayNew::getRawAddress(size_t offset) const{
+std::shared_ptr<const void> isis::data::ValueArray::getRawAddress(size_t offset) const{
 	const std::shared_ptr<const void> b_ptr = std::visit(
 	    [](const auto &p){return std::static_pointer_cast<const void>(p);},
 	    static_cast<const ArrayTypes&>(*this)
@@ -30,16 +30,16 @@ std::shared_ptr<const void> isis::data::ValueArrayNew::getRawAddress(size_t offs
 		return b_ptr;
 }
 
-std::shared_ptr<void> isis::data::ValueArrayNew::getRawAddress(size_t offset) { // use the const version and cast away the const
-	const std::shared_ptr<const void> ptr=const_cast<const ValueArrayNew*>(this)->getRawAddress( offset );
+std::shared_ptr<void> isis::data::ValueArray::getRawAddress(size_t offset) { // use the const version and cast away the const
+	const std::shared_ptr<const void> ptr=const_cast<const ValueArray*>(this)->getRawAddress(offset );
 	return std::const_pointer_cast<void>( ptr );
 }
 
-std::string isis::data::ValueArrayNew::typeName() const{
+std::string isis::data::ValueArray::typeName() const{
 	return std::visit(_internal::arrayname_visitor(),static_cast<const ArrayTypes&>(*this));
 }
 
-isis::data::ValueArrayNew::iterator isis::data::ValueArrayNew::begin() {
+isis::data::ValueArray::iterator isis::data::ValueArray::begin() {
 	return visit([](auto ptr)->iterator{
 		typedef typename decltype(ptr)::element_type element_type;
 		return iterator(
@@ -48,25 +48,25 @@ isis::data::ValueArrayNew::iterator isis::data::ValueArrayNew::begin() {
 		);
 	});
 }
-isis::data::ValueArrayNew::const_iterator isis::data::ValueArrayNew::begin() const {
-	return const_cast<ValueArrayNew*>(this)->begin();
+isis::data::ValueArray::const_iterator isis::data::ValueArray::begin() const {
+	return const_cast<ValueArray*>(this)->begin();
 }
 
-isis::data::ValueArrayNew::iterator isis::data::ValueArrayNew::end() {
+isis::data::ValueArray::iterator isis::data::ValueArray::end() {
 	return begin()+m_length;
 }
 
-isis::data::ValueArrayNew::const_iterator isis::data::ValueArrayNew::end() const {
+isis::data::ValueArray::const_iterator isis::data::ValueArray::end() const {
 	return begin()+m_length;
 }
 
-std::string isis::data::ValueArrayNew::toString(bool labeled) const {
+std::string isis::data::ValueArray::toString(bool labeled) const {
 	std::stringstream ret;
 	ret << *this;
 	return ret.str();
 }
 
-std::vector<isis::data::ValueArrayNew> isis::data::ValueArrayNew::splice(size_t size) const{
+std::vector<isis::data::ValueArray> isis::data::ValueArray::splice(size_t size) const{
 	if ( size >= getLength() ) {
 		LOG( Debug, warning )
 		        << "splicing data of the size " << getLength() << " up into blocks of the size " << size << " is kind of useless ...";
@@ -79,13 +79,13 @@ std::vector<isis::data::ValueArrayNew> isis::data::ValueArrayNew::splice(size_t 
 	_internal::DelProxy proxy( *this );
 
 	auto generator = [&](auto ptr){
-		std::vector<ValueArrayNew> ret( splices );
+		std::vector<ValueArray> ret(splices );
 
 		for ( size_t i = 0; i < fullSplices; i++ )
-			ret[i]=ValueArrayNew( ptr.get() + i * size, size, proxy );
+			ret[i]=ValueArray(ptr.get() + i * size, size, proxy );
 
 		if ( lastSize )
-			ret.back()= ValueArrayNew( ptr.get() + fullSplices * size, lastSize, proxy );
+			ret.back()= ValueArray(ptr.get() + fullSplices * size, lastSize, proxy );
 
 		return ret;
 	};
@@ -93,10 +93,10 @@ std::vector<isis::data::ValueArrayNew> isis::data::ValueArrayNew::splice(size_t 
 	return std::visit(generator,static_cast<const ArrayTypes&>(*this));
 }
 
-isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo(unsigned short typeID) const {
+isis::data::scaling_pair isis::data::ValueArray::getScalingTo(unsigned short typeID) const {
 	return getScalingTo(typeID, getMinMax());
 }
-isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo( unsigned short typeID, const std::pair<util::ValueNew, util::ValueNew> &minmax )const
+isis::data::scaling_pair isis::data::ValueArray::getScalingTo(unsigned short typeID, const std::pair<util::Value, util::Value> &minmax )const
 {
 	const Converter &conv = getConverterTo( typeID );
 
@@ -109,11 +109,11 @@ isis::data::scaling_pair isis::data::ValueArrayNew::getScalingTo( unsigned short
 	}
 }
 
-std::size_t isis::data::ValueArrayNew::bytesPerElem() const{
+std::size_t isis::data::ValueArray::bytesPerElem() const{
 	return visit([](auto ptr){return sizeof(typename decltype(ptr)::element_type);});
 }
 
-void isis::data::ValueArrayNew::endianSwap() {
+void isis::data::ValueArray::endianSwap() {
 	const size_t len=m_length;
 	if(bytesPerElem()>1){
 		std::visit([len](auto ptr){
@@ -123,10 +123,10 @@ void isis::data::ValueArrayNew::endianSwap() {
 
 }
 
-std::pair<isis::util::ValueNew, isis::util::ValueNew> isis::data::ValueArrayNew::getMinMax() const{
+std::pair<isis::util::Value, isis::util::Value> isis::data::ValueArray::getMinMax() const{
 	if ( getLength() == 0 ) {
 		LOG( Debug, error ) << "Skipping computation of min/max on an empty ValueArray";
-		return std::pair<util::ValueNew, util::ValueNew>();
+		return std::pair<util::Value, util::Value>();
 	} else {
 		_internal::getMinMaxVisitor visitor(getLength());
 		std::visit(visitor,static_cast<const ArrayTypes&>(*this));
@@ -134,19 +134,19 @@ std::pair<isis::util::ValueNew, isis::util::ValueNew> isis::data::ValueArrayNew:
 	}
 }
 
-const isis::data::_internal::ValueArrayConverterMap & isis::data::ValueArrayNew::converters(){
+const isis::data::_internal::ValueArrayConverterMap & isis::data::ValueArray::converters(){
 	static const _internal::ValueArrayConverterMap map;
 	return map;
 }
 
-isis::data::ValueArrayNew::ValueArrayNew():m_length(0)
+isis::data::ValueArray::ValueArray(): m_length(0)
 {}
 
-bool isis::data::ValueArrayNew::isValid() const{
+bool isis::data::ValueArray::isValid() const{
 	return index()!=std::variant_npos && std::visit([](auto ptr){return (bool)ptr;}, static_cast<const ArrayTypes&>(*this));
 }
 
-isis::data::ValueArrayNew isis::data::ValueArrayNew::copyByID(size_t ID, const scaling_pair &scaling) const
+isis::data::ValueArray isis::data::ValueArray::copyByID(size_t ID, const scaling_pair &scaling) const
 {
 	const Converter &conv = getConverterTo( ID );
 
@@ -154,10 +154,10 @@ isis::data::ValueArrayNew isis::data::ValueArrayNew::copyByID(size_t ID, const s
 		return conv->generate( *this, getScaling( scaling, ID ) );
 	} else {
 		LOG( Runtime, error ) << "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true )[ID];
-		return ValueArrayNew(); // return an invalid array
+		return ValueArray(); // return an invalid array
 	}
 }
-bool isis::data::ValueArrayNew::copyTo(isis::data::ValueArrayNew& dst, isis::data::scaling_pair scaling) const
+bool isis::data::ValueArray::copyTo(isis::data::ValueArray& dst, isis::data::scaling_pair scaling) const
 {
 	const unsigned short dID = dst.getTypeID();
 	const Converter &conv = getConverterTo( dID );
@@ -171,7 +171,7 @@ bool isis::data::ValueArrayNew::copyTo(isis::data::ValueArrayNew& dst, isis::dat
 	}
 }
 
-void isis::data::ValueArrayNew::copyRange(std::size_t start, std::size_t end, isis::data::ValueArrayNew& dst, std::size_t dst_start) const
+void isis::data::ValueArray::copyRange(std::size_t start, std::size_t end, isis::data::ValueArray& dst, std::size_t dst_start) const
 {
 	assert( start <= end );
 	const size_t len = end - start + 1;
@@ -195,14 +195,14 @@ void isis::data::ValueArrayNew::copyRange(std::size_t start, std::size_t end, is
 		memcpy( dest + doffset, src + soffset, blength );
 	}
 }
-std::size_t isis::data::ValueArrayNew::getTypeID() const{
+std::size_t isis::data::ValueArray::getTypeID() const{
 	return std::visit(
 	    [](auto ptr){return util::typeID<typename decltype(ptr)::element_type>();},
 	    static_cast<const ArrayTypes&>(*this)
 	);
 }
 
-isis::data::ValueArrayNew isis::data::ValueArrayNew::convertByID(unsigned short ID, scaling_pair scaling) const{
+isis::data::ValueArray isis::data::ValueArray::convertByID(unsigned short ID, scaling_pair scaling) const{
 	scaling = getScaling(scaling, ID);
 
 	assert(scaling.valid );
@@ -213,11 +213,11 @@ isis::data::ValueArrayNew isis::data::ValueArrayNew::convertByID(unsigned short 
 	}
 }
 
-isis::data::ValueArrayNew isis::data::ValueArrayNew::createByID(unsigned short ID, std::size_t len)
+isis::data::ValueArray isis::data::ValueArray::createByID(unsigned short ID, std::size_t len)
 {
 	const _internal::ValueArrayConverterMap::const_iterator f1 = converters().find( ID );
 	_internal::ValueArrayConverterMap::mapped_type::const_iterator f2;
-	ValueArrayNew ret;
+	ValueArray ret;
 	// try to get a converter to convert the requested type into itself - they're there for all known types
 	if( f1 != converters().end() && ( f2 = f1->second.find( ID ) ) != f1->second.end() ) {
 		const ValueArrayConverterBase &conv = *( f2->second );
@@ -229,17 +229,17 @@ isis::data::ValueArrayNew isis::data::ValueArrayNew::createByID(unsigned short I
 	return ret;
 }
 
-std::size_t isis::data::ValueArrayNew::useCount() const
+std::size_t isis::data::ValueArray::useCount() const
 {
 	return std::visit([](auto ptr){return ptr.use_count();},static_cast<const ArrayTypes&>(*this));
 }
 
-isis::data::ValueArrayNew isis::data::ValueArrayNew::cloneToNew(std::size_t length) const
+isis::data::ValueArray isis::data::ValueArray::cloneToNew(std::size_t length) const
 {
 	return createByID(getTypeID(),length);
 }
 
-std::size_t isis::data::ValueArrayNew::compare(std::size_t start, std::size_t end, const isis::data::ValueArrayNew& dst, std::size_t dst_start) const
+std::size_t isis::data::ValueArray::compare(std::size_t start, std::size_t end, const isis::data::ValueArray& dst, std::size_t dst_start) const
 {
 	assert( start <= end );
 	size_t ret = 0;
@@ -272,7 +272,7 @@ std::size_t isis::data::ValueArrayNew::compare(std::size_t start, std::size_t en
 	return ret;
 }
 
-const isis::data::ValueArrayNew::Converter & isis::data::ValueArrayNew::getConverterFromTo(unsigned short fromID, unsigned short toID)
+const isis::data::ValueArray::Converter & isis::data::ValueArray::getConverterFromTo(unsigned short fromID, unsigned short toID)
 {
 	const _internal::ValueArrayConverterMap::const_iterator f1 = converters().find( fromID );
 	LOG_IF( f1 == converters().end(), Debug, error ) << "There is no known conversion from " << util::getTypeMap()[fromID];
@@ -281,17 +281,17 @@ const isis::data::ValueArrayNew::Converter & isis::data::ValueArrayNew::getConve
 	return f2->second;
 }
 
-const isis::data::ValueArrayNew::Converter & isis::data::ValueArrayNew::getConverterTo(unsigned short ID) const
+const isis::data::ValueArray::Converter & isis::data::ValueArray::getConverterTo(unsigned short ID) const
 {
 	return getConverterFromTo(getTypeID(),ID);
 }
 
-std::size_t isis::data::ValueArrayNew::getLength() const
+std::size_t isis::data::ValueArray::getLength() const
 {
 	return m_length;
 }
 
-bool isis::data::ValueArrayNew::isFloat() const
+bool isis::data::ValueArray::isFloat() const
 {
 	return std::visit(
 	    [](auto ptr){
@@ -300,7 +300,7 @@ bool isis::data::ValueArrayNew::isFloat() const
 	);
 }
 
-bool isis::data::ValueArrayNew::isInteger() const
+bool isis::data::ValueArray::isInteger() const
 {
 	return std::visit(
 	    [](auto ptr){

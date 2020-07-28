@@ -709,7 +709,7 @@ std::ostream &PropertyMap::print( std::ostream &out, bool label )const
 	return out;
 }
 
-PropertyValue& PropertyMap::setValue(const PropPath &path, const ValueNew &val, const std::optional<size_t> &at){
+PropertyValue& PropertyMap::setValue(const PropPath &path, const Value &val, const std::optional<size_t> &at){
 	PropertyValue &ret = touchProperty( path );
 	const auto index=at.value_or(0);
 

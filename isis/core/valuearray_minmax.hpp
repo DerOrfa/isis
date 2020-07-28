@@ -54,7 +54,7 @@ template<> std::pair<int32_t, int32_t> calcMinMax<int32_t, 1>( const int32_t *da
 
 struct getMinMaxVisitor { 
 	getMinMaxVisitor(size_t len):length(len){}
-	std::pair<util::ValueNew,util::ValueNew> minmax;
+	std::pair<util::Value, util::Value> minmax;
 	size_t length;
 	// fallback for unsupported types
 	template<typename T> std::enable_if_t<!std::is_arithmetic_v<T>> operator()( const std::shared_ptr<T> &/*ref*/ ) {

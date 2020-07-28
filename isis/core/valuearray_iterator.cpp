@@ -15,22 +15,22 @@ template<> GenericValueIterator<false>::reference GenericValueIterator<false>::o
 }
 
 ConstValueAdapter::ConstValueAdapter( const uint8_t *const _p, Getter _getValueFunc ):getter(_getValueFunc), p( _p ) {}
-bool ConstValueAdapter::operator==( const util::ValueNew &val )const {return getter(p).eq( val );}
-bool ConstValueAdapter::operator!=( const util::ValueNew &val )const {return !operator==( val );}
-bool ConstValueAdapter::operator==( const ConstValueAdapter &val )const {return getter(p).eq( util::ValueNew(val) );}
+bool ConstValueAdapter::operator==( const util::Value &val )const {return getter(p).eq(val );}
+bool ConstValueAdapter::operator!=( const util::Value &val )const {return !operator==(val );}
+bool ConstValueAdapter::operator==( const ConstValueAdapter &val )const {return getter(p).eq( util::Value(val) );}
 bool ConstValueAdapter::operator!=( const ConstValueAdapter &val )const {return !operator==( val );}
 
-bool ConstValueAdapter::operator<( const util::ValueNew &val )const {return getter(p).lt( val );}
-bool ConstValueAdapter::operator>( const util::ValueNew &val )const {return getter(p).gt( val );}
-bool ConstValueAdapter::operator<( const ConstValueAdapter &val )const {return getter(p).lt( util::ValueNew(val) );}
-bool ConstValueAdapter::operator>( const ConstValueAdapter &val )const {return getter(p).gt( util::ValueNew(val) );}
+bool ConstValueAdapter::operator<( const util::Value &val )const {return getter(p).lt(val );}
+bool ConstValueAdapter::operator>( const util::Value &val )const {return getter(p).gt(val );}
+bool ConstValueAdapter::operator<( const ConstValueAdapter &val )const {return getter(p).lt( util::Value(val) );}
+bool ConstValueAdapter::operator>( const ConstValueAdapter &val )const {return getter(p).gt( util::Value(val) );}
 
-const std::unique_ptr<util::ValueNew> ConstValueAdapter::operator->() const{return std::make_unique<util::ValueNew>(getter(p));}
+const std::unique_ptr<util::Value> ConstValueAdapter::operator->() const{return std::make_unique<util::Value>(getter(p));}
 const std::string ConstValueAdapter::toString( bool label ) const{ return getter(p).toString(label);}
 
 WritingValueAdapter::WritingValueAdapter( uint8_t*const _p, ConstValueAdapter::Getter _getValueFunc, ConstValueAdapter::Setter _setValueFunc, size_t _byteSize )
 : ConstValueAdapter( _p, _getValueFunc ), setValueFunc( _setValueFunc ), byteSize(_byteSize) {}
-WritingValueAdapter WritingValueAdapter::operator=( const util::ValueNew& val )
+WritingValueAdapter WritingValueAdapter::operator=( const util::Value& val )
 {
 	assert( setValueFunc );
 	setValueFunc( const_cast<uint8_t * const>( p ), val );

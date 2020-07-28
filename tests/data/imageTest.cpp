@@ -651,13 +651,13 @@ BOOST_AUTO_TEST_CASE ( image_iterator_for_test )
 
 	//iterate through image and get values as references (will implicitely make ValueReference from the Adapter
 	// Note: ValueBase cannot be used, as it cannot exist on its own
-	for(util::ValueNew v:img){
+	for(util::Value v:img){
 		v_sum+=v.as<float>();
 	}
 	BOOST_CHECK_EQUAL(v_sum,42*3);
 
 	v_sum=0;
-	//Adapter can also just act as ValueNew through "->"-Magic
+	//Adapter can also just act as Value through "->"-Magic
 	for(auto v:img){
 		v_sum+=v->as<float>();
 	}

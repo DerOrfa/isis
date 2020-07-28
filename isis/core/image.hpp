@@ -46,8 +46,8 @@ public:
 	void setIndexingDim ( dimensions d = rowDim );
 	enum orientation {axial, reversed_axial, sagittal, reversed_sagittal, coronal, reversed_coronal};
 
-	typedef _internal::ImageIteratorTemplate<ValueArrayNew,false> iterator;
-	typedef _internal::ImageIteratorTemplate<ValueArrayNew,true> const_iterator;
+	typedef _internal::ImageIteratorTemplate<ValueArray, false> iterator;
+	typedef _internal::ImageIteratorTemplate<ValueArray, true> const_iterator;
 	typedef iterator::reference reference;
 	typedef const_iterator::reference const_reference;
 	static const char *neededProperties;
@@ -120,7 +120,7 @@ protected:
 	Chunk &chunkAt ( size_t at );
 	/// Creates an empty Image object.
 	Image();
-	std::pair<ValueArrayNew,ValueArrayNew> getChunksMinMax()const;
+	std::pair<ValueArray, ValueArray> getChunksMinMax()const;
 public:
 	/**
 	 * Copy constructor.
@@ -249,8 +249,8 @@ public:
 		return data.get()+index.second;
 	}
 
-	const util::ValueNew getVoxelValue ( size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 ) const;
-	void setVoxelValue ( const util::ValueNew &val, size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 );
+	const util::Value getVoxelValue (size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 ) const;
+	void setVoxelValue (const util::Value &val, size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 );
 
 	iterator begin();
 	iterator end();
@@ -433,7 +433,7 @@ public:
 	}
 
 	/// Get the maximum and the minimum voxel value of the image as a pair of ValueReference-objects.
-	std::pair<util::ValueNew, util::ValueNew> getMinMax(bool unify=true) const;
+	std::pair<util::Value, util::Value> getMinMax(bool unify=true) const;
 
 	/**
 	 * Compares the voxel-values of this image to the given.
@@ -502,14 +502,14 @@ public:
 	 * \note This is a deep copy, no data will be shared between the Image and the ValueArray. It will waste a lot of memory, use it wisely.
 	 * \returns a ValueArray containing the voxeldata of the Image (but not its Properties)
 	 */
-	ValueArrayNew copyAsValueArray() const;
+	ValueArray copyAsValueArray() const;
 	/**
 	 * Copy all voxel data of the image into an existing ValueArray using its type.
 	 * If neccessary a conversion into the datatype of the target is done using min/max of the image.
 	 * \param dst ValueArray to copy into
 	 * \param scaling the scaling to be used when converting the data (will be determined automatically if not given)
 	 */
-	void copyToValueArray ( data::ValueArrayNew &dst, scaling_pair scaling = scaling_pair() ) const;
+	void copyToValueArray (data::ValueArray &dst, scaling_pair scaling = scaling_pair() ) const;
 
 	/**
 	 * Create a new Image of consisting of deep copied chunks.
@@ -654,7 +654,7 @@ public:
 		std::vector<TypedArray<T>> buff(lookup.size());
 		for(size_t i=0;i<lookup.size();i++){
 			assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
-			buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArrayNew (if its actually T)
+			buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArray (if its actually T)
 		}
 		return iterator( buff );
 	}
@@ -668,7 +668,7 @@ public:
 		std::vector<TypedArray<T>> buff(lookup.size());
 		for(size_t i=0;i<lookup.size();i++){
 			assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
-			buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArrayNew (if its actually T)
+			buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArray (if its actually T)
 			assert((float*)buff[i].begin()==lookup[i]->template beginTyped<T>()); //make sure it was a cheap copy
 		}
 		return const_iterator( buff );

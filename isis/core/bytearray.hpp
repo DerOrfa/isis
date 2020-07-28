@@ -79,7 +79,7 @@ public:
 			return data::TypedArray<T>( ptr, len ); // return a cheap copy
 		} else { // flip bytes into a new ValueArray
 			LOG( Debug, verbose_info ) << "Byte swapping " <<  util::typeName<T>() << " for endianess";
-			TypedArray<T> ret=ValueArrayNew::make<T>( len );
+			TypedArray<T> ret=ValueArray::make<T>(len );
 			data::endianSwapArray( ptr.get(), ptr.get() + std::min( len, getLength() / sizeof( T ) ), ret.begin() );
 			return ret;
 		}
@@ -95,7 +95,7 @@ public:
 	 * \param len the requested length of the resulting ValueArray in elements (if that will go behind the end of the file, a warning will be issued).
 	 * \param swap_endianess if endianess should be swapped when reading data file (ignored when used on files opened for writing)
 	 */
-	data::ValueArrayNew atByID( unsigned short ID, size_t offset, size_t len = 0, bool swap_endianess = false );
+	data::ValueArray atByID(unsigned short ID, size_t offset, size_t len = 0, bool swap_endianess = false );
 };
 }
 }

@@ -114,11 +114,11 @@ bool DicomElement::next(size_t _position){
 const uint8_t *DicomElement::data()const{
 	return &source[position+2+2+2+2]; //offset by group-id, element-id, vr and length
 }
-std::optional<util::ValueNew> DicomElement::getValue(){
+std::optional<util::Value> DicomElement::getValue(){
 	return getValue(getVR());
 }
-std::optional<util::ValueNew> DicomElement::getValue(std::string vr){
-	std::optional<util::ValueNew> ret;
+std::optional<util::Value> DicomElement::getValue(std::string vr){
+	std::optional<util::Value> ret;
 	auto found_generator=generator_map.find(vr);
 	if(found_generator!=generator_map.end()){
 		auto generator=found_generator->second;;
@@ -302,18 +302,18 @@ bool ImageFormat_Dicom::parseCSAValueList( const util::slist &val, const util::P
 }
 
 namespace _internal{
-    template<typename T, typename LT> util::ValueNew list_generate(const DicomElement *e){
+    template<typename T, typename LT> util::Value list_generate(const DicomElement *e){
 	    size_t mult=e->getLength()/sizeof(T);
 		assert(float(mult)*sizeof(T) == e->getLength());
 		auto wrap=e->dataAs<T>(mult);
 		return std::list<LT>(wrap.begin(),wrap.end());
     }
-    template<typename T> util::ValueNew scalar_generate(const DicomElement *e){
+    template<typename T> util::Value scalar_generate(const DicomElement *e){
 	    assert(e->getLength()==sizeof(T));
 		T *v=(T*)e->data();
 		return e->endian_swap() ? data::endianSwap(*v):*v;
     }
-    std::optional<util::ValueNew> string_generate(const DicomElement *e){
+    std::optional<util::Value> string_generate(const DicomElement *e){
 		//@todo http://dicom.nema.org/Dicom/2013/output/chtml/part05/sect_6.2.html#note_6.1-2-1
 		if(e->getLength()){
 			const uint8_t *start=e->data();
@@ -328,9 +328,9 @@ namespace _internal{
 			else
 				return ret_s;
 		}
-		return std::optional<util::ValueNew>();
+		return std::optional<util::Value>();
 	}
-	std::optional<util::ValueNew> bytes_as_strings(const DicomElement *e){
+	std::optional<util::Value> bytes_as_strings(const DicomElement *e){
 		//@todo http://dicom.nema.org/Dicom/2013/output/chtml/part05/sect_6.2.html#note_6.1-2-1
 		if(e->getLength()){
 			const uint8_t *pos=e->data();
@@ -349,10 +349,10 @@ namespace _internal{
 			else
 				return ret_list.front();
 		}
-		return std::optional<util::ValueNew>();
+		return std::optional<util::Value>();
 	}
-	std::optional<util::ValueNew> parse_AS(const _internal::DicomElement *e){
-		std::optional<util::ValueNew> ret;
+	std::optional<util::Value> parse_AS(const _internal::DicomElement *e){
+		std::optional<util::Value> ret;
 		uint16_t duration = 0;
 		auto as=string_generate(e);
 		assert(as && as->typeID()==util::typeID<std::string>());//AS must always be one string

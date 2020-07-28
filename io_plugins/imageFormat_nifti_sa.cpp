@@ -65,7 +65,7 @@ void WriteOp::operator()(const data::Chunk &ch, util::vector4<size_t> posInImage
 		LOG( Runtime, error ) << "Failed to copy chunk at " << posInImage;
 	}
 }
-void WriteOp::applyFlipToData ( data::ValueArrayNew &dat, util::vector4< size_t > chunkSize )
+void WriteOp::applyFlipToData (data::ValueArray &dat, util::vector4<size_t > chunkSize )
 {
 	if( !flip_list.empty() ) {
 		// wrap the copied part back into a Chunk to flip it
@@ -109,7 +109,7 @@ public:
 	bool doCopy( const data::Chunk &ch, util::vector4<size_t> posInImage )override {
 		applyFlipToCoords( posInImage, ( data::dimensions )ch.getRelevantDims() );
 		size_t offset = m_voxelstart + getLinearIndex( posInImage ) * m_bpv / 8;
-		data::ValueArrayNew out_data = m_out.atByID( m_targetId, offset, ch.getVolume() );
+		data::ValueArray out_data = m_out.atByID(m_targetId, offset, ch.getVolume() );
 		ch.copyTo( out_data, m_scale );
 
 		applyFlipToData( out_data, ch.getSizeAsVector() );
@@ -763,7 +763,7 @@ std::list< data::Chunk > ImageFormat_NiftiSa::load(
 	header->dim[0] = tDims;
 
 	std::copy(header->dim + 1, header->dim + 1 + 4, std::begin(size) );
-	data::ValueArrayNew data_src;
+	data::ValueArray data_src;
 
 	if( header->datatype == NIFTI_TYPE_BINARY ) { // image is binary encoded - needs special decoding
 		data_src = bitRead( source.at<uint8_t>( header->vox_offset ), util::product(size) );

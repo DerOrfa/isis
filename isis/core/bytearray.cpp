@@ -24,7 +24,7 @@ namespace data{
 
 namespace _internal {
 
-typedef std::function<data::ValueArrayNew(data::ByteArray &, size_t, size_t, bool )> generator_fn;
+typedef std::function<data::ValueArray(data::ByteArray &, size_t, size_t, bool )> generator_fn;
 
 template<int ID=std::variant_size_v<ArrayTypes>-1>
 void make_generators(std::map<unsigned short, generator_fn>& map) { //The ID here is the index in ArrayTypes, NOT the isis-typeID
@@ -47,11 +47,11 @@ struct GeneratorMap: public std::map<unsigned short, generator_fn> {
 
 }
 
-ByteArray::ByteArray(const std::shared_ptr<uint8_t>& ptr, size_t length):TypedArray<uint8_t>(ValueArrayNew(ptr,length)){}
+ByteArray::ByteArray(const std::shared_ptr<uint8_t>& ptr, size_t length):TypedArray<uint8_t>(ValueArray(ptr, length)){}
 ByteArray::ByteArray(size_t length):TypedArray<uint8_t>(make<uint8_t>(length)){}
 ByteArray::ByteArray(const TypedArray<uint8_t> &ref):TypedArray<uint8_t>(ref){}
 
-ValueArrayNew ByteArray::atByID(unsigned short ID, std::size_t offset, std::size_t len, bool swap_endianess)
+ValueArray ByteArray::atByID(unsigned short ID, std::size_t offset, std::size_t len, bool swap_endianess)
 {
 	LOG_IF(!isValid(), Debug, error ) << "There is no mapped data for this ByteArray - I'm very likely gonna crash soon ..";
 	_internal::GeneratorMap &map = util::Singletons::get<_internal::GeneratorMap, 0>();

@@ -49,7 +49,7 @@ boost::property_tree::ptree getXML(data::ByteArray &data, size_t offset, size_t 
 	return ret;
 }
 
-data::ValueArrayNew reinterpretData(const data::ByteArray &data, int32_t PixelType){
+data::ValueArray reinterpretData(const data::ByteArray &data, int32_t PixelType){
 	switch(PixelType){
 	case 0://Gray8 - no reinterpretation needed
 		return data;break;
@@ -70,7 +70,7 @@ data::ValueArrayNew reinterpretData(const data::ByteArray &data, int32_t PixelTy
 	default:
 		LOG(Runtime,error) << "Pixel Type " << PixelType << " not implemented";break;
 	}
-	return data::ValueArrayNew();
+	return data::ValueArray();
 }
 std::map<char,DimensionEntry> DirectoryEntryDV::getDimsMap()const{
 	std::map<char,DimensionEntry> ret;
@@ -418,7 +418,7 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 					
 					const auto center=pyramid.xml_data.get_optional<std::string>("CenterPosition");
 					if(center){
-						const auto fCenter=util::ValueNew(*center).as<util::fvector3>();
+						const auto fCenter=util::Value(*center).as<util::fvector3>();
 						const util::fvector3 origin{
 							fCenter[0]-size[0]/2,
 							fCenter[1]-size[1]/2,

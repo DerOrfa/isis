@@ -1,7 +1,7 @@
 #include "details_fft.hxx"
 
 
-void isis::math::_internal::halfshift(isis::data::ValueArrayNew &src){
+void isis::math::_internal::halfshift(isis::data::ValueArray &src){
 	//shift backwards
 	assert(src.getLength()%2==0);
 	const size_t shiftsize=src.getLength()/2*src.bytesPerElem();
@@ -14,18 +14,18 @@ void isis::math::_internal::halfshift(isis::data::ValueArrayNew &src){
 }
 
 void isis::math::_internal::halfshift(isis::data::Chunk &data){
-	isis::data::ValueArrayNew &array=data;
+	isis::data::ValueArray &array=data;
 	for(size_t rank=0;rank<data.getRelevantDims();rank++){
 		std::array<size_t,4> dummy_index={0,0,0,0};
 		dummy_index[rank]=1;
 		//spliceAt into lines of dimsize elements
 		size_t stride=data.getLinearIndex(dummy_index);
-		std::vector< data::ValueArrayNew > lines= 
+		std::vector< data::ValueArray > lines=
 			(rank<data.getRelevantDims()-1) ? //do not call spliceAt for the top rank (full volume)
 				array.splice(data.getDimSize(rank)*stride):
-				std::vector<data::ValueArrayNew>(1,array);
+				std::vector<data::ValueArray>(1, array);
 
-		for(data::ValueArrayNew line:lines){
+		for(data::ValueArray line:lines){
 			halfshift(line);
 		}
 	}

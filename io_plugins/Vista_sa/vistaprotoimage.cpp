@@ -30,12 +30,12 @@ namespace image_io
 namespace _internal
 {
 	
-template<typename T> data::ValueArrayNew reader( data::ByteArray data, size_t offset, size_t size )
+template<typename T> data::ValueArray reader(data::ByteArray data, size_t offset, size_t size )
 {
 	return data.atByID( util::typeID<T>(), offset, size );
 }
 
-template<> data::ValueArrayNew reader<bool>( data::ByteArray data, size_t offset, size_t size )
+template<> data::ValueArray reader<bool>(data::ByteArray data, size_t offset, size_t size )
 {
 	return reader< uint8_t >( data, offset, size ).as<bool>(); //@todo check if scaling is computed
 }
@@ -92,7 +92,7 @@ bool VistaInputImage::add( util::PropertyMap props )
 		<< "Don't know what to do with nframes="<< vistaTree.queryProperty( "nframes" ) 
 		<< " that differs from nbands=" << vistaTree.queryProperty( "nbands" );
 
-	data::ValueArrayNew ch_data = m_reader( m_data, std::distance( m_data.begin(), m_data_start ) + ch_offset, util::product(ch_size) );
+	data::ValueArray ch_data = m_reader(m_data, std::distance(m_data.begin(), m_data_start ) + ch_offset, util::product(ch_size) );
 
 	//those are not needed anymore
 	vistaTree.remove( "ncolumns" );

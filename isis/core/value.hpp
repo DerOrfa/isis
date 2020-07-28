@@ -15,19 +15,19 @@ namespace isis::data::_internal{
 
 namespace isis::util{
 
-class ValueNew:public ValueTypes{
+class Value: public ValueTypes{
 	static const _internal::ValueConverterMap &converters();
-	template<typename OP, typename RET> RET operatorWrapper(const OP& op,const ValueNew &rhs,const RET &default_ret)const{
+	template<typename OP, typename RET> RET operatorWrapper(const OP& op, const Value &rhs, const RET &default_ret)const{
 		try{
 			return op(*this,rhs);
 		} catch(const std::domain_error &e){ // return default value on failure
 			LOG(Runtime,error)
-			        << "Operation " << typeid(OP).name() << " on " << typeName() << " and " << rhs.typeName()
-			        << " failed with \"" << e.what() << "\", will return " << ValueNew(default_ret).toString(true);
+				<< "Operation " << typeid(OP).name() << " on " << typeName() << " and " << rhs.typeName()
+				<< " failed with \"" << e.what() << "\", will return " << Value(default_ret).toString(true);
 			return default_ret;
 		}
 	}
-	template<typename OP> ValueNew& operatorWrapper_me(const OP& op,const ValueNew &rhs){
+	template<typename OP> Value& operatorWrapper_me(const OP& op, const Value &rhs){
 		try{
 			op(*this,rhs);
 		} catch(const std::domain_error &e){
@@ -45,20 +45,20 @@ public:
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
 
 	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
-	constexpr ValueNew(T &&v):ValueTypes(v){}
+	constexpr Value(T &&v):ValueTypes(v){}
 
 	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
-	constexpr ValueNew(const T &v):ValueTypes(v){}
+	constexpr Value(const T &v):ValueTypes(v){}
 	
 	//some overrides
-	ValueNew(const char text[]):ValueNew(std::string(text)){}
+	Value(const char text[]): Value(std::string(text)){}
 
 	//copy
-	ValueNew(const ValueTypes &v);
-	ValueNew(ValueTypes &&v);
-	template<typename T> ValueNew& operator=(const T& v){ValueTypes::operator=(v);return *this;}
-	template<typename T> ValueNew& operator=(T&& v){ValueTypes::operator=(v);return *this;}
-	ValueNew()=default;
+	Value(const ValueTypes &v);
+	Value(ValueTypes &&v);
+	template<typename T> Value& operator=(const T& v){ValueTypes::operator=(v);return *this;}
+	template<typename T> Value& operator=(T&& v){ValueTypes::operator=(v);return *this;}
+	Value()=default;
 
 	std::string typeName()const;
 	size_t typeID()const;
@@ -71,10 +71,10 @@ public:
 	const Converter &getConverterTo( unsigned short ID )const;
 
 	/// creates a copy of the stored value using a type referenced by its ID
-	ValueNew copyByID(size_t ID ) const;
+	Value copyByID(size_t ID ) const;
 
 	/// creates a default constructed value using a type referenced by its ID
-	static ValueNew createByID( unsigned short ID );
+	static Value createByID(unsigned short ID );
 
 	/**
 	 * Check if the stored value would also fit into another type referenced by its ID
@@ -90,7 +90,7 @@ public:
 	 * \param to the Value-object which will contain the converted value if conversion was successfull
 	 * \returns false if the conversion failed for any reason, true otherwise
 	 */
-	static bool convert( const ValueNew &from, ValueNew &to );
+	static bool convert(const Value &from, Value &to );
 
 	/**
 	* Interpret the value as value of any (other) type.
@@ -111,12 +111,12 @@ public:
 			return std::get<T>(*this);
 
 		try{
-			ValueNew ret = copyByID( util::typeID<T>() );
+			Value ret = copyByID(util::typeID<T>() );
 			return std::get<T>(ret);
 		} catch(...) {//@todo specify exception
 			LOG( Debug, error )
-			        << "Interpretation of " << *this << " as " << isis::util::typeName<T>()
-			        << " failed. Returning " << ValueNew(T()).toString() << ".";
+				<< "Interpretation of " << *this << " as " << isis::util::typeName<T>()
+				<< " failed. Returning " << Value(T()).toString() << ".";
 			return T();
 		}
 	}
@@ -144,7 +144,7 @@ public:
 	 * \retval false if the conversion failed because the value of ref was to high for TYPE (positive overflow)
 	 * \retval false if there is no know conversion from ref to TYPE
 	 */
-	bool gt( const ValueNew &ref )const;
+	bool gt( const Value &ref )const;
 
 	/**
 	 * Check if the this value is less than another value converted to this values type.
@@ -155,7 +155,7 @@ public:
 	 * \retval true if the conversion failed because the value of ref was to high for TYPE (positive overflow)
 	 * \retval false if there is no know conversion from ref to TYPE
 	 */
-	bool lt( const ValueNew &ref )const;
+	bool lt( const Value &ref )const;
 
 	/**
 	 * Check if the this value is equal to another value converted to this values type.
@@ -166,31 +166,31 @@ public:
 	 * \retval false if the conversion failed because the value of ref was to high for TYPE (positive overflow)
 	 * \retval false if there is no known conversion from ref to TYPE
 	 */
-	bool eq( const ValueNew &ref )const;
+	bool eq( const Value &ref )const;
 
-	ValueNew plus( const ValueNew &ref )const;
-	ValueNew minus( const ValueNew &ref )const;
-	ValueNew multiply( const ValueNew &ref )const;
-	ValueNew divide( const ValueNew &ref )const;
+	Value plus(const Value &ref )const;
+	Value minus(const Value &ref )const;
+	Value multiply(const Value &ref )const;
+	Value divide(const Value &ref )const;
 
-	ValueNew& add( const ValueNew &ref );
-	ValueNew& substract( const ValueNew &ref );
-	ValueNew& multiply_me( const ValueNew &ref );
-	ValueNew& divide_me( const ValueNew &ref );
+	Value& add(const Value &ref );
+	Value& substract(const Value &ref );
+	Value& multiply_me(const Value &ref );
+	Value& divide_me(const Value &ref );
 
-	ValueNew operator+( const ValueNew &ref )const{return plus(ref);};
-	ValueNew operator-( const ValueNew &ref )const{return minus(ref);};
-	ValueNew operator*( const ValueNew &ref )const{return multiply(ref);};
-	ValueNew operator/( const ValueNew &ref )const{return divide(ref);};
+	Value operator+(const Value &ref )const{return plus(ref);};
+	Value operator-(const Value &ref )const{return minus(ref);};
+	Value operator*(const Value &ref )const{return multiply(ref);};
+	Value operator/(const Value &ref )const{return divide(ref);};
 
-	ValueNew& operator+=( const ValueNew &ref ){return add(ref);};
-	ValueNew& operator-=( const ValueNew &ref ){return substract(ref);};
-	ValueNew& operator*=( const ValueNew &ref ){return multiply_me(ref);};
-	ValueNew& operator/=( const ValueNew &ref ){return divide_me(ref);};
+	Value& operator+=(const Value &ref ){return add(ref);};
+	Value& operator-=(const Value &ref ){return substract(ref);};
+	Value& operator*=(const Value &ref ){return multiply_me(ref);};
+	Value& operator/=(const Value &ref ){return divide_me(ref);};
 
-	bool operator<( const ValueNew &ref )const{return lt(ref);};
-	bool operator>( const ValueNew &ref )const{return gt(ref);};
-	bool operator==( const ValueNew &ref )const{return eq(ref);};
+	bool operator<( const Value &ref )const{return lt(ref);};
+	bool operator>( const Value &ref )const{return gt(ref);};
+	bool operator==( const Value &ref )const{return eq(ref);};
 
 	/**
 	 * Set value to a new value but keep its type.
@@ -198,7 +198,7 @@ public:
 	 * If this conversion fails nothing is done and false is returned.
 	 * \returns true if conversion was successful (and the value was changed), false otherwise
 	 */
-	bool apply(const ValueNew &other);
+	bool apply(const Value &other);
 };
 
 
@@ -214,9 +214,9 @@ template<typename OPERATOR,bool modifying,bool enable> struct type_op
 {
 	typedef typename OPERATOR::result_type result_type;
 	typedef std::integral_constant<bool,enable> enabled;
-	typedef typename std::conditional<modifying,util::ValueNew,const util::ValueNew>::type lhs; //<typename OPERATOR::first_argument_type>
+	typedef typename std::conditional<modifying, util::Value, const util::Value>::type lhs; //<typename OPERATOR::first_argument_type>
 
-	result_type operator()( lhs &first, const ValueNew &second )const {
+	result_type operator()( lhs &first, const Value &second )const {
 		LOG( Debug, error )
 		    << "operator " << typeid(OPERATOR).name() << " is not supportet for "
 		    << first.typeName()  << " and " << second.typeName();
@@ -268,23 +268,23 @@ template<typename T> struct type_div :   type_op<div_op<T>,true,  has_op<T>::div
 template<typename OPERATOR,bool modifying> struct type_op<OPERATOR,modifying,true>
 {
 	virtual ~type_op(){}
-	typedef typename std::conditional<modifying,util::ValueNew,const util::ValueNew>::type lhs; //<typename OPERATOR::first_argument_type>
-	typedef typename util::ValueNew rhs; //<typename OPERATOR::second_argument_type>
+	typedef typename std::conditional<modifying, util::Value, const util::Value>::type lhs; //<typename OPERATOR::first_argument_type>
+	typedef typename util::Value rhs; //<typename OPERATOR::second_argument_type>
 	typedef typename OPERATOR::result_type result_type;
 	typedef std::integral_constant<bool,true> enabled;
 
 	virtual result_type posOverflow()const {throw std::domain_error("positive overflow");}
 	virtual result_type negOverflow()const {throw std::domain_error("negative overflow");}
-	virtual result_type inRange( lhs &first, const util::ValueNew &second )const {
+	virtual result_type inRange( lhs &first, const util::Value &second )const {
 		return OPERATOR()(std::get<typename OPERATOR::first_argument_type>(first),std::get<typename OPERATOR::second_argument_type>(second));
 	}
-	result_type operator()(lhs &first, const ValueNew &second )const {
+	result_type operator()(lhs &first, const Value &second )const {
 		// ask second for a converter from itself to lhs
-		const ValueNew::Converter conv = second.getConverterTo( util::typeID<typename OPERATOR::second_argument_type>() );
+		const Value::Converter conv = second.getConverterTo(util::typeID<typename OPERATOR::second_argument_type>() );
 
 		if ( conv ) {
 			//try to convert second into T and handle results
-			ValueNew buff=typename OPERATOR::second_argument_type();
+			Value buff=typename OPERATOR::second_argument_type();
 
 			switch ( conv->convert( second, buff ) ) {
 			    case boost::numeric::cPosOverflow:return posOverflow();
@@ -309,7 +309,7 @@ API_EXCLUDE_END;
 namespace std
 {
 template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::ValueNew &s )
+basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::Value &s )
 {
 	return s.print(true,out);
 }

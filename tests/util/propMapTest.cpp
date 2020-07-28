@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE( prop_list_splice_test )
 {
 
 	PropertyMap map,backup;
-	const util::ValueNew buff[] = {1, 2, 3, 4, 5, 6};
+	const util::Value buff[] = {1, 2, 3, 4, 5, 6};
 	std::copy( buff, buff + 6, std::back_inserter( map.touchProperty( "test1" ) ) );
 	std::copy( buff, buff + 6, std::back_inserter( map.touchProperty( "test2" ) ) );
 

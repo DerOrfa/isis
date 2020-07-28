@@ -35,7 +35,7 @@ template<typename TYPE> class TypedChunk;
  * Like in ValueArray, the copy of a Chunk will reference the same data. (cheap copy)
  * (If you want to make a memory based deep copy of a Chunk create a MemChunk from it)
  */
-class Chunk : public NDimensional<4>, public util::PropertyMap, public ValueArrayNew
+class Chunk : public NDimensional<4>, public util::PropertyMap, public ValueArray
 {
 	friend class Image;
 	friend class std::vector<Chunk>;
@@ -45,12 +45,12 @@ protected:
 	Chunk(bool fakeValid=false);
 public:
 	static const char *neededProperties;
-	typedef ValueArrayNew::iterator iterator;
-	typedef ValueArrayNew::const_iterator const_iterator;
+	typedef ValueArray::iterator iterator;
+	typedef ValueArray::const_iterator const_iterator;
 
 	static Chunk makeByID(unsigned short typeID, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false);
 
-	Chunk( const ValueArrayNew &src, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false );
+	Chunk(const ValueArray &src, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false );
 
 	/**
 	 * Gets a reference to the element at a given index.
@@ -66,8 +66,8 @@ public:
 		return at<TYPE>(getLinearIndex( pos ));
 	}
 
-	const util::ValueNew getVoxelValue( size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 )const;
-	void setVoxelValue( const util::ValueNew &val, size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 );
+	const util::Value getVoxelValue(size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 )const;
+	void setVoxelValue(const util::Value &val, size_t nrOfColumns, size_t nrOfRows = 0, size_t nrOfSlices = 0, size_t nrOfTimesteps = 0 );
 
 	/**
 	 * Gets a const reference of the element at a given index.
@@ -144,7 +144,7 @@ public:
 	 * \return true if copying was (at least partly) successful
 	 */
 	template<typename T> bool copyToMem( T *dst, size_t len, const scaling_pair &scaling = scaling_pair() )const {
-		return ValueArrayNew::copyToMem<T>( dst, len,  scaling ); // use copyToMem of ValueArrayBase
+		return ValueArray::copyToMem<T>(dst, len, scaling ); // use copyToMem of ValueArrayBase
 	}
 	/**
 	 * Create a new Chunk of the requested type and copy all voxel data of the chunk into it.
@@ -188,7 +188,7 @@ public:
 	 */
 	std::string getShapeString( bool upper=false )const;
 
-	template<typename T> bool is()const {return ValueArrayNew::is<T>();}
+	template<typename T> bool is()const {return ValueArray::is<T>();}
 
 	void copyRange( const std::array< size_t, 4 >& source_start, const std::array< size_t, 4 >& source_end, isis::data::Chunk& dst, const std::array< size_t, 4 >& destination=std::array< size_t, 4 >({0,0,0,0}) )const;
 
@@ -222,7 +222,7 @@ public:
 	//http://en.wikipedia.org/wiki/In-place_matrix_transposition#Non-square_matrices%3a_Following_the_cycles
 	void swapDim(unsigned short dim_a,unsigned short dim_b,std::shared_ptr<util::ProgressFeedback> feedback=std::shared_ptr<util::ProgressFeedback>());
 
-	bool isValid()const{return ValueArrayNew::isValid() && util::PropertyMap::isValid();}
+	bool isValid()const{return ValueArray::isValid() && util::PropertyMap::isValid();}
 };
 
 template<typename TYPE> class TypedChunk : public Chunk{
@@ -253,8 +253,8 @@ public:
 		std::for_each(me.get(),me.get()+getLength(),func);
 	}
 
-	//empty constructor making sure underlying ValueArrayNew has correct type
-	TypedChunk():Chunk(ValueArrayNew(std::add_pointer_t<TYPE>(),0), 0, 0, 0, 0),me(castTo<TYPE>()){}
+	//empty constructor making sure underlying ValueArray has correct type
+	TypedChunk(): Chunk(ValueArray(std::add_pointer_t<TYPE>(), 0), 0, 0, 0, 0), me(castTo<TYPE>()){}
 	
 	TypedChunk( const TypedChunk<TYPE> &ref):TypedChunk(){
 		//copy shape
@@ -262,10 +262,10 @@ public:
 		//copy properties
 		util::PropertyMap::operator=(ref);
 		//copy array
-		ValueArrayNew::operator=(ref.as<TYPE>());//will call std::shared_ptr<TYPE>::operator=() as underlying stored types are the same (and thus "me" will still be valid)
+		ValueArray::operator=(ref.as<TYPE>());//will call std::shared_ptr<TYPE>::operator=() as underlying stored types are the same (and thus "me" will still be valid)
 	}
 
-	TypedChunk( const ValueArrayNew &ref, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false, const scaling_pair &scaling = scaling_pair()  )
+	TypedChunk(const ValueArray &ref, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false, const scaling_pair &scaling = scaling_pair()  )
 	: Chunk( ref.as<TYPE>(scaling), nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid ),me(castTo<TYPE>()) {}
 	
 	TypedChunk( const Chunk &ref, scaling_pair scaling = scaling_pair() ) : TypedChunk( ref.as<TYPE>(scaling) ) {}
@@ -288,7 +288,7 @@ template<typename T> TypedChunk<T> Chunk::as(const scaling_pair &scaling)const
 {
 	//make a chunk from a typed ValueArray
 	const auto size=getSizeAsVector();
-	TypedChunk<T> ret( ValueArrayNew::as<T>(scaling), size[0], size[1], size[2], size[3], false, scaling);
+	TypedChunk<T> ret(ValueArray::as<T>(scaling), size[0], size[1], size[2], size[3], false, scaling);
 	//and copy properties over
 	static_cast<util::PropertyMap&>(ret)=*this;
 	return ret;
@@ -305,9 +305,9 @@ public:
 	/// Create a MemChunk with the given size
 	MemChunk( size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false )
 	:TypedChunk<TYPE>(
-		ValueArrayNew::make<TYPE>(nrOfColumns*nrOfRows*nrOfSlices*nrOfTimesteps), 
-		nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, 
-		fakeValid, 
+		ValueArray::make<TYPE>(nrOfColumns*nrOfRows*nrOfSlices*nrOfTimesteps),
+		nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps,
+		fakeValid,
 		scaling_pair(1,0) // we just made that thing, no scaling needed
 	)
 	{}
@@ -337,7 +337,7 @@ public:
 	 */
 	MemChunk( const Chunk &ref, const scaling_pair &scaling = scaling_pair() )//initialize as an empty Chunk made of an empty ValueArray
 	:TypedChunk<TYPE>(
-		static_cast<const ValueArrayNew&>(ref).copyByID( util::typeID<TYPE>(), scaling ),//deep copy data of ref
+		static_cast<const ValueArray&>(ref).copyByID(util::typeID<TYPE>(), scaling ),//deep copy data of ref
 		ref.getSizeAsVector()[0],ref.getSizeAsVector()[1],ref.getSizeAsVector()[2],ref.getSizeAsVector()[3],//copy shape of ref
 		false, //we're going to copy the properties from ref, no need to fake "it"
 		scaling_pair(1,0)//we already scaled the data
@@ -354,9 +354,9 @@ public:
 		//copy properties
 		util::PropertyMap::operator=(ref);
 		//copy data ()
-		ValueArrayNew newdata=ref.copyByID( util::typeID<TYPE>());
+		ValueArray newdata=ref.copyByID(util::typeID<TYPE>());
 		assert(newdata.is<TYPE>());
-		ValueArrayNew::operator=(std::move(newdata));//will call std::shared_ptr<TYPE>::operator=() as underlying stored types are the same (and thus "me" will still be valid)
+		ValueArray::operator=(std::move(newdata));//will call std::shared_ptr<TYPE>::operator=() as underlying stored types are the same (and thus "me" will still be valid)
 		return *this;
 	}
 };

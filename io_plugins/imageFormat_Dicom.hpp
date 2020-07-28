@@ -55,7 +55,7 @@ template <boost::endian::order Order> struct ExplicitVrTag:Tag<Order>{
 extern std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict;
 
 class DicomElement{
-	using value_generator = std::function<std::optional<util::ValueNew>(const DicomElement *e)>;
+	using value_generator = std::function<std::optional<util::Value>(const DicomElement *e)>;
 	const data::ByteArray &source;
 	size_t position;
 	boost::endian::order endian;
@@ -106,8 +106,8 @@ public:
 	std::string getVR()const;
 	util::PropertyMap::PropPath getName()const;
 	DicomElement(const data::ByteArray &_source, size_t _position, boost::endian::order endian,bool _implicit_vr);
-	std::optional<util::ValueNew> getValue();
-	std::optional<util::ValueNew> getValue(std::string vr);
+	std::optional<util::Value> getValue();
+	std::optional<util::Value> getValue(std::string vr);
 	DicomElement next(boost::endian::order endian)const;
 };
 }

@@ -176,7 +176,7 @@ void ImageFormat_VistaSa::sanitize( util::PropertyMap &obj )
 		const auto timeQuery = obj.queryProperty("vista/time");
 
 		if(dateQuery && timeQuery){ // if we have time and date, try to parse it as combined string
-			util::ValueNew date_time=dateQuery->as<std::string>()+" "+timeQuery->as<std::string>();
+			util::Value date_time=dateQuery->as<std::string>()+" "+timeQuery->as<std::string>();
 			obj.setValueAs("sequenceStart",date_time.as<util::timestamp>());
 			obj.remove("vista/date");
 			obj.remove("vista/time");

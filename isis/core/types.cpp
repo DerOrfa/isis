@@ -54,7 +54,7 @@ setName( date, "date" );
 
 namespace _internal{
 template<std::size_t index = std::variant_size_v<ValueTypes>-1> void insert_types(std::map<size_t, std::string> &map,bool arrayTypesOnly) {
-	typedef util::ValueNew::TypeByIndex<index> v_type;
+	typedef util::Value::TypeByIndex<index> v_type;
 	if(
 		!arrayTypesOnly || 
 		_internal::variant_index<data::ArrayTypes,std::remove_cv_t<std::shared_ptr<v_type>>>()!=std::variant_npos
@@ -63,7 +63,7 @@ template<std::size_t index = std::variant_size_v<ValueTypes>-1> void insert_type
 	insert_types<index-1>(map,arrayTypesOnly);
 }
 template<> void insert_types<0>(std::map<size_t, std::string> &map,bool arrayTypesOnly){
-	typedef util::ValueNew::TypeByIndex<0> v_type;
+	typedef util::Value::TypeByIndex<0> v_type;
 	if(
 		!arrayTypesOnly || 
 		_internal::variant_index<data::ArrayTypes,std::remove_cv_t<std::shared_ptr<v_type>>>()!=std::variant_npos

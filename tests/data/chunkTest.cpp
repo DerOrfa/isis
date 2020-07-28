@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE ( chunk_voxel_value_test )
 	for ( int i = 0; i < 3; i++ )
 		for ( int j = 0; j < 3; j++ ) {
 			BOOST_CHECK_EQUAL( ch.getVoxelValue( i, j ).as<int>(),  i + j * 3 );
-			ch.setVoxelValue( util::ValueNew( i + j * 3 + 42 ), i, j );
+			ch.setVoxelValue(util::Value(i + j * 3 + 42 ), i, j );
 		}
 
 	for ( int i = 0; i < 3; i++ )
@@ -308,7 +308,7 @@ BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
 	ch1.setValueAs( "voxelGap", util::fvector3( {1, 1, 1} ) );
 	ch1.setValueAs<uint32_t>( "acquisitionNumber", 0 );
 
-	const util::ValueNew buff[] = {0, 1, 2};
+	const util::Value buff[] = {0, 1, 2};
 	std::copy( buff, buff + 3, std::back_inserter( ch1.touchProperty( "list_test" ) ) );
 
 

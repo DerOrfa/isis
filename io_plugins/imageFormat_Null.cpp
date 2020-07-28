@@ -46,7 +46,7 @@ class ImageFormat_Null: public FileFormat
 		for ( uint32_t t = 0; t < timesteps; t++ ) {
 			for ( uint32_t s = 0; s < size; s++ ) {
 
-				data::Chunk ch(data::ValueArrayNew::createByID(ID,size*size), size, size );
+				data::Chunk ch(data::ValueArray::createByID(ID, size*size), size, size );
 				ch.setValueAs( "indexOrigin", util::fvector3{ 0, -150 / 2, s * 110.f / size - 100 / 2 } ); //don't use s*100./size-100/2 because we want a small gap
 				ch.setValueAs( "sequenceNumber", sequence_offset+ID );
 				ch.setValueAs( "performingPhysician", std::string( "Dr. Jon Doe" ) );

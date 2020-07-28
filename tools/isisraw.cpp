@@ -65,10 +65,10 @@ int main( int argc, char *argv[] )
 		data::FilePtr src( infiles.front() );
 		const unsigned short rrepn = app.parameters["read_repn"].as<util::Selection>();
 		util::ivector4 dims = app.parameters["rawdims"];
-		data::ValueArrayNew dat;
+		data::ValueArray dat;
 
 		if( util::product(dims) == 0 ) {
-			data::ValueArrayNew dat = src.atByID( rrepn, offset, 0, app.parameters["byteswap"] );
+			data::ValueArray dat = src.atByID(rrepn, offset, 0, app.parameters["byteswap"] );
 
 			const size_t sidelength = sqrt( dat.getLength() );
 
@@ -100,13 +100,13 @@ int main( int argc, char *argv[] )
 
 		for( const data::Image & img :  app.images ) {
 			const unsigned short sRepn = ( int )wrepn ? : img.getMajorTypeID(); // get repn eigther from the parameter, or from the image
-			size_t repnsize = data::ValueArrayNew::createByID( sRepn, 1 ).bytesPerElem(); //create a dummy ValueArray to determine the elementsize of the requested repn
+			size_t repnsize = data::ValueArray::createByID(sRepn, 1 ).bytesPerElem(); //create a dummy ValueArray to determine the elementsize of the requested repn
 			const size_t imgsize = img.getVolume() * repnsize;
 			const std::string filename = *( iOut++ );
 
 			LOG( RawLog, notice ) << "Writing " << imgsize / ( 1024.*1024. ) << " MBytes from an " << img.getSizeAsString() << "-image as " << util::getTypeMap()[sRepn] << " to " << filename;
 			data::FilePtr f( filename, imgsize + offset, true );
-			data::ValueArrayNew dat = f.atByID( sRepn, offset ); //if repn is unset use the type of the image
+			data::ValueArray dat = f.atByID(sRepn, offset ); //if repn is unset use the type of the image
 			img.copyToValueArray( dat );
 		}
 	}

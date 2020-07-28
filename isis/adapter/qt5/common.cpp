@@ -1,7 +1,7 @@
 #include "common.hpp"
 #include <thread>
 
-QImage isis::qt5::makeQImage(const std::vector<data::ValueArrayNew> &lines, data::scaling_pair scaling)
+QImage isis::qt5::makeQImage(const std::vector<data::ValueArray> &lines, data::scaling_pair scaling)
 {
 	QImage ret;
 	size_t line_length = lines.front().getLength();
@@ -21,13 +21,13 @@ QImage isis::qt5::makeQImage(const std::vector<data::ValueArrayNew> &lines, data
 	return ret;
 }
 
-QImage isis::qt5::makeQImage(const data::ValueArrayNew &slice,size_t line_length,data::scaling_pair scaling)
+QImage isis::qt5::makeQImage(const data::ValueArray &slice, size_t line_length, data::scaling_pair scaling)
 {
 	return makeQImage(slice.splice(line_length),scaling);
 }
 
 
-QImage isis::qt5::makeQImage(const std::vector<data::ValueArrayNew> &lines, const std::function<void (uchar *, const data::ValueArrayNew &)>& transfer_function)
+QImage isis::qt5::makeQImage(const std::vector<data::ValueArray> &lines, const std::function<void (uchar *, const data::ValueArray &)>& transfer_function)
 {
 	QImage ret;
 	size_t line_length = lines.front().getLength();
@@ -46,23 +46,23 @@ QImage isis::qt5::makeQImage(const std::vector<data::ValueArrayNew> &lines, cons
 		LOG(Runtime,error) << "Sorry Images larger than 32768x32768 pixels are not supported, returning an empty QImage";
 	return ret;
 }
-QImage isis::qt5::makeQImage(const data::ValueArrayNew& slice, size_t line_length, const std::function<void (uchar *, const data::ValueArrayNew &)>& transfer_function)
+QImage isis::qt5::makeQImage(const data::ValueArray& slice, size_t line_length, const std::function<void (uchar *, const data::ValueArray &)>& transfer_function)
 {
 	return makeQImage(slice.splice(line_length),transfer_function);
 }
 
 
-void isis::qt5::fillQImage(QImage& dst, const std::vector<data::ValueArrayNew> &lines, data::scaling_pair scaling)
+void isis::qt5::fillQImage(QImage& dst, const std::vector<data::ValueArray> &lines, data::scaling_pair scaling)
 {
-	std::function<void (uchar *, const data::ValueArrayNew &)> transfer_function;
+	std::function<void (uchar *, const data::ValueArray &)> transfer_function;
 	switch(dst.format()){
 	case QImage::Format_Indexed8:
-		transfer_function = [scaling](uchar *dst, const data::ValueArrayNew &line){
+		transfer_function = [scaling](uchar *dst, const data::ValueArray &line){
 			line.copyToMem<uint8_t>(dst,line.getLength(),scaling);
 		};
 		break;
 	case QImage::Format_RGB32:
-		transfer_function = [scaling](uchar *dst, const data::ValueArrayNew &line){
+		transfer_function = [scaling](uchar *dst, const data::ValueArray &line){
 			QRgb *rgbdst=(QRgb*)dst;
 			for(const util::color24 &c:data::TypedArray<util::color24>(line,scaling)){
 				*(rgbdst++)=qRgb(c.r,c.g,c.b);
@@ -74,13 +74,13 @@ void isis::qt5::fillQImage(QImage& dst, const std::vector<data::ValueArrayNew> &
 	}
 	fillQImage(dst, lines, transfer_function);
 }
-void isis::qt5::fillQImage(QImage& dst, const data::ValueArrayNew& data, size_t line_length, data::scaling_pair scaling)
+void isis::qt5::fillQImage(QImage& dst, const data::ValueArray& data, size_t line_length, data::scaling_pair scaling)
 {
 	LOG_IF(data.getLength()%line_length,Debug,error) << "The length of the array (" << data.getLength() << ") is not a multiple of the given line length for the QImage, something is really wrong here";
 	fillQImage(dst, data.splice(line_length), scaling);
 }
 
-void isis::qt5::fillQImage(QImage& dst, const std::vector<data::ValueArrayNew> &lines, const std::function<void (uchar *, const data::ValueArrayNew &)> &transfer_function)
+void isis::qt5::fillQImage(QImage& dst, const std::vector<data::ValueArray> &lines, const std::function<void (uchar *, const data::ValueArray &)> &transfer_function)
 {
 	const size_t thread_size=std::ceil(lines.size()/float(std::thread::hardware_concurrency()));
 	std::vector<std::thread> threads;
@@ -100,7 +100,7 @@ void isis::qt5::fillQImage(QImage& dst, const std::vector<data::ValueArrayNew> &
 		t.join();
 	}
 }
-void isis::qt5::fillQImage(QImage& dst, const data::ValueArrayNew& data, size_t line_length, const std::function<void (uchar *, const data::ValueArrayNew &)> &transfer_function)
+void isis::qt5::fillQImage(QImage& dst, const data::ValueArray& data, size_t line_length, const std::function<void (uchar *, const data::ValueArray &)> &transfer_function)
 {
 	LOG_IF(data.getLength()%line_length,Debug,error) << "The length of the array (" << data.getLength() << ") is not a multiple of the given line length for the QImage, something is really wrong here";
 	fillQImage(dst, data.splice(line_length), transfer_function);

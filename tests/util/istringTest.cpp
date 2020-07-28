@@ -4,9 +4,7 @@
 #include <isis/core/istring.hpp>
 #include <isis/core/common.hpp>
 
-namespace isis
-{
-namespace test
+namespace isis::test
 {
 
 // TestCase object instantiation
@@ -21,7 +19,7 @@ BOOST_AUTO_TEST_CASE( istring_test )
 	BOOST_CHECK_EQUAL(buffer , 1234 );
 
 	std::complex<double> buffer_c;
-	BOOST_REQUIRE(util::stringTo(std::string("12,34"),buffer_c));
+	BOOST_REQUIRE(util::stringTo(std::string("(12,34)"),buffer_c));
 	BOOST_CHECK_EQUAL(buffer_c, std::complex<double>(12,34));
 
 	util::istring buffer_i;
@@ -33,5 +31,4 @@ BOOST_AUTO_TEST_CASE( istring_test )
 	BOOST_CHECK_EQUAL( buffer_s, "Test" );
 }
 
-}
 }

@@ -39,7 +39,7 @@ bool &ProgParameter::hidden()
 
 bool ProgParameter::parse( const std::string &prop )
 {
-	ValueNew &me = this->front();
+	Value &me = this->front();
 	bool ret = false;
 
 	if ( prop.empty() ) {
@@ -49,7 +49,7 @@ bool ProgParameter::parse( const std::string &prop )
 		}
 	} else {
 		static_assert(knownType<std::string>(),"not known");
-		ret = ValueNew::convert(prop, me );
+		ret = Value::convert(prop, me );
 	}
 
 	LOG_IF( ret, Debug, info ) << "Parsed " << MSubject( prop ) << " as " << me.toString( true );
@@ -63,10 +63,10 @@ bool ProgParameter::parse( const std::string &prop )
 }
 bool ProgParameter::parse_list( const slist& theList )
 {
-	ValueNew &me = this->front();
+	Value &me = this->front();
 	bool ret = false;
 
-	ret = ValueNew::convert(theList, me );
+	ret = Value::convert(theList, me );
 	if(theList.empty()){
 		LOG_IF( ret, Debug, info )
 		<< "Parsed empty parameter list as " << me.toString( true );

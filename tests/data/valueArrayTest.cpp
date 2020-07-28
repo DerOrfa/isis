@@ -51,20 +51,20 @@ struct Randomizer{
 	}
 };
 struct Maxer{
-	template<typename T, size_t NUM> std::pair<util::ValueNew,util::ValueNew> minmax(std::array<T,NUM> *){
+	template<typename T, size_t NUM> std::pair<util::Value, util::Value> minmax(std::array<T, NUM> *){
 		return {0,std::numeric_limits<T>::max()};
 	}
-	template<typename T> std::pair<util::ValueNew,util::ValueNew> minmax(util::color<T> *){
+	template<typename T> std::pair<util::Value, util::Value> minmax(util::color<T> *){
 		const auto limit=std::numeric_limits<T>::max();
 		return {util::color<T>(),util::color<T>{limit,limit,limit}};
 	}
-	template<typename T> std::pair<util::ValueNew,util::ValueNew> minmax(std::complex<T> *){
+	template<typename T> std::pair<util::Value, util::Value> minmax(std::complex<T> *){
 		return {0,std::sqrt(std::numeric_limits<T>::max())};
 	}
-	template<typename T> std::pair<util::ValueNew,util::ValueNew> minmax(T*, std::enable_if_t<std::is_arithmetic_v<T>> *p=nullptr){
+	template<typename T> std::pair<util::Value, util::Value> minmax(T*, std::enable_if_t<std::is_arithmetic_v<T>> *p=nullptr){
 		return {0,std::numeric_limits<T>::max()};
 	}
-	template<typename T> std::pair<util::ValueNew,util::ValueNew> operator()(std::shared_ptr<T> ptr){
+	template<typename T> std::pair<util::Value, util::Value> operator()(std::shared_ptr<T> ptr){
 		return minmax(ptr.get());
 	}
 };
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_init_test )
 		BOOST_CHECK( ! outer.castTo<int32_t>() ); //the underlying pointer should evaluate to false (as its equal to nullptr);
 		BOOST_CHECK_EQUAL( outer.castTo<int32_t>().use_count(), 0 );
 		{
-			data::ValueArrayNew inner( ( int32_t * )calloc( 5, sizeof( int32_t ) ), 5, _internal::Deleter() );
+			data::ValueArray inner(( int32_t * )calloc(5, sizeof( int32_t ) ), 5, _internal::Deleter() );
 			// for now we have only one pointer referencing the data
 			auto &dummy = inner.castTo<int32_t>(); //get the smart_pointer inside, because ValueArray does not have/need use_count
 			BOOST_CHECK_EQUAL( dummy.use_count(), 1 );
@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_minmax_test ){
 	for(const auto &t:util::getTypeMap(true)) {
 		if(t.first==util::typeID<bool>())
 			continue;
-		auto array=data::ValueArrayNew::createByID(t.first,randomizer.length);
+		auto array=data::ValueArray::createByID(t.first, randomizer.length);
 		array.visit(randomizer);
 		std::cout << array.typeName() << std::endl;
 		BOOST_CHECK_EQUAL(array.getMinMax(),array.visit(_internal::Maxer()));
@@ -157,9 +157,9 @@ BOOST_AUTO_TEST_CASE( ValueArray_clone_test )
 {
 	_internal::Deleter::deleted = false;
 	{
-		data::ValueArrayNew outer;
+		data::ValueArray outer;
 		{
-			data::ValueArrayNew inner( ( int32_t * )calloc( 5, sizeof( int32_t ) ), 5, _internal::Deleter() );
+			data::ValueArray inner(( int32_t * )calloc(5, sizeof( int32_t ) ), 5, _internal::Deleter() );
 			// for now we have only one ValueArray referencing the data
 			std::shared_ptr<int32_t> &dummy = inner.castTo<int32_t>(); //get the smart_pointer inside, because ValueArray does not have/need use_count
 			BOOST_CHECK_EQUAL( dummy.use_count(), 1 );
@@ -184,9 +184,9 @@ BOOST_AUTO_TEST_CASE( ValueArray_splice_test )
 {
 	_internal::Deleter::deleted = false;
 	{
-		std::vector<data::ValueArrayNew> outer;
+		std::vector<data::ValueArray> outer;
 		{
-			data::ValueArrayNew inner( ( int32_t * )calloc( 5, sizeof( int32_t ) ), 5, _internal::Deleter() );
+			data::ValueArray inner(( int32_t * )calloc(5, sizeof( int32_t ) ), 5, _internal::Deleter() );
 			// for now we have only one pointer referencing the data
 			std::shared_ptr<int32_t> &dummy = inner.castTo<int32_t>(); //get the smart_pointer inside, because ValueArray does not have/need use_count
 			BOOST_CHECK_EQUAL( dummy.use_count(), 1 );
@@ -209,7 +209,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_splice_test )
 BOOST_AUTO_TEST_CASE( ValueArray_conv_scaling_test )
 {
 	const float init[] = { -2, -1.8, -1.5, -1.3, -0.6, -0.2, 2, 1.8, 1.5, 1.3, 0.6, 0.2};
-	data::ValueArrayNew floatArray=data::ValueArrayNew::make<float>( 12 );
+	data::ValueArray floatArray=data::ValueArray::make<float>(12 );
 
 	//scaling to itself should allways be 1/0
 	floatArray.copyFromMem( init, 12 );
@@ -231,7 +231,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_conv_scaling_test )
 BOOST_AUTO_TEST_CASE( ValueArray_conversion_test )
 {
 	const float init[] = { -2, -1.8, -1.5, -1.3, -0.6, -0.2, 2, 1.8, 1.5, 1.3, 0.6, 0.2};
-	data::TypedArray<float> floatArray=data::ValueArrayNew::make<float>(12);
+	data::TypedArray<float> floatArray=data::ValueArray::make<float>(12);
 	//with automatic upscaling into integer
 	floatArray.copyFromMem( init, 12 );
 
@@ -272,7 +272,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_conversion_test )
 BOOST_AUTO_TEST_CASE( ValueArray_complex_minmax_test )
 {
 	const std::complex<float> init[] = { std::complex<float>( -2, 1 ), -1.8, -1.5, -1.3, -0.6, -0.2, 2, 1.8, 1.5, 1.3, 0.6, std::complex<float>( 10, 10 )};
-	auto cfArray=data::ValueArrayNew::make<std::complex<float> >( 12 );
+	auto cfArray=data::ValueArray::make<std::complex<float> >(12 );
 	cfArray.copyFromMem( init, 12 );
 
 	auto minmax = cfArray.getMinMax();
@@ -284,7 +284,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_complex_minmax_test )
 BOOST_AUTO_TEST_CASE( ValueArray_complex_conversion_test )
 {
 	const std::complex<float> init[] = { -2, -1.8, -1.5, -1.3, -0.6, -0.2, 2, 1.8, 1.5, 1.3, 0.6, 0.2};
-	data::TypedArray<std::complex<float>> cfArray= data::ValueArrayNew::make<std::complex<float> >( 12 );
+	data::TypedArray<std::complex<float>> cfArray= data::ValueArray::make<std::complex<float> >(12 );
 	cfArray.copyFromMem( init, 12 );
 	data::TypedArray<std::complex<double>> cdArray = cfArray.copyAs<std::complex<double> >();
 
@@ -296,7 +296,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_complex_conversion_test )
 BOOST_AUTO_TEST_CASE( ValueArray_numeric_to_complex_conversion_test )
 {
 	const float init[] = { -2, -1.8, -1.5, -1.3, -0.6, -0.2, 2, 1.8, 1.5, 1.3, 0.6, 0.2};
-	auto fArray=data::ValueArrayNew::make<float>( sizeof( init ) / sizeof( float ) );
+	auto fArray=data::ValueArray::make<float>(sizeof( init ) / sizeof( float ) );
 	fArray.copyFromMem( init, sizeof( init ) / sizeof( float ) );
 
 	data::TypedArray<std::complex<float> > cfArray = fArray.copyAs<std::complex<float> >();
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_color_minmax_test )
 	    { 20, 180, 150},
 	    {130,  60,  20}
 	};
-	auto ccArray=data::ValueArrayNew::make<util::color48>( 4 );
+	auto ccArray=data::ValueArray::make<util::color48>(4 );
 	ccArray.copyFromMem( init, 4 );
 	auto minmax = ccArray.getMinMax();
 	const util::color48 colmin = {20, 60, 20}, colmax = {130, 180, 150};
@@ -333,7 +333,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_color_minmax_test )
 BOOST_AUTO_TEST_CASE( ValueArray_color_conversion_test )
 {
 	const util::color48 init[] = { {0, 0, 0}, {100, 2, 4}, {200, 200, 200}, {510, 4, 2}};
-	data::TypedArray<util::color48 > c16Array=data::ValueArrayNew::make<util::color48 >( 4 );
+	data::TypedArray<util::color48 > c16Array=data::ValueArray::make<util::color48 >(4 );
 	c16Array.copyFromMem( init, 4 );
 
 	data::TypedArray<util::color24 > c8Array = c16Array.copyAs<util::color24 >();// should downscale (by 2)
@@ -357,7 +357,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_color_conversion_test )
 BOOST_AUTO_TEST_CASE( ValueArray_numeric_to_color_conversion_test )
 {
 	const short init[] = {0, 0, 0, 100, 2, 4, 200, 200, 200, 510, 4, 2};
-	auto i16Array = data::ValueArrayNew::make<uint16_t>( sizeof( init ) / sizeof( uint16_t ) );
+	auto i16Array = data::ValueArray::make<uint16_t>(sizeof( init ) / sizeof( uint16_t ) );
 	i16Array.copyFromMem( init, sizeof( init ) / sizeof( uint16_t ) );
 
 	//scaling should be 0.5/0
@@ -385,7 +385,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_numeric_to_color_conversion_test )
 BOOST_AUTO_TEST_CASE( ValueArray_boolean_conversion_test )
 {
 	const float init[] = { -2, -1.8, -1.5, -1.3, -0.6, 0, 2, 1.8, 1.5, 1.3, 0.6, 0.2};
-	auto cfArray = data::ValueArrayNew::make<float>( 12 );
+	auto cfArray = data::ValueArray::make<float>(12 );
 	cfArray.copyFromMem( init, 12 );
 	data::TypedArray<bool> bArray = cfArray.copyAs<bool>();
 	data::TypedArray<float> fArray = bArray.copyAs<float>();
@@ -404,11 +404,11 @@ BOOST_AUTO_TEST_CASE( ValueArray_boolean_conversion_test )
 //	    static_cast<float>( sqrt( -1 ) ),
 //	    std::numeric_limits<float>::infinity(), 0.6, 0.2
 //	};
-//	auto floatArray = data::ValueArrayNew::make<float>( sizeof( init ) / sizeof( float ) );
+//	auto floatArray = data::ValueArray::make<float>( sizeof( init ) / sizeof( float ) );
 //	//without scaling
 //	floatArray.copyFromMem( init, sizeof( init ) / sizeof( float ) );
 //	{
-//		std::pair<util::ValueNew, util::ValueNew> minmax = floatArray.getMinMax();
+//		std::pair<util::Value, util::Value> minmax = floatArray.getMinMax();
 //		BOOST_CHECK( minmax.first.is<float>() );
 //		BOOST_CHECK( minmax.second.is<float>() );
 //		BOOST_CHECK_EQUAL( minmax.first.as<float>(), -1.8f );
@@ -418,7 +418,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_boolean_conversion_test )
 
 template<typename T> void minMaxInt()
 {
-	data::TypedArray<T> array = data::ValueArrayNew::make<T>( 1024 );
+	data::TypedArray<T> array = data::ValueArray::make<T>(1024 );
 	double div = static_cast<double>( RAND_MAX ) / std::numeric_limits<T>::max();
 
 	for( int i = 0; i < 1024; i++ )
@@ -427,7 +427,7 @@ template<typename T> void minMaxInt()
 	array[40] = std::numeric_limits<T>::max();
 	array[42] = std::numeric_limits<T>::min();
 
-	std::pair<util::ValueNew, util::ValueNew> minmax = array.getMinMax();
+	std::pair<util::Value, util::Value> minmax = array.getMinMax();
 	BOOST_CHECK( minmax.first.is<T>() );
 	BOOST_CHECK( minmax.second.is<T>() );
 	BOOST_CHECK_EQUAL( minmax.first.as<T>(), std::numeric_limits<T>::min() );
@@ -450,7 +450,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_rnd_minmax_test )
 
 BOOST_AUTO_TEST_CASE( ValueArray_iterator_test )
 {
-	data::TypedArray<short> array = data::ValueArrayNew::make<short>( 1024 );
+	data::TypedArray<short> array = data::ValueArray::make<short>(1024 );
 
 	for( int i = 0; i < 1024; i++ )
 		array[i] = i + 1;
@@ -480,7 +480,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_iterator_test )
 }
 BOOST_AUTO_TEST_CASE( ValueArray_generic_iterator_test )
 {
-	auto array = data::ValueArrayNew::make<short>( 1024 );
+	auto array = data::ValueArray::make<short>(1024 );
 
 	// filling, using generic access
 	for( int i = 0; i < 1024; i++ )

@@ -35,8 +35,8 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 	std::list<data::Image> images = data::IOFactory::load( "nix.null" );
 	BOOST_REQUIRE( images.size() >= 1 );
 
-	data::enableLog<util::DefaultMsgPrint>(info);
-	image_io::enableLog<util::DefaultMsgPrint>( info );
+//	data::enableLog<util::DefaultMsgPrint>(info);
+//	image_io::enableLog<util::DefaultMsgPrint>( info );
 	for( data::Image & null :  images ) {
 
 		// adapt additional/non supported properties

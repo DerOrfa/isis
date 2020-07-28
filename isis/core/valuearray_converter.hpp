@@ -31,16 +31,16 @@ namespace isis
 namespace data
 {
 
-class ValueArrayNew;
+class ValueArray;
 struct scaling_pair;
 
 class ValueArrayConverterBase
 {
 public:
-	virtual void convert( const ValueArrayNew &src, ValueArrayNew &dst, const scaling_pair &scaling )const;
-	virtual ValueArrayNew generate( const ValueArrayNew &src, const scaling_pair &scaling )const = 0;//@todo replace by create+copy
-	virtual ValueArrayNew create(size_t len )const = 0;
-	virtual scaling_pair getScaling( const util::ValueNew &min, const util::ValueNew &max )const;
+	virtual void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const;
+	virtual ValueArray generate(const ValueArray &src, const scaling_pair &scaling )const = 0;//@todo replace by create+copy
+	virtual ValueArray create(size_t len )const = 0;
+	virtual scaling_pair getScaling(const util::Value &min, const util::Value &max )const;
 	static std::shared_ptr<const ValueArrayConverterBase> get() {return std::shared_ptr<const ValueArrayConverterBase>();}
 	virtual ~ValueArrayConverterBase() {}
 };

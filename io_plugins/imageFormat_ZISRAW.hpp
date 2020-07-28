@@ -46,7 +46,7 @@ namespace _internal {
 		return ret;
 	}
 	
-	data::ValueArrayNew reinterpretData(const data::ByteArray &data, int32_t PixelType);
+	data::ValueArray reinterpretData(const data::ByteArray &data, int32_t PixelType);
 	
 	struct bounds{
 		int32_t min=std::numeric_limits<int32_t>::max(),max=std::numeric_limits<int32_t>::min();

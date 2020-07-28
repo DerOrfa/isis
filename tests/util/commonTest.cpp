@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE( from_chars_test )
 	string2Test<long double>("2.3",2.3);
 	string2Test<int>("1234",1234);
 	string2Test<short >("1234",1234);
-	string2Test<std::complex<double> >("12,34",{12,34});
+	string2Test<std::complex<double> >("(12,34)",{12,34});
 }
 
 BOOST_AUTO_TEST_CASE( string_to_list_test )

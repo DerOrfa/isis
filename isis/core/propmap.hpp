@@ -188,11 +188,11 @@ API_EXCLUDE_END;
 		const auto ref = queryProperty( path );
 
 		if( !ref ){
-			LOG( Runtime, warning ) << "Property " << MSubject( path ) << " doesn't exist returning " << MSubject( ValueNew(T()) );
+			LOG( Runtime, warning ) << "Property " << MSubject( path ) << " doesn't exist returning " << MSubject(Value(T()) );
 			return T();
 		} else if (ref->size()<=at.value_or(0)){
-			LOG_IF(at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " does exist, but index " << *at << " is out of bounds. returning " << MSubject( ValueNew(T()) );
-			LOG_IF(!at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " is empty. returning " << MSubject( ValueNew(T()) );
+			LOG_IF(at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " does exist, but index " << *at << " is out of bounds. returning " << MSubject(Value(T()) );
+			LOG_IF(!at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " is empty. returning " << MSubject(Value(T()) );
 			return T();
 		} else
 			return at ?
@@ -525,7 +525,7 @@ public:
 	// Additional get/set - Functions
 	//////////////////////////////////////////////////////////////////////////////////////
 
-	PropertyValue &setValue(const PropPath &path, const ValueNew &val, const std::optional<size_t> &at=std::optional<size_t>());
+	PropertyValue &setValue(const PropPath &path, const Value &val, const std::optional<size_t> &at=std::optional<size_t>());
 
 	/**
 	 * Set the given property to a given value/type at a specified index.
@@ -549,7 +549,7 @@ public:
 	//@todo can't we get rid of this'
 	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, const std::optional<size_t> &at=std::optional<size_t>() ) {
 		static_assert(knownType<T>(),"invalid type");
-		return setValue(path,ValueNew( val ), at);
+		return setValue(path, Value(val ), at);
 	}//@todo maybe remove the templated version
 	PropertyValue &setValueAs( const PropPath &path, const char *val, size_t at );
 

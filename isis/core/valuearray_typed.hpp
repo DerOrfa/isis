@@ -21,7 +21,7 @@
 #include "valuearray.hpp"
 
 namespace isis::data{
-template<typename TYPE> class TypedArray :  public ValueArrayNew
+template<typename TYPE> class TypedArray :  public ValueArray
 {
 	const std::shared_ptr<TYPE> &me;
 public:
@@ -32,19 +32,19 @@ public:
 	using value_type=TYPE;
 
 	/// Create a typed value array from a shared ptr of the same type.
-	TypedArray(std::shared_ptr<TYPE> ptr, size_t length):ValueArrayNew(ptr,length),me(castTo<TYPE>()){} //we use castTo to set "me" to the ValueArray's shared_ptr (as we know the type)
+	TypedArray(std::shared_ptr<TYPE> ptr, size_t length): ValueArray(ptr, length), me(castTo<TYPE>()){} //we use castTo to set "me" to the ValueArray's shared_ptr (as we know the type)
 	/**
 	 * Create a typed value array from a ValueArray of any type.
 	 * This might use do a type conversion (and thus a deep copy) of the given ValueArray if its type does not fit.
 	 */
-	TypedArray(const ValueArrayNew& other, const scaling_pair &scaling = scaling_pair()):ValueArrayNew(other.as<TYPE>(scaling)),me(castTo<TYPE>()){
+	TypedArray(const ValueArray& other, const scaling_pair &scaling = scaling_pair()): ValueArray(other.as<TYPE>(scaling)), me(castTo<TYPE>()){
 		LOG_IF(!other.is<TYPE>(),Debug,info) << "Made a converted " << typeName() << " copy of a " << other.typeName() << " array";
 	}
 	/// Create a typed value array from scratch
-	TypedArray(size_t length):TypedArray(ValueArrayNew::make<TYPE>(length),scaling_pair(1,0)){} //this will call the constructor for creation from ValueArray but we know we won't need any conversion or scaling
+	TypedArray(size_t length):TypedArray(ValueArray::make<TYPE>(length), scaling_pair(1, 0)){} //this will call the constructor for creation from ValueArray but we know we won't need any conversion or scaling
 	/// Basic copy constructor
-	TypedArray(const TypedArray<TYPE> &ref):TypedArray(static_cast<const ValueArrayNew&>(ref),scaling_pair(1,0)){}//same as above
-	TypedArray(TypedArray<TYPE> &&ref):ValueArrayNew(std::move(ref)),me(castTo<TYPE>()){};
+	TypedArray(const TypedArray<TYPE> &ref):TypedArray(static_cast<const ValueArray&>(ref), scaling_pair(1, 0)){}//same as above
+	TypedArray(TypedArray<TYPE> &&ref): ValueArray(std::move(ref)), me(castTo<TYPE>()){};
 
 	/// Create an invalid array of the correct type.
 	TypedArray():TypedArray(std::shared_ptr<TYPE>(),0){}//(makes sure me is valid)
@@ -59,19 +59,19 @@ public:
     }
 
 	TypedArray<TYPE>& operator=(const TypedArray<TYPE>& other){
-		ValueArrayNew::operator=(other);
-		//"me" will still reference my own ValueArrayNew::std::shared_ptr<TYPE> which got overwritten by the copy operation above
+		ValueArray::operator=(other);
+		//"me" will still reference my own ValueArray::std::shared_ptr<TYPE> which got overwritten by the copy operation above
 		return *this;
 	}
 	TypedArray<TYPE>& operator=(TypedArray<TYPE> &&other){
-		ValueArrayNew::operator=(other);
+		ValueArray::operator=(other);
 		return *this;
 	}
 
 	std::vector<TypedArray<TYPE>> typed_splice(size_t size) const
 	{
 		std::vector<TypedArray<TYPE>> ret;
-		for(auto slice:ValueArrayNew::splice(size))//for each slice, create a typed one in ret
+		for(auto slice:ValueArray::splice(size))//for each slice, create a typed one in ret
 			ret.emplace_back(slice,scaling_pair(1,0));//we know its TYPE => no conversion needed => no scaling needed
 		return ret;
 	}

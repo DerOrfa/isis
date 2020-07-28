@@ -276,7 +276,7 @@ public:
 		){
 			auto minmax=image.getMinMax();
 			const util::PropertyValue min = image.property("window/min"),max = image.property("window/max");
-			scale=data::ValueArrayNew::getConverterFromTo(util::typeID<double>(),isis_data_type)->getScaling(min.front(),max.front());
+			scale=data::ValueArray::getConverterFromTo(util::typeID<double>(), isis_data_type)->getScaling(min.front(), max.front());
 			
 			LOG_IF(!(scale.scale.eq(1) && scale.offset.eq(1)), Runtime,notice) << "Rescaling values with " << scale << " to fit windowing";
 		}
@@ -370,14 +370,14 @@ public:
 			}
 	}
 
-	static png_byte* filterRows(std::vector<data::ValueArrayNew>::const_iterator row_it, size_t rows) {
+	static png_byte* filterRows(std::vector<data::ValueArray>::const_iterator row_it, size_t rows) {
 		const size_t bytesPerRow = ((*row_it).bytesPerElem() * (*row_it).getLength() + 1);
 
 		png_byte* filteredRows = reinterpret_cast<png_byte*>(malloc(rows * bytesPerRow));
 		
 		for(size_t row=0;row<rows;row++) {
 			png_byte *dst=filteredRows+(row*bytesPerRow);
-			data::ValueArrayNew current_row_ref=*(row_it++);
+			data::ValueArray current_row_ref=*(row_it++);
 			//Add filter byte 0 to disable actual row filtering
 			dst[0]=0;
 			memcpy(dst+1,current_row_ref.getRawAddress().get(),bytesPerRow-1);
@@ -450,7 +450,7 @@ public:
 		}
 	};
 	
-	static std::pair<data::ByteArray,uLong> compress_row_set(std::vector<data::ValueArrayNew>::const_iterator row_it, size_t rows, bool finish){
+	static std::pair<data::ByteArray,uLong> compress_row_set(std::vector<data::ValueArray>::const_iterator row_it, size_t rows, bool finish){
 		//add filter-byte (0) to all scanlines and re-concatenate them
 		png_byte *filteredRows = filterRows(row_it,rows);
 		
@@ -496,8 +496,8 @@ public:
 		outputFile.write((std::ofstream::char_type*)signature,sizeof(signature));
 
 		IHDR ihdr_chunk(// use smart conversion to check for bounds
-			util::ValueNew((uint64_t)size[0]).as<int32_t>(),
-			util::ValueNew((uint64_t)size[1]).as<int32_t>(),
+			util::Value((uint64_t)size[0]).as<int32_t>(),
+			util::Value((uint64_t)size[1]).as<int32_t>(),
 			bit_depth,color_type
 		);
 		ihdr_chunk.write(outputFile);
@@ -505,7 +505,7 @@ public:
 		auto vsize=src.getValueAs<util::fvector3>("voxelSize"); //this is the size of each voxel in mm
 		pHYs(1000/vsize[0],1000/vsize[1]).write(outputFile); //how many voxels fit into 1 meter (1000mm)
 		
-		auto rows= static_cast<const data::ValueArrayNew&>(src).splice(size[0]);
+		auto rows= static_cast<const data::ValueArray&>(src).splice(size[0]);
 		
 		// compute amount of rows that fir into 100MB
 		const size_t bytes_per_row=size[0]*src.getBytesPerVoxel();

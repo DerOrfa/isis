@@ -36,18 +36,18 @@ Chunk::Chunk(bool fakeValid )
 	}
 }
 
-Chunk::Chunk( const ValueArrayNew &src, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps,bool fakeValid): Chunk(fakeValid)
+Chunk::Chunk(const ValueArray &src, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps, bool fakeValid): Chunk(fakeValid)
 {
 	const util::vector4<size_t> init_size={nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps};
 	init( init_size );
-	if(!(src.isValid() || ValueArrayNew::getLength())){//creation of an zero-sized chunk from a zero sized Array was probably intentional
+	if(!(src.isValid() || ValueArray::getLength())){//creation of an zero-sized chunk from a zero sized Array was probably intentional
 		LOG(Debug,info) << "Creating a zero sized Chunk. Make sure you change that before using it";
 	} else {
 		LOG_IF(!src.isValid(),Runtime,error) << "Creating a chunk from an invalid ValueArray, thats not going to end well ...";
 		LOG_IF( NDimensional<4>::getVolume() == 0, Debug, warning ) << "Size " << init_size << " is invalid";
 	}
-	ValueArrayNew::operator=(src);
-	assert( ValueArrayNew::getLength() == getVolume() );
+	ValueArray::operator=(src);
+	assert(ValueArray::getLength() == getVolume() );
 }
 
 Chunk Chunk::cloneToNew( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )const
@@ -59,17 +59,17 @@ Chunk Chunk::createByID ( size_t ID, size_t nrOfColumns, size_t nrOfRows, size_t
 {
 	const util::vector4<size_t> newSize( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} );
 	assert( util::product(newSize) != 0);
-	const ValueArrayNew created( ValueArrayNew::createByID( ID, util::product(newSize) ) );
+	const ValueArray created(ValueArray::createByID(ID, util::product(newSize) ) );
 	return  Chunk( created, nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid );
 }
 
 bool Chunk::convertToType( size_t ID, const scaling_pair &scaling )
 {
 	//get a converted ValueArray (will be a cheap copy if no conv was needed)
-	ValueArrayNew newPtr = ValueArrayNew::convertByID( ID, scaling );
+	ValueArray newPtr = ValueArray::convertByID(ID, scaling );
 
 	if( newPtr.isValid() ){ // if the conversion is ok
-		ValueArrayNew::operator=(newPtr);
+		ValueArray::operator=(newPtr);
 		return true;
 	} else
 		return false;
@@ -78,7 +78,7 @@ bool Chunk::convertToType( size_t ID, const scaling_pair &scaling )
 Chunk Chunk::copyByID( size_t ID, const scaling_pair &scaling ) const
 {
 	Chunk ret = *this; //make copy of the chunk
-	static_cast<ValueArrayNew&>( ret ) = ValueArrayNew::copyByID( ID, scaling ); // replace its data by the copy
+	static_cast<ValueArray&>( ret ) = ValueArray::copyByID(ID, scaling ); // replace its data by the copy
 	return ret;
 }
 
@@ -93,7 +93,7 @@ void Chunk::copyFromTile(const Chunk &src, std::array<size_t,4> pos, bool allow_
 	for(size_t l=0;l<std::min(tilesize[1],size[1]-pos[1]);l++){
 		size_t dst_scanline_idx= getLinearIndex({pos[0],pos[1]+l,0,0});
 		size_t src_scanline_idx= src.getLinearIndex({0,l,0,0});
-		static_cast<const ValueArrayNew&>( src ).copyRange(src_scanline_idx,src_scanline_idx+scanline_width-1,*this,dst_scanline_idx);
+		static_cast<const ValueArray&>( src ).copyRange(src_scanline_idx, src_scanline_idx+scanline_width-1, *this, dst_scanline_idx);
 	}
 }
 void Chunk::copyTileTo(Chunk &dst, std::array<size_t,4> pos, bool allow_capping){
@@ -107,7 +107,7 @@ void Chunk::copyTileTo(Chunk &dst, std::array<size_t,4> pos, bool allow_capping)
 	for(size_t l=0;l<std::min(tilesize[1],size[1]-pos[1]);l++){
 		size_t dst_scanline_idx= dst.getLinearIndex({0,l,0,0});
 		size_t src_scanline_idx= getLinearIndex({pos[0],pos[1]+l,0,0});
-		ValueArrayNew::copyRange(src_scanline_idx,src_scanline_idx+scanline_width-1,dst,dst_scanline_idx);
+		ValueArray::copyRange(src_scanline_idx, src_scanline_idx+scanline_width-1, dst, dst_scanline_idx);
 	}
 }
 
@@ -150,7 +150,7 @@ void Chunk::copyRange( const std::array<size_t,4> &source_start, const std::arra
 	const size_t sstart = getLinearIndex( source_start );
 	const size_t send = getLinearIndex( source_end );
 	const size_t dstart = dst.getLinearIndex( destination );
-	ValueArrayNew::copyRange( sstart, send, dst, dstart );
+	ValueArray::copyRange(sstart, send, dst, dstart );
 }
 
 size_t Chunk::compareRange( const std::array<size_t,4> &source_start, const std::array<size_t,4> &source_end, Chunk &dst, const std::array<size_t,4> &destination ) const
@@ -170,12 +170,12 @@ size_t Chunk::compareRange( const std::array<size_t,4> &source_start, const std:
 	const size_t sstart = getLinearIndex( source_start );
 	const size_t send = getLinearIndex( source_end );
 	const size_t dstart = dst.getLinearIndex( destination );
-	return ValueArrayNew::compare( sstart, send, dst, dstart );
+	return ValueArray::compare(sstart, send, dst, dstart );
 }
 size_t Chunk::compare( const isis::data::Chunk &dst ) const
 {
 	if( getSizeAsVector() == dst.getSizeAsVector() )
-		return ValueArrayNew::compare( 0, getVolume() - 1, dst, 0 );
+		return ValueArray::compare(0, getVolume() - 1, dst, 0 );
 	else
 		return std::max( getVolume(), dst.getVolume() );
 }
@@ -258,10 +258,10 @@ std::list<Chunk> Chunk::spliceAt (dimensions atDim )const
 	//copy the relevant dimensional sizes from wholesize (in case of sliceDim we copy only the first two elements of wholesize - making slices)
 	std::copy(std::begin(wholesize),std::begin(wholesize)+atDim,std::begin(spliceSize));
 	//get the spliced ValueArray's (the volume of the requested dims is the split-size - in case of sliceDim it is rows*columns)
-	const auto pointers = ValueArrayNew::splice( util::product(spliceSize) );
+	const auto pointers = ValueArray::splice(util::product(spliceSize) );
 
 	//create new Chunks from this ValueArray's
-	for( const ValueArrayNew &ref :  pointers ) {
+	for( const ValueArray &ref :  pointers ) {
 		ret.push_back( Chunk( ref, spliceSize[0], spliceSize[1], spliceSize[2], spliceSize[3] ) );
 	}
 	PropertyMap dummyMap(*this);
@@ -271,7 +271,7 @@ std::list<Chunk> Chunk::spliceAt (dimensions atDim )const
 
 size_t Chunk::useCount() const
 {
-	return ValueArrayNew::useCount();
+	return ValueArray::useCount();
 }
 
 void Chunk::flipAlong( const dimensions dim )
@@ -321,16 +321,16 @@ void Chunk::swapDim( unsigned short dim_a,unsigned short dim_b, std::shared_ptr<
 	}
 }
 
-const util::ValueNew Chunk::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
+const util::Value Chunk::getVoxelValue (size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
 {
 	LOG_IF(!isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
 	    << "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << nrOfTimesteps
 	    << " is out of range (" << getSizeAsString() << ")";
 
 	const auto iter=begin();
-	return util::ValueNew(iter[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )]);
+	return util::Value(iter[getLinearIndex({nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )]);
 }
-void Chunk::setVoxelValue ( const util::ValueNew &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
+void Chunk::setVoxelValue (const util::Value &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
 {
 	LOG_IF(!isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
 	        << "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << nrOfTimesteps

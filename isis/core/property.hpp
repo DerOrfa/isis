@@ -31,7 +31,7 @@ namespace util
 class PropertyValue
 {
 	bool m_needed;
-	std::list<ValueNew> container;
+	std::list<Value> container;
 public:
 	typedef decltype(container)::iterator iterator;
 	typedef decltype(container)::const_iterator const_iterator;
@@ -39,22 +39,22 @@ public:
 	typedef decltype(container)::const_reference const_reference;
 	typedef decltype(container)::value_type value_type;
 	/// Create a property and store the given single value object.
-	PropertyValue( const ValueNew &ref, bool _needed = false ):m_needed( _needed ) {container.emplace_back(ref);}
+	PropertyValue(const Value &ref, bool _needed = false ): m_needed(_needed ) {container.emplace_back(ref);}
 	/// Create a property and store the given single value object.
-	PropertyValue( ValueNew &&ref, bool _needed = false ):m_needed( _needed ){container.emplace_back(ref);}
+	PropertyValue(Value &&ref, bool _needed = false ): m_needed(_needed ){container.emplace_back(ref);}
 	virtual ~PropertyValue() = default;
 
 	////////////////////////////////////////////////////////////////////////////
 	// List operations
 	////////////////////////////////////////////////////////////////////////////
-	void push_back(const ValueNew& ref);
-	template<typename T> typename std::enable_if<knownType<T>() >::type push_back(const T& ref){insert(end(),ref);}//@why not just ValueNew
+	void push_back(const Value& ref);
+	template<typename T> typename std::enable_if<knownType<T>() >::type push_back(const T& ref){insert(end(),ref);}//@why not just Value
 
-	iterator insert(iterator at,const ValueNew& ref);
+	iterator insert(iterator at,const Value& ref);
 
 	template<typename T> typename std::enable_if<knownType<T>(), iterator >::type insert(iterator at,const T& ref){
-		LOG_IF(!isEmpty() && getTypeID()!=typeID<T>(),Debug,error) << "Inserting inconsistent type " << MSubject(ValueNew(ref).toString(true)) << " in " << MSubject(*this);
-		return container.emplace(at,ValueNew(ref));
+		LOG_IF(!isEmpty() && getTypeID()!=typeID<T>(),Debug,error) << "Inserting inconsistent type " << MSubject(Value(ref).toString(true)) << " in " << MSubject(*this);
+		return container.emplace(at, Value(ref));
 	}
 
 	iterator erase( size_t at );
@@ -62,7 +62,7 @@ public:
 	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 	iterator erase( iterator first, iterator last );
 
-	void resize(size_t size, ValueNew insert=ValueNew()){
+	void resize(size_t size, Value insert=Value()){
 		const auto mysize=container.size();
 		if(size-mysize>1){
 			LOG(Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
@@ -77,16 +77,16 @@ public:
 
 
 // 	void reserve(size_t size);
-// 	void resize( size_t size, const ValueNew& clone );
-	ValueNew&        operator[]( size_t n );
-	const ValueNew&  operator[]( size_t n ) const;
-	ValueNew&        at( size_t n );
-	const ValueNew&  at( size_t n ) const;
-	ValueNew&        front();
-	const ValueNew&  front()const;
+// 	void resize( size_t size, const Value& clone );
+	Value&        operator[](size_t n );
+	const Value&  operator[](size_t n ) const;
+	Value&        at(size_t n );
+	const Value&  at(size_t n ) const;
+	Value&        front();
+	const Value&  front()const;
 
-	const ValueNew &operator()()const;
-	ValueNew &operator()();
+	const Value &operator()()const;
+	Value &operator()();
 
 
 	iterator begin();
@@ -178,12 +178,12 @@ public:
 	 * Equality to another Value-Object
 	 * \returns Value::operator== if the property has exactly one value, false otherwise.
 	 */
-	bool operator ==( const ValueNew &second )const;
+	bool operator ==( const Value &second )const;
 	/**
 	 * Unequality to another Value-Object
 	 * \returns Value::operator!= if the property has exactly one value, false otherwise.
 	 */
-	bool operator !=( const ValueNew &second )const;
+	bool operator !=( const Value &second )const;
 
 	/**
 	 * (re)set property to one specific value of a specific type
@@ -192,10 +192,10 @@ public:
 	 */
 	template<typename T> typename std::enable_if_t<knownType<T>(),PropertyValue&> operator=( const T &ref){
 	    container.clear();
-	    container.emplace_back(ValueNew(ref));
+	    container.emplace_back(Value(ref));
 	    return *this;
     }
-	PropertyValue& operator=( const ValueNew &ref){
+	PropertyValue& operator=( const Value &ref){
 	    container.clear();
 	    push_back(ref);
 	    return *this;
@@ -342,15 +342,15 @@ public:
 	 */
 	template<typename T> typename std::enable_if<knownType<T>(),bool>::type operator !=( const T &second )const{return size()==1 && !front().eq(second);}
 
-	PropertyValue& operator +=( const ValueNew &second );
-	PropertyValue& operator -=( const ValueNew &second );
-	PropertyValue& operator *=( const ValueNew &second );
-	PropertyValue& operator /=( const ValueNew &second );
+	PropertyValue& operator +=( const Value &second );
+	PropertyValue& operator -=( const Value &second );
+	PropertyValue& operator *=( const Value &second );
+	PropertyValue& operator /=( const Value &second );
 
-	PropertyValue operator+( const ValueNew &second )const {PropertyValue lhs(*this); return lhs+=second;}
-	PropertyValue operator-( const ValueNew &second )const {PropertyValue lhs(*this); return lhs-=second;}
-	PropertyValue operator*( const ValueNew &second )const {PropertyValue lhs(*this); return lhs*=second;}
-	PropertyValue operator/( const ValueNew &second )const {PropertyValue lhs(*this); return lhs/=second;}
+	PropertyValue operator+( const Value &second )const {PropertyValue lhs(*this); return lhs+=second;}
+	PropertyValue operator-( const Value &second )const {PropertyValue lhs(*this); return lhs-=second;}
+	PropertyValue operator*( const Value &second )const {PropertyValue lhs(*this); return lhs*=second;}
+	PropertyValue operator/( const Value &second )const {PropertyValue lhs(*this); return lhs/=second;}
 };
 
 }

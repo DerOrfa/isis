@@ -38,11 +38,11 @@ namespace isis{
 namespace qt5{
 namespace _internal{
 	
-TransferFunction::TransferFunction(std::pair<util::ValueNew,util::ValueNew> in_minmax):minmax(in_minmax)
+TransferFunction::TransferFunction(std::pair<util::Value, util::Value> in_minmax): minmax(in_minmax)
 {
 	//we dont actually want the converter, but its scaling function
 	//which is why we hard-wire it to double->uint8_t, so we always get a full scaling
-	c=data::ValueArrayNew::getConverterFromTo(util::typeID<double>(),util::typeID<uint8_t>());
+	c=data::ValueArray::getConverterFromTo(util::typeID<double>(), util::typeID<uint8_t>());
 	updateScale(0,1);
 }
 
@@ -63,8 +63,8 @@ class MagnitudeTransfer : public TransferFunction{
 	}
 
 public:
-	MagnitudeTransfer(std::pair<util::ValueNew,util::ValueNew> minmax):TransferFunction(minmax){}
-	void operator()(uchar * dst, const data::ValueArrayNew & line) const override{
+	MagnitudeTransfer(std::pair<util::Value, util::Value> minmax): TransferFunction(minmax){}
+	void operator()(uchar * dst, const data::ValueArray & line) const override{
 		switch(line.getTypeID()){
 			case util::typeID<std::complex<float>>():
 				transferFunc(dst,data::TypedArray<std::complex<float>>(line));
@@ -88,8 +88,8 @@ class PhaseTransfer : public TransferFunction{
 	}
 
 public:
-	PhaseTransfer():TransferFunction(std::pair<util::ValueNew,util::ValueNew>(util::ValueNew(-180),util::ValueNew(180))){}
-	void operator()(uchar * dst, const data::ValueArrayNew & line) const override{
+	PhaseTransfer():TransferFunction(std::pair<util::Value, util::Value>(util::Value(-180), util::Value(180))){}
+	void operator()(uchar * dst, const data::ValueArray & line) const override{
 		switch(line.getTypeID()){
 			case util::typeID<std::complex<float>>():
 				transferFunc(dst,data::TypedArray<std::complex<float>>(line));
@@ -105,8 +105,8 @@ public:
 
 class LinearTransfer : public TransferFunction{
 public:
-	LinearTransfer(std::pair<util::ValueNew,util::ValueNew> minmax):TransferFunction(minmax){}
-	void operator()(uchar * dst, const data::ValueArrayNew & line) const override{
+	LinearTransfer(std::pair<util::Value, util::Value> minmax): TransferFunction(minmax){}
+	void operator()(uchar * dst, const data::ValueArray & line) const override{
 		if(line.isFloat() || line.isInteger() ) {
 			line.copyToMem<uint8_t>(dst, line.getLength(), scale);
 		} else if(line.is<util::color24>() || line.is<util::color48>()){
@@ -122,7 +122,7 @@ public:
 class MaskTransfer : public TransferFunction{
 public:
 	MaskTransfer():TransferFunction({0,1}){}
-	void operator()(uchar * dst, const data::ValueArrayNew & line) const override{
+	void operator()(uchar * dst, const data::ValueArray & line) const override{
 		for(const bool &c:data::TypedArray<bool>(line)){
 			if(c)
 				*(dst++)=255;
@@ -354,18 +354,18 @@ void SimpleImageView::updateImage()
 		qimage = makeQImage(
 			m_img.getChunk(0,0,curr_slice,curr_time),
 			m_img.getDimSize(data::rowDim),
-			[transfer](uchar *dst, const data::ValueArrayNew &line){
+			[transfer](uchar *dst, const data::ValueArray &line){
 				transfer->operator()(dst,line);
 			}
 		);
 	} else { // if we have a "lines-image"
-		std::vector<data::ValueArrayNew> lines(m_img.getDimSize(1));
+		std::vector<data::ValueArray> lines(m_img.getDimSize(1));
 		for(size_t l=0;l<m_img.getDimSize(1);l++){
 			lines[l]=m_img.getChunk(0,l,curr_slice,curr_time);
 		}
 		qimage = makeQImage(
 			lines,
-			[transfer](uchar *dst, const data::ValueArrayNew &line){
+			[transfer](uchar *dst, const data::ValueArray &line){
 				transfer->operator()(dst,line);
 			}
 		);

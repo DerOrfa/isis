@@ -19,14 +19,14 @@ util::istring id2Name( const uint16_t group, const uint16_t element ){
 util::istring id2Name( const uint32_t id32 ){
 	return id2Name((id32&0xFFFF0000)>>16,id32&0xFFFF);
 }
-util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArrayNew> &data_elements);
-util::PropertyMap readItem(DicomElement &token,std::multimap<uint32_t,data::ValueArrayNew> &data_elements){
+util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArray> &data_elements);
+util::PropertyMap readItem(DicomElement &token,std::multimap<uint32_t,data::ValueArray> &data_elements){
 	assert(token.getID32()==0xFFFEE000);//must be an item-tag
 	size_t len=token.getLength();
 	token.next(token.getPosition()+8);
 	return readStream(token,len,data_elements);
 }
-void readDataItems(DicomElement &token, std::multimap<uint32_t, data::ValueArrayNew> &data_elements){
+void readDataItems(DicomElement &token, std::multimap<uint32_t, data::ValueArray> &data_elements){
 	const uint32_t id=token.getID32();
 
 	bool wide= (token.getVR()=="OW");
@@ -44,7 +44,7 @@ void readDataItems(DicomElement &token, std::multimap<uint32_t, data::ValueArray
 	}
 	assert(token.getID32()==0xFFFEE0DD);//we expect a sequence delimiter (will be eaten by the calling loop)
 }
-util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArrayNew> &data_elements){
+util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArray> &data_elements){
 	size_t start=token.getPosition();
 	util::PropertyMap ret;
 
@@ -63,7 +63,7 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 			if(len==0xFFFFFFFF){ // itemized data of undefined length
 				readDataItems(token,data_elements);
 			} else {
-				std::multimap<uint32_t,data::ValueArrayNew>::iterator inserted;
+				std::multimap<uint32_t,data::ValueArray>::iterator inserted;
 				if(vr=="OW")
 					inserted=data_elements.insert({token.getID32(),token.dataAs<uint16_t>()});
 				else
@@ -106,15 +106,15 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 	return ret;
 }
 template<typename T>
-data::ValueArrayNew repackValueArray(data::ValueArrayNew &data){
+data::ValueArray repackValueArray(data::ValueArray &data){
 	//the VR of pixel data not necessarily fits the actual pixel representation so we have to repack the raw byte data
 	const auto new_ptr=std::static_pointer_cast<T>(data.getRawAddress());
 	const size_t bytes = data.getLength()*data.bytesPerElem();
-	return data::ValueArrayNew(new_ptr,bytes/sizeof(T));
+	return data::ValueArray(new_ptr, bytes/sizeof(T));
 }
 template<typename T>
-data::ValueArrayNew repackValueArray(data::ValueArrayNew &data, bool invert){
-	data::ValueArrayNew ret=repackValueArray<T>(data);
+data::ValueArray repackValueArray(data::ValueArray &data, bool invert){
+	data::ValueArray ret=repackValueArray<T>(data);
 
 	if(invert){
 		auto minmax=ret.getMinMax();
@@ -130,13 +130,13 @@ data::ValueArrayNew repackValueArray(data::ValueArrayNew &data, bool invert){
 
 class DicomChunk : public data::Chunk
 {
-	data::Chunk getUncompressedPixel(data::ValueArrayNew &data,const util::PropertyMap &props){
+	data::Chunk getUncompressedPixel(data::ValueArray &data, const util::PropertyMap &props){
 		auto rows=props.getValueAs<uint32_t>("Rows");
 		auto columns=props.getValueAs<uint32_t>("Columns");
 		//Number of Frames: 0028,0008
 
 		//repack the pixel data into proper type
-		data::ValueArrayNew pixel;
+		data::ValueArray pixel;
 		auto color=props.getValueAs<std::string>("PhotometricInterpretation");
 		auto bits_allocated=props.getValueAs<uint8_t>("BitsAllocated");
 		auto signed_values=props.getValueAsOr<bool>("PixelRepresentation",false);
@@ -168,7 +168,7 @@ class DicomChunk : public data::Chunk
 		return ret;
 	}
 public:
-	DicomChunk(data::ValueArrayNew &data,const std::string &transferSyntax,const util::PropertyMap &props)
+	DicomChunk(data::ValueArray &data, const std::string &transferSyntax, const util::PropertyMap &props)
 	{
 #ifdef HAVE_OPENJPEG
 		if(transferSyntax=="1.2.840.10008.1.2.4.90"){ //JPEG 2K
@@ -454,8 +454,8 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 	auto windowCenterQuery=dicomTree.queryProperty("WindowCenter");
 	auto windowWidthQuery=dicomTree.queryProperty("WindowWidth");
 	if( windowCenterQuery && windowWidthQuery){
-		util::ValueNew windowCenterVal=windowCenterQuery->front();
-		util::ValueNew windowWidthVal=windowWidthQuery->front();
+		util::Value windowCenterVal=windowCenterQuery->front();
+		util::Value windowWidthVal=windowWidthQuery->front();
 		double windowCenter,windowWidth;
 		if(windowCenterVal.isFloat()){
 			windowCenter=windowCenterVal.as<double>();
@@ -584,7 +584,7 @@ std::list<data::Chunk> ImageFormat_Dicom::load ( std::streambuf *source, std::li
 	boost::iostreams::copy(*source,buff_stream);
 	const auto buff = buff_stream.str();
 
-	const std::shared_ptr<uint8_t> p((uint8_t*)buff.data(),data::ValueArrayNew::NonDeleter());
+	const std::shared_ptr<uint8_t> p((uint8_t*)buff.data(),data::ValueArray::NonDeleter());
 	data::ByteArray wrap(p,buff.length());
 	return load(wrap,formatstack,dialects,progress);
 }
@@ -597,7 +597,7 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 		throwGenericError("Prefix \"DICM\" not found");
 
 	size_t meta_info_length = _internal::DicomElement(source,128+4,boost::endian::order::little,false).getValue()->as<uint32_t>();
-	std::multimap<uint32_t,data::ValueArrayNew> data_elements;
+	std::multimap<uint32_t,data::ValueArray> data_elements;
 
 	LOG(Debug,info)<<"Reading Meta Info begining at " << 158 << " length: " << meta_info_length-14;
 	_internal::DicomElement m(source,158,boost::endian::order::little,false);
@@ -643,7 +643,7 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 	}
 
 	//extract actual image data from data_elements
-	std::list<data::ValueArrayNew> img_data;
+	std::list<data::ValueArray> img_data;
 	for(auto e_it=data_elements.find(0x7FE00010);e_it!=data_elements.end() && e_it->first==0x7FE00010;){
 		img_data.push_back(e_it->second);
 		data_elements.erase(e_it++);

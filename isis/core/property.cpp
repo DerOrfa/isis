@@ -30,11 +30,11 @@ bool PropertyValue::operator!= ( const util::PropertyValue &second )const
 	return !isEmpty() && !second.isEmpty() && container!=second.container;
 }
 
-bool PropertyValue::operator== ( const ValueNew &second )const
+bool PropertyValue::operator== ( const Value &second )const
 {
 	return size()==1 && front()==second;
 }
-bool PropertyValue::operator!=( const ValueNew& second ) const
+bool PropertyValue::operator!=( const Value& second ) const
 {
 	return size()==1 && front()!=second;
 }
@@ -69,12 +69,12 @@ std::string PropertyValue::toString( bool labeled )const
 }
 bool PropertyValue::isEmpty() const{return container.empty();}
 
-const ValueNew &PropertyValue::operator()() const{return front();}
-ValueNew &PropertyValue::operator()(){return front();}
+const Value &PropertyValue::operator()() const{return front();}
+Value &PropertyValue::operator()(){return front();}
 
-void PropertyValue::push_back( const ValueNew& ref ){insert(end(),ref);}
+void PropertyValue::push_back( const Value& ref ){insert(end(), ref);}
 
-PropertyValue::iterator PropertyValue::insert( iterator at, const ValueNew& ref ){
+PropertyValue::iterator PropertyValue::insert( iterator at, const Value& ref ){
 	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting inconsistent type " << MSubject(ref.toString(true)) << " in " << MSubject(*this);
 	return container.insert(at,ref );
 }
@@ -109,7 +109,7 @@ void PropertyValue::swap(PropertyValue &src)
 bool PropertyValue::transform(uint16_t dstID)
 {
 	PropertyValue ret,err;
-	for(const ValueNew& ref : container){
+	for(const Value& ref : container){
         #pragma message "no error handling for failed convert"
 		ret.push_back(ref.copyByID( dstID ));
 	}
@@ -124,11 +124,11 @@ bool PropertyValue::transform(uint16_t dstID)
 }
 
 
-ValueNew& PropertyValue::at( size_t n ){auto it=container.begin(); std::advance(it,n);return *it;}
-const ValueNew& PropertyValue::at( size_t n ) const{auto it=container.begin(); std::advance(it,n);return *it;}
+Value& PropertyValue::at(size_t n ){auto it=container.begin(); std::advance(it, n);return *it;}
+const Value& PropertyValue::at(size_t n ) const{auto it=container.begin(); std::advance(it, n);return *it;}
 
-ValueNew& PropertyValue::operator[]( size_t n ){return at(n);}
-const ValueNew& PropertyValue::operator[]( size_t n ) const{return at(n);}
+Value& PropertyValue::operator[](size_t n ){return at(n);}
+const Value& PropertyValue::operator[](size_t n ) const{return at(n);}
 
 PropertyValue::iterator PropertyValue::begin(){return container.begin();}
 PropertyValue::const_iterator PropertyValue::begin() const{return container.begin();}
@@ -141,13 +141,13 @@ PropertyValue::iterator PropertyValue::erase( size_t at ){
 }
 PropertyValue::iterator PropertyValue::erase( iterator first, iterator last ){return container.erase(first,last);}
 
-ValueNew& PropertyValue::front(){
+Value& PropertyValue::front(){
 	LOG_IF(size()>1,Debug,warning) << "Doing single value operation on a multi value Property";
 	LOG_IF(isEmpty(),Debug,error) << "Doing single value operation on an empy Property, exception ahead ..";
 	return container.front();
 
 }
-const ValueNew& PropertyValue::front() const{
+const Value& PropertyValue::front() const{
 	LOG_IF(size()>1,Debug,warning) << "Doing single value operation on a multi value Property (" << util::listToString(begin(),end()) << ")";
 	LOG_IF(isEmpty(),Debug,error) << "Doing single value operation on an empy Property, exception ahead ..";
 	return container.front();
@@ -250,7 +250,7 @@ bool PropertyValue::eq( const PropertyValue& ref ) const{
 	if(ref.isEmpty() || ref.size()!=size())
 		return false;
 	auto mine_it=container.begin();
-	for(const ValueNew &other:ref.container)
+	for(const Value &other:ref.container)
 		ret&=(mine_it++)->eq(other);
 	return ret;
 }
@@ -273,10 +273,10 @@ bool PropertyValue::lt( const PropertyValue& ref ) const{
 	return ret;
 }
 
-PropertyValue& PropertyValue::operator +=( const ValueNew &second ){front().add(second);return *this;}
-PropertyValue& PropertyValue::operator -=( const ValueNew &second ){front().substract(second);return *this;}
-PropertyValue& PropertyValue::operator *=( const ValueNew &second ){front().multiply_me(second);return *this;}
-PropertyValue& PropertyValue::operator /=( const ValueNew &second ){front().divide_me(second);return *this;}
+PropertyValue& PropertyValue::operator +=( const Value &second ){front().add(second);return *this;}
+PropertyValue& PropertyValue::operator -=( const Value &second ){front().substract(second);return *this;}
+PropertyValue& PropertyValue::operator *=( const Value &second ){front().multiply_me(second);return *this;}
+PropertyValue& PropertyValue::operator /=( const Value &second ){front().divide_me(second);return *this;}
 
 }
 }

@@ -5,31 +5,31 @@
 
 namespace isis::util{
 
-ValueNew::ValueNew(const ValueTypes &v):ValueTypes(v){
+Value::Value(const ValueTypes &v): ValueTypes(v){
 	LOG(Debug,verbose_info) << "Value copy created from " << v;
 }
 
-ValueNew::ValueNew(ValueTypes &&v):ValueTypes(v){
+Value::Value(ValueTypes &&v): ValueTypes(v){
 	LOG(Debug,verbose_info) << "Value move created from " << v;
 }
 
-std::string ValueNew::toString(bool with_typename)const{
+std::string Value::toString(bool with_typename)const{
 	std::stringstream o;
 	print(with_typename,o);
 	return o.str();
 }
 
-std::string ValueNew::typeName() const {
+std::string Value::typeName() const {
 	return std::visit(_internal::name_visitor(),static_cast<const ValueTypes&>(*this));
 }
-size_t ValueNew::typeID()const{return index();}
+size_t Value::typeID()const{return index();}
 
-const _internal::ValueConverterMap &ValueNew::converters(){
+const _internal::ValueConverterMap &Value::converters(){
 	static _internal::ValueConverterMap ret;
 	return ret;
 }
 
-const ValueNew::Converter &ValueNew::getConverterTo(unsigned short ID) const {
+const Value::Converter &Value::getConverterTo(unsigned short ID) const {
 	const auto f1 = converters().find( typeID() );
 	assert( f1 != converters().end() );
 	const auto f2 = f1->second.find( ID );
@@ -37,7 +37,7 @@ const ValueNew::Converter &ValueNew::getConverterTo(unsigned short ID) const {
 	return f2->second;
 }
 
-ValueNew ValueNew::createByID(unsigned short ID) {
+Value Value::createByID(unsigned short ID) {
 	const auto f1 = converters().find(ID);
 	assert( f1 != converters().end() );
 	const auto f2 = f1->second.find( ID );
@@ -45,9 +45,9 @@ ValueNew ValueNew::createByID(unsigned short ID) {
 	return f2->second->create();//trivial conversion to itself should always be there
 }
 
-ValueNew ValueNew::copyByID(size_t ID) const{
+Value Value::copyByID(size_t ID) const{
 	const Converter &conv = getConverterTo( ID );
-	ValueNew to;
+	Value to;
 
 	if ( conv ) {
 		switch ( conv->generate( *this, to ) ) {
@@ -68,9 +68,9 @@ ValueNew ValueNew::copyByID(size_t ID) const{
 	}
 }
 
-bool ValueNew::fitsInto(size_t ID) const { //@todo find a better way to do this
+bool Value::fitsInto(size_t ID) const { //@todo find a better way to do this
 	const Converter &conv = getConverterTo( ID );
-	ValueNew to = createByID(ID);
+	Value to = createByID(ID);
 
 	if ( conv ) {
 		return ( conv->generate( *this, to ) ==  boost::numeric::cInRange );
@@ -82,7 +82,7 @@ bool ValueNew::fitsInto(size_t ID) const { //@todo find a better way to do this
 	}
 }
 
-bool ValueNew::convert(const ValueNew &from, ValueNew &to) {
+bool Value::convert(const Value &from, Value &to) {
 	const Converter &conv = from.getConverterTo( to.index() );
 
 	if ( conv ) {
@@ -106,7 +106,7 @@ bool ValueNew::convert(const ValueNew &from, ValueNew &to) {
 	return false;
 }
 
-bool ValueNew::isFloat() const
+bool Value::isFloat() const
 {
 	return std::visit(
 	            [](auto ptr){
@@ -115,7 +115,7 @@ bool ValueNew::isFloat() const
 	);
 }
 
-bool ValueNew::isInteger() const
+bool Value::isInteger() const
 {
 	return std::visit(
 	            [](auto ptr){
@@ -124,65 +124,65 @@ bool ValueNew::isInteger() const
 	);
 }
 
-bool ValueNew::isValid() const{return !ValueTypes::valueless_by_exception();}
+bool Value::isValid() const{return !ValueTypes::valueless_by_exception();}
 
-bool ValueNew::gt( const ValueNew &ref )const {
+bool Value::gt(const Value &ref )const {
 	auto op = [&](auto ptr){
 		return operatorWrapper(_internal::type_greater<decltype(ptr)>(),ref,false );
 	};
 	return std::visit(op,static_cast<const ValueTypes&>(*this));
 }
-bool ValueNew::lt( const ValueNew &ref )const {
+bool Value::lt(const Value &ref )const {
 	auto op=[&](auto ptr){
 		return operatorWrapper(_internal::type_less<decltype(ptr)>(),ref,false );
 	};
 	return std::visit(op,static_cast<const ValueTypes&>(*this));
 }
-bool ValueNew::eq( const ValueNew &ref )const {
+bool Value::eq(const Value &ref )const {
 	auto op=[&](auto ptr){
 		return operatorWrapper(_internal::type_eq<decltype(ptr)>(),ref,false );
 	};
 	return std::visit(op,static_cast<const ValueTypes&>(*this));
 }
 
-ValueNew ValueNew::plus( const ValueNew &ref )const{return ValueNew(*this).add(ref);}
-ValueNew ValueNew::minus( const ValueNew &ref )const{return ValueNew(*this).substract(ref);}
-ValueNew ValueNew::multiply( const ValueNew &ref )const{return ValueNew(*this).multiply_me(ref);}
-ValueNew ValueNew::divide( const ValueNew &ref )const{return ValueNew(*this).divide_me(ref);}
+Value Value::plus(const Value &ref )const{return Value(*this).add(ref);}
+Value Value::minus(const Value &ref )const{return Value(*this).substract(ref);}
+Value Value::multiply(const Value &ref )const{return Value(*this).multiply_me(ref);}
+Value Value::divide(const Value &ref )const{return Value(*this).divide_me(ref);}
 
-ValueNew& ValueNew::add( const ValueNew &ref )
+Value& Value::add(const Value &ref )
 {
-	auto op=[&](auto ptr)->ValueNew&{
+	auto op=[&](auto ptr)->Value&{
 		return operatorWrapper_me(_internal::type_plus<decltype(ptr)>(), ref );
 	};
 	return std::visit(op,static_cast<ValueTypes&>(*this));
 }
 
-ValueNew& ValueNew::substract( const ValueNew &ref )
+Value& Value::substract(const Value &ref )
 {
-	auto op=[&](auto ptr)->ValueNew&{
+	auto op=[&](auto ptr)->Value&{
 		return operatorWrapper_me(_internal::type_minus<decltype(ptr)>(), ref );
 	};
 	return std::visit(op,static_cast<ValueTypes&>(*this));
 }
 
-ValueNew& ValueNew::multiply_me( const ValueNew &ref )
+Value& Value::multiply_me(const Value &ref )
 {
-	auto op=[&](auto ptr)->ValueNew&{
+	auto op=[&](auto ptr)->Value&{
 		return operatorWrapper_me(_internal::type_mult<decltype(ptr)>(), ref );
 	};
 	return std::visit(op,static_cast<ValueTypes&>(*this));
 }
 
-ValueNew& ValueNew::divide_me( const ValueNew &ref )
+Value& Value::divide_me(const Value &ref )
 {
-	auto op=[&](auto ptr)->ValueNew&{
+	auto op=[&](auto ptr)->Value&{
 		return operatorWrapper_me(_internal::type_div<decltype(ptr)>(), ref );
 	};
 	return std::visit(op,static_cast<ValueTypes&>(*this));
 }
 
-bool ValueNew::apply(const isis::util::ValueNew& other){
+bool Value::apply(const isis::util::Value& other){
 	return convert(other,*this);
 }
 

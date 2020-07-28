@@ -210,7 +210,7 @@ API_EXCLUDE_END;
  * \param min the smallest value of the source data
  * \param max the biggest value of the source data
  */
-template<typename SRC, typename DST> scaling_pair getNumericScaling( const util::ValueNew &min, const util::ValueNew &max )
+template<typename SRC, typename DST> scaling_pair getNumericScaling(const util::Value &min, const util::Value &max )
 {
 	double scale = 1.0;
 	double offset = 0.0;

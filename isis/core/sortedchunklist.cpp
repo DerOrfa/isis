@@ -46,8 +46,8 @@ bool SortedChunkList::posCompare::operator()( const util::fvector3 &posA, const 
 }
 bool SortedChunkList::scalarPropCompare::operator()( const isis::util::PropertyValue &a, const isis::util::PropertyValue &b ) const
 {
-	const util::ValueNew &aScal = a.front();
-	const util::ValueNew &bScal = b.front();
+	const util::Value &aScal = a.front();
+	const util::Value &bScal = b.front();
 
 	if ( aScal.lt( bScal ) ) {
 		LOG( Debug, verbose_info ) << "Successfully sorted chunks by " << propertyName << " (" << aScal.toString( false ) << " before " << bScal.toString( false ) << ")";

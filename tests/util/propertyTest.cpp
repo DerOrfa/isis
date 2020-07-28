@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE( direct_property_operator_test )
 
 BOOST_AUTO_TEST_CASE( property_list_creation )
 {
-	const util::ValueNew buff[]={0,1,2,3,4,5,6,7,8,9};
+	const util::Value buff[]={0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 	PropertyValue list;
 	list.insert(list.end(),buff,buff+10);
 	for(int i=0;i<10;i++){
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE( property_list_creation )
 
 BOOST_AUTO_TEST_CASE( property_list_splice )
 {
-	const util::ValueNew buff[]={0,1,2,3,4,5,6,7,8,9};
+	const util::Value buff[]={0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 	PropertyValue list;
 	list.insert(list.end(),buff,buff+10);
 

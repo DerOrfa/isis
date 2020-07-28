@@ -497,7 +497,7 @@ const Chunk Image::getChunk ( size_t first, size_t second, size_t third, size_t 
 	return getChunkAt( index, copy_metadata );
 }
 
-void Image::copyToValueArray( ValueArrayNew &dst, scaling_pair scaling ) const
+void Image::copyToValueArray(ValueArray &dst, scaling_pair scaling ) const
 {
 	if( getVolume() > dst.getLength() ) {
 		LOG( Runtime, error ) << "Image won't fit into the ValueArray, wont copy..";
@@ -510,7 +510,7 @@ void Image::copyToValueArray( ValueArrayNew &dst, scaling_pair scaling ) const
 
 		assert(scaling.valid);
 
-		std::vector< ValueArrayNew > targets;
+		std::vector<ValueArray > targets;
 
 		if( lookup.size() > 1 ) { //if there are more than 1 chunks
 			//spliceAt target to have the same parts as the image
@@ -697,7 +697,7 @@ size_t Image::getMaxBytesPerVoxel() const
 	return bytes;
 }
 
-std::pair<util::ValueNew, util::ValueNew> Image::getMinMax (bool unify) const
+std::pair<util::Value, util::Value> Image::getMinMax (bool unify) const
 {
 	if( !lookup.empty() ) {
 		auto minmax_ch = getChunksMinMax();
@@ -720,7 +720,7 @@ std::pair<util::ValueNew, util::ValueNew> Image::getMinMax (bool unify) const
 
 	} else {
 		LOG(Runtime,error) << "Won't run getMinMax on an empty image.";
-		return std::pair<util::ValueNew, util::ValueNew>();
+		return std::pair<util::Value, util::Value>();
 	}
 }
 
@@ -728,7 +728,7 @@ std::pair<util::ValueNew, util::ValueNew> Image::getMinMax (bool unify) const
 scaling_pair Image::getScalingTo( short unsigned int targetID ) const
 {
 	LOG_IF( !clean, Debug, error ) << "You should run reIndex before running this";
-	std::pair<util::ValueNew, util::ValueNew> minmax = getMinMax();
+	std::pair<util::Value, util::Value> minmax = getMinMax();
 
 	for( const std::shared_ptr<const Chunk> &ref :  lookup ) { //find a chunk which would be converted
 		if( targetID != ref->getTypeID() ) {
@@ -773,7 +773,7 @@ size_t Image::compare( const isis::data::Image &comp ) const
 		LOG( Debug, verbose_info )
 		        << "Start positions are " << c1pair1.second << " and " << c2pair1.second
 		        << " and the length is " << c1pair2.second - c1pair1.second;
-		ret += static_cast<const ValueArrayNew&>(c1).compare( c1pair1.second, c1pair2.second, c2, c2pair1.second );
+		ret += static_cast<const ValueArray&>(c1).compare(c1pair1.second, c1pair2.second, c2, c2pair1.second );
 	}
 
 	return ret;
@@ -826,8 +826,8 @@ Image::orientation Image::getMainOrientation()const
 	return axial; //will never be reached
 }
 
-ValueArrayNew Image::copyAsValueArray() const {
-	ValueArrayNew ret=ValueArrayNew::createByID(getMajorTypeID(),getVolume());
+ValueArray Image::copyAsValueArray() const {
+	ValueArray ret=ValueArray::createByID(getMajorTypeID(), getVolume());
 	copyToValueArray(ret);
 	return ret;
 }
@@ -1059,9 +1059,9 @@ Image::iterator Image::begin()
 	if(! checkMakeClean() ) {
 		LOG( Debug, error )  << "Image is not clean. Returning invalid iterator ...";
 	}
-	std::vector<ValueArrayNew> buff(lookup.size());
+	std::vector<ValueArray> buff(lookup.size());
 	for(size_t i=0;i<lookup.size();i++)
-		buff[i]=*lookup[i];//Chunk is derived from ValueArrayNew
+		buff[i]=*lookup[i];//Chunk is derived from ValueArray
 	return iterator( buff );
 }
 Image::iterator Image::end() {return begin() + getVolume();}
@@ -1070,14 +1070,14 @@ Image::const_iterator Image::begin()const
 	if(! isClean() ) {
 		LOG( Debug, error )  << "Image is not clean. Returning invalid iterator ...";
 	}
-	std::vector<ValueArrayNew> buff(lookup.size());
+	std::vector<ValueArray> buff(lookup.size());
 	for(size_t i=0;i<lookup.size();i++)
-		buff[i]=*lookup[i];//Chunk is derived from ValueArrayNew
+		buff[i]=*lookup[i];//Chunk is derived from ValueArray
 	return iterator( buff );
 }
 Image::const_iterator Image::end()const {return begin() + getVolume();}
 
-const util::ValueNew Image::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
+const util::Value Image::getVoxelValue (size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
 {
 	LOG_IF( !isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
 	        << "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << " is out of range (" << getSizeAsString() << ")";
@@ -1086,7 +1086,7 @@ const util::ValueNew Image::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows,
 	const auto it = ch.begin()[index.second];
 	return it;
 }
-void Image::setVoxelValue ( const util::ValueNew &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
+void Image::setVoxelValue (const util::Value &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
 {
 	const auto index = commonGet(nrOfColumns,nrOfRows,nrOfSlices,nrOfTimesteps);
 	Chunk ch = getChunkAt(index.first,false);
@@ -1100,19 +1100,19 @@ std::string Image::identify ( bool withpath, bool withdate )const
 	seqNum(*this);seqDesc(*this);seqStart(*this);source(*this);
 	return set.identify(withpath,withdate,source, seqNum,seqDesc,seqStart);
 }
-std::pair<ValueArrayNew,ValueArrayNew> Image::getChunksMinMax()const
+std::pair<ValueArray, ValueArray> Image::getChunksMinMax()const
 {
 	LOG_IF(!clean, Debug, info )  << "Image is not clean, result will be faulty  ...";
 	assert(!lookup.empty());
 	//get all the minmax from all the chunks
-	std::list<util::ValueNew> min, max;
+	std::list<util::Value> min, max;
 	for(const auto ch_ptr:lookup){
 		const auto minmax=ch_ptr->getMinMax();
 		min.push_back(minmax.first);
 		max.push_back(minmax.second);
 	}
 	//check to be run on all values
-	auto typefind = [](size_t &curtype,const util::ValueNew &val)->void
+	auto typefind = [](size_t &curtype,const util::Value &val)->void
 	{
 		if (val.fitsInto(curtype))
 			return;// val fits into current type go on
@@ -1129,8 +1129,8 @@ std::pair<ValueArrayNew,ValueArrayNew> Image::getChunksMinMax()const
 
 	//create ValueArrays
 	auto ret=std::make_pair(
-	    ValueArrayNew::createByID(mintype,lookup.size()),
-	    ValueArrayNew::createByID(maxtype,lookup.size())
+		ValueArray::createByID(mintype, lookup.size()),
+		ValueArray::createByID(maxtype, lookup.size())
 	);
 	std::copy(min.begin(),min.end(),ret.first.begin());
 	std::copy(max.begin(),max.end(),ret.second.begin());

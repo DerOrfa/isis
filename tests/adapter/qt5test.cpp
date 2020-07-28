@@ -55,13 +55,13 @@ BOOST_AUTO_TEST_CASE( qimage_complex_test )
 	const auto minmax = data.getMinMax();
 // 	const float min=minmax.first.as<float>(),max=minmax.second.as<float>();
 	
-	const auto &c = data::ValueArrayNew::getConverterFromTo(util::typeID<float>(),util::typeID<uint8_t>());
+	const auto &c = data::ValueArray::getConverterFromTo(util::typeID<float>(), util::typeID<uint8_t>());
 	const data::scaling_pair scaling=c->getScaling(minmax.first,minmax.second);
 	
 	BOOST_REQUIRE_CLOSE(scaling.scale.as<float>(), 0.5,1);
 	BOOST_REQUIRE_CLOSE(scaling.offset.as<float>(), -0.5,1);
 
-	auto magnitude_transfer = [scaling](uchar *dst, const data::ValueArrayNew &line){
+	auto magnitude_transfer = [scaling](uchar *dst, const data::ValueArray &line){
 		const float scale=scaling.scale.as<float>();
 		const float offset=scaling.offset.as<float>();
 		for(const std::complex<float> &v:data::TypedArray<std::complex<float>>(line)){
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE( qimage_complex_test )
 		}
 	};
 
-	auto phase_transfer = [](uchar *dst, const data::ValueArrayNew &line){
+	auto phase_transfer = [](uchar *dst, const data::ValueArray &line){
 		const float scale=M_PI/128;
 		const float offset=128;
 		for(const std::complex<float> &v:data::TypedArray<std::complex<float>>(line)){

@@ -26,29 +26,29 @@ class ConstValueAdapter
 {
 	template<bool BB> friend class GenericValueIterator; //allow the iterators (and only them) to create the adapter
 public:
-	typedef const util::ValueNew ( *Getter )( const void * );
-	typedef void ( *Setter )( void *, const util::ValueNew & );
+	typedef const util::Value ( *Getter )(const void * );
+	typedef void ( *Setter )( void *, const util::Value & );
 protected:
 	const Getter getter;
 	const uint8_t *const p;
 	ConstValueAdapter( const uint8_t *const _p, Getter _getValueFunc );
 public:
 	// to make some algorithms work
-	bool operator==( const util::ValueNew &val )const;
-	bool operator!=( const util::ValueNew &val )const;
-	//@make ValueAdapter implicitly convertible to ValueNew
+	bool operator==( const util::Value &val )const;
+	bool operator!=( const util::Value &val )const;
+	//@make ValueAdapter implicitly convertible to Value
 	bool operator==( const ConstValueAdapter &val )const;
 	bool operator!=( const ConstValueAdapter &val )const;
 
-	bool operator<( const util::ValueNew &val )const;
-	bool operator>( const util::ValueNew &val )const;
-	//@make ValueAdapter implicitly convertible to ValueNew
+	bool operator<( const util::Value &val )const;
+	bool operator>( const util::Value &val )const;
+	//@make ValueAdapter implicitly convertible to Value
 	bool operator<( const ConstValueAdapter &val )const;
 	bool operator>( const ConstValueAdapter &val )const;
 
-	const std::unique_ptr<util::ValueNew> operator->() const; //maybe more trouble than worth it
+	const std::unique_ptr<util::Value> operator->() const; //maybe more trouble than worth it
 	const std::string toString( bool label = false )const;
-	operator util::ValueNew()const{return getter(p);}
+	operator util::Value()const{return getter(p);}
 };
 class WritingValueAdapter: public ConstValueAdapter
 {
@@ -58,7 +58,7 @@ class WritingValueAdapter: public ConstValueAdapter
 protected:
 	WritingValueAdapter( uint8_t *const _p, Getter _getValueFunc, Setter _setValueFunc, size_t _size );
 public:
-	WritingValueAdapter operator=( const util::ValueNew &val );
+	WritingValueAdapter operator=( const util::Value &val );
 	void swapwith( const WritingValueAdapter &b )const; // the WritingValueAdapter is const not what its dereferencing
 };
 
@@ -191,7 +191,7 @@ namespace std
 	template<typename charT, typename traits> basic_ostream<charT, traits>&
 	operator<<( basic_ostream<charT, traits> &out, const isis::data::_internal::ConstValueAdapter &v )
 	{
-		return out << isis::util::ValueNew(v);
+		return out << isis::util::Value(v);
 	}
 }
 

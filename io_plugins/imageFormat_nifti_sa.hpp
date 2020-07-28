@@ -141,7 +141,7 @@ protected:
 	WriteOp( const isis::data::Image &image, size_t bitsPerVoxel );
 	virtual bool doCopy( const data::Chunk &ch, util::vector4<size_t> posInImage ) = 0;
 	void applyFlipToCoords ( util::vector4< size_t > &coords, data::dimensions blockdims );
-	void applyFlipToData ( data::ValueArrayNew &dat, util::vector4< size_t > chunkSize );
+	void applyFlipToData (data::ValueArray &dat, util::vector4<size_t > chunkSize );
 	void applyFlipToData ( data::Chunk &dat );
 public:
 	virtual ~WriteOp() {}

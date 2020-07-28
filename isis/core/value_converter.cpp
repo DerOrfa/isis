@@ -61,10 +61,10 @@ template<typename T_DUR> bool parseTimeString(const std::string &src, const char
 template<typename SRC, typename DST> class ValueGenerator: public ValueConverterBase
 {
 public:
-	ValueNew create()const override {
+	Value create()const override {
 		return DST();
 	}
-	boost::numeric::range_check_result generate( const ValueNew &src, ValueNew& dst )const override {
+	boost::numeric::range_check_result generate(const Value &src, Value& dst )const override {
 		dst=create();
 		assert(dst.is<DST>());
 		const boost::numeric::range_check_result result = convert( src, dst );
@@ -100,7 +100,7 @@ public:
 		auto *ret = new ValueConverter<NUMERIC, true, SRC, DST>;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		dst=src;
 		return boost::numeric::cInRange;
 	}
@@ -289,7 +289,7 @@ template<typename DST> struct StrTransformer {
 };
 
 //helper to convert strings to FixedVectors
-template<typename DST, int NUM> boost::numeric::range_check_result convertStr2Vector( const ValueNew &src, std::array<DST, NUM> &dstList )
+template<typename DST, int NUM> boost::numeric::range_check_result convertStr2Vector(const Value &src, std::array<DST, NUM> &dstList )
 {
 	const std::list<std::string> srcList = Tokenizer<std::is_arithmetic<DST>::value>::run( std::get<std::string>(src) ); // tokenize the string based on the target type
 	auto end = srcList.begin();
@@ -311,11 +311,11 @@ template<typename SRC, typename DST> struct IterableSubValueConv: SubValueConv<S
 		typename SRC_LST::const_iterator srcAt = srcLst.begin(), srcEnd = srcLst.end();
 		typename DST_LST::iterator dstBegin = dstLst.begin(), dstEnd = dstLst.end();
 
-		ValueNew elem_dst=DST();
+		Value elem_dst=DST();
 		while( srcAt != srcEnd ) { //slow and ugly, but flexible
 
 			if( dstBegin != dstEnd ) {
-				const boost::numeric::range_check_result result = SubValueConv<SRC, DST>::sub_conv->convert( ValueNew( *srcAt ), elem_dst );
+				const boost::numeric::range_check_result result = SubValueConv<SRC, DST>::sub_conv->convert(Value(*srcAt ), elem_dst );
 
 				if ( ret == boost::numeric::cInRange && result != boost::numeric::cInRange )
 					ret = result;
@@ -369,7 +369,7 @@ public:
 		auto *ret = new ValueConverter<true, false, SRC, DST>;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		assert(src.is<SRC>());
 		assert(dst.is<DST>());
 		return num2num( std::get<SRC>(src), std::get<DST>(dst) );
@@ -390,7 +390,7 @@ public:
 		auto *ret = new ValueConverter<false, false, std::complex<SRC>, std::complex<DST> >;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return num2num( std::get<std::complex<SRC>>(src), std::get<std::complex<DST> >(dst) );
 	}
 	~ValueConverter() override = default;
@@ -409,7 +409,7 @@ public:
 		auto *ret = new ValueConverter<false, false, color<SRC>, color<DST>  >;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		boost::numeric::range_check_result res = boost::numeric::cInRange;
 		const SRC *srcVal = &std::get<color<SRC> >(src).r;
 		DST *dstVal = &std::get<color<DST> >(dst).r;
@@ -441,9 +441,9 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, SRC, std::complex<DST> >, SRC, DST >();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		std::complex<DST> &dstVal = std::get<std::complex<DST> >(dst);
-		ValueNew real=DST();
+		Value real=DST();
 		boost::numeric::range_check_result ret = this->sub_conv->convert( src, real );
 
 		if( ret == boost::numeric::cInRange )
@@ -470,7 +470,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, vector4<SRC>, vector4<DST> >, SRC, DST>();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<vector4<SRC> >(src), std::get<vector4<DST> >(dst) );
 	}
 	~ValueConverter() override = default;
@@ -487,7 +487,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, vector3<SRC>, vector4<DST> >, SRC, DST>();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<vector3<SRC> >(src), std::get<vector4<DST> >(dst) );
 	}
 	~ValueConverter() override = default;
@@ -504,7 +504,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, vector4<SRC>, vector3<DST> >, SRC, DST>();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<vector4<SRC> >(src), std::get<vector3<DST> >(dst) );
 	}
 	~ValueConverter() override = default;
@@ -521,7 +521,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, vector3<SRC>, vector3<DST> >, SRC, DST>();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<vector3<SRC> >(src), std::get<vector3<DST> >(dst) );
 	}
 	~ValueConverter() override = default;
@@ -541,7 +541,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, std::list<SRC>, std::list<DST> >, SRC, DST>();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		auto &dstVal = std::get<std::list<DST> >(dst);
 		LOG_IF( ! dstVal.empty(), CoreLog, warning )
 				<< "Storing into non empty list while conversion from "
@@ -567,7 +567,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, util::vector3<SRC>, std::list<DST> >, SRC, DST>();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		auto &dstVal = std::get<std::list<DST> >(dst);
 		LOG_IF( ! dstVal.empty(), CoreLog, warning ) << "Storing into non empty list while conversion from " <<typeName<util::vector3<SRC> >() << " to " <<typeName<std::list<DST> >();
 		dstVal.resize( 3 );
@@ -587,7 +587,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, util::vector4<SRC>, std::list<DST> >, SRC, DST>();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		auto &dstVal = std::get<std::list<DST> >(dst);
 		LOG_IF( ! dstVal.empty(), CoreLog, warning ) << "Storing into non empty list while conversion from " <<typeName<util::vector4<SRC> >() << " to " <<typeName<std::list<DST> >();
 		dstVal.resize( 4 );
@@ -609,7 +609,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, std::list<SRC>, vector3<DST> >, SRC, DST>();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<std::list<SRC> >(src), std::get<vector3<DST> >(dst) );
 	}
 	~ValueConverter() override = default;
@@ -625,7 +625,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, std::list<SRC>, vector4<DST> >, SRC, DST>();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<std::list<SRC> >(src), std::get<vector4<DST> >(dst) );
 	}
 	~ValueConverter() override = default;
@@ -645,7 +645,7 @@ public:
 		auto *ret = new ValueConverter<false, false, std::string, DST>;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return str2scalar( std::get<std::string>(src), std::get<DST>(dst) );
 	}
 	~ValueConverter() override = default;
@@ -663,7 +663,7 @@ public:
 	static std::shared_ptr<const ValueConverterBase> get() {
 		return getFor<ValueConverter<false, false, std::string, std::complex<DST> >, std::complex<double>, std::complex<DST> >();
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		std::complex<double> buffer;
 		if(stringTo(std::get<std::string>(src),buffer)){// make a double from the string
 			return num2num( buffer, std::get<std::complex<DST> >(dst) );
@@ -691,7 +691,7 @@ public:
 		auto *ret = new ValueConverter<false, false, SRC, std::string>;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		dst = toStringConv( std::get<SRC>(src), std::is_integral<SRC>() );
 		return boost::numeric::cInRange; // this should allways be ok
 	}
@@ -713,7 +713,7 @@ public:
 		auto *ret = new ValueConverter<false, false, std::string, std::list<DST> >;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		std::list<DST> &dstList = std::get<std::list<DST> >(dst);
 		const std::list<std::string> srcList = Tokenizer<std::is_arithmetic<DST>::value>::run( std::get<std::string>(src) ); // tokenize the strin based on the target type
 		dstList.resize( srcList.size() ); // resize target to the ammount of found tokens
@@ -733,7 +733,7 @@ public:
 		auto *ret = new ValueConverter<false, false, std::string, vector4<DST> >;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return _internal::convertStr2Vector<DST, 4>( src, std::get<vector4<DST> >(dst) );
 	}
 	~ValueConverter() override = default;
@@ -749,7 +749,7 @@ public:
 		auto *ret = new ValueConverter<false, false, std::string, vector3<DST> >;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return _internal::convertStr2Vector<DST, 3>( src, std::get<vector3<DST> >(dst) );
 	}
 	~ValueConverter() override = default;
@@ -766,7 +766,7 @@ public:
 		auto *ret = new ValueConverter<false, false, std::string, color<T> >;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		color<T> &dstVal = std::get<color<T> >(dst);
 		const std::list<std::string> srcList = Tokenizer<std::is_arithmetic<T>::value>::run( std::get<std::string>(src) ); // tokenize the string based on the target type
 		auto end = srcList.begin();
@@ -791,7 +791,7 @@ public:
 		auto *ret = new ValueConverter<false, false, util::timestamp, util::date>;
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
-	boost::numeric::range_check_result convert( const ValueNew &src, ValueNew &dst )const override {
+	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		auto &dstVal = std::get<util::date>(dst);
 		dstVal=std::chrono::time_point_cast<std::chrono::days>(std::get<util::timestamp>(src));
 
@@ -815,14 +815,14 @@ template<typename DST> struct MakeConvVisitor{
 };
 
 template<int I=0> constexpr void makeInnerConv(const ValueTypes &src,ConverterMap &m_map){
-    MakeConvVisitor<ValueNew::TypeByIndex<I>> vis;
+    MakeConvVisitor<Value::TypeByIndex<I>> vis;
 	m_map[src.index()][I]= std::visit(vis,src);
     makeInnerConv<I+1>(src, m_map);
 }
 template<> constexpr void makeInnerConv<std::variant_size<ValueTypes>::value>(const ValueTypes &src,ConverterMap &){}
 
 template<int I=0> constexpr void makeOuterConv(ConverterMap &m_map){
-    makeInnerConv(ValueTypes{ValueNew::TypeByIndex<I>()},m_map);
+    makeInnerConv(ValueTypes{Value::TypeByIndex<I>()}, m_map);
 	makeOuterConv<I+1>(m_map);
 }
 template<> constexpr void makeOuterConv<std::variant_size<ValueTypes>::value>(ConverterMap &){}

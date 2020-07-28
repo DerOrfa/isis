@@ -50,7 +50,7 @@ ptrdiff_t  DCMStack::readJson( data::ByteArray stream, char extra_token )
 // some basic functors for later use
 struct ComputeTimeDist {
 	util::timestamp sequenceStart;
-	util::ValueNew operator()( const util::ValueNew &val )const {
+	util::Value operator()(const util::Value &val )const {
 		return val.as<util::timestamp>() - sequenceStart;
 	}
 };

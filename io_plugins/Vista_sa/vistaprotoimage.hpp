@@ -58,7 +58,7 @@ public:
 class VistaProtoImage: protected std::list<data::Chunk>{};
 
 class VistaInputImage: public VistaProtoImage{
-	typedef data::ValueArrayNew ( *readerPtr )( data::ByteArray data, size_t offset, size_t size );
+	typedef data::ValueArray ( *readerPtr )(data::ByteArray data, size_t offset, size_t size );
 	readerPtr m_reader;
 	data::ByteArray m_data;
 	data::ByteArray::iterator m_data_start;
@@ -71,7 +71,7 @@ class VistaInputImage: public VistaProtoImage{
 	std::map<util::istring, readerPtr> vista2isis;
 	bool big_endian;
 	
-	template<typename T> data::TypedArray<util::color<T> > toColor( const data::ValueArrayNew ref, size_t slice_size ) {
+	template<typename T> data::TypedArray<util::color<T> > toColor(const data::ValueArray ref, size_t slice_size ) {
 		assert( ref.getLength() % 3 == 0 );
 
 		//colors are stored slice-wise in the 3d block
