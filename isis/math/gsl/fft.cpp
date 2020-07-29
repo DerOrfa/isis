@@ -20,11 +20,12 @@
 #include "fft.hxx"
 #include "../common.hpp"
 
-#include <math.h>
+#include <cmath>
 #include <gsl/gsl_fft_complex.h>
 #include "../details/details_fft.hxx"
+#include "../../core/valuearray_typed.hpp"
 
-void fft_impl(isis::data::ValueArray<std::complex<double> > &data,bool inverse,size_t stride=1){
+void fft_impl(isis::data::TypedArray<std::complex<double> > &data,bool inverse,size_t stride=1){
 	const size_t elements=data.getLength()/stride;
 	std::shared_ptr<gsl_fft_complex_wavetable> wavetable(gsl_fft_complex_wavetable_alloc (elements),gsl_fft_complex_wavetable_free);
 	std::shared_ptr<gsl_fft_complex_workspace> workspace(gsl_fft_complex_workspace_alloc (elements),gsl_fft_complex_workspace_free);
@@ -37,22 +38,22 @@ void fft_impl(isis::data::ValueArray<std::complex<double> > &data,bool inverse,s
 
 }
 
-void isis::math::gsl::fft(isis::data::TypedChunk< std::complex< double > > &data, bool inverse, double scale)
+bool isis::math::gsl::fft(isis::data::TypedChunk<std::complex<double > > &data, bool inverse, double scale)
 {
 	_internal::halfshift(data);
-	data::ValueArray< std::complex< double > > &array=data.asValueArray<std::complex<double> >();
+	data::TypedArray< std::complex< double > > array(data);
 
 	for(size_t rank=0;rank<data.getRelevantDims();rank++){
 		std::array<size_t,4> dummy_index={0,0,0,0};
 		dummy_index[rank]=1;
 		//splice into lines of dimsize elements
 		size_t stride=data.getLinearIndex(dummy_index);
-		std::vector< data::ValueArrayBase::Reference > lines= (rank<data.getRelevantDims()-1) ? //do not call splice for the top rank (full volume)
-			array.splice(data.getDimSize(rank)*stride):
-			std::vector<data::ValueArrayBase::Reference>(1,array); 
+		auto lines= (rank<data.getRelevantDims()-1) ? //do not call splice for the top rank (full volume)
+			array.typed_splice(data.getDimSize(rank)*stride):
+			std::vector<data::TypedArray< std::complex< double > >>(1,array);
 
-		for(data::ValueArrayBase::Reference line_ref:lines)
-			fft_impl(line_ref->castToValueArray<std::complex<double> >(),inverse,stride);
+		for(auto &line_ref:lines)
+			fft_impl(line_ref,inverse,stride);
 	}
 
 	_internal::halfshift(data);
@@ -63,4 +64,6 @@ void isis::math::gsl::fft(isis::data::TypedChunk< std::complex< double > > &data
 	if(scale!=1)
 		for(std::complex< double > &v:data)
 			v*=scale;
+
+	return true;
 }

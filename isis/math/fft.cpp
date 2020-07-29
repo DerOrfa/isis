@@ -32,27 +32,31 @@ isis::data::TypedChunk< std::complex< float > > isis::math::fft_single(isis::dat
 {
 #ifdef HAVE_CLFFT
 	LOG(Runtime,info) << "Using single precision clfft to transform " << data.getSizeAsString() << " data";
-	cl::fft(data,inverse,scale);
-#elif HAVE_FFTW
-	LOG(Runtime,info) << "Using single precision fftw to transform " << data.getSizeAsString() << " data";
-	fftw::fft(data,inverse,scale);
-#else
-	LOG(Runtime,error) << "Sorry, no single precision fft support compiled in (enable clFFT and/or fftw)";
+	if(cl::fft(data,inverse,scale))//if it fails, fall through
+		return data;
 #endif
-	return data;
+#if HAVE_FFTW
+	LOG(Runtime,info) << "Using single precision fftw to transform " << data.getSizeAsString() << " data";
+	if(fftw::fft(data,inverse,scale))//if it fails fall through
+		return data;
+#endif
+	LOG(Runtime,error) << "Sorry, no single precision fft support compiled in (enable clFFT and/or fftw)";
+	return isis::data::TypedChunk< std::complex< float > >();
 }
 
 isis::data::TypedChunk< std::complex< double > > isis::math::fft_double(isis::data::MemChunk< std::complex< double > > data, bool inverse, double scale)
 {
 #ifdef HAVE_FFTW
 	LOG(Runtime,info) << "Using double precision fftw to transform " << data.getSizeAsString() << " data";
-	fftw::fft(data,inverse,scale);
-#elif HAVE_GSL
-	LOG(Runtime,info) << "Using double precision gsl_fft_complex_transform to transform " << data.getSizeAsString() << " data";
-	gsl::fft(data,inverse,scale);
-#else
-	LOG(Runtime,error) << "Sorry, no double precision fft support compiled in (enable gsl and/or fftw)";
+	if(fftw::fft(data,inverse,scale))
+		return data;
 #endif
+#if HAVE_GSL
+	LOG(Runtime,info) << "Using double precision gsl_fft_complex_transform to transform " << data.getSizeAsString() << " data";
+	if(gsl::fft(data,inverse,scale))
+		return data;
+#endif
+	LOG(Runtime,error) << "Sorry, no double precision fft support compiled in (enable gsl and/or fftw)";
 	return data;
 }
 

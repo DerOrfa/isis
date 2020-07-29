@@ -97,20 +97,20 @@ public:
 };
 }
 
-void cl::fft(data::TypedChunk< std::complex< float > > &data, bool inverse, float scale)
+bool cl::fft(data::TypedChunk<std::complex<float > > &data, bool inverse, float scale)
 {
-	// handle data
-	_internal::halfshift(data);
-
 	_internal::OpenCLPlatform platform;
+	if(platform.good()){
+		// handle data
+		_internal::halfshift(data);
 
+		/* Setup clFFT. */
+		_internal::CLFFTPlan plan(platform,data,scale);
 
-    /* Setup clFFT. */
-	_internal::CLFFTPlan plan(platform,data,scale);
+		plan.transform(data,inverse?CLFFT_BACKWARD:CLFFT_FORWARD);
 
-
-	plan.transform(data,inverse?CLFFT_BACKWARD:CLFFT_FORWARD);
-
-	_internal::halfshift(data);
+		_internal::halfshift(data);
+	}
+	return false;
 }
 }
