@@ -41,7 +41,7 @@ namespace util
 /**
 * Continously searches in a sorted list using the given less-than comparison.
 * It starts at current and increments it until the referenced value is not less than the compare-value anymore.
-* Than it returns.
+* Then it returns.
 * \param current the current-position-iterator for the sorted list.
 * This value is changed directly, so after the function returns is references the first entry of the list
 * which does not compare less than compare or, if such a value does not exist in the list, it will be equal to end.
@@ -59,7 +59,7 @@ continousFind(ForwardIterator &current, const ForwardIterator end, const T &comp
 
 	if (current == end //if we're at the end
 		|| compOp(compare, *current) //or compare less than that iterator (eg. iterator greater than compare)
-		)
+	)
 		return false;//we didn't find a match
 	else
 		return true;//not(current <> compare) makes compare == current
@@ -142,12 +142,13 @@ TARGET listToString(
  */
 template<typename TARGET, typename traits>
 bool stringTo(const std::basic_string<char, traits> &str, TARGET& target){
-	std::basic_stringstream<char, traits> stream(str);
+	std::stringstream stream(str.c_str());
 	stream>>target;
-	LOG_IF(!stream.eof(),CoreDebug,warning)
-		<< "There are some characters left after parsing "
-		<< util::MSubject(str) << "(" << util::MSubject(stream.str()) << ")";
-	return stream.eof();
+	bool eof = stream.eof() || stream.tellg()>=str.length();
+	LOG_IF(stream.fail(),CoreDebug,error) << "Failed to read string "	<< str << " as number";
+	LOG_IF(!eof,CoreDebug,warning)
+		<< "Didn't use all " << str << " while converting it to " << target << " stoppet at " << str.substr(stream.tellg());
+	return !stream.fail() && eof;
 }
 /**
  * Specialisation of stringTo for string to string conversion.
