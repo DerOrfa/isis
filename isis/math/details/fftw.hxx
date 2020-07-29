@@ -2,9 +2,7 @@
 #include "../../core/chunk.hpp"
 #include "details_fft.hxx"
 
-namespace isis{
-namespace math{
-namespace fftw{
+namespace isis::math::fftw{
 namespace _internal{
 void fft_impl(isis::data::TypedChunk< std::complex< double > > &data, bool inverse=false);
 void fft_impl(isis::data::TypedChunk< std::complex< float > > &data, bool inverse=false);
@@ -20,7 +18,5 @@ template<typename T> void fft(data::TypedChunk<std::complex< T >> &data, bool in
 	if(scale!=1)
 		for(std::complex< T > &v:data)
 			v*=scale;
-}
-}
 }
 }

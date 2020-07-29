@@ -38,11 +38,10 @@ class Selection
 	MapType ent_map;
 	int m_set;
 	template<typename OPERATION> bool comp_op(const Selection &ref,const OPERATION &op)const{
-		if(ent_map != ref.ent_map)
-			LOG(Debug,error)
-				<< "Comparing different Selection sets "
-				<< std::make_pair(getEntries(),ref.getEntries())
-				<< ", result will be \"false\"";
+		LOG_IF(ent_map != ref.ent_map,Debug,error)
+			<< "Comparing different Selection sets "
+			<< std::make_pair(getEntries(),ref.getEntries())
+			<< ", result will be \"false\"";
 		LOG_IF(!(m_set && ref.m_set),Debug,error) << "Comparing unset Selection, result will be \"false\"";
 		return (m_set && ref.m_set) && ent_map == ref.ent_map && op(m_set, ref.m_set);
 	}

@@ -3,9 +3,9 @@
 #include "../common.hpp"
 #include "details_fft.hxx"
 #include "opencl/clplatform.hxx"
+#include "../../core/valuearray_typed.hpp"
 
-namespace isis{
-namespace math{
+namespace isis::math{
 namespace _internal{
 class CLFFTPlan{
     clfftPlanHandle planHandle;
@@ -14,7 +14,7 @@ class CLFFTPlan{
 	cl_command_queue queue;
 	cl_mem buffer;
 public:
-	std::string getErrorString(cl_int err){
+	static std::string getErrorString(cl_int err){
 		if(err < CLFFT_BUGCHECK)
 			return OpenCLPlatform::getErrorString(err);
 
@@ -31,13 +31,13 @@ public:
 		}
 		return "Unknown OpenCL error";
 	}
-	CLFFTPlan(OpenCLPlatform &dev, data::NDimensional<4> shape, float scale):device(dev){
+	CLFFTPlan(OpenCLPlatform &dev, const data::NDimensional<4>& shape, float scale):device(dev){
 		clfftSetupData fftSetup;
 		const clfftDim dim = (clfftDim)shape.getRelevantDims();
 		queue = dev.clCreateCommandQueue( );
 
 		/* Prepare OpenCL memory objects and place data inside them. */
-		buffer = clCreateBuffer( device, CL_MEM_READ_WRITE, sizeof(std::complex< float >)*shape.getVolume(), NULL, &err );
+		buffer = clCreateBuffer( device, CL_MEM_READ_WRITE, sizeof(std::complex< float >)*shape.getVolume(), nullptr, &err );
 		LOG_IF(err!=CL_SUCCESS,Runtime,error) << "clCreateBuffer failed with " << getErrorString(err);
 
 		if((err = clfftInitSetupData(&fftSetup)) != CL_SUCCESS || (err = clfftSetup(&fftSetup)) != CL_SUCCESS){
@@ -59,24 +59,24 @@ public:
 		err = clfftSetPlanScale(planHandle,CLFFT_BACKWARD,scale);
 
 		/* Bake the plan. */
-		err = clfftBakePlan(planHandle, 1, &queue, NULL, NULL);
+		err = clfftBakePlan(planHandle, 1, &queue, nullptr, nullptr);
 		LOG_IF(err!=CL_SUCCESS,Runtime,error) << "clfft plan creation failed with " << getErrorString(err);
 	}
-	cl_int transform(data::ValueArray< std::complex< float > > &data,clfftDirection direction){
+	cl_int transform(data::TypedArray< std::complex< float > > data,clfftDirection direction){
 		size_t buffer_size  = data.bytesPerElem()*data.getLength();
-		std::shared_ptr< void > X= data.getRawAddress();
+		std::shared_ptr<void> X= data.getRawAddress();
 
 
-		err = clEnqueueWriteBuffer( queue, buffer, CL_TRUE, 0, buffer_size, X.get(), 0, NULL, NULL );
+		err = clEnqueueWriteBuffer( queue, buffer, CL_TRUE, 0, buffer_size, X.get(), 0, nullptr, nullptr );
 		LOG_IF(err!=CL_SUCCESS,Runtime,error) << "transferring of " << float(buffer_size)/1024/1024 << "MBytes to OpenCL failed with " << getErrorString(err);
 
 		/* Execute the plan. */
-		if((err = clfftEnqueueTransform(planHandle, direction, 1, &queue, 0, NULL, NULL, &buffer, NULL, NULL))!=CL_SUCCESS || (err = clFinish(queue))!=CL_SUCCESS){
+		if((err = clfftEnqueueTransform(planHandle, direction, 1, &queue, 0, nullptr, nullptr, &buffer, nullptr, nullptr))!=CL_SUCCESS || (err = clFinish(queue))!=CL_SUCCESS){
 			LOG(Runtime,error) << "executing clfft on " << float(buffer_size)/1024/1024 << "MBytes failed with " << getErrorString(err);
 		}
 
 		/* Fetch results of calculations. */
-		err = clEnqueueReadBuffer( queue, buffer, CL_TRUE, 0, buffer_size, X.get(), 0, NULL, NULL );
+		err = clEnqueueReadBuffer( queue, buffer, CL_TRUE, 0, buffer_size, X.get(), 0, nullptr, nullptr );
 		LOG_IF(err!=CL_SUCCESS,Runtime,error) << "getting result data from clfft failed with " << getErrorString(err);
 
 		return err;
@@ -109,9 +109,8 @@ void cl::fft(data::TypedChunk< std::complex< float > > &data, bool inverse, floa
 	_internal::CLFFTPlan plan(platform,data,scale);
 
 
-	plan.transform(data.asValueArray<std::complex< float >>(),inverse?CLFFT_BACKWARD:CLFFT_FORWARD);
+	plan.transform(data,inverse?CLFFT_BACKWARD:CLFFT_FORWARD);
 
 	_internal::halfshift(data);
-}
 }
 }

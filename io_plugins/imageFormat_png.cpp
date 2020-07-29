@@ -27,7 +27,7 @@ protected:
 			data::Chunk ret = data::MemChunk<TYPE >( width, height );
 
 			/* png needs a pointer to each row */
-			std::shared_ptr<png_bytep[]> row_pointers( new png_bytep[height] );
+			auto row_pointers = std::make_unique<png_bytep[]>(height);
 
 			for ( unsigned short r = 0; r < height; r++ )
 				row_pointers[r] = ( png_bytep )&ret.voxel<TYPE>( 0, r );

@@ -18,14 +18,14 @@ void isis::math::_internal::halfshift(isis::data::Chunk &data){
 	for(size_t rank=0;rank<data.getRelevantDims();rank++){
 		std::array<size_t,4> dummy_index={0,0,0,0};
 		dummy_index[rank]=1;
-		//spliceAt into lines of dimsize elements
+		//splice into lines of dimsize elements
 		size_t stride=data.getLinearIndex(dummy_index);
 		std::vector< data::ValueArray > lines=
-			(rank<data.getRelevantDims()-1) ? //do not call spliceAt for the top rank (full volume)
+			(rank<data.getRelevantDims()-1) ? //do not call splice for the top rank (full volume)
 				array.splice(data.getDimSize(rank)*stride):
 				std::vector<data::ValueArray>(1, array);
 
-		for(data::ValueArray line:lines){
+		for(data::ValueArray &line:lines){
 			halfshift(line);
 		}
 	}
