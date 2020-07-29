@@ -417,9 +417,9 @@ namespace _internal{
 	    {"IS",{string_generate,nullptr,0}},
 	    {"DS",{string_generate,nullptr,0}},
 	    //time strings
-	    {"DA",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?prop:std::make_optional(prop->copyByID(util::typeID<util::date>()));},nullptr,0}},
-	    {"TM",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?prop:std::make_optional(prop->copyByID(util::typeID<util::timestamp>()));},nullptr,0}},
-	    {"DT",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?prop:std::make_optional(prop->copyByID(util::typeID<util::timestamp>()));},nullptr,0}},
+	    {"DA",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?std::make_optional(prop->copyByID(util::typeID<util::date>()))     :prop;},nullptr,0}},
+	    {"TM",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?std::make_optional(prop->copyByID(util::typeID<util::timestamp>())):prop;},nullptr,0}},
+	    {"DT",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?std::make_optional(prop->copyByID(util::typeID<util::timestamp>())):prop;},nullptr,0}},
 	    {"AS",{parse_AS,nullptr,0}},
 	    //fallback for unknown
 	    {"--",{bytes_as_strings,nullptr,0}}
