@@ -142,12 +142,12 @@ TARGET listToString(
  */
 template<typename TARGET, typename traits>
 bool stringTo(const std::basic_string<char, traits> &str, TARGET& target){
-	const auto end = str.data()+str.size();
-	const auto begin = str.data()+str.find_first_of("0123456789-");
-	const auto result = std::from_chars(begin,end, target,10);
-	LOG_IF(result.ptr == begin, CoreLog, error)
-		<< "Failed to convert " << util::MSubject(str) << " into " << util::MSubject(typeid(TARGET).name());
-	return result.ptr != str.data();
+	std::basic_stringstream<char, traits> stream(str);
+	stream>>target;
+	LOG_IF(!stream.eof(),CoreDebug,warning)
+		<< "There are some characters left after parsing "
+		<< util::MSubject(str) << "(" << util::MSubject(stream.str()) << ")";
+	return stream.eof();
 }
 /**
  * Specialisation of stringTo for string to string conversion.
@@ -181,19 +181,6 @@ bool stringTo(const std::basic_string<char, traits> &str, long double& target){
 	target=std::stold(str.c_str());
 	return true;
 }
-/**
- * Specialisation of stringTo for string to std::complex conversion.
- * @param str the string to be reinterpreted as TARGET
- * @param target the refernce where the converted value will be stored
- * @return true if conversion was successful, false otherweise
- */
-template<typename traits1,typename T>
-bool stringTo(const std::basic_string<char, traits1> &str, std::complex<T>& target){
-	std::stringstream stream(str);
-	stream>>target;
-	return true;
-}
-
 // @todo be careful stringTo is used in the automatic conversion, so don't use the automatic conversion to implement stringTo
 
 /**
