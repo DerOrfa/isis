@@ -142,8 +142,10 @@ TARGET listToString(
  */
 template<typename TARGET, typename traits>
 bool stringTo(const std::basic_string<char, traits> &str, TARGET& target){
-	const auto result = std::from_chars(str.data(), str.data()+str.size(), target,10);
-	LOG_IF(result.ptr == str.data(), CoreLog, error)
+	const auto end = str.data()+str.size();
+	const auto begin = str.data()+str.find_first_of("0123456789-");
+	const auto result = std::from_chars(begin,end, target,10);
+	LOG_IF(result.ptr == begin, CoreLog, error)
 		<< "Failed to convert " << util::MSubject(str) << " into " << util::MSubject(typeid(TARGET).name());
 	return result.ptr != str.data();
 }
