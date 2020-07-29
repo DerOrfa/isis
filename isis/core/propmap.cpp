@@ -15,9 +15,7 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 API_EXCLUDE_BEGIN;
 /// @cond _internal
@@ -33,7 +31,7 @@ struct MapStrAdapter {
 };
 struct RemoveEqualCheck {
 	bool removeNeeded;
-	RemoveEqualCheck( bool _removeNeeded ): removeNeeded( _removeNeeded ) {}
+	explicit RemoveEqualCheck( bool _removeNeeded ): removeNeeded( _removeNeeded ) {}
 	bool operator()( PropertyValue &first, const PropertyValue &second )const { // if both are Values
 		if( first != second ) {
 			return false;
@@ -82,9 +80,9 @@ struct FlatMapMaker {
 		out[name] = value;
 	}
 	void operator()( const PropertyMap &map )const {
-		for ( PropertyMap::container_type::const_iterator i = map.container.begin(); i != map.container.end(); i++ ) {
-			const auto &key=i->first;
-			const PropertyMap::Node &node= i->second;
+		for (const auto & i : map.container) {
+			const auto &key=i.first;
+			const PropertyMap::Node &node= i.second;
 			std::visit( FlatMapMaker( out, name / key ), node.variant() );
 		}
 	}
@@ -123,13 +121,13 @@ struct Extractor {
 		std::list<PropertyMap::PropPath> to_extract;
 
 		// check if this whole map can be extracted
-		for ( util::PropertyMap::container_type::iterator i = map.container.begin(); i != map.container.end(); i++ ) {
-			const PropertyMap::PropPath path=name / i->first;
-			PropertyMap::Node &node=i->second;
-			if(std::visit( Extractor( out, name / i->first, condition ), node.variant() )==false){ // ..
+		for (auto & i : map.container) {
+			const PropertyMap::PropPath path=name / i.first;
+			PropertyMap::Node &node=i.second;
+			if(std::visit( Extractor( out, name / i.first, condition ), node.variant() )==false){ // ..
 				extract_me=false; // ok this must stay, so the tree must stay
 			} else {
-				to_extract.push_back(i->first); // memorize this as to be extracted (in case not the whole tree is to be extracted)
+				to_extract.emplace_back(i.first); // memorize this as to be extracted (in case not the whole tree is to be extracted)
 			}
 		}
 		if(extract_me) // if whole tree can be extracted tell upstream
@@ -154,7 +152,6 @@ API_EXCLUDE_END;
 ///////////////////////////////////////////////////////////////////
 
 
-PropertyMap::PropPath::PropPath() {}
 PropertyMap::PropPath::PropPath( const char *key ): std::list<key_type>( stringToList<key_type>( istring( key ), pathSeperator ) ) {}
 PropertyMap::PropPath::PropPath( const key_type &key ): std::list<key_type>( stringToList<key_type>( key, pathSeperator ) ) {}
 PropertyMap::PropPath::PropPath( const std::list<key_type> &path ): std::list<key_type>( path ) {}
@@ -186,8 +183,6 @@ std::string PropertyMap::PropPath::toString()const
 ///////////////////////////////////////////////////////////////////
 
 PropertyMap::PropertyMap( const PropertyMap::container_type &src ): container( src ) {}
-PropertyMap::PropertyMap() {}
-
 
 ///////////////////////////////////////////////////////////////////
 // The core tree traversal functions
@@ -234,11 +229,11 @@ bool PropertyMap::recursiveRemove( container_type &root, const propPathIterator 
 	if ( pathIt != pathEnd ) {
 		propPathIterator next = pathIt;
 		next++;
-		const container_type::iterator found = root.find( *pathIt );
+		const auto found = root.find( *pathIt );
 
 		if ( found != root.end() ) {
 			if ( next != pathEnd ) {
-				PropertyMap &ref = std::get<PropertyMap>( found->second );
+				auto &ref = std::get<PropertyMap>( found->second );
 				ret = recursiveRemove( ref.container, next, pathEnd );
 
 				if ( ref.isEmpty() )
@@ -274,7 +269,7 @@ PropertyValue &PropertyMap::touchProperty( const PropertyMap::PropPath &path )
 {
 	return *tryFetchEntry<PropertyValue>( path );
 }
-const PropertyValue PropertyMap::property(const PropertyMap::PropPath& path) const
+PropertyValue PropertyMap::property(const PropertyMap::PropPath& path) const
 {
 	const auto prop = queryProperty(path);
 	return prop ? *prop : PropertyValue();
@@ -292,7 +287,7 @@ PropertyMap& PropertyMap::touchBranch(const PropertyMap::PropPath& path)
 {
 	return *tryFetchEntry<PropertyMap>( path );
 }
-const PropertyMap PropertyMap::branch( const PropertyMap::PropPath &path ) const
+PropertyMap PropertyMap::branch( const PropertyMap::PropPath &path ) const
 {
 	const auto branch=queryBranch( path );
 	return branch ? *branch : PropertyMap();
@@ -328,11 +323,11 @@ bool PropertyMap::remove( const PathSet &removeList, bool keep_needed )
 
 bool PropertyMap::remove( const PropertyMap &removeMap, bool keep_needed )
 {
-	container_type::iterator thisIt = container.begin();
+	auto thisIt = container.begin();
 	bool ret = true;
 
 	//remove everything that is also in second
-	for ( container_type::const_iterator otherIt = removeMap.container.begin(); otherIt != removeMap.container.end(); otherIt++ ) {
+	for ( auto otherIt = removeMap.container.begin(); otherIt != removeMap.container.end(); otherIt++ ) {
 		//find the closest match for otherIt->first in this (use the value-comparison-functor of PropMap)
 		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first - so its the same property or propmap
 			if ( thisIt->second.isBranch() && otherIt->second.isBranch() ) { //both are a branch => recurse
@@ -377,17 +372,17 @@ PropertyMap::DiffMap PropertyMap::getDifference( const PropertyMap &other ) cons
 
 void PropertyMap::diffTree( const container_type& other, DiffMap& ret, const PropPath& prefix ) const
 {
-	container_type::const_iterator otherIt = other.begin();
+	auto otherIt = other.begin();
 
 	//insert everything that is in this, but not in second or is on both but differs
-	for ( container_type::const_iterator thisIt = container.begin(); thisIt != container.end(); thisIt++ ) {
+	for ( auto thisIt = container.begin(); thisIt != container.end(); thisIt++ ) {
 		//find the closest match for thisIt->first in other (use the value-comparison-functor of the container)
 		if ( continousFind( otherIt, other.end(), *thisIt, container.value_comp() ) ) { //otherIt->first == thisIt->first - so its the same property
 			if( thisIt->second.isBranch() && otherIt->second.isBranch() ) { // both are branches -- recursion step
 				const PropertyMap &thisMap = thisIt->second.branch(), &refMap = otherIt->second.branch();
 				thisMap.diffTree( refMap.container, ret, prefix / thisIt->first );
 			} else if( thisIt->second.isProperty() && otherIt->second.isProperty() ) { // both are PropertyValue
-				const PropertyValue &thisVal = std::get<PropertyValue>( thisIt->second ), &otherVal = std::get<PropertyValue>( otherIt->second );
+				const auto &thisVal = std::get<PropertyValue>( thisIt->second ), &otherVal = std::get<PropertyValue>( otherIt->second );
 				if(!(thisVal == otherVal) ) // if they are different
 					ret.insert( // add (propertyname|(value1|value2))
 					    ret.end(),      // we know it has to be at the end
@@ -415,7 +410,7 @@ void PropertyMap::diffTree( const container_type& other, DiffMap& ret, const Pro
 	}
 
 	//insert everything that is in second but not in this
-	container_type::const_iterator thisIt = container.begin();
+	auto thisIt = container.begin();
 
 	for ( otherIt = other.begin(); otherIt != other.end(); otherIt++ ) {
 		if ( ! continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //there is nothing in this which has the same key as ref
@@ -433,10 +428,10 @@ void PropertyMap::diffTree( const container_type& other, DiffMap& ret, const Pro
 
 void PropertyMap::removeEqual ( const PropertyMap &other, bool removeNeeded )
 {
-	container_type::iterator thisIt = container.begin();
+	auto thisIt = container.begin();
 
 	//remove everything that is also in second and equal (or also empty)
-	for ( container_type::const_iterator otherIt = other.container.begin(); otherIt != other.container.end(); otherIt++ ) {
+	for ( auto otherIt = other.container.begin(); otherIt != other.container.end(); otherIt++ ) {
 		//find the closest match for otherIt->first in this (use the value-comparison-functor of PropMap)
 		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first  - so its the same property
 
@@ -481,9 +476,9 @@ PropertyMap::PathSet PropertyMap::transfer(PropertyMap& other, const PropPath &p
 
 void PropertyMap::joinTree( PropertyMap &other, bool overwrite, bool delsource, const PropPath &prefix, PathSet &rejects )
 {
-	container_type::iterator thisIt = container.begin();
+	auto thisIt = container.begin();
 
-	for ( container_type::iterator otherIt = other.container.begin(); otherIt != other.container.end(); ) { //iterate through the elements of other
+	for ( auto otherIt = other.container.begin(); otherIt != other.container.end(); ) { //iterate through the elements of other
 		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { // if the element is already here
 			if(
 			    std::visit( _internal::JoinTreeVisitor( overwrite, delsource, rejects, prefix, thisIt->first ), thisIt->second.variant(), otherIt->second.variant() ) &&
@@ -581,7 +576,7 @@ PropertyMap::PropPath PropertyMap::find( const key_type &key, bool allowProperty
 	LOG_IF( name.size() > 1, Debug, warning ) << "Stripping search key " << MSubject( name ) << " to " << name.back();
 
 	// if the searched key is on this brach return its name
-	container_type::const_iterator found = container.find( name.back() );
+	auto found = container.find( name.back() );
 
 	if( found != container.end() &&
 	    ( ( found->second.isProperty() && allowProperty ) || ( found->second.isBranch() && allowBranch ) )
@@ -590,10 +585,10 @@ PropertyMap::PropPath PropertyMap::find( const key_type &key, bool allowProperty
 	} else { // otherwise search in the branches
 		for( container_type::const_reference ref :  container ) {
 			if( ref.second.isBranch() ) {
-				const PropPath found = ref.second.branch().find( name.back(), allowProperty, allowBranch );
+				const PropPath foundPath = ref.second.branch().find( name.back(), allowProperty, allowBranch );
 
-				if( !found.empty() ) // if the key is found abort search and return it with its branch-name
-					return PropPath( ref.first ) / found;
+				if( !foundPath.empty() ) // if the key is found abort search and return it with its branch-name
+					return PropPath( ref.first ) / foundPath;
 			}
 		}
 	}
@@ -699,11 +694,11 @@ std::ostream &PropertyMap::print( std::ostream &out, bool label )const
 	FlatMap buff = getFlatMap();
 	size_t key_len = 0;
 
-	for ( FlatMap::const_iterator i = buff.begin(); i != buff.end(); i++ )
+	for ( auto i = buff.begin(); i != buff.end(); i++ )
 		if ( key_len < i->first.length() )
 			key_len = i->first.length();
 
-	for ( FlatMap::const_iterator i = buff.begin(); i != buff.end(); i++ )
+	for ( auto i = buff.begin(); i != buff.end(); i++ )
 		out << i->first << std::string( key_len - i->first.length(), ' ' ) + ":" << i->second.toString( label ) << std::endl;
 
 	return out;
@@ -781,5 +776,4 @@ bool PropertyMap::EmptyP::operator()(const PropertyValue& ref) const {return ref
 
 /// @endcond _internal
 
-}
 }

@@ -107,10 +107,7 @@ namespace std{
 		if(msec.count()){
 			if(msec.count()<0)
 				msec+=chrono::seconds(1);
-			// we dont want to mess with out, so we don't use stream formatting
-			char buff[5];
-			snprintf(buff,5,"%3lld",msec.count());
-			out << "+" << buff << "ms"; 
+			out << "+" << std::to_string(msec.count()) << "ms";
 		}
 		return out;
 	}

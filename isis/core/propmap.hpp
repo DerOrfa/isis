@@ -73,10 +73,10 @@ public:
 	/// "Path" type used to locate entries in the tree
 	struct PropPath: public std::list<key_type> {
 		static const char pathSeperator = '/';
-		PropPath();
+		PropPath() = default;
 		PropPath( const char *key );
 		PropPath( const key_type &key );
-		PropPath( const std::list<key_type> &path );
+		explicit PropPath( const std::list<key_type> &path );
 		PropPath operator/( const PropPath &s )const;
 		PropPath &operator/=( const PropPath &s );
 		bool operator==( const key_type &s )const {return *this == PropPath( s );}
@@ -254,8 +254,8 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// constructors
 	/////////////////////////////////////////////////////////////////////////////////////////
-	PropertyMap();
-	PropertyMap( const container_type &cont );
+	PropertyMap() = default;
+	explicit PropertyMap( const container_type &cont );
 
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Common rw-accessors
@@ -277,7 +277,7 @@ public:
 	 * \param path the path to the property
 	 * \returns the requested property or an empty property
 	 */
-	const PropertyValue property( const PropPath &path )const;
+	PropertyValue property( const PropPath &path )const;
 
 	/**
 	 * Access the property referenced by the path, create it if its not there.
@@ -312,7 +312,7 @@ public:
 	 * \returns the requested branch or an empty PropertyMap
 	 * \warning as this creates a deep copy of the branch it can be an expensive call. Its usually better to use queryBranch( const PropPath &path )const.
 	 */
-	const PropertyMap branch( const PropPath &path )const;
+	PropertyMap branch( const PropPath &path )const;
 
 	/**
 	 * Remove the property adressed by the path.

@@ -39,7 +39,7 @@ bool ichar_traits::lt( const char &c1, const char &c2 )
 
 const char *ichar_traits::find( const char *s, size_t n, const char &a )
 {
-	const char lowA = std::tolower( a );
+	const auto lowA = (char)std::tolower( a );
 
 	if( lowA == std::toupper( a ) ) { // if a has no cases we can do naive search
 		return std::find( s, s + n, a );
