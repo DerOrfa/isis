@@ -80,4 +80,6 @@ endif(WIN32)
 # install header files
 install(FILES ${CORE_HDR_FILES} DESTINATION include/isis/core COMPONENT Development)
 
-
+# write configuration file
+configure_file(isis_corecfg.cmake.in ${CMAKE_BINARY_DIR}/ISISCoreConfig.cmake @ONLY)
+install(FILES ${CMAKE_BINARY_DIR}/ISISCoreConfig.cmake DESTINATION share/isis/cmake COMPONENT Development)

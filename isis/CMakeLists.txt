@@ -94,7 +94,7 @@ add_subdirectory(adapter)
 add_subdirectory(math)
 
 # write configuration file
-configure_file(isis_corecfg.cmake.in ${CMAKE_BINARY_DIR}/ISISConfig.cmake @ONLY)
+configure_file(isis_cfg.cmake.in ${CMAKE_BINARY_DIR}/ISISConfig.cmake @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/ISISConfig.cmake DESTINATION share/isis/cmake COMPONENT Development)
 
 
