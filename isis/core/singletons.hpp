@@ -2,7 +2,6 @@
 #define SINGLETONS_HPP_INCLUDED
 
 #include <map>
-#include <boost/noncopyable.hpp>
 #include <string>
 #include <iostream>
 #include <typeinfo>

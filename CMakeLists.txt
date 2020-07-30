@@ -102,8 +102,6 @@ else(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS system iostreams)
 endif(BUILD_TESTING)
 
-include_directories(${Boost_INCLUDE_DIR})
-
 ############################################################
 # Macro to generate manpages for CLI programms
 ############################################################

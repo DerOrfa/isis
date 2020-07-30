@@ -25,7 +25,6 @@
 #include <type_traits>
 
 #include <array>
-#include <boost/operators.hpp>
 
 namespace isis
 {

@@ -54,7 +54,7 @@ set_source_files_properties( "valuearray_minmax.cpp" PROPERTIES COMPILE_FLAGS "-
 #add the core library
 add_lib(isis_core
 	"${CORE_SRC_FILES}"
-	"${Boost_LIBRARIES};${CURSES_LIBRARIES}" #deps
+	"Boost::headers;${CURSES_LIBRARIES}" #deps
 	"${LIBORC_LIB};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads;$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>" #private deps
 	${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API}
 )
