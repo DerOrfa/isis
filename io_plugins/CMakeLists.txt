@@ -185,16 +185,16 @@ if(ISIS_IOPLUGIN_COMP)
 		target_include_directories(isisImageFormat_comp_proxy PRIVATE ${INCPATH_LZMA})
 	endif(ISIS_IOPLUGIN_COMP_LZMA)
 
-	target_link_libraries(isisImageFormat_comp_proxy ${isis_core_lib} ZLIB::ZLIB ${BZIP2_LIBRARIES})
+	target_link_libraries(isisImageFormat_comp_proxy ${isis_core_lib} ZLIB::ZLIB Boost::system ${BZIP2_LIBRARIES})
 	set(TARGETS ${TARGETS} isisImageFormat_comp_proxy)
 endif(ISIS_IOPLUGIN_COMP)
 
 ############################################################
-# COMP proxy plugin
+# TAR proxy plugin
 ############################################################
 if(ISIS_IOPLUGIN_TAR)
   add_library(isisImageFormat_tar_proxy SHARED imageFormat_tar.cpp)
-  target_link_libraries(isisImageFormat_tar_proxy ${isis_core_lib})
+  target_link_libraries(isisImageFormat_tar_proxy ${isis_core_lib} Boost::system)
   set(TARGETS ${TARGETS} isisImageFormat_tar_proxy)
 endif(ISIS_IOPLUGIN_TAR)
 

@@ -99,7 +99,7 @@ endif(ISIS_DEBUG_LOG)
 if(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS system iostreams unit_test_framework)
 else(BUILD_TESTING)
-	find_package(Boost REQUIRED COMPONENTS iostreams)
+	find_package(Boost REQUIRED COMPONENTS system iostreams)
 endif(BUILD_TESTING)
 
 include_directories(${Boost_INCLUDE_DIR})
