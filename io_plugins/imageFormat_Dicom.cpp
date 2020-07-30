@@ -659,17 +659,28 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 		sanitise( chunk, dialects );
 		const auto iType = chunk.queryValueAs<util::slist>( util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/" + "ImageType");
 
+
 		//handle philips scaling
-		float ri = chunk.getValueAsOr<float>("DICOM/Philips private sequence/Philips private sequence/RescaleIntercept",0);
-		float rs = chunk.getValueAsOr<float>("DICOM/Philips private sequence/Philips private sequence/RescaleSlope",1);
+		data::scaling_pair philps_scale(1,0);
+		auto ri = chunk.queryValueAs<float>("DICOM/Philips private sequence/Philips private sequence/RescaleIntercept");
+		auto rs = chunk.queryValueAs<float>("DICOM/Philips private sequence/Philips private sequence/RescaleSlope");
 
-		float si = chunk.getValueAsOr<float>("DICOM/UnknownTag/(2005,100d)",0);
-		float ss = chunk.getValueAsOr<float>("DICOM/UnknownTag/(2005,100e)",1);
+		auto si = chunk.queryValueAs<float>("DICOM/UnknownTag/(2005,100d)");
+		auto ss = chunk.queryValueAs<float>("DICOM/UnknownTag/(2005,100e)"); //default 1
 
-		data::scaling_pair scale(1/ss,-si/ss);
+		if(ss){
+			if(si){
+				philps_scale.offset = -(*si / *ss);
+			} else if(ri && rs){ // if we don't have si we can reconstruct it from ri and rs
+				philps_scale.offset=(*ri / *rs) / *ss;
+			}
+			philps_scale.scale = 1 / *ss;
+		}
 
-		LOG( Runtime, info ) << "Applying Philips scaling of " << scale << " on data";
-		chunk.convertToType(util::typeID<float>(),scale);
+		if(philps_scale.isRelevant()) {
+			LOG(Runtime, info) << "Applying Philips scaling of " << philps_scale << " on data";
+			chunk.convertToType(util::typeID<float>(), philps_scale);
+		}
 
 		//handle siemens mosaic data
 		if ( iType && std::find( iType->begin(), iType->end(), "MOSAIC" ) != iType->end() ) { // if we have an image type and its a mosaic
