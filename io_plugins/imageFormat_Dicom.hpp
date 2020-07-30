@@ -119,7 +119,7 @@ class ImageFormat_Dicom: public FileFormat
 	static bool parseCSAValueList( const isis::util::slist &val, const util::PropertyMap::PropPath &name, const util::istring &vr, isis::util::PropertyMap &map );
 	static data::Chunk readMosaic( data::Chunk source );
 protected:
-	util::istring suffixes( io_modes modes = both )const override;
+	util::istring suffixes( io_modes modes )const override;
 public:
 	ImageFormat_Dicom();
 	static const char dicomTagTreeName[];
@@ -130,7 +130,7 @@ public:
 	std::list<util::istring> dialects()const override;
 
 	std::list<data::Chunk> load(std::streambuf *source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override;
-	std::list<data::Chunk> load(const data::ByteArray source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override;
+	std::list<data::Chunk> load(data::ByteArray source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override;
 	void write( const data::Image &image,     const std::string &filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> progress )override;
 };
 }

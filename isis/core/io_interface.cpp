@@ -6,8 +6,6 @@
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <fstream>
-#include <iomanip>
 #include <iostream>
 
 #include "log.hpp"
@@ -32,7 +30,7 @@ API_EXCLUDE_END;
 void FileFormat::write( const std::list< data::Image >& images, const std::string &filename, std::list<util::istring> dialects, std::shared_ptr< util::ProgressFeedback > progress )
 {
 	std::list<std::string> names = makeUniqueFilenames( images, filename );
-	std::list<std::string>::const_iterator inames = names.begin();
+	auto inames = names.begin();
 	for( std::list<data::Image>::const_reference ref :  images ) {
 		std::string uniquePath = *( inames++ );
 
@@ -65,7 +63,7 @@ std::list<data::Chunk> FileFormat::load( const std::filesystem::path &filename, 
 		set_up=true;
 		feedback->show( std::filesystem::file_size( filename ), std::string( "loading " ) + filename.native() );
 	}
-	std::list<data::Chunk> ret=load(ptr,formatstack,dialects,feedback);
+	std::list<data::Chunk> ret=load(static_cast<data::ByteArray&>(ptr),formatstack,dialects,feedback);
 	if(set_up) // close progress bar
 		feedback->close();
 	return ret;
@@ -137,12 +135,12 @@ std::optional< util::PropertyValue > extractOrTell(const std::initializer_list< 
 }
 
 
-void FileFormat::throwGenericError( std::string desc )
+void FileFormat::throwGenericError( const std::string& desc )
 {
 	throw( std::runtime_error( desc ) );
 }
 
-void FileFormat::throwSystemError( int err, std::string desc )
+void FileFormat::throwSystemError( int err, const std::string& desc )
 {
     throw( std::system_error( err, std::system_category(), desc ) );
 }
@@ -172,7 +170,7 @@ std::pair< std::string, std::string > FileFormat::makeBasename( const std::strin
 }
 
 // @todo document me (esp. the formatting-stuff)
-std::string FileFormat::makeFilename( const util::PropertyMap &props, const std::string namePattern )
+std::string FileFormat::makeFilename( const util::PropertyMap &props, const std::string& namePattern )
 {
 	using namespace std::regex_constants;
 	static const std::regex reg( "\\{[^{}]+\\}", optimize);
@@ -258,7 +256,7 @@ std::list<std::string> FileFormat::makeUniqueFilenames( const std::list<data::Im
 	return ret;
 }
 
-bool FileFormat::checkDialect(const std::list<util::istring> &dialects,util::istring searched){
+bool FileFormat::checkDialect(const std::list<util::istring> &dialects,const util::istring& searched){
 	return std::find(dialects.begin(),dialects.end(),searched)!=dialects.end();
 }
 

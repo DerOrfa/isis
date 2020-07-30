@@ -326,11 +326,11 @@ public:
 		}
 
 	}
-	void writeChunks(std::vector<data::Chunk > chunks,std::string filename, png_byte color_type, png_byte bit_depth, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback){
+	void writeChunks(std::vector<data::Chunk > chunks,const std::string& filename, png_byte color_type, png_byte bit_depth, const std::list<util::istring>& dialects, std::shared_ptr<util::ProgressFeedback> feedback){
 			if(feedback)
 				feedback->show(chunks.size(),std::string("Writing ")+std::to_string(chunks.size())+" slices as png files");
 			size_t number = 0;
-			unsigned short numLen = std::log10( chunks.size() ) + 1;
+			auto numLen = (unsigned short)std::log10( chunks.size() ) + 1;
 			const std::pair<std::string, std::string> fname = makeBasename( filename );
 			LOG_IF(chunks.size()>1, Runtime, info )
 					<< "Writing " << chunks.size() << " slices as png-images " << fname.first << "_"

@@ -3,11 +3,8 @@
 #include <isis/core/istring.hpp>
 
 #include <boost/iostreams/copy.hpp>
-#include <boost/iostreams/stream.hpp>
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 namespace _internal
 {
@@ -20,12 +17,6 @@ util::istring id2Name( const uint32_t id32 ){
 	return id2Name((id32&0xFFFF0000)>>16,id32&0xFFFF);
 }
 util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArray> &data_elements);
-util::PropertyMap readItem(DicomElement &token,std::multimap<uint32_t,data::ValueArray> &data_elements){
-	assert(token.getID32()==0xFFFEE000);//must be an item-tag
-	size_t len=token.getLength();
-	token.next(token.getPosition()+8);
-	return readStream(token,len,data_elements);
-}
 void readDataItems(DicomElement &token, std::multimap<uint32_t, data::ValueArray> &data_elements){
 	const uint32_t id=token.getID32();
 
@@ -83,12 +74,12 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 			else
 				token.next(token.getPosition()+4+2+2+4);//explicit SQ (4 bytes tag-id + 2bytes "SQ" + 2bytes reserved + 4 bytes length)
 
-			size_t start=token.getPosition();
-			LOG_IF(len==0xffffffff,Debug,verbose_info) << "Sequence of undefined length found (" << name << "), looking for items at " << start;
-			LOG_IF(len!=0xffffffff,Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start;
+			const size_t start_sq=token.getPosition();
+			LOG_IF(len==0xffffffff,Debug,verbose_info) << "Sequence of undefined length found (" << name << "), looking for items at " << start_sq;
+			LOG_IF(len!=0xffffffff,Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start_sq;
 
 			//load items (which themself again are made of tags)
-			while(token.getPosition()-start<len && token.getID32()!=0xFFFEE0DD){ //break the loop when we find the sequence delimiter tag or reach the end
+			while(token.getPosition()-start_sq<len && token.getID32()!=0xFFFEE0DD){ //break the loop when we find the sequence delimiter tag or reach the end
 				assert(token.getID32()==0xFFFEE000);//must be an item-tag
 				const size_t item_len=token.getLength();
 				token.next(token.getPosition()+8);
@@ -130,7 +121,7 @@ data::ValueArray repackValueArray(data::ValueArray &data, bool invert){
 
 class DicomChunk : public data::Chunk
 {
-	data::Chunk getUncompressedPixel(data::ValueArray &data, const util::PropertyMap &props){
+	static data::Chunk getUncompressedPixel(data::ValueArray &data, const util::PropertyMap &props){
 		auto rows=props.getValueAs<uint32_t>("Rows");
 		auto columns=props.getValueAs<uint32_t>("Columns");
 		//Number of Frames: 0028,0008
@@ -147,7 +138,7 @@ class DicomChunk : public data::Chunk
 			switch(bits_allocated){
 			    case  8:pixel=repackValueArray<util::color24>(data);break;
 			    case 16:pixel=repackValueArray<util::color48>(data);break;
-			    default:LOG(Runtime,error) << "Unsupportet bit-depth "<< bits_allocated << " for color image";
+			    default:LOG(Runtime,error) << "Unsupported bit-depth "<< bits_allocated << " for color image";
 			}
 		}else if(color=="MONOCHROME2" || color=="MONOCHROME1"){
 			bool invert = (color=="MONOCHROME1");
@@ -155,10 +146,10 @@ class DicomChunk : public data::Chunk
 			    case  8:pixel=signed_values? repackValueArray< int8_t>(data):repackValueArray< uint8_t>(data,invert);break;
 			    case 16:pixel=signed_values? repackValueArray<int16_t>(data):repackValueArray<uint16_t>(data,invert);break;
 			    case 32:pixel=signed_values? repackValueArray<int32_t>(data):repackValueArray<uint32_t>(data,invert);break;
-			    default:LOG(Runtime,error) << "Unsupportet bit-depth "<< bits_allocated << " for greyscale image";
+			    default:LOG(Runtime,error) << "Unsupported bit-depth "<< bits_allocated << " for greyscale image";
 			}
 		}else {
-			LOG(Runtime,error) << "Unsupportet photometric interpretation " << color;
+			LOG(Runtime,error) << "Unsupported photometric interpretation " << color;
 			ImageFormat_Dicom::throwGenericError("bad pixel type");
 		}
 
@@ -246,8 +237,8 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 
 	// compute studyStart
 	if ( hasOrTell( "StudyTime", dicomTree, warning ) && hasOrTell( "StudyDate", dicomTree, warning ) ) {
-		const util::date dt=dicomTree.getValueAs<util::date>("StudyDate");
-		const util::timestamp tm=dicomTree.getValueAs<util::timestamp>("StudyTime");
+		const auto dt=dicomTree.getValueAs<util::date>("StudyDate");
+		const auto tm=dicomTree.getValueAs<util::timestamp>("StudyTime");
 		    object.setValueAs("studyStart",tm+dt.time_since_epoch());
 			dicomTree.remove("StudyTime");
 			dicomTree.remove("StudyDate");
@@ -300,11 +291,11 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 	transformOrTell<uint16_t>     ( prefix + "NumberOfAverages",        "numberOfAverages",   object, warning );
 
 	if ( hasOrTell( prefix + "ImageOrientationPatient", object, info ) ) {
-		util::dlist buff = dicomTree.getValueAs<util::dlist>( "ImageOrientationPatient" );
+		auto buff = dicomTree.getValueAs<util::dlist>( "ImageOrientationPatient" );
 
 		if ( buff.size() == 6 ) {
 			util::fvector3 row, column;
-			util::dlist::iterator b = buff.begin();
+			auto b = buff.begin();
 
 			for ( int i = 0; i < 3; i++ )row[i] = *b++;
 
@@ -319,7 +310,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 
 		if( object.hasProperty( prefix + "SIEMENS CSA HEADER/SliceNormalVector" ) && !object.hasProperty( "sliceVec" ) ) {
 			LOG( Debug, info ) << "Extracting sliceVec from SIEMENS CSA HEADER/SliceNormalVector " << dicomTree.property( "SIEMENS CSA HEADER/SliceNormalVector" );
-			util::dlist list = dicomTree.getValueAs<util::dlist >( "SIEMENS CSA HEADER/SliceNormalVector" );
+			auto list = dicomTree.getValueAs<util::dlist >( "SIEMENS CSA HEADER/SliceNormalVector" );
 			util::fvector3 vec;
 			std::copy(list.begin(), list.end(), std::begin(vec) );
 			object.setValueAs( "sliceVec", vec );
@@ -423,8 +414,8 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 	// Do some sanity checks on redundant tags
 	////////////////////////////////////////////////////////////////
 	if ( dicomTree.hasProperty( util::istring( unknownTagName ) + "(0019,1015)" ) ) {
-		const util::fvector3 org = object.getValueAs<util::fvector3>( "indexOrigin" );
-		const util::fvector3 comp = dicomTree.getValueAs<util::fvector3>( util::istring( unknownTagName ) + "(0019,1015)" );
+		const auto org = object.getValueAs<util::fvector3>( "indexOrigin" );
+		const auto comp = dicomTree.getValueAs<util::fvector3>( util::istring( unknownTagName ) + "(0019,1015)" );
 
 		if ( util::fuzzyEqualV(comp, org ) )
 			dicomTree.remove( util::istring( unknownTagName ) + "(0019,1015)" );
@@ -443,7 +434,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 	}
 
 	if ( dicomTree.hasProperty( util::istring( unknownTagName ) + "(0051,100c)" ) ) { //@todo siemens only ?
-		std::string fov = dicomTree.getValueAs<std::string>( util::istring( unknownTagName ) + "(0051,100c)" );
+		auto fov = dicomTree.getValueAs<std::string>( util::istring( unknownTagName ) + "(0051,100c)" );
 		float row, column;
 
 		if ( std::sscanf( fov.c_str(), "FoV %f*%f", &column, &row ) == 2 ) {
@@ -478,7 +469,7 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 {
 	// prepare some needed parameters
 	const util::istring prefix = util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/";
-	util::slist iType = source.getValueAs<util::slist>( prefix + "ImageType" );
+	auto iType = source.getValueAs<util::slist>( prefix + "ImageType" );
 	std::replace( iType.begin(), iType.end(), std::string( "MOSAIC" ), std::string( "WAS_MOSAIC" ) );
 	util::istring NumberOfImagesInMosaicProp;
 
@@ -504,13 +495,13 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 	LOG( Debug, info ) << "Decomposing a " << source.getSizeAsString() << " mosaic-image into a " << size << " volume";
 	// fix the properties of the source (we 'll need them later)
 	const util::fvector3 voxelGap = source.getValueAsOr("voxelGap",util::fvector3());
-	const util::fvector3 voxelSize = source.getValueAs<util::fvector3>( "voxelSize" );
-	const util::fvector3 rowVec = source.getValueAs<util::fvector3>( "rowVec" );
-	const util::fvector3 columnVec = source.getValueAs<util::fvector3>( "columnVec" );
+	const auto voxelSize = source.getValueAs<util::fvector3>( "voxelSize" );
+	const auto rowVec = source.getValueAs<util::fvector3>( "rowVec" );
+	const auto columnVec = source.getValueAs<util::fvector3>( "columnVec" );
 	//remove the additional mosaic offset
 	//eg. if there is a 10x10 Mosaic, substract the half size of 9 Images from the offset
 	const util::fvector3 fovCorr = ( voxelSize + voxelGap ) * size * ( matrixSize - 1 ) / 2; // @todo this will not include the voxelGap between the slices
-	util::fvector3 &origin = source.refValueAs<util::fvector3>( "indexOrigin" );
+	auto &origin = source.refValueAs<util::fvector3>( "indexOrigin" );
 	origin = origin + ( rowVec * fovCorr[0] ) + ( columnVec * fovCorr[1] );
 	source.remove( NumberOfImagesInMosaicProp ); // we dont need that anymore
 	source.setValueAs( prefix + "ImageType", iType );
@@ -542,7 +533,7 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 
 	// update fov
 	if ( dest.hasProperty( "fov" ) ) {
-		util::fvector3 &ref = dest.refValueAs<util::fvector3>( "fov" );
+		auto &ref = dest.refValueAs<util::fvector3>( "fov" );
 		ref[0] /= matrixSize;
 		ref[1] /= matrixSize;
 		ref[2] = voxelSize[2] * images + voxelGap[2] * ( images - 1 );
@@ -589,7 +580,7 @@ std::list<data::Chunk> ImageFormat_Dicom::load ( std::streambuf *source, std::li
 	return load(wrap,formatstack,dialects,progress);
 }
 
-std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )
+std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )
 {
 	std::list< data::Chunk > ret;
 	const char prefix[4]={'D','I','C','M'};
@@ -751,7 +742,6 @@ ImageFormat_Dicom::ImageFormat_Dicom()
 	_internal::dicom_dict[0x60003000] = {"--","DICOM overlay data"};
 }
 
-}
 }
 
 isis::image_io::FileFormat *factory()
