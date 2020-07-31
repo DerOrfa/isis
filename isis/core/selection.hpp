@@ -16,16 +16,13 @@
 
  */
 
-
-#ifndef SELECTION_HPP_INCLUDED
-#define SELECTION_HPP_INCLUDED
+#pragma once
 #include <map>
 #include "common.hpp"
 #include "istring.hpp"
+#include <assert.h>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 /**
@@ -41,7 +38,10 @@ class Selection
 	MapType ent_map;
 	int m_set;
 	template<typename OPERATION> bool comp_op(const Selection &ref,const OPERATION &op)const{
-		LOG_IF(ent_map != ref.ent_map,Debug,error) << "Comparing different Selection sets, result will be \"false\"";
+		LOG_IF(ent_map != ref.ent_map,Debug,error)
+			<< "Comparing different Selection sets "
+			<< std::make_pair(getEntries(),ref.getEntries())
+			<< ", result will be \"false\"";
 		LOG_IF(!(m_set && ref.m_set),Debug,error) << "Comparing unset Selection, result will be \"false\"";
 		return (m_set && ref.m_set) && ent_map == ref.ent_map && op(m_set, ref.m_set);
 	}
@@ -53,7 +53,7 @@ public:
 	 * \param init_val the string which should be selected after initialisation (must be one from entries)
 	 * \warning this is really only <b>comma</b> separated, so write "first,second,and,so,on" and not "first, second, and, so, on"
 	 */
-	Selection( const char *entries, const char *init_val = "" );
+	Selection(std::initializer_list<std::string> entries, const char *init_val = "" );
 	/**
 	 * Default constructor.
 	 * Creates a selection from a number-option map.
@@ -126,8 +126,7 @@ template<typename T> Selection::Selection( const std::map< T, std::string >& map
 }
 
 }
-}
-
+/// @cond _internal
 namespace std
 {
 /// Streaming output for selections.
@@ -137,4 +136,4 @@ basic_ostream<charT, traits> &operator<<( basic_ostream<charT, traits> &out, con
 	return out << ( std::string )s;
 }
 }
-#endif //SELECTION_HPP_INCLUDED
+/// @endcond _internal

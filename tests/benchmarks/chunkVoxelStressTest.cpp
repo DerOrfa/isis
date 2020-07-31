@@ -6,21 +6,15 @@ using namespace isis;
 const size_t chunk_size = 150;
 
 template<typename TYPE>
-void check( const data::Chunk &chunk, const TYPE &value )
+void check( const data::TypedChunk<TYPE> &chunk, TYPE value )
 {
-	class DoCheck: public data::VoxelOp<TYPE>
-	{
-		const TYPE &value;
-	public:
-		bool operator()( TYPE &vox, const util::vector4<size_t> & ) {return vox == value;}
-		DoCheck( const TYPE &_value ): value( _value ) {}
-	} doCheck( value );
+	bool ok=true;
 
-	if( const_cast<data::Chunk &>( chunk ).foreachVoxel( doCheck ) == 0 ) {
+	chunk.foreachVoxel( [value,&ok]( TYPE &vox, const util::vector4<size_t> & ) {ok &= vox == value;} ) ;
+	if(ok)
 		std::cout << "check ok!" << std::endl;
-	} else {
+	else
 		std::cout << "check failed!" << std::endl;
-	}
 }
 
 int main()

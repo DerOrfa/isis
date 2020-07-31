@@ -49,13 +49,13 @@ Application::Application( const char name[], const char cfg[]): m_name( name )
 	parameters["locale"] = std::string("C");
 	parameters["locale"].setDescription( "locale to use for parsing/printing (use empty string to enforce use of system locale)");
 	parameters["locale"].needed() = false;
-	
+
 	if(strlen(cfg)){
 		parameters["cfg"]=std::string(cfg);
 		parameters["cfg"].setDescription("File to read configuration from");
 		parameters["cfg"].needed()=false;
 	}
-	
+
 	parameters["np"] = false;
 	parameters["np"].needed() = false;
 	parameters["np"].setDescription( "suppress progress bar" );
@@ -65,7 +65,7 @@ Application::~Application() {}
 
 void Application::addLoggingParameter( std::string name )
 {
-	static const Selection dbg_levels( "error,warning,notice,info,verbose_info", "notice" );
+	static const Selection dbg_levels({"error", "warning", "notice", "info", "verbose_info"}, "notice" );
 
 	if( parameters.find( std::string( "d" ) + name ) == parameters.end() ) { //only add the parameter if it does not exist yet
 		parameters[std::string( "d" ) + name] = dbg_levels;
@@ -89,9 +89,9 @@ bool Application::addConfigFile(const std::string& filename)
 {
 	data::FilePtr f(filename);
 	if(f.good()){
-		const data::ValueArray< uint8_t > buffer=f.at<uint8_t>(0);
-		if(configuration.readJson(&buffer[0],&buffer[buffer.getLength()],'/')==0){
-			boost::optional< PropertyMap& > param=configuration.queryBranch("parameters");
+		const data::ValueArray buffer=f.at<uint8_t>(0);
+		if(configuration.readJson(buffer.beginTyped<uint8_t>(),buffer.endTyped<uint8_t>(),'/')==0){
+			auto param=configuration.queryBranch("parameters");
 			// if there is a "parameters" section in the file, use that as default parameters for the app
 			if(param){
 				for(PropertyMap::PropPath p:param->getLocalProps()){
@@ -115,7 +115,7 @@ bool Application::addConfigFile(const std::string& filename)
 		} else {
 			LOG(Runtime,warning) << "Failed to parse configuration file " << util::MSubject(filename);
 		}
-	} 
+	}
 	return false;
 }
 const PropertyMap& Application::config() const{return configuration;}
@@ -141,7 +141,7 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 		err = true;
 	}
 	std::map< std::string, ProgParameter >::iterator cfg=parameters.find("cfg");
-	if(cfg!=parameters.end()){ 
+	if(cfg!=parameters.end()){
 		if(!addConfigFile(cfg->second.as<std::string>()) && exitOnError){
 			std::cerr << "Exiting..." << std::endl;
 			exit( 1 );
@@ -149,7 +149,7 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 	}
 
 	resetLogging();
-	
+
 	if ( ! parameters.isComplete() ) {
 		std::cerr << "Missing parameters: ";
 
@@ -169,7 +169,7 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 			exit( 1 );
 		}
 	}
-	
+
 	if(!parameters["np"])
 		feedback().reset(new util::ConsoleFeedback);
 
@@ -213,11 +213,11 @@ void Application::printHelp( bool withHidden )const
 		}
 
 		std::cerr
-				<< "\t-" << iP->first << " <" << iP->second.getTypeName() << ">" << std::endl
-				<< "\t\t" << iP->second.description() << pref << std::endl;
+		        << "\t-" << iP->first << " <" << iP->second.getTypeName() << ">" << std::endl
+		        << "\t\t" << iP->second.description() << pref << std::endl;
 
 		if ( iP->second.is<Selection>() ) {
-			const Selection &ref = iP->second.castTo<Selection>();
+			const Selection &ref = iP->second.as<Selection>();
 			const std::list< istring > entries = ref.getEntries();
 			std::list< istring >::const_iterator i = entries.begin();
 			std::cerr << "\t\tOptions are: \"" << *i << "\"";

@@ -69,10 +69,7 @@ public:
 	 * This must be done before anything else, or behaviour will be undefined.
 	 * \param d array with sizes to use. (d[0] is most iterating element / lowest dimension)
 	 */
-	void init(const std::array<size_t,DIMS> &d ) {
-		m_dim = d;
-		LOG_IF( getVolume() == 0, Runtime, error ) << "Creating object with volume of 0";
-	}
+	void init(const std::array<size_t,DIMS> &d ) {m_dim = d;}
 	NDimensional( const NDimensional &src ) {//@todo default copier should do the job
 		init( src.m_dim );
 	}
@@ -167,7 +164,7 @@ public:
 				std::array<size_t,DIMS> currIndex=oldshape.getCoordsFromLinIndex(i);
 				std::swap(currIndex[dim_a],currIndex[dim_b]);
 				i=getLinearIndex(currIndex);
-				std::swap(at[i],*cycle);
+				std::swap(*(at+i),*cycle);
 				visited[i] = true;
 			} while (at+i != cycle);
 		}

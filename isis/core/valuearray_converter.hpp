@@ -22,7 +22,7 @@
 
 #include <memory>
 #include <map>
-#include "value_base.hpp"
+#include "value.hpp"
 
 /// @cond _internal
 
@@ -30,18 +30,17 @@ namespace isis
 {
 namespace data
 {
-enum autoscaleOption {noscale, autoscale, noupscale, upscale};
-typedef std::pair<util::ValueReference, util::ValueReference> scaling_pair; //scale / offset
-class ValueArrayBase;
+
+class ValueArray;
+struct scaling_pair;
 
 class ValueArrayConverterBase
 {
 public:
-	virtual void convert( const ValueArrayBase &src, ValueArrayBase &dst, const scaling_pair &scaling )const;
-	virtual void generate( const ValueArrayBase &src, std::unique_ptr<ValueArrayBase>& dst, const scaling_pair &scaling )const = 0;
-	/// Create a ValueArray based on the ID - if len==0 a pointer to NULL is created
-	virtual void create( std::unique_ptr<ValueArrayBase>& dst, size_t len )const = 0;
-	virtual scaling_pair getScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )const;
+	virtual void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const;
+	virtual ValueArray generate(const ValueArray &src, const scaling_pair &scaling )const = 0;//@todo replace by create+copy
+	virtual ValueArray create(size_t len )const = 0;
+	virtual scaling_pair getScaling(const util::Value &min, const util::Value &max )const;
 	static std::shared_ptr<const ValueArrayConverterBase> get() {return std::shared_ptr<const ValueArrayConverterBase>();}
 	virtual ~ValueArrayConverterBase() {}
 };

@@ -99,17 +99,9 @@ void IOApplication::addOutput( util::ParameterMap &parameters, const std::string
 	parameters[std::string( "wdialect" ) + suffix] = util::slist();
 	parameters[std::string( "wdialect" ) + suffix].needed() = false;
 	parameters[std::string( "wdialect" ) + suffix].setDescription( "Choose dialect(s) for writing" + desc + ". Use \"--help-io\" for a list of the plugins and their supported dialects" );
-	std::map<unsigned short, std::string> types = util::getTypeMap( false, true );
-	// remove some types which are useless as representation
-	// "(unsigned short)" is needed because otherwise erase would take the reference of a static constant which is only there during compile time
-	types.erase( ( unsigned short )data::ValueArray<util::Selection>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<std::string>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<util::date>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<util::ilist>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<util::dlist>::staticID() );
-	types.erase( ( unsigned short )data::ValueArray<util::slist>::staticID() );
+	auto types = util::getTypeMap( true );
 
-	for( std::map<unsigned short, std::string>::iterator i = types.begin(); i != types.end(); i++ ) {
+	for( auto i = types.begin(); i != types.end(); i++ ) {
 		i->second.resize( i->second.find_last_not_of( '*' ) + 1 );
 	}
 
@@ -117,13 +109,6 @@ void IOApplication::addOutput( util::ParameterMap &parameters, const std::string
 	parameters[std::string( "repn" ) + suffix].needed() = false;
 	parameters[std::string( "repn" ) + suffix].setDescription(
 		"Representation in which the data" + desc + " shall be written" );
-
-	parameters[std::string( "scale_mode" ) + suffix] = util::Selection( "noscale,autoscale,noupscale,upscale", "autoscale" );
-	parameters[std::string( "scale_mode" ) + suffix].needed() = false;
-	parameters[std::string( "scale_mode" ) + suffix].hidden() = true;
-
-	parameters[std::string( "scale_mode" ) + suffix].setDescription(
-		"Scaling strategy to be used when converting into the datatype given in with -repn" + suffix );
 
 	if( parameters.find( "np" ) == parameters.end() ) {
 		parameters["np"] = false;
@@ -158,11 +143,11 @@ void IOApplication::printHelp( bool withHidden ) const
 	}
 }
 
-std::list< Image > IOApplication::autoload( bool exitOnError,const std::string &suffix,optional< util::slist& > rejected)
+std::list< Image > IOApplication::autoload( bool exitOnError,const std::string &suffix,util::slist* rejected)
 {
 	return autoload( parameters, exitOnError, suffix, feedback(),rejected );
 }
-std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameters, bool exitOnError, const std::string &suffix,  std::shared_ptr<util::ProgressFeedback> feedback, optional< util::slist& > rejected)
+std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameters, bool exitOnError, const std::string &suffix,  std::shared_ptr<util::ProgressFeedback> feedback, util::slist* rejected)
 {
 	util::slist input = parameters[std::string( "in" ) + suffix];
 	util::slist rf = parameters[std::string( "rf" ) + suffix];
@@ -174,8 +159,8 @@ std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameter
 		data::IOFactory::setProgressFeedback( feedback );
 	}
 
-	std::list<util::istring> formatstack=util::listToList<util::istring>(rf.begin(),rf.end());
-		
+	std::list<util::istring> formatstack=util::makeIStringList(rf);
+
 	std::list< Image > tImages;
 	if(input.size()==1 && input.front()=="-"){
 		LOG( Runtime, info )
@@ -183,14 +168,14 @@ std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameter
 			<< util::NoSubject( rf.empty() ? "" : std::string( " using the format stack: " ) + util::listToString(rf.begin(),rf.end()) )
 			<< util::NoSubject( ( !rf.empty() && !dl.empty() ) ? " and" : "" )
 			<< util::NoSubject( dl.empty() ? "" : std::string( " using the dialect: " ) + util::listToString(dl.begin(),dl.end()) );
-		tImages = data::IOFactory::load( std::cin.rdbuf(), formatstack, util::listToList<util::istring>(dl.begin(),dl.end()),rejected );
+		tImages = data::IOFactory::load( std::cin.rdbuf(), formatstack, util::makeIStringList(dl),rejected );
 	} else {
 		LOG( Runtime, info )
 			<< "loading " << util::MSubject( input )
 			<< util::NoSubject( rf.empty() ? "" : std::string( " using the format stack: " ) + util::listToString(rf.begin(),rf.end()) )
 			<< util::NoSubject( ( !rf.empty() && !dl.empty() ) ? " and" : "" )
 			<< util::NoSubject( dl.empty() ? "" : std::string( " using the dialect: " ) + util::listToString(dl.begin(),dl.end()) );
-		tImages = data::IOFactory::load( input, formatstack, util::listToList<util::istring>(dl.begin(),dl.end()),rejected );
+		tImages = data::IOFactory::load( input, formatstack, util::makeIStringList(dl),rejected );
 	}
 
 	if ( tImages.empty() ) {
@@ -227,7 +212,6 @@ bool IOApplication::autowrite ( const util::ParameterMap &parameters, Image out_
 bool IOApplication::autowrite ( const util::ParameterMap &parameters, std::list< Image > out_images, bool exitOnError, const std::string &suffix)
 {
 	const util::Selection repn = parameters[std::string( "repn" ) + suffix];
-	const util::Selection scale_mode = parameters[std::string( "scale_mode" ) + suffix];
 	const std::string output = parameters[std::string( "out" ) + suffix];
 	const util::slist wf = parameters[std::string( "wf" ) + suffix];
 	const util::slist dl = parameters[std::string( "wdialect" ) + suffix];
@@ -239,26 +223,20 @@ bool IOApplication::autowrite ( const util::ParameterMap &parameters, std::list<
 			<< ( ( !wf.empty() && !dl.empty() ) ? " and" : "" )
 			<< ( dl.empty() ? "" : std::string( " using the dialect: " ) + util::listToString(dl.begin(),dl.end()) );
 
-
-	LOG_IF( parameters[std::string( "scale_mode" ) + suffix].isParsed() && repn == 0, Runtime, warning )
-			<< "Ignoring -scale_mode" << suffix << " " << util::MSubject( scale_mode )
-			<<  ", because -repn" << suffix << " was not given";
-
 	if( repn != 0 ) {
 		for( std::list<Image>::reference ref :  out_images ) {
-			ref.convertToType( repn, static_cast<autoscaleOption>( scale_mode - 1 ) ); //noscale is 0 but 1 in the selection
+			ref.convertToType( repn ); //noscale is 0 but 1 in the selection
 		}
 	}
 
 	if( feedback() )
 		data::IOFactory::setProgressFeedback( feedback() );
 
-	if ( ! IOFactory::write( out_images, output, util::listToList<util::istring>(wf.begin(),wf.end()), util::listToList<util::istring>(dl.begin(),dl.end()) ) ) {
+	if ( ! IOFactory::write( out_images, output, util::makeIStringList(wf), util::makeIStringList(dl) ) ) {
 		if ( exitOnError ) {
 			LOG( Runtime, notice ) << "Failed to write, exiting...";
 			exit( 1 );
 		}
-
 		return false;
 	} else
 		return true;

@@ -8,7 +8,6 @@ using namespace isis::qt5;
 int main(int argc, char **argv) {
 
 	IOQtApplication app("isisview",true,false);
-// 	app.getLogHandler(data::Debug::name(),warning)->stopBelow(notice);
 	app.init(argc,argv);
 
 	while(!app.images.empty()){

@@ -10,7 +10,6 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/copy.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <boost/filesystem/fstream.hpp>
 #include <isis/core/fileptr.hpp>

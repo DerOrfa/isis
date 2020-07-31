@@ -11,6 +11,7 @@
 #include <isis/core/propmap.hpp>
 #include <isis/core/vector.hpp>
 #include <string>
+#include <iterator>
 
 namespace isis
 {
@@ -33,7 +34,6 @@ PropertyMap getFilledMap(){
 
 BOOST_AUTO_TEST_CASE( propPath_test )
 {
-
 	const PropertyMap::PropPath a( "a" ), bc( "b/c" ), abc( "a/b/c" );
 	//creation
 	BOOST_CHECK_EQUAL( PropertyMap::PropPath( "a/a/a" ), std::list<PropertyMap::key_type>( 3, PropertyMap::key_type( "a" ) ) );
@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE( propPath_test )
 	BOOST_CHECK_EQUAL( a / bc, abc );
 
 	//length
-	BOOST_CHECK_EQUAL( abc.length(), boost::lexical_cast<std::string>( abc ).length() );
+	BOOST_CHECK_EQUAL( abc.length(), abc.toString().length() );
 }
 
 BOOST_AUTO_TEST_CASE( propMap_init_test )
@@ -65,6 +65,8 @@ BOOST_AUTO_TEST_CASE( propMap_set_test )
 {
 	PropertyMap map1;
 	map1.setValueAs( "Test1", M_PI );
+	BOOST_CHECK( map1.property( "Test1" ).is<decltype(M_PI)>());
+	
 	BOOST_CHECK( !( map1.property( "Test1" ) == 7 ) );
 	BOOST_CHECK_EQUAL( map1.property( "Test1" ), M_PI );
 	map1.setValueAs( "Test1", 7. );
@@ -128,7 +130,9 @@ BOOST_AUTO_TEST_CASE( propMap_join_test )
 
 BOOST_AUTO_TEST_CASE( propMap_diff_test )
 {
+	util::enableLog<util::DefaultMsgPrint>(verbose_info);
 	PropertyMap map1, map2;
+
 	map1.setValueAs( "Test1", M_PI );
 	map1.setValueAs( "Test3", util::fvector4( {1, 1, 1, 1} ) );
 	map1.setValueAs( "Test4", std::string( "Hallo" ) );
@@ -143,15 +147,19 @@ BOOST_AUTO_TEST_CASE( propMap_diff_test )
 	map2.setValueAs( "Test5", std::string( "Hallo leer" ) );
 	map2.setValueAs( "Test6", std::string( "Hallo branch" ) );
 	PropertyMap::DiffMap result = map1.getDifference( map2 ), org;
+
 	//Test1 must be pair of map1.property("Test1") and |empty|
 	BOOST_CHECK_EQUAL( result["Test1"].first, map1.property( "Test1" ) );
 	BOOST_CHECK( result["Test1"].second.isEmpty() );
+
 	//Test2 must be pair of |empty| and map2.property("Test2")
 	BOOST_CHECK( result["Test2"].first.isEmpty() );
 	BOOST_CHECK_EQUAL( result["Test2"].second, map2.property( "Test2" ) );
+
 	//Test2 must be pair of map1.property("Test4") and map2.property("Test4")
 	BOOST_CHECK_EQUAL( result["Test4"].first, map1.property( "Test4" ) );
 	BOOST_CHECK_EQUAL( result["Test4"].second, map2.property( "Test4" ) );
+
 	//Test5 must be pair of |empty| and map2.property("Test5")
 	BOOST_CHECK( result["Test5"].first.isEmpty() );
 	BOOST_CHECK_EQUAL( result["Test5"].second, map2.property( "Test5" ) );
@@ -177,10 +185,6 @@ BOOST_AUTO_TEST_CASE( propMap_rename_test )
 	BOOST_CHECK( !map.hasBranch("sub")); //should be gone
 	BOOST_CHECK_EQUAL( map.property("sup/test1"), ( int32_t )1); // subtree should be here
 	BOOST_CHECK_EQUAL( map.property("sup/test2"), ( int32_t )2); // subtree should be here
-
-	BOOST_CHECK_EQUAL(boost::lexical_cast<std::string>(map.branch("sup")),"{Test1:1(s32bit),Test2:2(s32bit)}"); // first check stringinfy
-	BOOST_CHECK( map.rename("sup/Test1","sup/TEST1") ); // lexical rename (actually the case of the source doesn't matter)
-	BOOST_CHECK_EQUAL(boost::lexical_cast<std::string>(map.branch("sup")),"{TEST1:1(s32bit),Test2:2(s32bit)}"); // should be uppercase now
 }
 
 
@@ -220,7 +224,7 @@ BOOST_AUTO_TEST_CASE( prop_list_test )
 {
 
 	PropertyMap map;
-	const util::Value<int> five[] = {1, 2, 3, 4, 5};
+	const int five[] = {1, 2, 3, 4, 5};
 	std::copy( five, five + 5, std::back_inserter( map.touchProperty( "test1" ) ) );
 
 	for( int i = 0; i < 5; i++ ) {
@@ -232,7 +236,7 @@ BOOST_AUTO_TEST_CASE( prop_list_test )
 	BOOST_CHECK_EQUAL( map.property( "test1" ), map.property( "test2" ) ); //so both should be equal
 
 	for( int i = 4; i >= 0; i-- ) { // filling / setting from the back
-		map.setValueAs<int>( "test1back", five[i], i );
+		map.setValue( "test1back", five[i], i );
 	}
 
 	BOOST_CHECK_EQUAL( map.property( "test1" ), map.property( "test1back" ) ); //again both should be equal
@@ -245,7 +249,7 @@ BOOST_AUTO_TEST_CASE( prop_list_splice_test )
 {
 
 	PropertyMap map,backup;
-	const util::Value<int> buff[] = {1, 2, 3, 4, 5, 6};
+	const util::Value buff[] = {1, 2, 3, 4, 5, 6};
 	std::copy( buff, buff + 6, std::back_inserter( map.touchProperty( "test1" ) ) );
 	std::copy( buff, buff + 6, std::back_inserter( map.touchProperty( "test2" ) ) );
 
@@ -303,11 +307,12 @@ BOOST_AUTO_TEST_CASE( prop_value_ref_test )
 
 	BOOST_CHECK( map.queryValueAs<util::fvector3>( "Test1" ) ); //should be available as fvector3
 
-	optional< util::fvector4 & > vec4 = map.refValueAs<util::fvector4>( "Test1" );
-	BOOST_CHECK( vec4 ); //should be available as fvector4 (conversion available)
-
-	// changes should affect the property
-	vec4.get()[3] = 4;
+	//referneceing as another type should change type
+	util::fvector4 &vec4 = map.refValueAs<util::fvector4>( "Test1" );
+	BOOST_CHECK(map.property( "Test1" ).is<util::fvector4>());
+	
+	// changes to reference should affect the property
+	vec4[3] = 4;
 	BOOST_CHECK_EQUAL( map.getValueAs<util::fvector4>( "Test1" ), util::fvector4( {1, 2, 3, 4} ) );
 }
 

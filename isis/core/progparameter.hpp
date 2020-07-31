@@ -51,7 +51,7 @@ public:
 	 * (The value is used as default value if the parameter never gets to parse any other value)
 	 * \param is_needed flag if parameter is a needed one (default: true)
 	 */
-	template<class T, typename = std::enable_if_t<knowType<T>::value> >
+	template<class T, typename = std::enable_if_t<knownType<T>()> >
 	ProgParameter( const T &ref, bool is_needed = true ): PropertyValue( ref, is_needed ), m_hidden( false ), m_parsed( false ) {}
 	/**
 	 * Put the given value into this parameter.
@@ -75,14 +75,10 @@ public:
 	 */
 	template<typename T> operator const T()const {
 		LOG_IF( isEmpty(), isis::CoreDebug, isis::error ) << "Program parameters must not be empty. Please set it to any value.";
-		return front().castTo<T>();
+		return std::get<T>(front());
 	}
 
-#ifdef BOOST_NO_EXPLICIT_CONVERSION_OPERATORS
-	operator std::unique_ptr<ValueBase>::unspecified_bool_type()const;// implicit conversion to "bool" stolen from boost
-#else
 	explicit operator bool()const;
-#endif
 
 	/// \returns true, if the parameter was ever successfully parsed
 	bool isParsed()const;
@@ -144,7 +140,7 @@ public:
 
 }
 }
-
+/// @cond _internal
 namespace std
 {
 /// Streaming output for ProgParameter - classes
@@ -166,4 +162,6 @@ operator<<( basic_ostream<charT, traits> &out, const isis::util::ProgParameter &
 	return out;
 }
 }
+/// @endcond _internal
+
 #endif // PROGPARAMETER_HPP

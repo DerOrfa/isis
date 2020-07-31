@@ -49,30 +49,28 @@ boost::property_tree::ptree getXML(data::ByteArray &data, size_t offset, size_t 
 	return ret;
 }
 
-data::ValueArrayReference reinterpretData(const data::ByteArray &_data, int32_t PixelType){
-	data::ValueArrayReference ret;
-	data::ByteArray &data=const_cast<data::ByteArray &>(_data);
+data::ValueArray reinterpretData(const data::ByteArray &data, int32_t PixelType){
 	switch(PixelType){
 	case 0://Gray8 - no reinterpretation needed
-		ret=data;break;
+		return data;break;
 	case 1: //Gray16
-        ret=data.at<uint16_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<uint16_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
 	case 12: //Gray32
-        ret=data.at<uint32_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<uint32_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
 	case 2://Gray32Float
-        ret=data.at<float>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<float>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
 	case 3://Bgr24
-		ret=color_reshuffle(data);break;
+		return color_reshuffle(data);break;
 	case 4://Bgr48
-        ret=color_reshuffle(data.at<uint16_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__));break;
+		return color_reshuffle(data.at<uint16_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__));break;
 	case 10: // Gray64ComplexFloat
-        ret=data.at<std::complex<float>>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<std::complex<float>>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
 	case 11: // Bgr192ComplexFloat
-        ret=data.at<std::complex<double>>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<std::complex<double>>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
 	default:
 		LOG(Runtime,error) << "Pixel Type " << PixelType << " not implemented";break;
 	}
-	return ret;
+	return data::ValueArray();
 }
 std::map<char,DimensionEntry> DirectoryEntryDV::getDimsMap()const{
 	std::map<char,DimensionEntry> ret;
@@ -198,7 +196,7 @@ std::function<data::Chunk()> ImageFormat_ZISRAW::SubBlock::getChunkGenerator()co
 			auto pixel_type=DirectoryEntry.PixelType;
 			// linear representation of the pixel data reinterpreted as the correct PixelType
 			decoder = [size,pixel_type](isis::data::ByteArray image_data){
-				data::ValueArrayReference ref=_internal::reinterpretData(image_data, pixel_type);
+				auto ref=_internal::reinterpretData(image_data, pixel_type);
 				return data::Chunk(ref,size[0],size[1],size[2],size[3],true);
 			};
 		}break;
@@ -315,9 +313,6 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 		std::string getName()const{
 			return xml_data.empty() ? std::string("_unknown_") : xml_data.get<std::string>("<xmlattr>.Name");
 		}
-		std::array<int32_t,2> getSize(){
-			std::array<int32_t,2> ret{};
-		}
 	};
 	std::vector<Pyramid> pyramids;
 
@@ -423,7 +418,7 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 					
 					const auto center=pyramid.xml_data.get_optional<std::string>("CenterPosition");
 					if(center){
-						const auto fCenter=util::Value<std::string>(*center).as<util::fvector3>();
+						const auto fCenter=util::Value(*center).as<util::fvector3>();
 						const util::fvector3 origin{
 							fCenter[0]-size[0]/2,
 							fCenter[1]-size[1]/2,
@@ -448,24 +443,24 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 }}
 
 const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelTypeMap={
-	 {0,isis::data::ValueArray<uint8_t>::staticID()} //Gray8
-	,{1,isis::data::ValueArray<uint16_t>::staticID()} //Gray16
-	,{2,isis::data::ValueArray<float>::staticID()} //Gray32Float
-	,{3,isis::data::ValueArray<util::color24>::staticID()} //Bgr24
-	,{4,isis::data::ValueArray<util::color48>::staticID()} //Bgr48
-	,{10,isis::data::ValueArray<std::complex<float>>::staticID()} //Gray64ComplexFloat
-	,{11,isis::data::ValueArray<std::complex<double>>::staticID()} //Bgr192ComplexFloat
-	,{12,isis::data::ValueArray<int32_t>::staticID()} //Gray32
+	 {0,isis::util::typeID<uint8_t>()} //Gray8
+	,{1,isis::util::typeID<uint16_t>()} //Gray16
+	,{2,isis::util::typeID<float>()} //Gray32Float
+	,{3,isis::util::typeID<util::color24>()} //Bgr24
+	,{4,isis::util::typeID<util::color48>()} //Bgr48
+	,{10,isis::util::typeID<std::complex<float>>()} //Gray64ComplexFloat
+	,{11,isis::util::typeID<std::complex<double>>()} //Bgr192ComplexFloat
+	,{12,isis::util::typeID<int32_t>()} //Gray32
 };
 const std::map<std::string,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelTypeMapStr={
-	 {"Gray8",isis::data::ValueArray<uint8_t>::staticID()} //Gray8
-	,{"Gray16",isis::data::ValueArray<uint16_t>::staticID()} //Gray16
-	,{"Gray32Float",isis::data::ValueArray<float>::staticID()} //Gray32Float
-	,{"Bgr24",isis::data::ValueArray<util::color24>::staticID()} //Bgr24
-	,{"Bgr48",isis::data::ValueArray<util::color48>::staticID()} //Bgr48
-	,{"Gray64ComplexFloat",isis::data::ValueArray<std::complex<float>>::staticID()} //Gray64ComplexFloat
-	,{"Bgr192ComplexFloat",isis::data::ValueArray<std::complex<double>>::staticID()} //Bgr192ComplexFloat
-	,{"Gray32",isis::data::ValueArray<int32_t>::staticID()} //Gray32
+	 {"Gray8",isis::util::typeID<uint8_t>()} //Gray8
+	,{"Gray16",isis::util::typeID<uint16_t>()} //Gray16
+	,{"Gray32Float",isis::util::typeID<float>()} //Gray32Float
+	,{"Bgr24",isis::util::typeID<util::color24>()} //Bgr24
+	,{"Bgr48",isis::util::typeID<util::color48>()} //Bgr48
+	,{"Gray64ComplexFloat",isis::util::typeID<std::complex<float>>()} //Gray64ComplexFloat
+	,{"Bgr192ComplexFloat",isis::util::typeID<std::complex<double>>()} //Bgr192ComplexFloat
+	,{"Gray32",isis::util::typeID<int32_t>()} //Gray32
 };
 const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelSizeMap={
 	 {0,sizeof(uint8_t)} //Gray8
@@ -480,11 +475,11 @@ const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelSizeM
 
 isis::image_io::FileFormat *factory()
 {
-	isis_types.color.c24bit=isis::data::ValueArray<isis::util::color24>::staticID();
-	isis_types.color.c48bit=isis::data::ValueArray<isis::util::color48>::staticID();
-	isis_types.scalar.u8bit=isis::data::ValueArray<uint8_t>::staticID();
-	isis_types.scalar.u16bit=isis::data::ValueArray<uint16_t>::staticID();
-	isis_types.scalar.u32bit=isis::data::ValueArray<uint32_t>::staticID();
-	isis_types.scalar.float32bit=isis::data::ValueArray<float>::staticID();
+	isis_types.color.c24bit=isis::util::typeID<isis::util::color24>();
+	isis_types.color.c48bit=isis::util::typeID<isis::util::color48>();
+	isis_types.scalar.u8bit=isis::util::typeID<uint8_t>();
+	isis_types.scalar.u16bit=isis::util::typeID<uint16_t>();
+	isis_types.scalar.u32bit=isis::util::typeID<uint32_t>();
+	isis_types.scalar.float32bit=isis::util::typeID<float>();
 	return new isis::image_io::ImageFormat_ZISRAW();
 }

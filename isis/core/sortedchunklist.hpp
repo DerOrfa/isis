@@ -24,8 +24,6 @@
 #include <stack>
 #include <memory>
 
-using boost::optional;
-
 /// @cond _internal
 namespace isis
 {
@@ -100,7 +98,7 @@ public:
 	// utils
 
 	///runs op on all entries of the list (the order is not defined) and replaces the entries by the return value
-	void transform( chunkPtrOperator &op );
+	void transform( chunkPtrOperator &op );//make it a functional
 	
 	///runs op on all entries of the list (the order is not defined)
 	template<typename T> void forall( T &func)const
@@ -137,7 +135,7 @@ public:
 	 * Make image rectangular by dropping secondary sorted entries from all primary entries until their amount is equal.
 	 * \returns amount of dropped entries
 	 **/
-	size_t makeRectangular(optional< util::slist& > rejected=optional< util::slist& >());
+	size_t makeRectangular(util::slist* rejected=nullptr);
 
 	/// \returns the amount secondary sorted entries
 	size_t getHorizontalSize();

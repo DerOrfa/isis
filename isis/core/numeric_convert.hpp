@@ -11,7 +11,6 @@ namespace isis
 {
 namespace data
 {
-enum autoscaleOption;
 API_EXCLUDE_BEGIN;
 /// @cond _internal
 namespace _internal
@@ -35,7 +34,7 @@ template<typename T> T round( double x )
 template<typename SRC, typename DST> void numeric_convert_impl( const SRC *src, DST *dst, size_t count, double scale, double offset )
 {
 	LOG( Runtime, info )
-			<< "using generic scaling convert " << ValueArray<SRC>::staticName() << "=>" << ValueArray<DST>::staticName()
+			<< "using generic scaling convert " << util::typeName<SRC>() << "=>" << util::typeName<DST>()
 			<< " with scale/offset " << std::fixed << scale << "/" << offset;
 
 	static const std::pair<DST, DST> limits(
@@ -54,7 +53,7 @@ template<typename SRC, typename DST> void numeric_convert_impl( const SRC *src, 
 
 template<typename SRC, typename DST> void numeric_convert_impl( const SRC *src, DST *dst, size_t count )
 {
-	LOG( Runtime, verbose_info ) << "using generic convert " << ValueArray<SRC>::staticName() << " => " << ValueArray<DST>::staticName() << " without scaling";
+	LOG( Runtime, verbose_info ) << "using generic convert " << util::typeName<SRC>() << " => " << util::typeName<DST>() << " without scaling";
 
 	for ( size_t i = 0; i < count; i++ )
 		dst[i] = round<DST>( src[i] );
@@ -67,12 +66,12 @@ template<typename SRC, typename DST> void numeric_convert_impl( const std::compl
 
 template<typename T> void numeric_copy_impl( const T *src, T *dst, size_t count )
 {
-	LOG( Runtime, verbose_info )    << "using memcpy-copy of " << ValueArray<T>::staticName() << " without scaling";
+	LOG( Runtime, verbose_info )    << "using memcpy-copy of " << util::typeName<T>() << " without scaling";
 	memcpy( dst, src, count * sizeof( T ) );
 }
 template<typename T> void numeric_copy_impl( const T *src, T *dst, size_t count, double scale, double offset )
 {
-	LOG( Runtime, verbose_info )    << "using generic scaling copy of " << ValueArray<T>::staticName() << " with scale/offset " << std::fixed << scale << "/" << offset;
+	LOG( Runtime, verbose_info )    << "using generic scaling copy of " << util::typeName<T>() << " with scale/offset " << std::fixed << scale << "/" << offset;
 	numeric_convert_impl<T,T>(src,dst,count,scale,offset);
 }
 
@@ -208,28 +207,15 @@ API_EXCLUDE_END;
  * - elsewise values will be offset towards 0 if the value range of the source does not fit the destination.
  * - if destination is unsigned, values will be offset to be in positive domain if necessary.
  * - if destination is floating point no scaling is done at all (scale factor will be 1, offset will be 0).
- * The scaling strategies are:
- * - autoscale: do not scale up (scale <=1) if src is an integer type, otherwise also do upscaling
- * - noupscale: never scale up (scale <=1)
- * - upscale: enforce upscaling even if SRC is an integer type
- * - noscale: do not scale at all (scale==1)
  * \param min the smallest value of the source data
  * \param max the biggest value of the source data
- * \param scaleopt enum to tweak the scaling strategy
  */
-template<typename SRC, typename DST> std::pair<double, double>
-getNumericScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )
+template<typename SRC, typename DST> scaling_pair getNumericScaling(const util::Value &min, const util::Value &max )
 {
 	double scale = 1.0;
 	double offset = 0.0;
-	bool doScale = ( scaleopt != noscale && std::numeric_limits<DST>::is_integer ); //only do scale if scaleopt!=noscale and the target is an integer (scaling into float is useless)
 
-	if ( scaleopt == autoscale && std::numeric_limits<SRC>::is_integer ) {
-		LOG( Debug, verbose_info ) << "Won't upscale, because the source datatype is discrete (" << util::Value<SRC>::staticName() << ")";
-		scaleopt = noupscale; //dont scale up if SRC is an integer
-	}
-
-	if ( doScale ) {
+	if ( std::is_integral_v<DST> ) {//only do scale if the target is an integer (scaling into float is useless)
 		const DST domain_min = std::numeric_limits<DST>::min();//negative value domain of this dst [min .. -1]
 		const DST domain_max = std::numeric_limits<DST>::max();//positive value domain of this dst [0 .. max]
 		double minval, maxval;
@@ -266,8 +252,8 @@ getNumericScaling( const util::ValueBase &min, const util::ValueBase &max, autos
 			std::numeric_limits<double>::max();
 		scale = std::min( scale_max ? scale_max : std::numeric_limits<double>::max(), scale_min ? scale_min : std::numeric_limits<double>::max() );//get the smaller scaling factor which is not zero so the bigger range will fit into his domain
 
-		if ( scaleopt == noupscale && scale > 1 ) {
-			LOG( Runtime, info ) << "upscale not given, clamping scale " << scale << " to 1";
+		if ( std::is_integral_v<SRC> && scale > 1 ) {
+			LOG( Debug, verbose_info ) << "Limiting scaling to 1, because the source datatype " << util::typeName<SRC>() << " is discrete";
 			scale = 1;
 		}
 
@@ -278,7 +264,7 @@ getNumericScaling( const util::ValueBase &min, const util::ValueBase &max, autos
 			offset *= scale;//calc offset for dst
 	}
 
-	return std::make_pair( scale, offset );
+	return { scale, offset };
 }
 
 /**

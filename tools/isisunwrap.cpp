@@ -6,7 +6,7 @@ int main( int argc, char **argv )
 {
 	data::IOApplication app( "isis unwrap");
 	
-	app.parameters["dim"]=util::Selection("row,column,slice,time","time");
+	app.parameters["dim"]=util::Selection({"row", "column", "slice,time"},"time");
 // 	app.parameters["pos"]=0;
 // 	app.parameters["pos"].needed()=false;
 

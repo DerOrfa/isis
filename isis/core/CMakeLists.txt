@@ -17,7 +17,7 @@ else(CURSES_LIBRARIES)
 	message(STATUS "curses form library not found. Logging won't be colored.")
 	set(CURSES_LIBRARIES "")
 endif(CURSES_LIBRARIES)
- 
+
 # add source files to this parameter list
 file(GLOB CORE_SRC_FILES "*.cpp")
 file(GLOB CORE_HDR_FILES "*.hpp" "*.h")
@@ -29,7 +29,7 @@ set(ISIS_USE_LIBORC OFF CACHE BOOL "use the \"Oil Runtime Compiler\"" )
 if(ISIS_USE_LIBORC)
 	find_file(LIBORC_H "orc/orc.h" DOC "Where to find the orc include files (looks for orc/orc.h)" )
 	find_library(LIBORC_LIB "orc-0.4")
-	
+
 	find_program(LIBORC_COMPILER "orcc")
 
 	ADD_CUSTOM_COMMAND(
@@ -39,8 +39,8 @@ if(ISIS_USE_LIBORC)
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		OUTPUT ${CMAKE_BINARY_DIR}/type_conversions.c
 	)
-	
-	include_directories(${LIBORC_H})
+
+    include_directories(${LIBORC_H})
 	include_directories(${CMAKE_BINARY_DIR})#so we can #include the generated orc-code
 	list(APPEND CORE_SRC_FILES ${CMAKE_BINARY_DIR}/type_conversions.c)
 else(ISIS_USE_LIBORC)
@@ -48,11 +48,14 @@ else(ISIS_USE_LIBORC)
 	set(LIBORC_LIB "")
 endif(ISIS_USE_LIBORC)
 
+#see also https://stackoverflow.com/questions/41676311
+set_source_files_properties( "valuearray_minmax.cpp" PROPERTIES COMPILE_FLAGS "-Wno-ignored-attributes")
+
 #add the core library
 add_lib(isis_core
 	"${CORE_SRC_FILES}"
-	"${Boost_LIBRARIES};${CURSES_LIBRARIES}" #deps
-	"${LIBORC_LIB};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads;-lstdc++fs" #private deps
+	"Boost::headers;${CURSES_LIBRARIES}" #deps
+	"${LIBORC_LIB};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads;$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>" #private deps
 	${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API}
 )
 
@@ -77,4 +80,6 @@ endif(WIN32)
 # install header files
 install(FILES ${CORE_HDR_FILES} DESTINATION include/isis/core COMPONENT Development)
 
-
+# write configuration file
+configure_file(isis_corecfg.cmake.in ${CMAKE_BINARY_DIR}/ISISCoreConfig.cmake @ONLY)
+install(FILES ${CMAKE_BINARY_DIR}/ISISCoreConfig.cmake DESTINATION share/isis/cmake COMPONENT Development)

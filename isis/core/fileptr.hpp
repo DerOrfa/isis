@@ -1,17 +1,9 @@
-//
-//  fileptr.hpp
-//  isis
-//
-//  Created by Enrico Reimer on 08.08.11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
-//
 
 #ifndef FILEPTR_HPP
 #define FILEPTR_HPP
 
 #include <filesystem>
 #include "bytearray.hpp"
-#include "valuearray.hpp"
 #include "endianess.hpp"
 
 #ifdef WIN32

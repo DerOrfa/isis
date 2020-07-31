@@ -4,16 +4,16 @@
 #include <algorithm>
 #include <regex>
 
-
-struct DiffLog {static const char *name() {return "Diff";}; enum {use = _ENABLE_LOG};};
-struct DiffDebug {static const char *name() {return "DiffDebug";}; enum {use = _ENABLE_DEBUG};};
-
-static const char *_props[] = {"sequenceNumber", "sequenceDescription", "sequenceStart", "indexOrigin", "echoTime"};
-static const char *_skips[] = {"sequenceDescription=localizer"};
-
 using namespace isis;
 
-std::pair<std::string, int>  parseFilename( std::string name )
+struct DiffLog   {static constexpr char name[]="Diff";      static constexpr bool use = _ENABLE_LOG;};
+struct DiffDebug {static constexpr char name[]="DiffDebug"; static constexpr bool use = _ENABLE_DEBUG;};
+
+const util::slist props = {"sequenceNumber", "sequenceDescription", "sequenceStart", "indexOrigin", "echoTime"};
+const util::slist skips = {"sequenceDescription=localizer"};
+
+
+std::pair<std::string, int>  parseFilename( const std::string& name )
 {
 	static const std::regex reg( "^(.*):([\\d]+)$", std::regex_constants::optimize|std::regex_constants::ECMAScript );
 	std::smatch results;
@@ -31,8 +31,8 @@ std::pair<std::string, int>  parseFilename( std::string name )
 
 bool hasSameProp( const data::Image &img, const util::PropertyMap::PropPath &pname, const util::PropertyValue pval )
 {
-	return 
-	( !img.hasProperty( pname ) && pval.isEmpty() ) || 
+	return
+	( !img.hasProperty( pname ) && pval.isEmpty() ) ||
 	img.property( pname ) == pval; // if property does not exist, an empty propertyValue is returned and those compare unequal to everything
 }
 bool hasDifferentProp( const data::Image &img, const util::PropertyMap::PropPath &pname, const util::PropertyValue pval )
@@ -42,7 +42,7 @@ bool hasDifferentProp( const data::Image &img, const util::PropertyMap::PropPath
 
 data::Image pickImg( int pos, std::list<data::Image> list )
 {
-	std::list< data::Image >::iterator at = list.begin();
+	auto at = list.begin();
 	std::advance( at, pos );
 
 	if( at == list.end() ) {
@@ -53,17 +53,17 @@ data::Image pickImg( int pos, std::list<data::Image> list )
 	return *at;
 }
 
-size_t doFit( const data::Image reference, std::list<data::Image> &org_images, std::list<data::Image> &images, const char *propName )
+size_t doFit( const data::Image& reference, std::list<data::Image> &org_images, std::list<data::Image> &images, const char *propName )
 {
 	//first time org is empty - images is full
 	if(propName[0]==0){
-		LOG(DiffLog,warning) << "Empty property names are invalid! Use \'-selectwith\' instead of \'-selectwith \"\"\'.";
+		LOG(DiffLog,warning) << R"(Empty property names are invalid! Use '-selectwith' instead of '-selectwith ""'.)";
 	} else {
 		const util::PropertyMap::PropPath propPath( propName );
 		util::PropertyValue propval = reference.property( propPath );
 
 		//now move all with different prop back into org
-		for( std::list<data::Image>::iterator i = images.begin(); i != images.end(); ) {
+		for( auto i = images.begin(); i != images.end(); ) {
 			if( hasDifferentProp( *i, propPath, propval ) ) {
 				org_images.push_back( *i );
 				images.erase( i++ );
@@ -90,7 +90,7 @@ std::filesystem::path getCommonSource(const std::list<data::Image> &images){
 	return util::getRootPath(std::list<std::filesystem::path>(sources.begin(),sources.end()));
 }
 
-std::list<data::Image> findFitting( const data::Image reference, std::list<data::Image> &org_images, const util::slist &props )
+std::list<data::Image> findFitting( const data::Image& reference, std::list<data::Image> &org_images, const util::slist &props )
 {
 	std::list< data::Image > images;
 	images.splice( images.begin(), org_images ); //first move all into images
@@ -138,9 +138,9 @@ bool diff( const data::Image &img1, const data::Image &img2, const util::slist &
 	return ret;
 }
 
-void dropWith( util::slist props, std::list< data::Image > &images )
+void dropWith( const util::slist& prps, std::list< data::Image > &images )
 {
-	for( util::slist::const_reference propStr :  props ) {
+	for( util::slist::const_reference propStr :  prps ) {
 		const std::list< std::string > ppair = util::stringToList<std::string>( propStr, '=' );
 		images.remove_if( std::bind( hasSameProp, std::placeholders::_1, ppair.front().c_str(), util::PropertyValue( ppair.back() ) ) );
 	}
@@ -153,11 +153,11 @@ int main( int argc, char *argv[] )
 	app.parameters["ignore"].needed() = false;
 	app.parameters["ignore"].setDescription( "List of properties which should be ignored when comparing" );
 
-	app.parameters["skipwith"] = util::slist( _skips, _skips + sizeof( _skips ) / sizeof( char * ) );
+	app.parameters["skipwith"] = skips;
 	app.parameters["skipwith"].needed() = false;
 	app.parameters["skipwith"].setDescription( "List of property=value sets which should should make the program skip the according image" );
 
-	app.parameters["selectwith"] = util::slist( _props, _props + sizeof( _props ) / sizeof( char * ) );
+	app.parameters["selectwith"] = props;
 	app.parameters["selectwith"].needed() = false;
 	app.parameters["selectwith"].setDescription( "List of properties which should be used to select images for comparison" );
 	
@@ -173,7 +173,7 @@ int main( int argc, char *argv[] )
 	data::IOApplication::addInput( app.parameters, " of the second image", "2" );
 
 	app.addExample( "-in1 orphaned_data/ -in2 /archive/archived.dataset/ -ignore DICOM/PatientID",
-					"Check if (and where) a \"found\" dataset differs from one in your archive ignoring different \"DICOM/PatientID\"s (in case you anonymize your archive)." );
+					R"(Check if (and where) a "found" dataset differs from one in your archive ignoring different "DICOM/PatientID"s (in case you anonymize your archive).)" );
 
 	app.addExample( "-in1 dicom_dataset:3 -in2 :4",
 					"Check for differences between the third and the fourth image found in a directory of DICOM files." );
@@ -230,7 +230,7 @@ int main( int argc, char *argv[] )
 		LOG( DiffLog, notice ) << "Comparing " << images1.size() << " images from \"" << sPath1 << "\" and " << images2.size() << " from \"" << sPath2 << "\"";
 
 		for (
-			std::list< data::Image >::iterator first = images1.begin();
+			auto first = images1.begin();
 			first != images1.end() && !images1.empty();
 		) {
 			const std::list<data::Image> candidates = findFitting( *first, images2, app.parameters["selectwith"] );

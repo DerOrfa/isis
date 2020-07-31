@@ -6,8 +6,6 @@
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/stream.hpp>
-#include <fstream>
-#include <iomanip>
 #include <iostream>
 
 #include "log.hpp"
@@ -32,7 +30,7 @@ API_EXCLUDE_END;
 void FileFormat::write( const std::list< data::Image >& images, const std::string &filename, std::list<util::istring> dialects, std::shared_ptr< util::ProgressFeedback > progress )
 {
 	std::list<std::string> names = makeUniqueFilenames( images, filename );
-	std::list<std::string>::const_iterator inames = names.begin();
+	auto inames = names.begin();
 	for( std::list<data::Image>::const_reference ref :  images ) {
 		std::string uniquePath = *( inames++ );
 
@@ -65,7 +63,7 @@ std::list<data::Chunk> FileFormat::load( const std::filesystem::path &filename, 
 		set_up=true;
 		feedback->show( std::filesystem::file_size( filename ), std::string( "loading " ) + filename.native() );
 	}
-	std::list<data::Chunk> ret=load(ptr,formatstack,dialects,feedback);
+	std::list<data::Chunk> ret=load(static_cast<data::ByteArray&>(ptr),formatstack,dialects,feedback);
 	if(set_up) // close progress bar
 		feedback->close();
 	return ret;
@@ -107,25 +105,26 @@ util::PropertyMap::key_type hasOrTell(const std::initializer_list< util::Propert
 	return util::PropertyMap::key_type();
 }
 
-optional< util::PropertyValue > extractOrTell(const util::PropertyMap::key_type &name, util::PropertyMap& object, LogLevel level)
+std::optional< util::PropertyValue > extractOrTell(const util::PropertyMap::key_type &name, util::PropertyMap& object, LogLevel level)
 {
-	optional< util::PropertyValue > ret;
-	boost::optional< util::PropertyValue& > found=object.queryProperty(name);
+	auto found=object.queryProperty(name);
 	if(found){ // if we found one, swap its contet with ret and remove it
-		ret.reset(util::PropertyValue());
-		found->swap(*ret);
+		util::PropertyValue ret;
+		found->swap(ret);
 		object.remove(name);
+		return ret;
+	} else {
+		LOG(Runtime, level ) << "Missing property " << name;
+		return std::optional< util::PropertyValue >();
 	}
-	LOG_IF(!ret, Runtime, level ) << "Missing property " << name;
-	return ret;
 }
-optional< util::PropertyValue > extractOrTell(const std::initializer_list< util::PropertyMap::key_type > names, util::PropertyMap& object, LogLevel level)
+std::optional< util::PropertyValue > extractOrTell(const std::initializer_list< util::PropertyMap::key_type > names, util::PropertyMap& object, LogLevel level)
 {
-	optional< util::PropertyValue > ret;
+	std::optional< util::PropertyValue > ret;
 	for(const util::PropertyMap::key_type &key:names){ // iterate through all props
-		boost::optional< util::PropertyValue& > found=object.queryProperty(key);
-		if(found){ // if we found one, swap its contet with ret and remove it
-			ret.reset(util::PropertyValue());
+		auto found=object.queryProperty(key);
+		if(found){ // if we found one, swap its content with ret and remove it
+			ret.emplace();
 			found->swap(*ret);
 			object.remove(key);
 			break;
@@ -136,12 +135,12 @@ optional< util::PropertyValue > extractOrTell(const std::initializer_list< util:
 }
 
 
-void FileFormat::throwGenericError( std::string desc )
+void FileFormat::throwGenericError( const std::string& desc )
 {
 	throw( std::runtime_error( desc ) );
 }
 
-void FileFormat::throwSystemError( int err, std::string desc )
+void FileFormat::throwSystemError( int err, const std::string& desc )
 {
     throw( std::system_error( err, std::system_category(), desc ) );
 }
@@ -171,7 +170,7 @@ std::pair< std::string, std::string > FileFormat::makeBasename( const std::strin
 }
 
 // @todo document me (esp. the formatting-stuff)
-std::string FileFormat::makeFilename( const util::PropertyMap &props, const std::string namePattern )
+std::string FileFormat::makeFilename( const util::PropertyMap &props, const std::string& namePattern )
 {
 	using namespace std::regex_constants;
 	static const std::regex reg( "\\{[^{}]+\\}", optimize);
@@ -202,7 +201,7 @@ std::string FileFormat::makeFilename( const util::PropertyMap &props, const std:
 		}
 		
 		util::PropertyMap::key_type prop( smatch.c_str() ); // use remaining string to look for property
-		const boost::optional< util::PropertyValue const& > found= props.queryProperty( prop );
+		const auto found= props.queryProperty( prop );
 		std::string pstring;
 		if( found && !found->isEmpty() ) {
 			if(formatting==none){
@@ -257,7 +256,7 @@ std::list<std::string> FileFormat::makeUniqueFilenames( const std::list<data::Im
 	return ret;
 }
 
-bool FileFormat::checkDialect(const std::list<util::istring> &dialects,util::istring searched){
+bool FileFormat::checkDialect(const std::list<util::istring> &dialects,const util::istring& searched){
 	return std::find(dialects.begin(),dialects.end(),searched)!=dialects.end();
 }
 

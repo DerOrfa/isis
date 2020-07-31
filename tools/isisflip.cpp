@@ -37,22 +37,12 @@ bool swapProperties( data::Image &image, const unsigned short dim )
 
 int main( int argc, char **argv )
 {
-	class : public data::ChunkOp
-	{
-	public:
-		data::dimensions dim;
-		bool operator()( data::Chunk &ch, util::vector4<size_t> /*posInImage*/ ) {
-			ch.flipAlong( dim );
-			return true;
-		}
-	} flifu;
-
 	ENABLE_LOG( data::Runtime, util::DefaultMsgPrint, error );
 	std::map<std::string, unsigned int> alongMap = boost::assign::map_list_of
 			( "row", 0 ) ( "column", 1 ) ( "slice", 2 ) ( "x", 3 ) ( "y", 4 ) ( "z", 5 );
 	data::IOApplication app( "isisflip", true, true );
-	util::Selection along( "row,column,slice,x,y,z" );
-	util::Selection flip( "image,space,both" );
+	util::Selection along({"row", "column", "slice", "x", "y", "z"} );
+	util::Selection flip({"image", "space", "both"} );
 	along.set( "x" );
 	flip.set( "both" );
 	app.parameters["along"] = along;
@@ -82,8 +72,12 @@ int main( int argc, char **argv )
 
 		if ( app.parameters["flip"].toString() == "image" || app.parameters["flip"].toString() == "both" ) {
 			if( refImage.getChunkAt(0).getRelevantDims() > dim ) {
-				flifu.dim = static_cast<data::dimensions>( dim );
-				refImage.foreachChunk( flifu );
+				refImage.foreachChunk( 
+					[dim]( data::Chunk &ch, util::vector4<size_t> /*posInImage*/ ) {
+						ch.flipAlong( (data::dimensions)dim );
+						return true;
+					}
+				);
 			} else {
 				if( !swapProperties( refImage, dim ) ) {
 					return EXIT_FAILURE;

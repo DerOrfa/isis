@@ -5,7 +5,7 @@
 
 using namespace isis;
 
-class VoxelOp : public data::VoxelOp<double>
+class VoxelOp
 {
 	mu::Parser parser;
 	double voxBuff;
@@ -41,9 +41,9 @@ int main( int argc, char **argv )
 	try {
 		VoxelOp vop( op );
 
-		for( data::Image & img: app.images ) {
+		for( data::TypedImage<double> img: app.images ) { //muparser needs double
 			std::cout << "Computing vox=(" << op << ") for each voxel of the " << img.getSizeAsString() << "-Image" << std::endl;
-			img.foreachVoxel<double>( vop );
+			img.foreachVoxel( vop );
 		}
 	} catch( mu::Parser::exception_type &e ) {
 		std::cerr << e.GetMsg() << std::endl;

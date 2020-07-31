@@ -1,0 +1,40 @@
+# -*- mode: cmake -*-
+# ISIS cmake configuration file
+#
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED yes)
+
+SET(ISIS_INSTALL_PREFIX @CMAKE_INSTALL_PREFIX@)
+SET(ISIS_INCLUDE_DIRS @CMAKE_INSTALL_PREFIX@/include/ @Boost_INCLUDE_DIR@ )
+SET(ISIS_CORE_REV_STRING @ISIS_CORE_REV_STRING@)
+SET(ISIS_CORE_VERSION_API @ISIS_CORE_VERSION_API@)
+
+set(ISIS_RUNTIME_LOG @ISIS_RUNTIME_LOG@ CACHE BOOL "Enable runtime logging through isis (note this only has an effect on your compile, not of the isis libraries)")
+set(ISIS_DEBUG_LOG @ISIS_DEBUG_LOG@ CACHE BOOL "Enable debug logging through isis (note this only has an effect on your compile, not of the isis libraries)")
+
+# enable RUNTIME_LOG
+if(ISIS_RUNTIME_LOG)
+  add_definitions(-D_ENABLE_LOG=1)
+else(ISIS_RUNTIME_LOG)
+  add_definitions(-D_ENABLE_LOG=0)
+endif(ISIS_RUNTIME_LOG)
+
+# enable DEBUG_LOG
+if(ISIS_DEBUG_LOG)
+  add_definitions(-D_ENABLE_DEBUG=1)
+  message(STATUS "Debug code enabled, this will will have a big impact on the performance")
+else(ISIS_DEBUG_LOG)
+  add_definitions(-D_ENABLE_DEBUG=0)
+endif(ISIS_DEBUG_LOG)
+
+# only needed for plugins
+SET(ISIS_PLUGIN_INFIX @ISIS_PLUGIN_INFIX@)
+
+if(NOT ISIS_FIND_COMPONENTS)
+	list(APPEND ISIS_FIND_COMPONENTS ISISCore ISISMath ISISAdapter)
+endif(NOT ISIS_FIND_COMPONENTS)
+
+foreach(_COMP ${ISIS_FIND_COMPONENTS})
+	include("@CMAKE_INSTALL_PREFIX@/share/isis/cmake/${_COMP}Config.cmake")
+endforeach(_COMP ${ISIS_FIND_COMPONENTS})

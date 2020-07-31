@@ -11,18 +11,6 @@ namespace image_io
 
 namespace _internal
 {
-template<typename ST, typename DT> bool try_cast( const ST &source, DT &dest )
-{
-	bool ret = true;
-
-	try {
-		dest = boost::lexical_cast<DT>( source );
-	} catch ( boost::bad_lexical_cast e ) {
-		ret = false;
-	}
-
-	return ret;
-}
 struct tag_length_visitor
 {
 	template<boost::endian::order Order> size_t operator()(const ExplicitVrTag<Order> *_tag)const{
@@ -70,11 +58,11 @@ size_t DicomElement::getLength()const{
 	if(getID32()==0xFFFEE000){
 		return source.at<uint16_t>(position+4,1,endian_swap())[0];
 	} else if(extendedLength()){
-		assert(boost::apply_visitor(tag_length_visitor(),tag)==0);
+		assert(std::visit(tag_length_visitor(),tag)==0);
 		return source.at<uint32_t>(position+8,1,endian_swap())[0];
 	}
 	else
-		return boost::apply_visitor(tag_length_visitor(),tag);
+		return std::visit(tag_length_visitor(),tag);
 }
 size_t DicomElement::getPosition()const{
 	return position;
@@ -84,11 +72,11 @@ util::istring DicomElement::getIDString()const{
 }
 
 uint32_t DicomElement::getID32()const{
-	return boost::apply_visitor(tag_id_visitor(),tag);
+	return std::visit(tag_id_visitor(),tag);
 }
 
 std::string DicomElement::getVR()const{
-	return boost::apply_visitor(tag_vr_visitor(),tag);
+	return std::visit(tag_vr_visitor(),tag);
 }
 util::PropertyMap::PropPath DicomElement::getName()const{
 	auto found=dicom_dict.find(getID32());
@@ -126,11 +114,11 @@ bool DicomElement::next(size_t _position){
 const uint8_t *DicomElement::data()const{
 	return &source[position+2+2+2+2]; //offset by group-id, element-id, vr and length
 }
-util::ValueReference DicomElement::getValue(){
+std::optional<util::Value> DicomElement::getValue(){
 	return getValue(getVR());
 }
-util::ValueReference DicomElement::getValue(std::string vr){
-	util::ValueReference ret;
+std::optional<util::Value> DicomElement::getValue(std::string vr){
+	std::optional<util::Value> ret;
 	auto found_generator=generator_map.find(vr);
 	if(found_generator!=generator_map.end()){
 		auto generator=found_generator->second;;
@@ -144,7 +132,7 @@ util::ValueReference DicomElement::getValue(std::string vr){
 			assert(false);
 		}
 
-		LOG(Debug,verbose_info) << "Parsed " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << ret;
+		LOG(Debug,verbose_info) << "Parsed " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << *ret;
 	} else {
 		LOG(Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
 	}
@@ -169,7 +157,7 @@ template <typename S, typename V> void arrayToVecPropImp( S *array, util::Proper
 {
 	V vector;
 	vector.copyFrom( array, array + len );
-	dest.property( name ) = vector; //if Float32 is float its fine, if not we will get an linker error here
+	dest.touchProperty(name) = vector; //if Float32 is float its fine, if not we will get an linker error here
 }
 template <typename S> void arrayToVecProp( S *array, util::PropertyMap &dest, const util::PropertyMap::PropPath &name, size_t len )
 {
@@ -180,7 +168,7 @@ template <typename S> void arrayToVecProp( S *array, util::PropertyMap &dest, co
 template<typename T> bool noLatin( const T &t ) {return t >= 127;}
 }
 
-void ImageFormat_Dicom::parseCSA(const data::ValueArray<uint8_t> &data, util::PropertyMap &map, std::list<util::istring> dialects )
+void ImageFormat_Dicom::parseCSA(const data::ByteArray &data, util::PropertyMap &map, std::list<util::istring> dialects )
 {
 	const size_t len = data.getLength();
 
@@ -271,19 +259,19 @@ bool ImageFormat_Dicom::parseCSAValue( const std::string &val, const util::Prope
 	if ( vr == "IS" or vr == "SL" ) {
 		map.setValueAs( name, std::stoi( val ));
 	} else if ( vr == "UL" ) {
-		map.setValueAs( name, boost::lexical_cast<uint32_t>( val ));
+		util::stringTo( val, map.refValueAsOr( name, uint32_t()) );
 	} else if ( vr == "CS" or vr == "LO" or vr == "SH" or vr == "UN" or vr == "ST" or vr == "UT" ) {
 		map.setValueAs( name, val );
 	} else if ( vr == "DS" or vr == "FD" ) {
 		map.setValueAs( name, std::stod( val ));
 	} else if ( vr == "US" ) {
-		map.setValueAs( name, boost::lexical_cast<uint16_t>( val ));
+		util::stringTo( val, map.refValueAsOr( name, uint16_t()) );
 	} else if ( vr == "SS" ) {
-		map.setValueAs( name, boost::lexical_cast<int16_t>( val ));
+		util::stringTo( val, map.refValueAsOr( name, int16_t()) );
 	} else if ( vr == "UT" or vr == "LT" ) {
 		map.setValueAs( name, val);
 	} else {
-		LOG( Runtime, error ) << "Dont know how to parse CSA entry " << std::make_pair( name, val ) << " type is " << util::MSubject( vr );
+		LOG( Runtime, error ) << "Don't know how to parse CSA entry " << std::make_pair( name, val ) << " type is " << util::MSubject( vr );
 		return false;
 	}
 
@@ -292,13 +280,17 @@ bool ImageFormat_Dicom::parseCSAValue( const std::string &val, const util::Prope
 bool ImageFormat_Dicom::parseCSAValueList( const util::slist &val, const util::PropertyMap::PropPath &name, const util::istring &vr, util::PropertyMap &map )
 {
 	if ( vr == "IS" or vr == "SL" or vr == "US" or vr == "SS" ) {
-		map.setValueAs( name, util::listToList<int32_t>( val.begin(), val.end() ) );
+		auto &target=map.refValueAsOr(name,util::ilist());
+		for(const std::string &ref:val)
+			util::stringTo(ref,target.emplace_back());
 	} else if ( vr == "UL" ) {
 		map.setValueAs( name, val); // @todo we dont have an unsigned int list
 	} else if ( vr == "CS" or vr == "LO" or vr == "SH" or vr == "UN" or vr == "ST" or vr == "SL" ) {
 		map.setValueAs( name, val );
 	} else if ( vr == "DS" or vr == "FD" ) {
-		map.setValueAs( name, util::listToList<double>( val.begin(), val.end() ) );
+		auto &target=map.refValueAsOr(name,util::dlist());
+		for(const std::string &ref:val)
+			util::stringTo(ref,target.emplace_back());
 	} else if ( vr == "CS" ) {
 		map.setValueAs( name, val );
 	} else {
@@ -310,35 +302,35 @@ bool ImageFormat_Dicom::parseCSAValueList( const util::slist &val, const util::P
 }
 
 namespace _internal{
-    template<typename T, typename LT> util::ValueReference list_generate(const DicomElement *e){
+    template<typename T, typename LT> util::Value list_generate(const DicomElement *e){
 	    size_t mult=e->getLength()/sizeof(T);
 		assert(float(mult)*sizeof(T) == e->getLength());
 		auto wrap=e->dataAs<T>(mult);
-		return util::Value<std::list<LT>>(std::list<LT>(wrap.begin(),wrap.end()));
+		return std::list<LT>(wrap.begin(),wrap.end());
     }
-    template<typename T> util::ValueReference scalar_generate(const DicomElement *e){
+    template<typename T> util::Value scalar_generate(const DicomElement *e){
 	    assert(e->getLength()==sizeof(T));
 		T *v=(T*)e->data();
-		return util::Value<T>(e->endian_swap() ? data::endianSwap(*v):*v);
+		return e->endian_swap() ? data::endianSwap(*v):*v;
     }
-    util::ValueReference string_generate(const DicomElement *e){
+    std::optional<util::Value> string_generate(const DicomElement *e){
 		//@todo http://dicom.nema.org/Dicom/2013/output/chtml/part05/sect_6.2.html#note_6.1-2-1
 		if(e->getLength()){
 			const uint8_t *start=e->data();
 			const uint8_t *end=start+e->getLength()-1;
 			while(end>=start && (*end==' '|| *end==0)) //cut of trailing spaces and zeros
 				--end;
-			const std::string ret_s(start,end+1);
-			const util::slist ret_list=util::stringToList<std::string>(ret_s,'\\');
+			std::string ret_s(start,end+1);
+			util::slist ret_list=util::stringToList<std::string>(ret_s,'\\');
 
 			if(ret_list.size()>1)
-				return util::Value<util::slist>(ret_list);
+				return ret_list;
 			else
-				return util::Value<std::string>(ret_s);
-		} else
-			return util::ValueReference();
+				return ret_s;
+		}
+		return std::optional<util::Value>();
 	}
-	util::ValueReference bytes_as_strings(const DicomElement *e){
+	std::optional<util::Value> bytes_as_strings(const DicomElement *e){
 		//@todo http://dicom.nema.org/Dicom/2013/output/chtml/part05/sect_6.2.html#note_6.1-2-1
 		if(e->getLength()){
 			const uint8_t *pos=e->data();
@@ -353,16 +345,18 @@ namespace _internal{
 
 
 			if(ret_list.size()>1)
-				return util::Value<util::slist>(ret_list);
+				return ret_list;
 			else
-				return util::Value<std::string>(ret_list.front());
-		} else
-			return util::ValueReference();
+				return ret_list.front();
+		}
+		return std::optional<util::Value>();
 	}
-	util::ValueReference parse_AS(const _internal::DicomElement *e){
-		util::ValueReference ret;
+	std::optional<util::Value> parse_AS(const _internal::DicomElement *e){
+		std::optional<util::Value> ret;
 		uint16_t duration = 0;
-		std::string buff=string_generate(e)->castTo<std::string>();
+		auto as=string_generate(e);
+		assert(as && as->typeID()==util::typeID<std::string>());//AS must always be one string
+		std::string buff=std::get<std::string>(*as);
 
 		static boost::numeric::converter <
 		uint16_t, double,
@@ -371,7 +365,7 @@ namespace _internal{
 		        boost::numeric::RoundEven<double>
 		        > double2uint16;
 
-		if ( _internal::try_cast( buff.substr( 0, buff.find_last_of( "0123456789" ) + 1 ), duration ) ) {
+		if ( util::stringTo( buff.substr( 0, buff.find_last_of( "0123456789" ) + 1 ), duration ) ) {
 			switch ( buff.at( buff.size() - 1 ) ) {
 			case 'D':
 			case 'd':
@@ -394,7 +388,7 @@ namespace _internal{
 			}
 			LOG( Debug, verbose_info )
 			        << "Parsed age for " << e->getName() << "(" <<  buff << ")" << " as " << duration << " days";
-			ret=util::Value<uint16_t>(duration);
+			ret=duration;
 		} else
 			LOG( Runtime, warning )
 			        << "Cannot parse age string \"" << buff << "\" in the field \"" << e->getName() << "\"";
@@ -423,9 +417,9 @@ namespace _internal{
 	    {"IS",{string_generate,nullptr,0}},
 	    {"DS",{string_generate,nullptr,0}},
 	    //time strings
-	    {"DA",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::date>::staticID());},nullptr,0}},
-	    {"TM",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::timestamp>::staticID());},nullptr,0}},
-	    {"DT",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop.isEmpty()?prop:prop->copyByID(util::Value<util::timestamp>::staticID());},nullptr,0}},
+	    {"DA",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?std::make_optional(prop->copyByID(util::typeID<util::date>()))     :prop;},nullptr,0}},
+	    {"TM",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?std::make_optional(prop->copyByID(util::typeID<util::timestamp>())):prop;},nullptr,0}},
+	    {"DT",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?std::make_optional(prop->copyByID(util::typeID<util::timestamp>())):prop;},nullptr,0}},
 	    {"AS",{parse_AS,nullptr,0}},
 	    //fallback for unknown
 	    {"--",{bytes_as_strings,nullptr,0}}

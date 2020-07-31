@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef MESSAGE_H
-#define MESSAGE_H
+#pragma once
 
 #include <sstream>
 #include <string>
@@ -43,6 +42,7 @@ public:
 		text << cont;
 		assign( text.str() );
 	}
+	MSubject( const std::filesystem::directory_entry& entry );
 	MSubject( const std::string &cont );
 	MSubject( std::string &&cont );
 };
@@ -145,4 +145,3 @@ public:
 
 }
 }
-#endif //MESSAGE_H

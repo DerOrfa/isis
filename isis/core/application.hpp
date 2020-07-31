@@ -82,14 +82,19 @@ public:
 	 * This logging level then applies to LOG-commands using that specific module.
 	 *
 	 * The MODULE must be a struct like
-	 * \code struct MyLogModule {static const char *name() {return "MyModuleLog";}; enum {use = _ENABLE_LOG};}; \endcode
+	 * \code
+	 * struct MyLogModule {
+	 *     static constexpr char name[]="MyModuleLog";
+	 *     static constexpr bool use = _ENABLE_LOG;
+	 * };
+	 * \endcode
 	 * then \code addLogging<MyLogModule>("MyLog"); \endcode will install a parameter "-dMyLog" which will control all calls to
 	 * \code LOG(MyLogModule,...) << ... \endcode if _ENABLE_LOG was set for the compilation. Otherwise this commands will not have an effect.
 	 *
 	 * Multiple MODLUES can have the same parameter name, so
 	 * \code
-	 * struct MyLogModule {static const char *name() {return "MyModuleLog";}; enum {use = _ENABLE_LOG};};
-	 * struct MyDebugModule {static const char *name() {return "MyModuleDbg";}; enum {use = _ENABLE_DEBUG};};
+	 * struct MyLogModule   {static constexpr char name[]="MyModuleLog";static constexpr bool use = _ENABLE_LOG;};
+	 * struct MyDebugModule {static constexpr char name[]="MyModuleDbg";static constexpr bool use = _ENABLE_LOG;};
 	 *
 	 * addLogging<MyLogModule>("MyLog");
 	 * addLogging<MyDebugModule>("MyLog");
@@ -104,7 +109,7 @@ public:
 	/**
 	 * Removes a logging parameter from the application.
 	 * \param name the parameter name without "-d"
-	 * \note the logging module cannot be removed at runtime - its usage is controled by the _ENABLE_LOG / _ENABLE_DEBUG defines at compile time.
+	 * \note the logging module cannot be removed at runtime - its usage is controlled by the _ENABLE_LOG / _ENABLE_DEBUG defines at compile time.
 	 */
 	void removeLogging( std::string name );
 
@@ -142,9 +147,9 @@ public:
 	/// Set the logging level for the specified module
 	template<typename MODULE> void setLog( LogLevel level ) const {
 		if ( !MODULE::use );
-		else _internal::Log<MODULE>::setHandler( getLogHandler( MODULE::name(), level ) );
+		else _internal::Log<MODULE>::setHandler( getLogHandler( MODULE::name, level ) );
 
-		LOG( Debug, info ) << "Setting logging for module " << MSubject( MODULE::name() ) << " to level " << level;
+		LOG( Debug, info ) << "Setting logging for module " << MSubject( MODULE::name ) << " to level " << level;
 	}
 	//get the version of the coreutils
 	static const std::string getCoreVersion( void );

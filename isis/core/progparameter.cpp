@@ -39,16 +39,17 @@ bool &ProgParameter::hidden()
 
 bool ProgParameter::parse( const std::string &prop )
 {
-	ValueBase &me = this->front();
+	Value &me = this->front();
 	bool ret = false;
 
 	if ( prop.empty() ) {
 		if ( me.is<bool>() ) {
-			me.castTo<bool>() = true;
+			std::get<bool>(me) = true;
 			ret = true;
 		}
 	} else {
-		ret = ValueBase::convert( Value<std::string>(prop), me );
+		static_assert(knownType<std::string>(),"not known");
+		ret = Value::convert(prop, me );
 	}
 
 	LOG_IF( ret, Debug, info ) << "Parsed " << MSubject( prop ) << " as " << me.toString( true );
@@ -62,10 +63,10 @@ bool ProgParameter::parse( const std::string &prop )
 }
 bool ProgParameter::parse_list( const slist& theList )
 {
-	ValueBase &me = this->front();
+	Value &me = this->front();
 	bool ret = false;
 
-	ret = ValueBase::convert( Value<slist>(theList), me );
+	ret = Value::convert(theList, me );
 	if(theList.empty()){
 		LOG_IF( ret, Debug, info )
 		<< "Parsed empty parameter list as " << me.toString( true );
@@ -188,21 +189,10 @@ const ProgParameter ParameterMap::operator[] ( const std::string key ) const
 }
 ProgParameter &ParameterMap::operator[] ( const std::string key ) {return std::map<std::string, ProgParameter>::operator[]( key );}
 
-#ifdef BOOST_NO_EXPLICIT_CONVERSION_OPERATORS
-ProgParameter::operator std::unique_ptr<ValueBase>::unspecified_bool_type()const
-{
-	std::unique_ptr<ValueBase> dummy;
-
-	if( ( *this ).castTo<bool>() )dummy.reset( new Value<int16_t> );
-
-	return  dummy;
-}
-#else
 ProgParameter::operator bool()const
 {
-	return ( ( *this ).castTo<bool>() );
+	return as<bool>();
 }
-#endif
 
 }
 }

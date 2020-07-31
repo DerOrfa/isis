@@ -1,23 +1,6 @@
-/*
-    <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) <year>  <name of author>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-*/
-
+#include <iostream>
 #include "istring.hpp"
+
 #ifdef _MSC_VER
 #include <Windows.h>
 #else
@@ -56,7 +39,7 @@ bool ichar_traits::lt( const char &c1, const char &c2 )
 
 const char *ichar_traits::find( const char *s, size_t n, const char &a )
 {
-	const char lowA = std::tolower( a );
+	const auto lowA = (char)std::tolower( a );
 
 	if( lowA == std::toupper( a ) ) { // if a has no cases we can do naive search
 		return std::find( s, s + n, a );
@@ -74,13 +57,7 @@ const char *ichar_traits::find( const char *s, size_t n, const char &a )
 }
 /// @endcond _internal
 
-namespace boost
-{
-template<> isis::util::istring lexical_cast< isis::util::istring, std::string >( const std::string &arg ) {return isis::util::istring( arg.begin(), arg.end() );}
-template<> std::string lexical_cast< std::string, isis::util::istring >( const isis::util::istring &arg ) {return std::string( arg.begin(), arg.end() );}
-}
-
 std::ostream & std::operator<<(std::ostream& out, const isis::util::istring& s)
 {
-	return out << s.c_str();
+	return out.write(s.data(),s.size());
 }

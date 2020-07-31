@@ -5,8 +5,8 @@
 #include "../../core/image.hpp"
 
 namespace isis{
-	struct Qt5Log {static const char *name() {return "Qt5";}; enum {use = _ENABLE_LOG};};
-	struct Qt5Debug {static const char *name() {return "Qt5Debug";}; enum {use = _ENABLE_DEBUG};};
+	struct Qt5Log   {static constexpr char name[]="Qt5";      static constexpr bool use = _ENABLE_LOG;};
+	struct Qt5Debug {static constexpr char name[]="Qt5Debug"; static constexpr bool use = _ENABLE_DEBUG;};
 
 namespace qt5{
 
@@ -19,17 +19,17 @@ namespace qt5{
 		ENABLE_LOG( Qt5Debug, HANDLE, level );
 	}
 
-	void fillQImage(QImage &dst, const data::ValueArrayBase &slice,size_t line_length, data::scaling_pair scaling = data::scaling_pair() );
-	void fillQImage(QImage &dst, const data::ValueArrayBase &slice,size_t line_length, const std::function<void (uchar *, const data::ValueArrayBase &)> &transfer_function );
+	void fillQImage(QImage &dst, const data::ValueArray &slice, size_t line_length, data::scaling_pair scaling = data::scaling_pair() );
+	void fillQImage(QImage &dst, const data::ValueArray &slice, size_t line_length, const std::function<void (uchar *, const data::ValueArray &)> &transfer_function );
 
-	void fillQImage(QImage &dst, const std::vector<data::ValueArrayBase::Reference> &lines, data::scaling_pair scaling = data::scaling_pair() );
-	void fillQImage(QImage &dst, const std::vector<data::ValueArrayBase::Reference> &lines, const std::function<void (uchar *, const data::ValueArrayBase &)> &transfer_function );
+	void fillQImage(QImage &dst, const std::vector<data::ValueArray> &lines, data::scaling_pair scaling = data::scaling_pair() );
+	void fillQImage(QImage &dst, const std::vector<data::ValueArray> &lines, const std::function<void (uchar *, const data::ValueArray &)> &transfer_function );
 
-	QImage makeQImage(const data::ValueArrayBase &slice, size_t line_length, data::scaling_pair scaling = data::scaling_pair() );
-	QImage makeQImage(const data::ValueArrayBase &slice, size_t line_length, const std::function<void (uchar *, const data::ValueArrayBase &)> &transfer_function);
+	QImage makeQImage(const data::ValueArray &slice, size_t line_length, data::scaling_pair scaling = data::scaling_pair() );
+	QImage makeQImage(const data::ValueArray &slice, size_t line_length, const std::function<void (uchar *, const data::ValueArray &)> &transfer_function);
 
-	QImage makeQImage(const std::vector<data::ValueArrayBase::Reference> &lines, data::scaling_pair scaling = data::scaling_pair() );
-	QImage makeQImage(const std::vector<data::ValueArrayBase::Reference> &lines, const std::function<void (uchar *, const data::ValueArrayBase &)> &transfer_function);
+	QImage makeQImage(const std::vector<data::ValueArray> &lines, data::scaling_pair scaling = data::scaling_pair() );
+	QImage makeQImage(const std::vector<data::ValueArray> &lines, const std::function<void (uchar *, const data::ValueArray &)> &transfer_function);
 }
 }
 

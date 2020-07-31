@@ -1,0 +1,15 @@
+# -*- mode: cmake -*-
+# ISIS cmake configuration file
+#
+
+SET(isis_core-exported-deps        @isis_core-exported-deps@)
+
+# search isis core library
+SET(CMAKE_PREFIX_PATH @CMAKE_INSTALL_PREFIX@ ${CMAKE_PREFIX_PATH}) #make cmake first search where we installed the core
+FIND_LIBRARY(ISIS_LIB "isis_core")
+
+MESSAGE(STATUS "isis core library: ${ISIS_LIB} (API ${ISIS_CORE_VERSION_API})")
+list(APPEND ISIS_LIBS ${ISIS_LIB} ${isis_core-exported-deps})
+
+MESSAGE(STATUS "isis core library dependencies: ${isis_core-exported-deps}")
+MESSAGE(STATUS "isis include dirs: ${ISIS_INCLUDE_DIRS}")

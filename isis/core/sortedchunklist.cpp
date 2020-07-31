@@ -46,8 +46,8 @@ bool SortedChunkList::posCompare::operator()( const util::fvector3 &posA, const 
 }
 bool SortedChunkList::scalarPropCompare::operator()( const isis::util::PropertyValue &a, const isis::util::PropertyValue &b ) const
 {
-	const util::ValueBase &aScal = a.front();
-	const util::ValueBase &bScal = b.front();
+	const util::Value &aScal = a.front();
+	const util::Value &bScal = b.front();
 
 	if ( aScal.lt( bScal ) ) {
 		LOG( Debug, verbose_info ) << "Successfully sorted chunks by " << propertyName << " (" << aScal.toString( false ) << " before " << bScal.toString( false ) << ")";
@@ -63,9 +63,9 @@ SortedChunkList::chunkPtrOperator::~chunkPtrOperator() {}
 
 void SortedChunkList::getproplist::operator()(const util::PropertyMap& c)
 {
-	optional< const util::PropertyValue & > p=c.queryProperty(name);
+	auto p=c.queryProperty(name);
 	if(p && p->size()>1){ // if property holds many value, flatten it
-		util::PropertyValue dummy=p.get();
+		util::PropertyValue dummy=*p;
 		const std::vector< util::PropertyValue > splinters=dummy.splice(1);
 		insert(splinters.begin(),splinters.end());
 	} else if(p && p->size()==1) // otherwise just use it
@@ -111,11 +111,11 @@ SortedChunkList::SecondaryMap *SortedChunkList::primaryFind( const util::fvector
 std::pair<std::shared_ptr<Chunk>, bool> SortedChunkList::secondaryInsert( SecondaryMap &map, const Chunk &ch )
 {
 	util::PropertyMap::key_type propName = map.key_comp().propertyName;
-	const boost::optional< const util::PropertyValue & > found = ch.queryProperty( propName );
+	const auto found = ch.queryProperty( propName );
 
 	if( found ) {
 		//check, if there is already a chunk
-		std::shared_ptr<Chunk> &pos = map[found.get()];
+		std::shared_ptr<Chunk> &pos = map[*found];
 		bool inserted = false;
 
 		//if not. put ours there
@@ -171,7 +171,7 @@ bool SortedChunkList::insert( const Chunk &ch )
 {
 	LOG_IF( secondarySort.empty(), Debug, error ) << "Inserting will fail without any secondary sort. Use chunks.addSecondarySort at least once.";
 	LOG_IF( !ch.isValid(), Debug, error ) << "You're trying insert an invalid chunk. The missing properties are " << ch.getMissing();
-	LOG_IF( !ch.isValid(), Debug, error ) << "You should definitively check the chunks validity (use the function Chunk::valid) before calling this funktion. Aborting now..";
+	LOG_IF( !ch.isValid(), Debug, error ) << "You should definitively check the chunks validity (use the function Chunk::valid) before calling this function. Aborting now..";
 	assert( ch.isValid() );
 	
 	if(isEmpty()){ // find secondary Sort from first chunk
@@ -193,8 +193,8 @@ bool SortedChunkList::insert( const Chunk &ch )
 	}
 
 	size_t sort_prop_size=ch.queryProperty(secondarySort.top().propertyName)->size();
-	if(sort_prop_size>1){ // secondary sort is multi value, we have to splice the chunk and insert separately 
-		// @todo handle cases where first level of splcing won't be enough
+	if(sort_prop_size>1){ // secondary sort is multi value, we have to spliceAt the chunk and insert separately
+		// @todo handle cases where first level of splicing won't be enough
 		LOG(Runtime,info) << "Splicing chunk at top dim as secondary sorting property " << secondarySort.top().propertyName << " is a list of size " << sort_prop_size;
 		
 		// get rid of all not-to-be-splices props to save time
@@ -246,10 +246,10 @@ std::shared_ptr<Chunk> SortedChunkList::insert_impl(const Chunk &ch){
 
 		for(const util::PropertyMap::PropPath & ref :  equalProps ) { // check all properties which where given to the constructor of the list
 			// if at least one of them has the property and they are not equal - do not insert
-			if ( ( first.hasProperty( ref ) || ch.hasProperty( ref ) ) && first.queryProperty( ref ) != ch.queryProperty( ref ) ) {
+			if ( first.hasProperty( ref )  && !(first.property( ref ) == ch.property( ref ) )) { //"==" will be false if ch.property is empty or different
 				LOG( Debug, verbose_info )
-						<< "Ignoring chunk with different " << ref << ". Is " << util::MSubject( ch.queryProperty( ref ) )
-						<< " but chunks already in the list have " << util::MSubject( first.queryProperty( ref ) );
+						<< "Ignoring chunk with different " << ref << ". Is " << util::MSubject( ch.property( ref ) )
+						<< " but chunks already in the list have " << util::MSubject( first.property( ref ) );
 				return nullptr;
 			}
 		}
@@ -300,7 +300,7 @@ std::set<size_t> SortedChunkList::getShape()
 	return images;
 }
 
-size_t SortedChunkList::makeRectangular(optional< util::slist& > rejected)
+size_t SortedChunkList::makeRectangular(util::slist* rejected)
 {
 	const std::set<size_t> images = getShape();//get lenghts of all primary sorted "columns" -- as set is sorted the smallest will be at begin
 	size_t dropped = 0;
@@ -325,7 +325,7 @@ size_t SortedChunkList::makeRectangular(optional< util::slist& > rejected)
 			assert( it.size() == resize );
 		}
 
-		LOG_IF( dropped, Runtime, warning ) << "Dropped " << dropped << " chunks to make " << identify(true,false) << " rectagular";
+		LOG_IF( dropped, Runtime, warning ) << "Dropped " << dropped << " chunks to make " << identify(true,false) << " rectangular";
 	}
 
 	return dropped;
@@ -387,8 +387,8 @@ std::string SortedChunkList::identify(bool withpath, bool withdate, getproplist 
 			return v.as<std::string>();
 		});
 		ret+=
-			(ret.empty() ? std::string():std::string(" "))+( std::string( "from " ) + 
-			util::getRootPath(sources,true).native() );
+			(ret.empty() ? std::string():std::string(" "))+
+			( std::string( "from " ) + util::getRootPath(sources,true).native() );
 	}
 	if(withdate){
 		forall(seqStart);

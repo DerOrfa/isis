@@ -27,7 +27,7 @@ protected:
 			data::Chunk ret = data::MemChunk<TYPE >( width, height );
 
 			/* png needs a pointer to each row */
-			boost::scoped_array<png_bytep> row_pointers( new png_bytep[height] );
+			auto row_pointers = std::make_unique<png_bytep[]>(height);
 
 			for ( unsigned short r = 0; r < height; r++ )
 				row_pointers[r] = ( png_bytep )&ret.voxel<TYPE>( 0, r );
@@ -35,7 +35,7 @@ protected:
 			png_read_image( png_ptr, row_pointers.get() );
 			ret.flipAlong( data::rowDim ); //the png-"space" is mirrored to the isis space
 #if __BYTE_ORDER == __LITTLE_ENDIAN // png is always big endian, so we swap if we run on little endian
-			ret.asValueArrayBase().endianSwap();
+			ret.endianSwap();
 #endif
 			return ret;
 		}
@@ -47,7 +47,8 @@ protected:
 
 		if( end != std::string::npos ) {
 			std::string::size_type start = filename.find_last_not_of( "0123456789", end );
-			property = boost::lexical_cast<T>( filename.substr( start + 1, end - start ) );
+			T buffer;util::stringTo(filename.substr( start + 1, end - start ),buffer);
+			property = buffer;
 			return true;
 		} else {
 			return false;
@@ -147,7 +148,7 @@ public:
 
 		/* png needs a pointer to each row */
 		png_byte **row_pointers = new png_byte*[size[1]];
-		row_pointers[0] = ( png_byte * )src.getValueArrayBase().getRawAddress().get();
+		row_pointers[0] = ( png_byte * )src.getRawAddress().get();
 
 		for ( unsigned short r = 1; r < size[1]; r++ )
 			row_pointers[r] = row_pointers[0] + ( src.getBytesPerVoxel() * src.getLinearIndex( { 0, r, 0, 0 } ) );
@@ -270,33 +271,31 @@ public:
 		data::scaling_pair scale;
 		
 		if(
-			isis_data_type!=data::ValueArray<util::color24>::staticID() && isis_data_type!=data::ValueArray<util::color48>::staticID() &&
+			isis_data_type!=util::typeID<util::color24>() && isis_data_type!=util::typeID<util::color48>() &&
 			image.hasProperty("window/max") && image.hasProperty("window/min")
 		){
 			auto minmax=image.getMinMax();
 			const util::PropertyValue min = image.property("window/min"),max = image.property("window/max");
-			scale=data::ValueArrayBase::getConverterFromTo(data::ValueArray<double>::staticID(),isis_data_type)->getScaling(min.front(),max.front());
+			scale=data::ValueArray::getConverterFromTo(util::typeID<double>(), isis_data_type)->getScaling(min.front(), max.front());
 			
-			static const util::Value<uint8_t> one( 1 );
-			static const util::Value<uint8_t> zero( 0 );
-			LOG_IF(!(scale.first->eq(one) && scale.second->eq(zero)), Runtime,notice) << "Rescaling values with " << scale << " to fit windowing";
+			LOG_IF(!(scale.scale.eq(1) && scale.offset.eq(1)), Runtime,notice) << "Rescaling values with " << scale << " to fit windowing";
 		}
 
 		switch( isis_data_type ) {
-		case data::ValueArray< int8_t>::staticID(): // if its signed, fall "back" to unsigned
-		case data::ValueArray<uint8_t>::staticID():
-			tImg.convertToType( data::ValueArray<uint8_t>::staticID(), scale ); // make sure whole image has same type   (u8bit)
+		case util::typeID< int8_t>(): // if its signed, fall "back" to unsigned
+		case util::typeID<uint8_t>():
+			tImg.convertToType( util::typeID<uint8_t>(), scale ); // make sure whole image has same type   (u8bit)
 			color_type = PNG_COLOR_TYPE_GRAY;
 			bit_depth = 8;
 			break;
-		case data::ValueArray< int16_t>::staticID(): // if its signed, fall "back" to unsigned
-		case data::ValueArray<uint16_t>::staticID():
-			tImg.convertToType( data::ValueArray<uint16_t>::staticID(), scale ); // make sure whole image has same type (u16bit)
+		case util::typeID< int16_t>(): // if its signed, fall "back" to unsigned
+		case util::typeID<uint16_t>():
+			tImg.convertToType( util::typeID<uint16_t>(), scale ); // make sure whole image has same type (u16bit)
 			color_type = PNG_COLOR_TYPE_GRAY;
 			bit_depth = 16;
 			break;
-		case data::ValueArray<util::color24>::staticID():
-		case data::ValueArray<util::color48>::staticID():
+		case util::typeID<util::color24>():
+		case util::typeID<util::color48>():
 			tImg.convertToType( isis_data_type ); // make sure whole image hase same type (color24 or color48)
 			color_type = PNG_COLOR_TYPE_RGB;
 			bit_depth = ( png_byte )tImg.getChunk( 0, 0 ).getBytesPerVoxel() * 8 / 3;
@@ -327,11 +326,11 @@ public:
 		}
 
 	}
-	void writeChunks(std::vector<data::Chunk > chunks,std::string filename, png_byte color_type, png_byte bit_depth, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback){
+	void writeChunks(std::vector<data::Chunk > chunks,const std::string& filename, png_byte color_type, png_byte bit_depth, const std::list<util::istring>& dialects, std::shared_ptr<util::ProgressFeedback> feedback){
 			if(feedback)
 				feedback->show(chunks.size(),std::string("Writing ")+std::to_string(chunks.size())+" slices as png files");
 			size_t number = 0;
-			unsigned short numLen = std::log10( chunks.size() ) + 1;
+			auto numLen = (unsigned short)std::log10( chunks.size() ) + 1;
 			const std::pair<std::string, std::string> fname = makeBasename( filename );
 			LOG_IF(chunks.size()>1, Runtime, info )
 					<< "Writing " << chunks.size() << " slices as png-images " << fname.first << "_"
@@ -360,7 +359,7 @@ public:
 				} else {
 					if(!checkDialect(dialects,"noflip")){
 						//buff has to be swapped along the png-x-axis
-						buff = buff.copyByID(); //make a deep copy to not interfere with the source
+						buff = buff.copyByID(buff.getTypeID(),data::scaling_pair(1,0)); //make a deep copy to not interfere with the source
 						buff.flipAlong( data::rowDim ); //the png-"space" is mirrored to the isis space @todo check if we can use exif
 					} 
 					
@@ -371,17 +370,17 @@ public:
 			}
 	}
 
-	static png_byte* filterRows(std::vector<data::ValueArrayBase::Reference>::const_iterator row_it, size_t rows) {
-		const size_t bytesPerRow = ((*row_it)->bytesPerElem() * (*row_it)->getLength() + 1);
+	static png_byte* filterRows(std::vector<data::ValueArray>::const_iterator row_it, size_t rows) {
+		const size_t bytesPerRow = ((*row_it).bytesPerElem() * (*row_it).getLength() + 1);
 
 		png_byte* filteredRows = reinterpret_cast<png_byte*>(malloc(rows * bytesPerRow));
 		
 		for(size_t row=0;row<rows;row++) {
 			png_byte *dst=filteredRows+(row*bytesPerRow);
-			data::ValueArrayBase::Reference current_row_ref=*(row_it++);
+			data::ValueArray current_row_ref=*(row_it++);
 			//Add filter byte 0 to disable actual row filtering
 			dst[0]=0;
-			memcpy(dst+1,current_row_ref->getRawAddress().get(),bytesPerRow-1);
+			memcpy(dst+1,current_row_ref.getRawAddress().get(),bytesPerRow-1);
 		}
 		return filteredRows;
 	}
@@ -425,7 +424,7 @@ public:
 		}
 	};
 	struct IDAT:png_chunk_t{
-		IDAT(const data::ValueArray<uint8_t> &dat){
+		IDAT(const data::TypedArray<uint8_t> &dat){
 			name="IDAT";
 			png_chunk_t::data=&dat[0];
 			png_chunk_t::length=dat.getLength();
@@ -451,12 +450,12 @@ public:
 		}
 	};
 	
-	static std::pair<data::ByteArray,uLong> compress_row_set(std::vector<data::ValueArrayBase::Reference>::const_iterator row_it, size_t rows, bool finish){
+	static std::pair<data::ByteArray,uLong> compress_row_set(std::vector<data::ValueArray>::const_iterator row_it, size_t rows, bool finish){
 		//add filter-byte (0) to all scanlines and re-concatenate them
 		png_byte *filteredRows = filterRows(row_it,rows);
 		
 		//zlib compression
-		const size_t bytesPerRow = ((*row_it)->bytesPerElem() * (*row_it)->getLength() + 1);
+		const size_t bytesPerRow = ((*row_it).bytesPerElem() * (*row_it).getLength() + 1);
 		const size_t deflateOutputSize=bytesPerRow * rows;
 		char *deflateOutput;
 
@@ -478,8 +477,12 @@ public:
 		deflate(&zStream, finish ? Z_FINISH : Z_FULL_FLUSH);
 		assert(zStream.avail_in==0);
 		assert(zStream.total_in==bytesPerRow * rows);
-		
-		auto ret=std::make_pair(data::ByteArray(output_buffer,deflateOutputSize-zStream.avail_out),zStream.adler);
+
+		auto wrap=data::ByteArray( //create a wrapper around the output_buffer
+			std::shared_ptr<uint8_t>(output_buffer), //its ok we tell him the shorter length, the OS will knw when we delete it
+			deflateOutputSize-zStream.avail_out
+		);
+		auto ret=std::make_pair(wrap,zStream.adler);
 		deflateEnd(&zStream);
 		free(filteredRows);
 		
@@ -493,15 +496,16 @@ public:
 		outputFile.write((std::ofstream::char_type*)signature,sizeof(signature));
 
 		IHDR ihdr_chunk(// use smart conversion to check for bounds
-			util::Value<uint64_t>(size[0]).as<int32_t>(),
-			util::Value<uint64_t>(size[1]).as<int32_t>(),
-			bit_depth,color_type);
+			util::Value((uint64_t)size[0]).as<int32_t>(),
+			util::Value((uint64_t)size[1]).as<int32_t>(),
+			bit_depth,color_type
+		);
 		ihdr_chunk.write(outputFile);
 		
 		auto vsize=src.getValueAs<util::fvector3>("voxelSize"); //this is the size of each voxel in mm
 		pHYs(1000/vsize[0],1000/vsize[1]).write(outputFile); //how many voxels fit into 1 meter (1000mm)
 		
-		auto rows=src.getValueArrayBase().splice(size[0]);
+		auto rows= static_cast<const data::ValueArray&>(src).splice(size[0]);
 		
 		// compute amount of rows that fir into 100MB
 		const size_t bytes_per_row=size[0]*src.getBytesPerVoxel();

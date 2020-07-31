@@ -24,10 +24,9 @@
 
 #include "valuearray_converter.hpp"
 
-#include "valuearray_base.hpp"
+#include "valuearray.hpp"
 #include "numeric_convert.hpp"
 #include "types.hpp"
-#include <boost/mpl/for_each.hpp>
 
 #ifdef ISIS_USE_LIBOIL
 #include <liboil/liboil.h>
@@ -42,46 +41,34 @@ API_EXCLUDE_BEGIN;
 namespace _internal
 {
 
-size_t getConvertSize( const ValueArrayBase &src, const ValueArrayBase &dst )
+size_t getConvertSize(const ValueArray &src, const ValueArray &dst )
 {
-
 	LOG_IF( src.getLength() > dst.getLength(), Runtime, error ) << "The " << src.getLength() << " elements of src wont fit into the destination. Will only convert " << dst.getLength() << " elements.";
 	LOG_IF( src.getLength() < dst.getLength(), Debug, info ) << "Source is shorter than destination. Will only convert " << src.getLength() << " values";
 	return std::min( src.getLength(), dst.getLength() );
 }
-static bool checkScale( const scaling_pair &scaling )
-{
-	assert( !scaling.first.isEmpty() && !scaling.second.isEmpty() );
-	const double scale = scaling.first->as<double>(), offset = scaling.second->as<double>();
-	return ( scale != 1 || offset );
-}
 
 template<typename SRC, typename DST>
-scaling_pair getScalingToColor( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )
+scaling_pair getScalingToColor(const util::Value &min, const util::Value &max )
 {
 	double scalMin, scalMax;
 
-	if( min.isFloat() || min.isInteger() )scalMin = min.as<double>(); // if min is allready a scalar
+	if( min.isFloat() || min.isInteger() )scalMin = min.as<double>(); // if min is already a scalar
 	else { // of not, determine the scalar min from the elements
 		const util::color48 minCol = min.as<util::color48>(); //use the "biggest" known color type
 		scalMin = *std::min_element( &minCol.r, &minCol.b ); // take the lowest value
 	}
 
-	if( max.isFloat() || max.isInteger() )scalMax = max.as<double>(); // if max is allready a scalar
+	if( max.isFloat() || max.isInteger() )scalMax = max.as<double>(); // if max is already a scalar
 	else { // of not, determine the scalar min from the elements
 		const util::color48 maxCol = max.as<util::color48>(); //use the "biggest" known color type
 		scalMax = *std::max_element( &maxCol.r, &maxCol.b ); // take the lowest value
 	}
 
-	const std::pair<double, double> scale = getNumericScaling<SRC, DST>( util::Value<double>( scalMin ), util::Value<double>( scalMax ), scaleopt );
-
-	return std::make_pair(
-			   util::ValueReference( util::Value<double>( scale.first ) ),
-			   util::ValueReference( util::Value<double>( scale.second ) )
-		   );
+	return getNumericScaling<SRC, DST>( scalMin, scalMax );;
 }
 template<typename SRC, typename DST>
-scaling_pair getScalingToComplex( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )
+scaling_pair getScalingToComplex(const util::Value &min, const util::Value &max )
 {
 	double scalMin, scalMax;
 
@@ -97,41 +84,32 @@ scaling_pair getScalingToComplex( const util::ValueBase &min, const util::ValueB
 		scalMax = std::max( maxCpl.real(), maxCpl.imag() );
 	}
 
-	const std::pair<double, double> scale = getNumericScaling<SRC, DST>( util::Value<double>( scalMin ), util::Value<double>( scalMax ), scaleopt );
-
-	return std::make_pair(
-			   util::ValueReference( util::Value<double>( scale.first ) ),
-			   util::ValueReference( util::Value<double>( scale.second ) )
-		   );
+	return getNumericScaling<SRC, DST>( scalMin, scalMax );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // basic numeric conversion class
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct NumConvImplBase {
-	static scaling_pair getScaling( const util::ValueBase &/*min*/, const util::ValueBase &/*max*/, autoscaleOption /*scaleopt*/ ) {
-		return scaling_pair( util::ValueReference( util::Value<uint8_t>( 1 ) ), util::ValueReference( util::Value<uint8_t>( 0 ) ) );
+	static scaling_pair getScaling(const util::Value &/*min*/, const util::Value & ) {
+		return scaling_pair( 1, 0 );
 	}
 };
 // default generic conversion between numeric types
 template<typename SRC, typename DST, bool SAME> struct NumConvImpl: NumConvImplBase {
 	static void convert( const SRC *src, DST *dst, const scaling_pair &scaling, size_t size ) {
-		const double scale = scaling.first->as<double>(), offset = scaling.second->as<double>();
+		const double scale = scaling.scale.as<double>(), offset = scaling.offset.as<double>();
 		numeric_convert( src, dst, size, scale , offset );
 	}
-	static scaling_pair getScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt ) {
-		const std::pair<double, double> scale = getNumericScaling<SRC, DST>( min, max, scaleopt );
-		return std::make_pair(
-				   util::ValueReference( util::Value<double>( scale.first ) ),
-				   util::ValueReference( util::Value<double>( scale.second ) )
-			   );
+	static scaling_pair getScaling(const util::Value &min, const util::Value &max ) {
+		return getNumericScaling<SRC, DST>( min, max );
 	}
 };
 // special generic conversion between equal numeric types (maybe we can copy / scaling will be 1/0)
 template<typename T> struct NumConvImpl<T, T, true>: NumConvImplBase {
 	static void convert( const T *src, T *dst, const scaling_pair &scaling, size_t size ) {
-		if( checkScale( scaling ) ) {
-			const double scale = scaling.first->as<double>(), offset = scaling.second->as<double>();
+		if( scaling.isRelevant() ) {
+			const double scale = scaling.scale.as<double>(), offset = scaling.offset.as<double>();
 			numeric_convert( src, dst, size, scale , offset );
 		} else { // if there is no scaling - we can copy
 			numeric_copy( src, dst, size );
@@ -142,8 +120,8 @@ template<typename T> struct NumConvImpl<T, T, true>: NumConvImplBase {
 // specialisation for bool (anything that is "<=0" after the scaling results in false)
 template<typename SRC> struct NumConvImpl<SRC, bool, false>: NumConvImplBase {
 	static void convert( const SRC *src, bool *dst, const scaling_pair &scaling, size_t size ) {
-		if( checkScale( scaling ) ) {
-			const double scale = scaling.first->as<double>(), offset = scaling.second->as<double>();
+		if( scaling.isRelevant() ) {
+			const double scale = scaling.scale.as<double>(), offset = scaling.offset.as<double>();
 			while( size-- )
 				*( dst++ ) = ( (*( src++ ) * scale) > -offset);
 		} else
@@ -164,7 +142,7 @@ template<typename DST> struct NumConvImpl<bool, DST, false>: NumConvImplBase {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template<typename S, typename D> struct copy_op_base {
 	typedef D dst_type;
-	typedef typename ValueArray<S>::const_iterator iter_type;
+	typedef const S* iter_type;
 	iter_type s;
 	copy_op_base( iter_type _s ): s( _s ) {}
 	D getScal() {
@@ -175,8 +153,8 @@ template<typename S, typename D> struct scaling_op_base : copy_op_base<S, D> {
 	double scale, offset;
 	scaling_op_base( typename copy_op_base<S, D>::iter_type s ): copy_op_base<S, D>( s ) {}
 	void setScale( scaling_pair scaling ) {
-		scale = scaling.first->as<double>();
-		offset = scaling.second->as<double>();
+		scale = scaling.scale.as<double>();
+		offset = scaling.offset.as<double>();
 	}
 	D getScal() {
 		return round<D>( *( copy_op_base<S, D>::s++ ) * scale + offset );
@@ -189,13 +167,13 @@ template<typename S, typename D> struct scaling_op_base : copy_op_base<S, D> {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //default implementation of ValueArrayConverterBase::getScaling - allways returns scaling of 1/0 - should be overridden by real converters if they do use a scaling
-scaling_pair ValueArrayConverterBase::getScaling( const isis::util::ValueBase &min, const isis::util::ValueBase &max, autoscaleOption scaleopt ) const
+scaling_pair ValueArrayConverterBase::getScaling(const util::Value &min, const util::Value &max ) const
 {
-	return _internal::NumConvImplBase::getScaling( min, max, scaleopt );
+	return _internal::NumConvImplBase::getScaling( min, max );
 }
-void ValueArrayConverterBase::convert( const ValueArrayBase &src, ValueArrayBase &dst, const scaling_pair &/*scaling*/ ) const
+void ValueArrayConverterBase::convert(const ValueArray &src, ValueArray &dst, const scaling_pair &/*scaling*/ ) const
 {
-	LOG( Debug, error ) << "Empty conversion was called as conversion from " << src.getTypeName() << " to " << dst.getTypeName() << " this is most likely an error.";
+	LOG( Debug, error ) << "Empty conversion was called as conversion from " << src.typeName() << " to " << dst.typeName() << " this is most likely an error.";
 }
 
 namespace _internal{
@@ -203,16 +181,14 @@ namespace _internal{
 template<typename SRC, typename DST> class ValueArrayGenerator: public ValueArrayConverterBase
 {
 public:
-	void create( std::unique_ptr<ValueArrayBase>& dst, const size_t len )const {
-		LOG_IF( dst.get(), Debug, warning ) << "Creating into existing value " << dst->toString( true );
-		ValueArray<DST> *newDat = new ValueArray<DST>( ( DST * )malloc( sizeof( DST )*len ), len );
-		dst.reset( newDat );
+	ValueArray create(const size_t len )const override {
+		return ValueArray(( DST * )calloc(len, sizeof( DST ) ), len );
 	}
-	void generate( const ValueArrayBase &src, std::unique_ptr<ValueArrayBase>& dst, const scaling_pair &scaling )const {
+	ValueArray generate(const ValueArray &src, const scaling_pair &scaling )const override {
 		//Create new "stuff" in memory
-		create( dst, src.getLength() );
-		assert( dst );
-		convert( src, *dst, scaling );//and convert into that
+		ValueArray dst=create(src.getLength() );
+		convert( src, dst, scaling );//and convert into that
+		return dst;
 	}
 };
 
@@ -229,20 +205,21 @@ public:
 /////////////////////////////////////////////////////////////////////////////
 // trivial version -- for conversion of the same non numeric type (scaling will fail)
 /////////////////////////////////////////////////////////////////////////////
-template<typename SRC, typename DST> class ValueArrayConverter<false, false, SRC, DST> : public ValueArrayGenerator<SRC, DST>
+template<typename SRC, typename DST> 
+class ValueArrayConverter<false, false, SRC, DST> : public ValueArrayGenerator<SRC, DST>
 {
 	ValueArrayConverter() {
-		LOG( Debug, verbose_info )  << "Creating trivial copy converter for " << ValueArray<SRC>::staticName();
+		LOG( Debug, verbose_info )  << "Creating trivial copy converter for " << util::typeName<SRC>();
 	};
 public:
 	static std::shared_ptr<const ValueArrayConverterBase> get() {
-		ValueArrayConverter<false, false, SRC, DST> *ret = new ValueArrayConverter<false, false, SRC, DST>;
+		auto ret = new ValueArrayConverter<false, false, SRC, DST>;
 		return std::shared_ptr<const ValueArrayConverterBase>( ret );
 	}
-	void convert( const ValueArrayBase &src, ValueArrayBase &dst, const scaling_pair &scaling )const {
-		SRC *dstPtr = &dst.castToValueArray<SRC>()[0];
-		const SRC *srcPtr = &src.castToValueArray<SRC>()[0];
-		LOG_IF( checkScale( scaling ),  Runtime, error )  << "Scaling is ignored when copying data of type "  << src.getTypeName() << " to " << dst.getTypeName() ;
+	void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const {
+		SRC *dstPtr = dst.castTo<SRC>().get();
+		const SRC *srcPtr = src.castTo<SRC>().get();
+		LOG_IF( scaling.isRelevant(),  Runtime, error )  << "Scaling is ignored when copying data of type "  << src.typeName() << " to " << dst.typeName() ;
 		memcpy( dstPtr, srcPtr, getConvertSize( src, dst )*src.bytesPerElem() );
 	}
 	virtual ~ValueArrayConverter() {}
@@ -255,20 +232,20 @@ public:
 template<typename SRC, typename DST> class ValueArrayConverter<true, true, SRC, DST> : public ValueArrayGenerator<SRC, DST>
 {
 	ValueArrayConverter() {
-		LOG( Debug, verbose_info ) << "Creating numeric converter from " << ValueArray<SRC>::staticName() << " to " << ValueArray<DST>::staticName();
+		LOG( Debug, verbose_info ) << "Creating numeric converter from " << util::typeName<SRC>() << " to " << util::typeName<DST>();
 	};
 public:
 	static std::shared_ptr<const ValueArrayConverterBase> get() {
-		ValueArrayConverter<true, true, SRC, DST> *ret = new ValueArrayConverter<true, true, SRC, DST>;
+		auto ret = new ValueArrayConverter<true, true, SRC, DST>;
 		return std::shared_ptr<const ValueArrayConverterBase>( ret );
 	}
-	void convert( const ValueArrayBase &src, ValueArrayBase &dst, const scaling_pair &scaling )const {
-		const SRC *srcPtr = &src.castToValueArray<SRC>()[0];
-		DST *dstPtr = &dst.castToValueArray<DST>()[0];
-		NumConvImpl<SRC, DST, boost::is_same<SRC, DST>::value>::convert( srcPtr, dstPtr, scaling, getConvertSize( src, dst ) );
+	void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const {
+		DST *dstPtr = dst.castTo<DST>().get();
+		const SRC *srcPtr = src.castTo<SRC>().get();
+		NumConvImpl<SRC, DST, std::is_same_v<SRC, DST>>::convert( srcPtr, dstPtr, scaling, getConvertSize( src, dst ) );
 	}
-	scaling_pair getScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )const {
-		return NumConvImpl<SRC, DST, boost::is_same<SRC, DST>::value >::getScaling( min, max, scaleopt );
+	scaling_pair getScaling(const util::Value &min, const util::Value &max )const {
+		return NumConvImpl<SRC, DST, std::is_same_v<SRC, DST>>::getScaling( min, max );
 	}
 	virtual ~ValueArrayConverter() {}
 };
@@ -281,25 +258,25 @@ template<typename SRC, typename DST> class ValueArrayConverter<false, false, std
 	ValueArrayConverter() {
 		LOG( Debug, verbose_info )
 				<< "Creating complex converter from "
-				<< ValueArray<std::complex<SRC> >::staticName() << " to " << ValueArray<std::complex<DST> >::staticName();
+				<< util::typeName<std::complex<SRC>>() << " to " << util::typeName<std::complex<DST> >();
 	};
 public:
 	static std::shared_ptr<const ValueArrayConverterBase> get() {
 		ValueArrayConverter<false, false, std::complex<SRC>, std::complex<DST> > *ret = new ValueArrayConverter<false, false, std::complex<SRC>, std::complex<DST> >;
 		return std::shared_ptr<const ValueArrayConverterBase>( ret );
 	}
-	void convert( const ValueArrayBase &src, ValueArrayBase &dst, const scaling_pair &scaling )const {
+	void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const {
 		//@todo we do an evil hack here assuming std::complex is POD - at least check if the size of std::complex is reasonable
 		static_assert( sizeof( std::complex<SRC> ) == sizeof( SRC ) * 2, "complex type apparently not POD" );
 		static_assert( sizeof( std::complex<DST> ) == sizeof( DST ) * 2, "complex type apparently not POD" );
 
-		const SRC *sp = reinterpret_cast<const SRC*>(&src.castToValueArray<std::complex<SRC> >()[0]);
-		      DST *dp = reinterpret_cast<      DST*>(&dst.castToValueArray<std::complex<DST> >()[0]);
+		const SRC *sp = reinterpret_cast<const SRC*>(src.castTo<std::complex<SRC>>().get());
+		      DST *dp = reinterpret_cast<      DST*>(dst.castTo<std::complex<DST>>().get());
 
-		NumConvImpl<SRC, DST, boost::is_same<SRC, DST>::value>::convert( sp, dp, scaling, getConvertSize( src, dst ) * 2 );
+		NumConvImpl<SRC, DST, std::is_same_v<SRC, DST>>::convert( sp, dp, scaling, getConvertSize( src, dst ) * 2 );
 	}
-	scaling_pair getScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )const {
-		return getScalingToComplex<SRC, DST>( min, max, scaleopt );
+	scaling_pair getScaling(const util::Value &min, const util::Value &max )const {
+		return getScalingToComplex<SRC, DST>( min, max );
 	}
 	virtual ~ValueArrayConverter() {}
 };
@@ -312,7 +289,7 @@ template<typename SRC, typename DST> class ValueArrayConverter<true, false, SRC,
 	ValueArrayConverter() {
 		LOG( Debug, verbose_info )
 				<< "Creating converter from scalar "
-				<< ValueArray<SRC>::staticName() << " complex to " << ValueArray<std::complex<DST> >::staticName();
+				<< util::typeName<SRC>() << " complex to " << util::typeName<std::complex<DST> >();
 	};
 	template<typename BASE> struct num2complex: BASE {
 		num2complex( typename BASE::iter_type s ): BASE( s ) {}
@@ -325,13 +302,13 @@ public:
 		ValueArrayConverter<true, false, SRC, std::complex<DST> > *ret = new ValueArrayConverter<true, false, SRC, std::complex<DST> >;
 		return std::shared_ptr<const ValueArrayConverterBase>( ret );
 	}
-	void convert( const ValueArrayBase &src, ValueArrayBase &dst, const scaling_pair &scaling )const {
+	void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const {
 
 		size_t size = getConvertSize( src, dst );
-		typename ValueArray<SRC>::const_iterator s = src.castToValueArray<SRC>().begin();
-		typename ValueArray<std::complex<DST> >::iterator d = dst.castToValueArray<std::complex<DST> >().begin();
+		auto s = src.beginTyped<SRC>();
+		auto d = dst.beginTyped<std::complex<DST> >();
 
-		if( checkScale( scaling ) ) {
+		if( scaling.isRelevant() ) {
 			num2complex<scaling_op_base<SRC, DST> > op( s );
 			op.setScale( scaling );
 			std::generate_n( d, size, op );
@@ -341,8 +318,8 @@ public:
 		}
 
 	}
-	scaling_pair getScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )const {
-		return getScalingToComplex<SRC, DST>( min, max, scaleopt );
+	scaling_pair getScaling(const util::Value &min, const util::Value &max )const {
+		return getScalingToComplex<SRC, DST>( min, max );
 	}
 	virtual ~ValueArrayConverter() {}
 };
@@ -355,20 +332,20 @@ template<typename SRC, typename DST> class ValueArrayConverter<false, false, uti
 	ValueArrayConverter() {
 		LOG( Debug, verbose_info )
 				<< "Creating color converter from "
-				<< ValueArray<util::color<SRC> >::staticName() << " to " << ValueArray<util::color<DST> >::staticName();
+				<< util::typeName<util::color<SRC> >() << " to " << util::typeName<util::color<DST> >();
 	};
 public:
 	static std::shared_ptr<const ValueArrayConverterBase> get() {
 		ValueArrayConverter<false, false, util::color<SRC>, util::color<DST> > *ret = new ValueArrayConverter<false, false, util::color<SRC>, util::color<DST> >;
 		return std::shared_ptr<const ValueArrayConverterBase>( ret );
 	}
-	void convert( const ValueArrayBase &src, ValueArrayBase &dst, const scaling_pair &scaling )const {
-		const SRC *sp = &src.castToValueArray<util::color<SRC> >().begin()->r;
-		DST *dp = &dst.castToValueArray<util::color<DST> >().begin()->r;
+	void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const {
+		const SRC *sp = &src.castTo<util::color<SRC> >().get()->r;
+		DST *dp = &dst.castTo<util::color<DST> >().get()->r;
 		NumConvImpl<SRC, DST, false>::convert( sp, dp, scaling, getConvertSize( src, dst ) * 3 );
 	}
-	scaling_pair getScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )const {
-		return getScalingToColor<SRC, DST>( min, max, scaleopt );
+	scaling_pair getScaling(const util::Value &min, const util::Value &max )const {
+		return getScalingToColor<SRC, DST>( min, max );
 	}
 
 	virtual ~ValueArrayConverter() {}
@@ -381,7 +358,7 @@ template<typename SRC, typename DST> class ValueArrayConverter<true, false, SRC,
 	ValueArrayConverter() {
 		LOG( Debug, verbose_info )
 				<< "Creating converter from scalar "
-				<< ValueArray<SRC >::staticName() << " to color " << ValueArray<util::color<DST> >::staticName();
+				<< util::typeName<SRC>() << " to color " << util::typeName<util::color<DST>>();
 	};
 	template<typename BASE> struct num2color: BASE {
 		num2color( typename BASE::iter_type s ): BASE( s ) {}
@@ -397,12 +374,12 @@ public:
 		ValueArrayConverter<true, false, SRC, util::color<DST> > *ret = new ValueArrayConverter<true, false, SRC, util::color<DST> >;
 		return std::shared_ptr<const ValueArrayConverterBase>( ret );
 	}
-	void convert( const ValueArrayBase &src, ValueArrayBase &dst, const scaling_pair &scaling )const {
+	void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const {
 		size_t size = getConvertSize( src, dst );
-		typename ValueArray<SRC>::const_iterator s = src.castToValueArray<SRC>().begin();
-		typename ValueArray<util::color<DST> >::iterator d = dst.castToValueArray<util::color<DST> >().begin();
+		auto s = src.beginTyped<SRC>();
+		auto d = dst.beginTyped<util::color<DST> >();
 
-		if( checkScale( scaling ) ) {
+		if( scaling.isRelevant() ) {
 			num2color<scaling_op_base<SRC, DST> > op( s );
 			op.setScale( scaling );
 			std::generate_n( d, size, op );
@@ -411,41 +388,81 @@ public:
 			std::generate_n( d, size, op );
 		}
 	}
-	scaling_pair getScaling( const util::ValueBase &min, const util::ValueBase &max, autoscaleOption scaleopt = autoscale )const {
-		return getScalingToColor<SRC, DST>( min, max, scaleopt );
+	scaling_pair getScaling(const util::Value &min, const util::Value &max )const {
+		return getScalingToColor<SRC, DST>( min, max );
 	}
 
 	virtual ~ValueArrayConverter() {}
 };
+/////////////////////////////////////////////////////////////////////////////
+// vector to vector version - using numeric_convert on each element with a global scaling
+/////////////////////////////////////////////////////////////////////////////
+template<typename SRC, typename DST, int NUM> class VectorArrayConverter : public ValueArrayGenerator<std::array<SRC,NUM>, std::array<DST,NUM> >
+{
+        VectorArrayConverter() {
+            if(std::is_same_v<SRC,DST>){
+                LOG(Debug, verbose_info ) << "Creating trivial copy converter for " << util::typeName<std::array<SRC,NUM>>();
+            } else {
+                LOG(Debug, verbose_info )
+                    << "Creating vector converter from "
+                    << util::typeName<std::array<SRC,NUM>>() << " to " << util::typeName<std::array<DST,NUM>>();
+            }
+	};
+public:
+	static std::shared_ptr<const ValueArrayConverterBase> get() {
+		auto *ret = new VectorArrayConverter<SRC,DST,NUM>;
+		return std::shared_ptr<const ValueArrayConverterBase>( ret );
+	}
+	void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const {
+		const SRC *sp = &src.castTo<std::array<SRC,NUM> >()->operator[](0);
+		DST *dp = &dst.castTo<std::array<DST,NUM> >()->operator[](0);
+		NumConvImpl<SRC, DST, std::is_same_v<SRC,DST>>::convert( sp, dp, scaling, getConvertSize( src, dst ) * NUM );
+	}
+	scaling_pair getScaling(const util::Value &min, const util::Value &max )const {
+		return NumConvImpl<SRC, DST, std::is_same_v<SRC,DST>>::getScaling( min, max );
+	}
+
+	virtual ~VectorArrayConverter() {}
+};
+
+template<typename SRC, typename DST> class ValueArrayConverter<false, false, util::vector3<SRC>, util::vector3<DST>> : public VectorArrayConverter<SRC, DST, 3>{};
+template<typename SRC, typename DST> class ValueArrayConverter<false, false, util::vector4<SRC>, util::vector4<DST>> : public VectorArrayConverter<SRC, DST, 4>{};
 
 
 ////////////////////////////////////////////////////////////////////////
-//OK, thats about the foreplay. Now we get to the dirty stuff.
+//OK, that's it about the foreplay. Now we get to the dirty stuff.
 ////////////////////////////////////////////////////////////////////////
 
-///generate a ValueArrayConverter for conversions from SRC to any type from the "types" list
-template<typename SRC> struct inner_ValueArrayConverter {
-	std::map<int, std::shared_ptr<const ValueArrayConverterBase> > &m_subMap;
-	inner_ValueArrayConverter( std::map<int, std::shared_ptr<const ValueArrayConverterBase> > &subMap ): m_subMap( subMap ) {}
-	template<typename DST> void operator()( DST ) { //will be called by the mpl::for_each in outer_ValueArrayConverter for any DST out of "types"
+typedef std::shared_ptr<const ValueArrayConverterBase> ConverterPtr;
+typedef std::map< int , std::map<int, ConverterPtr> > ConverterMap;
+
+// starting point for inner visitor recursion
+template<int I=0> void makeInnerConv(const ValueArray &src, ConverterMap &m_map){
+	typedef ValueArray::TypeByIndex<I> dst_ptr_type;
+	ValueArray dst(dst_ptr_type(), 0);
+	auto vis=[](auto src_ptr_array){//visits the underlying std::shared_ptr-type of src while dst_ptr_type is fixed by I
 		//create a converter based on the type traits and the types of SRC and DST
-		std::shared_ptr<const ValueArrayConverterBase> conv =
-			ValueArrayConverter<std::is_arithmetic<SRC>::value, std::is_arithmetic<DST>::value, SRC, DST>::get();
-		//and insert it into the to-conversion-map of SRC
-		m_subMap.insert( m_subMap.end(), std::make_pair( ValueArray<DST>::staticID(), conv ) );
-	}
-};
+		typedef typename decltype(src_ptr_array)::element_type SRC;
+		typedef typename dst_ptr_type::element_type DST;
+		typedef ValueArrayConverter<std::is_arithmetic_v<SRC>, std::is_arithmetic_v<DST>, SRC, DST> ConverterType;
+		return ConverterType::get();
+    };
 
-///generate a ValueArrayConverter for conversions from any SRC from the "types" list
-struct outer_ValueArrayConverter {
-	std::map< int , std::map<int, std::shared_ptr<const ValueArrayConverterBase> > > &m_map;
-	outer_ValueArrayConverter( std::map< int , std::map<int, std::shared_ptr<const ValueArrayConverterBase> > > &map ): m_map( map ) {}
-	template<typename SRC> void operator()( SRC ) {//will be called by the mpl::for_each in ValueArrayConverterMap() for any SRC out of "types"
-		boost::mpl::for_each<util::_internal::types>( // create a functor for from-SRC-conversion and call its ()-operator for any DST out of "types"
-			inner_ValueArrayConverter<SRC>( m_map[ValueArray<SRC>::staticID()] )
-		);
-	}
-};
+	m_map[src.getTypeID()][dst.getTypeID()]= src.visit(vis);
+    makeInnerConv<I+1>(src, m_map);
+}
+// terminator for inner visitor recursion
+template<> void makeInnerConv<std::variant_size<ArrayTypes>::value>(const ValueArray &, ConverterMap &){}
+
+// starting point for outer visitor recursion
+template<int I=0> void makeOuterConv(ConverterMap &m_map){
+	typedef ValueArray::TypeByIndex<I> src_ptr_type;
+    makeInnerConv(ValueArray(src_ptr_type(), 0), m_map);
+	makeOuterConv<I+1>(m_map);
+}
+// terminator for outer visitor recursion
+template<> constexpr void makeOuterConv<std::variant_size<ArrayTypes>::value>(ConverterMap &){}
+
 
 ValueArrayConverterMap::ValueArrayConverterMap()
 {
@@ -453,9 +470,8 @@ ValueArrayConverterMap::ValueArrayConverterMap()
 	LOG( Debug, info ) << "Initializing liboil";
 	oil_init();
 #endif // ISIS_USE_LIBOIL
-	boost::mpl::for_each<util::_internal::types>( outer_ValueArrayConverter( *this ) );
-	LOG( Debug, info )
-			<< "conversion map for " << size() << " array-types created";
+	makeOuterConv( *this );
+	LOG( Debug, info ) << "conversion map for " << size() << " array-types created";
 }
 
 }

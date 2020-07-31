@@ -59,7 +59,6 @@ public:
 	 * - \c -wf to override the file suffix used to select the plugin used for writing
 	 * - \c -wdialect selects a special dialect used for writing
 	 * - \c -repn selects a data type used for writing
-	 * - \c -scale_mode selects the scaling strategy when converting data type for writing
 	 * \param parameters the ParameterMap the parameters should be added to
 	 * \param needed if true, the -out parameter is marked as needed (init will fail, if this is not set)
 	 * \param suffix text to be appended to the parameters above (eg. "1" here results in "-out1" etc.) to distinguish multiple outputs
@@ -99,7 +98,7 @@ public:
 	 * with the ParameterMap of the application and stores the loaded image in its input list (see fetchImage and fetchImageAs).
 	 * \note usually there is no nedd to explicitely call that function. It is called automatically by init() if the Application is set up for input (see IOApplication()).
 	 */
-	std::list< Image > autoload( bool exitOnError = false,const std::string &suffix = "",optional< util::slist& > rejected=optional< util::slist& >() );
+	std::list< Image > autoload(bool exitOnError = false,const std::string &suffix = "",util::slist* rejected=nullptr);
 
 	/**
 	 * Load images using parameters from the given ParameterMap.
@@ -115,7 +114,7 @@ public:
 		bool exitOnError = false, 
 		const std::string &suffix = "", 
 		std::shared_ptr< util::ProgressFeedback > feedback = IOApplication::feedback(),
-		optional< util::slist& > rejected=optional< util::slist& >()
+		util::slist* rejected=nullptr
 	);
 
 	/** Write data using the internal ParameterMap.

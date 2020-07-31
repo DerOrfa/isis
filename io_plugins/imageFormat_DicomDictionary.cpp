@@ -1,8 +1,6 @@
 #include "imageFormat_Dicom.hpp"
 
-namespace isis{
-namespace image_io{
-namespace _internal{
+namespace isis::image_io::_internal{
 	
 std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict{
 	{0x00000000,{"UL","CommandGroupLength"}}, //DICOM
@@ -4107,6 +4105,4 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x2005143e,{"FL","Philips private Attribute"}},//PrivateTag
 	{0x20051580,{"SQ","Philips private sequence"}},//PrivateTag
 };
-
-	
-}}}
+}

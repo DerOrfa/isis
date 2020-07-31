@@ -22,7 +22,6 @@
 #include <isis/core/vector.hpp>
 #include "imageFormat_nifti_dcmstack.hpp"
 #include "imageFormat_nifti_sa.hpp"
-#include <isis/core/value_base.hpp>
 #include <isis/core/property.hpp>
 #include <limits.h>
 
@@ -39,7 +38,7 @@ DCMStack::DCMStack( const util::PropertyMap &src ): util::PropertyMap( src ) {}
 ////////////////////////////////////////////////////////////////////////////////
 // low level json parser
 ////////////////////////////////////////////////////////////////////////////////
-std::ptrdiff_t  DCMStack::readJson( data::ValueArray<uint8_t > stream, char extra_token )
+ptrdiff_t  DCMStack::readJson( data::ByteArray stream, char extra_token )
 {
 	return PropertyMap::readJson(stream.begin(),stream.end(),extra_token,"samples:slices");
 }
@@ -51,7 +50,7 @@ std::ptrdiff_t  DCMStack::readJson( data::ValueArray<uint8_t > stream, char extr
 // some basic functors for later use
 struct ComputeTimeDist {
 	util::timestamp sequenceStart;
-	util::Value<util::duration> operator()( const util::ValueBase &val )const {
+	util::Value operator()(const util::Value &val )const {
 		return val.as<util::timestamp>() - sequenceStart;
 	}
 };
@@ -84,17 +83,17 @@ void DCMStack::translateToISIS( data::Chunk &orig )
 	//translate TM sets we know about to proper Timestamps
 	const char *TMs[] = {"DICOM/ContentTime", "DICOM/AcquisitionTime"};
 	for( const util::PropertyMap::PropPath tm :  TMs ) {
-		const boost::optional< util::PropertyValue& > found=queryProperty( tm );
+		const auto found=queryProperty( tm );
 		found && found->transform<util::timestamp>();
 	}
 
 
 	// compute acquisitionTime as relative to DICOM/SeriesTime TODO include date
-	optional< util::PropertyValue& > serTime=queryProperty( "DICOM/SeriesTime" );
+	auto serTime=queryProperty( "DICOM/SeriesTime" );
 	if(serTime){
 		const char *time_stor[] = {"DICOM/ContentTime", "DICOM/AcquisitionTime"};
 		for( const char * time :  time_stor ) {
-			optional< util::PropertyValue& > src=queryProperty( time );
+			auto src=queryProperty( time );
 			if( src ) {
 				//@todo test me
 				const ComputeTimeDist comp = {serTime->as<util::timestamp>()};
@@ -108,7 +107,7 @@ void DCMStack::translateToISIS( data::Chunk &orig )
 	}
 
 	// deal with mosaic
-	boost::optional< util::slist& > iType=queryValueAs<util::slist>("DICOM/ImageType");
+	auto iType=queryValueAs<util::slist>("DICOM/ImageType");
 	if( iType && std::find( iType->begin(), iType->end(), std::string( "MOSAIC" ) ) != iType->end() )
 			decodeMosaic();
 
@@ -175,7 +174,7 @@ void DCMStack::decodeMosaic()
 	if( ! mosaicTimes.empty() ) { // if there are MosaicRefAcqTimes recompute acquisitionTime
 
 		util::PropertyValue &acq = touchProperty( "acquisitionTime" );
-		const util::PropertyValue &mos = queryProperty( mosaicTimes ).get();
+		const util::PropertyValue &mos = *queryProperty( mosaicTimes );
 
 		if( !acq.isEmpty() && ( acq.is<util::ilist>() || acq.is<util::dlist>() || acq.is<util::slist>() ) ) {
 			LOG( Runtime, warning ) << "There is already an acquisitionTime for each slice, won't recompute it from " << mosaicTimes;
@@ -187,11 +186,13 @@ void DCMStack::decodeMosaic()
 			if( acq.size() == mos.size() )
 				old_acq.transfer(acq);
 
-			acq.reserve( mos[0].as<util::dlist>().size() * mos.size() );
-
-			for( size_t i = 0; i < mos.size(); i++ ) {
-				const util::dlist inner_mos = mos[i].as<util::dlist>();
-				const float offset= old_acq.isEmpty() ? 0:old_acq[i].as<float>();
+			for(
+				util::PropertyValue::const_iterator mos_it=mos.begin(),old_acq_it=old_acq.begin(); 
+				mos_it!=mos.end();
+				mos_it++,old_acq_it++ 
+			) {
+				const util::dlist inner_mos = mos_it->as<util::dlist>();
+				const float offset= old_acq.isEmpty() ? 0:old_acq_it->as<float>();
 				for(const float m : inner_mos){
 					acq.push_back(m+offset);
 				}

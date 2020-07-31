@@ -45,12 +45,12 @@ public:
 template<typename T> class typeSpecImpl:public WriterSpec{
 public:
 	typeSpecImpl(std::string repn,uint8_t prio):
-		WriterSpec(repn,"image",prio,boost::is_integral<T>::value,boost::is_float<T>::value,sizeof(T),data::ValueArray<T>::staticID()){}
+		WriterSpec(repn,"image",prio,std::is_integral_v<T>,std::is_floating_point_v<T>,sizeof(T),util::typeID<T>()){}
 };
 template<> class typeSpecImpl<util::color24>:public WriterSpec{
 public:
 	typeSpecImpl(std::string repn,uint8_t prio):
-		WriterSpec(repn,"3DVectorfield",prio,false,false,3,data::ValueArray<util::color24>::staticID()){}
+		WriterSpec(repn,"3DVectorfield",prio,false,false,3,util::typeID<util::color24>()){}
 	uint16_t storeVImageImpl(std::list< isis::data::Chunk >& chunks, std::ofstream& out, data::scaling_pair scaling );
 	void modHeaderImpl(isis::util::PropertyMap& props, const isis::util::vector4< size_t > &size);
 };
@@ -58,10 +58,10 @@ public:
 class VistaProtoImage: protected std::list<data::Chunk>{};
 
 class VistaInputImage: public VistaProtoImage{
-	typedef data::ValueArrayReference ( *readerPtr )( data::ByteArray data, size_t offset, size_t size );
+	typedef data::ValueArray ( *readerPtr )(data::ByteArray data, size_t offset, size_t size );
 	readerPtr m_reader;
 	data::ByteArray m_data;
-	data::ValueArray< uint8_t >::iterator m_data_start;
+	data::ByteArray::iterator m_data_start;
 	
 	unsigned short last_type;
 	util::fvector3 last_voxelsize;
@@ -71,21 +71,23 @@ class VistaInputImage: public VistaProtoImage{
 	std::map<util::istring, readerPtr> vista2isis;
 	bool big_endian;
 	
-	template<typename T> data::ValueArray<util::color<T> > toColor( const data::ValueArrayReference ref, size_t slice_size ) {
-		assert( ref->getLength() % 3 == 0 );
-		const std::vector< data::ValueArrayReference > layers = ref->as<T>().splice( slice_size ); //colors are stored slice-wise in the 3d block
-		data::ValueArray<util::color<T> > ret( ref->getLength() / 3 );
+	template<typename T> data::TypedArray<util::color<T> > toColor(const data::ValueArray ref, size_t slice_size ) {
+		assert( ref.getLength() % 3 == 0 );
+
+		//colors are stored slice-wise in the 3d block
+		std::vector<data::TypedArray<T>> layers = data::TypedArray<T>(ref).typed_splice( slice_size ); ;
+		data::TypedArray<util::color<T>> ret( ref.getLength() / 3 );
 		
-		typename data::ValueArray<util::color<T> >::iterator d_pix = ret.begin();
+		typename data::TypedArray<util::color<T> >::iterator d_pix = ret.begin();
 		
-		for( std::vector< data::ValueArrayReference >::const_iterator l = layers.begin(); l != layers.end(); ) {
-			for( T s_pix: ( *l++ )->castToValueArray<T>() )
+		for( auto l = layers.begin(); l != layers.end(); ) {
+			for( T s_pix: ( *l++ ) )
 				( *( d_pix++ ) ).r = data::endianSwap( s_pix ); //red
 			d_pix -= slice_size; //return to the slice start
-			for( T s_pix: ( *l++ )->castToValueArray<T>() )
+			for( T s_pix: ( *l++ ) )
 				( *( d_pix++ ) ).g = data::endianSwap( s_pix ); //green
 			d_pix -= slice_size; //return to the slice start
-			for( T s_pix: ( *l++ )->castToValueArray<T>() )
+			for( T s_pix: ( *l++ ) )
 				( *( d_pix++ ) ).b = data::endianSwap( s_pix ); //blue
 		}
 		
@@ -94,7 +96,7 @@ class VistaInputImage: public VistaProtoImage{
 	}
 	
 public:
-	VistaInputImage( data::ByteArray data, data::ValueArray< uint8_t >::iterator data_start );
+	VistaInputImage( data::ByteArray data, data::TypedArray< uint8_t >::iterator data_start );
 	/// add a chunk to the protoimage
 	bool add( util::PropertyMap props );
 	bool isFunctional()const;
@@ -105,20 +107,20 @@ public:
 	void store( std::list< data::Chunk >& out, const util::PropertyMap& root_map, uint16_t sequence, const std::shared_ptr< util::ProgressFeedback > &feedback );
 };
 class VistaOutputImage:public VistaProtoImage{
-	template<typename T> void insertSpec(std::map<unsigned short,boost::shared_ptr<WriterSpec> > &map,std::string name,uint8_t prio){
-		map[(uint16_t)data::ValueArray<T>::staticID()].reset(new typeSpecImpl<T>(name,prio));
+	template<typename T> void insertSpec(std::map<unsigned short,std::shared_ptr<WriterSpec> > &map,std::string name,uint8_t prio){
+		map[util::typeID<T>()].reset(new typeSpecImpl<T>(name,prio));
 	}
 	size_t chunksPerVistaImage;
 	util::PropertyMap imageProps;
 	void writeMetadata(std::ofstream& out, const isis::util::PropertyMap& data, const std::string& title, size_t indent=0);
-	std::map<unsigned short,boost::shared_ptr<WriterSpec> > isis2vista;
+	std::map<unsigned short,std::shared_ptr<WriterSpec> > isis2vista;
 	unsigned short storeTypeID;
 	data::scaling_pair scaling;
 	template<typename FIRST,typename SECOND> static void typeFallback(unsigned short typeID){
 		LOG(Runtime,notice) 
-			<< util::MSubject(data::ValueArray<FIRST>::staticName()) << " is not supported in vista falling back to " 
-			<< util::MSubject(data::ValueArray<SECOND>::staticName());
-		typeID=data::ValueArray<SECOND>::staticID();
+			<< util::MSubject(util::typeName<FIRST>()) << " is not supported in vista falling back to "
+			<< util::MSubject(util::typeName<SECOND>());
+		typeID=util::typeID<SECOND>();
 	}
 public:
 	VistaOutputImage(data::Image src);

@@ -26,9 +26,7 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/lu.hpp>
 
-namespace isis
-{
-namespace math
+namespace isis::math
 {
 /**
  * Transforms the image coordinate system into an other system by multiplying
@@ -129,7 +127,6 @@ inverseMatrix(const util::Matrix<TYPE,SIZE,SIZE> &mat, bool &invertible )
 
 
 
-}
 }
 
 #endif // TRANSFORM_H

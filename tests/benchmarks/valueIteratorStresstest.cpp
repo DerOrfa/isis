@@ -24,8 +24,8 @@ int main()
 		data::Chunk  ch(data::MemChunk<short>( 256, 256, 256 ));
 		timer.restart();
 
-		for( data::Chunk::reference ref :  ch ) {
-			ref = util::Value<int>( 42 );
+		for( auto v :  ch ) {
+			v = 42;
 		}
 
 		std::cout << ch.getVolume() << " voxel set to 42 in " << timer.elapsed() << " sec" << std::endl;
@@ -62,7 +62,7 @@ int main()
 		timer.restart();
 
 		for( data::Image::reference ref :  img ) {
-			ref = util::Value<int>( 42 );
+			ref = 42 ;
 		}
 
 		std::cout << img.getVolume() << " voxel set to 42 in " << timer.elapsed() << " sec" << std::endl;

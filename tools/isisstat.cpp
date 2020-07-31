@@ -5,8 +5,8 @@
 #include <boost/progress.hpp>
 
 
-struct StatLog {static const char *name() {return "Raw";}; enum {use = _ENABLE_LOG};};
-struct StatDebug {static const char *name() {return "RawDebug";}; enum {use = _ENABLE_DEBUG};};
+struct StatLog   {static constexpr char name[]="Stat";      static constexpr bool use = _ENABLE_LOG;};
+struct StatDebug {static constexpr char name[]="StatDebug"; static constexpr bool use = _ENABLE_DEBUG;};
 
 using namespace boost::accumulators;
 using namespace isis;

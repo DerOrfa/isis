@@ -90,6 +90,7 @@ std::string Message::strTime(const char *formatting)const
 
 MSubject::MSubject( const std::string &cont ):std::string(cont) {}
 MSubject::MSubject( std::string &&cont ):std::string(cont){}
+MSubject::MSubject(const std::filesystem::directory_entry& entry):std::string(std::filesystem::path(entry).native()){}
 
 NoSubject::NoSubject( const std::string &cont ):std::string(cont) {}
 NoSubject::NoSubject( std::string &&cont ):std::string(cont){}
