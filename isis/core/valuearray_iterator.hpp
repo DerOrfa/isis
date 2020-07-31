@@ -183,7 +183,7 @@ public:
 	operator pointer(){return p;}
 };
 }
-
+/// @cond _internal
 namespace std
 {
     void swap(const isis::data::_internal::WritingValueAdapter &a,const isis::data::_internal::WritingValueAdapter &b);
@@ -194,4 +194,5 @@ namespace std
 		return out << isis::util::Value(v);
 	}
 }
+/// @endcond _internal
 

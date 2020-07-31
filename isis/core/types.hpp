@@ -21,6 +21,8 @@ typedef std::chrono::time_point<std::chrono::system_clock,std::chrono::milliseco
 typedef std::chrono::time_point<std::chrono::system_clock,std::chrono::days> date;
 typedef timestamp::duration duration; // @todo float duration might be nice
 
+
+/// @cond _internal
 namespace _internal{
 struct name_visitor{
 	//linking will fail if a setName( ... ); is missing in types.cpp
@@ -47,6 +49,7 @@ template<typename VariantType, typename T, std::size_t index = 0> constexpr std:
 }
 
 }
+/// @encond _internal
 
 template<typename T> static std::string typeName(){
 	return _internal::name_visitor().operator()(T());

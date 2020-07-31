@@ -92,6 +92,7 @@ public:
 	///a flat map, matching complete paths as keys to the corresponding values
 	typedef std::map<PropPath, PropertyValue> FlatMap;
 
+	/// @cond _internal
 	template<typename T> class NeededsList: public std::list<PropPath>
 	{
 	public:
@@ -105,6 +106,8 @@ public:
 			}
 		}
 	};
+	/// @endcond _internal
+
 
 protected:
 	static Node &nullnode();
@@ -732,6 +735,7 @@ public:
 /////////////////////////////////////////////////////////////////////////////////////////
 // internal functors
 /////////////////////////////////////////////////////////////////////////////////////////
+/// @cond _internal
 template<class Predicate> struct PropertyMap::WalkTree {
 	PathSet &m_out;
 	const PropPath &name;
@@ -802,6 +806,8 @@ struct PropertyMap::IsEmpty
 		return true;
 	}
 };
+/// @endcond _internal
+
 template<typename T> PropertyMap::PathSet PropertyMap::getLocal()const{
 	PathSet ret;
 	for(const container_type::value_type &v:container){
@@ -858,7 +864,7 @@ template<typename T> T* PropertyMap::tryFetchEntry( const PropPath &path ) {
 
 }
 }
-
+/// @cond _internal
 namespace std
 {
 /// Streaming output for Nodes
@@ -889,4 +895,5 @@ basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, con
 	return out;
 }
 }
+/// @endcond _internal
 

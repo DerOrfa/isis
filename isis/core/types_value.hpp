@@ -59,6 +59,7 @@ template<typename T> struct has_op<std::complex<T> >:_internal::ordered<false>,_
 }
 
 // define +/- operations for timestamp and date
+/// @cond _internal
 namespace std{
 	template<> struct plus<isis::util::date>:binary_function<isis::util::date,isis::util::duration,isis::util::date>{
 		isis::util::date operator() (const isis::util::date& x, const isis::util::duration& y) const {return x+chrono::duration_cast<chrono::days>(y);}
@@ -118,3 +119,4 @@ namespace std{
 		return out<<std::put_time(std::localtime(&tme), "%x"); 
 	}
 }
+/// @endcond _internal

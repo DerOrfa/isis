@@ -24,7 +24,7 @@ typedef color<uint8_t> color24;
 typedef color<uint16_t> color48;
 }
 }
-
+/// @cond _internal
 namespace std
 {
 ///Streaming output for color using isis::util::listToOStream
@@ -36,4 +36,5 @@ basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, con
 	return out;
 }
 }
+/// @endcond _internal
 #endif //COLOR_HPP_INCLUDED

@@ -23,12 +23,14 @@ typedef std::variant<
 , std::shared_ptr<util::color24>, std::shared_ptr<util::color48>
 > ArrayTypes;
 
+/// @cond _internal
 namespace _internal{
 struct arrayname_visitor{
 	template<typename T> std::string operator()(const std::shared_ptr<T> &)const{
         return util::_internal::name_visitor()(T());
 	}
 };
+/// @encond _internal
 
 }
 }

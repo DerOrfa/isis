@@ -490,7 +490,7 @@ BOOST_AUTO_TEST_CASE( ValueArray_generic_iterator_test )
 	uint32_t cnt = 0;
 
 	for( auto i = array.begin(); i != array.end(); i++, cnt++ ) {
-		BOOST_CHECK_EQUAL( *i, cnt + 1 ); //this is using ValueBase::eq
+		BOOST_CHECK_EQUAL( *i, cnt + 1 ); //this is using Value::eq
 	}
 
 	//check searching operations

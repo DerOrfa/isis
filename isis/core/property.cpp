@@ -172,7 +172,7 @@ std::vector< PropertyValue > PropertyValue::splice( const size_t len )
 }
 
 
-// ValueBase hooks
+// Value hooks
 bool PropertyValue::fitsInto( short unsigned int ID ) const{
 	return begin()->fitsInto(ID);//use begin() instead of front() to avoid warning about single value operation on a multi value Property
 }
@@ -280,7 +280,7 @@ PropertyValue& PropertyValue::operator /=( const Value &second ){front().divide_
 
 }
 }
-
+/// @cond _internal
 namespace std{
 bool less< isis::util::PropertyValue >::operator()(const isis::util::PropertyValue& x, const isis::util::PropertyValue& y) const
 {
@@ -288,3 +288,4 @@ bool less< isis::util::PropertyValue >::operator()(const isis::util::PropertyVal
 }
 
 }
+/// @endcond _internal

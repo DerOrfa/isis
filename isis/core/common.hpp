@@ -401,7 +401,7 @@ void enableLogGlobal(LogLevel level)
 	ENABLE_LOG(DataDebug, HANDLE, level);
 }
 }//isis
-
+/// @cond _internal
 namespace std
 {
 /// Streaming output for std::pair
@@ -456,3 +456,4 @@ basic_ostream<charT, std::char_traits<charT> >& operator<<( basic_ostream<charT,
 }
 
 }
+/// @endcond _internal

@@ -96,13 +96,8 @@ public:
 	* Interpret the value as value of any (other) type.
 	* This is a runtime-based cast via automatic conversion.
 	* \code
-	* ValueBase *mephisto=new Value<std::string>("666");
+	* Value mephisto("666");
 	* int devil=mephisto->as<int>();
-	* \endcode
-	* If you know the type of source and destination at compile time you should use Value\<DEST_TYPE\>((SOURCE_TYPE)src).
-	* \code
-	* Value<std::string> mephisto("666");
-	* Value<int> devil((std::string)mephisto);
 	* \endcode
 	* \return this value converted to the requested type if conversion was successfull.
 	*/
@@ -306,6 +301,7 @@ API_EXCLUDE_END;
 }
 
 // streaming output
+/// @cond _internal
 namespace std
 {
 template<typename charT, typename traits>
@@ -314,3 +310,4 @@ basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, con
 	return s.print(true,out);
 }
 }
+/// @endcond _internal

@@ -215,12 +215,12 @@ public:
 
 
 	////////////////////////////////////////////////////////////////////////////
-	// ValueBase interface
+	// Value interface
 	////////////////////////////////////////////////////////////////////////////
 
 	/**
-	 * Hook for \link ValueBase::as \endlink called on the first value
-	 * \note Uses only on the first value. Other Values are ignored (use the []-operator to access them).
+	 * Hook for \link Value::as \endlink called on the first value
+	 * \note Uses only the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
 	template<class T> T as()const {return front().as<T>();}
@@ -228,77 +228,77 @@ public:
 	template<class T> T& castAs() {return std::get<T>(front());}
 
 	/**
-	 * \copybrief ValueBase::is
-	 * hook for \link ValueBase::is \endlink
+	 * \copybrief Value::is
+	 * hook for \link Value::is \endlink
 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
 	template<class T> bool is()const {return container.front().is<T>();}
 
 	/**
-	 * \copybrief ValueBase::getTypeName
-	 * hook for \link ValueBase::getTypeName \endlink
+	 * \copybrief Value::getTypeName
+	 * hook for \link Value::getTypeName \endlink
 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
 	std::string getTypeName()const;
 
 	/**
-	 * \copybrief ValueBase::getTypeID
-	 * hook for \link ValueBase::getTypeID \endlink
+	 * \copybrief Value::getTypeID
+	 * hook for \link Value::getTypeID \endlink
 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
 	unsigned short getTypeID()const;
 
 	/**
-	 * \copybrief ValueBase::castTo
-	 * hook for \link ValueBase::castTo \endlink
-	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
+	 * Cast to a known type.
+	 * \returns result of std::get\<T\> on first on the first value.
+	 * \note Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
 	template<typename T> const T &castTo() const{return std::get<T>(front());}
 
 	/**
-	 * \returns true if \link ValueBase::fitsInto \endlink is true for all values
+	 * \returns true if \link Value::fitsInto \endlink is true for all values
 	 * \note Operation is done on all values. For comparing single values access them via the []-operator.
 	 */
 	bool fitsInto( unsigned short ID ) const;
 
 	/**
-	 * \returns true if \link ValueBase::gt \endlink is true for all values
+	 * \returns true if \link Value::gt \endlink is true for all values
 	 * \note Operation is done on all values. For working on single values access them via the []-operator.
 	 * \note An exception is thrown if this has less values than the target (the opposite case is ignored).
 	 */
 	bool gt( const PropertyValue &ref )const;
 	/**
-	 * \returns true if \link ValueBase::lt \endlink is true for all values
+	 * \returns true if \link Value::lt \endlink is true for all values
 	 * \copydetails PropertyValue::gt
 	 */
 	bool lt( const PropertyValue &ref )const;
 	/**
-	 * \returns true if \link ValueBase::eq \endlink is true for all values
+	 * \returns true if \link Value::eq \endlink is true for all values
 	 * \copydetails PropertyValue::gt
 	 */
 	bool eq( const PropertyValue &ref )const;
 
 	/**
-	 * \returns a PropertyValue with the results of \link ValueBase::plus \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::plus \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	PropertyValue plus( const PropertyValue &ref )const;
 	/**
-	 * \returns a PropertyValue with the results of \link ValueBase::minus \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::minus \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	PropertyValue minus( const PropertyValue &ref )const;
 	/**
-	 * \returns a PropertyValue with the results of \link ValueBase::multiply \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::multiply \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	PropertyValue multiply( const PropertyValue &ref )const;
 	/**
-	 * \returns a PropertyValue with the results of \link ValueBase::divide \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::divide \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	PropertyValue divide( const PropertyValue &ref )const;
@@ -355,7 +355,7 @@ public:
 
 }
 }
-
+/// @cond _internal
 namespace std
 {
     /// streaming output for PropertyValue
@@ -368,6 +368,7 @@ namespace std
 		bool operator() (const isis::util::PropertyValue& x, const isis::util::PropertyValue& y) const;
 	};
 }
+/// @endcond _internal
 #endif
 
 

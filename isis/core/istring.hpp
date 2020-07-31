@@ -30,9 +30,10 @@ std::list<util::istring> makeIStringList(const std::list<std::basic_string<CharT
 }
 
 }
-
+/// @cond _internal
 namespace std
 {
 // adapter for sending istring to normal ostream
 std::ostream &operator<<( std::ostream &out, const isis::util::istring &s );
 }
+/// @endcond _internal

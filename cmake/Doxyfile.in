@@ -80,7 +80,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/lib/Core"
+INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/isis/Core"
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          =
 RECURSIVE              = YES

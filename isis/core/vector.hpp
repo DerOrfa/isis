@@ -202,7 +202,7 @@ typedef vector3<int32_t> ivector3;
 }
 }
 
-/// Streaming output for FixedVector
+/// @cond _internal
 namespace std
 {
 
@@ -213,4 +213,5 @@ operator<<( basic_ostream<charT, traits> &out, const std::array<TYPE, SIZE>& s )
 	return out;
 }
 }
+/// @endcond _internal
 #endif //VECTOR_HPP

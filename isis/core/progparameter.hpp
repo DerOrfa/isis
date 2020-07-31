@@ -78,11 +78,7 @@ public:
 		return std::get<T>(front());
 	}
 
-#ifdef BOOST_NO_EXPLICIT_CONVERSION_OPERATORS
-	operator std::unique_ptr<ValueBase>::unspecified_bool_type()const;// implicit conversion to "bool" stolen from boost
-#else
 	explicit operator bool()const;
-#endif
 
 	/// \returns true, if the parameter was ever successfully parsed
 	bool isParsed()const;
@@ -144,7 +140,7 @@ public:
 
 }
 }
-
+/// @cond _internal
 namespace std
 {
 /// Streaming output for ProgParameter - classes
@@ -166,4 +162,6 @@ operator<<( basic_ostream<charT, traits> &out, const isis::util::ProgParameter &
 	return out;
 }
 }
+/// @endcond _internal
+
 #endif // PROGPARAMETER_HPP

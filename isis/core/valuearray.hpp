@@ -231,7 +231,7 @@ public:
 	static ValueArray createByID(unsigned short ID, size_t len );
 
 	/**
-	 * Copy this to a new ValueArray\<T\> using newly allocated memory.
+	 * Copy this to a new TypedArray\<T\> using newly allocated memory.
 	 * This will create a new ValueArray of type T and the length of this.
 	 * The memory will be allocated and the data of this will be copy-converted to T using min/max as value range.
 	 * If the conversion fails, an error will be send to CoreLog and the data of the newly created ValueArray will be undefined.
@@ -303,7 +303,7 @@ public:
 	 * - min/max numbers for numbers from a 1-D value space (aka real numbers)
 	 * - complex(lowest real value,lowest imaginary value) / complex(biggest real value,biggest imaginary value) for complex numbers
 	 * - color(lowest red value,lowest green value, lowest blue value)/color(biggest red value,biggest green value, biggest blue value) for color
-	 * The computed min/max are of the same type as the stored data, but can be compared to other ValueReference without knowing this type via the lt/gt function of ValueBase.
+	 * The computed min/max are of the same type as the stored data, but can be compared to other ValueReference without knowing this type via the lt/gt function of Value.
 	 * The following code checks if the value range of ValueArray-object data1 is a real subset of data2:
 	 * \code
 	 * std::pair<util::Value,util::Value> minmax1=data1.getMinMax(), minmax2=data2.getMinMax();
@@ -333,7 +333,7 @@ public:
 	std::shared_ptr<const void> getRawAddress( size_t offset = 0 )const;
 
 	/**
-	* Dynamically cast the ValueBase up to its actual ValueArray\<T\>. Constant version.
+	* Dynamically cast the ValueArray up to its actual TypedArray\<T\>. Constant version.
 	* Will send an error if T is not the actual type and _ENABLE_CORE_LOG is true.
 	* \returns a constant reference of the ValueArray.
 	*/
@@ -344,9 +344,9 @@ public:
 	}
 
 	/**
-	 * Dynamically cast the ValueBase up to its actual ValueArray\<T\>. Referenced version.
+	 * Dynamically cast the ValueArray to the underlying std::shared_ptr\<T\>. Referenced version.
 	 * Will send an error if T is not the actual type and _ENABLE_CORE_LOG is true.
-	 * \returns a reference of the ValueArray.
+	 * \returns a reference of the std::shared_ptr\<T\>.
 	 */
 	template<typename T> std::shared_ptr<T>& castTo() {
 		LOG_IF(!is<T>(),Debug,error) << "Trying to cast " << typeName() << " as " << util::typeName<T>() << " this will crash";
@@ -389,7 +389,7 @@ struct NonDeleter {
 };
 
 }
-
+/// @cond _internal
 namespace std
 {
 // streaming for scaling_pair
@@ -415,3 +415,4 @@ basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, con
 	return out;
 }
 }
+/// @endcond _internal

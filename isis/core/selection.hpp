@@ -126,7 +126,7 @@ template<typename T> Selection::Selection( const std::map< T, std::string >& map
 }
 
 }
-
+/// @cond _internal
 namespace std
 {
 /// Streaming output for selections.
@@ -136,3 +136,4 @@ basic_ostream<charT, traits> &operator<<( basic_ostream<charT, traits> &out, con
 	return out << ( std::string )s;
 }
 }
+/// @endcond _internal

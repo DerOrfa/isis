@@ -363,6 +363,7 @@ public:
 
 }
 }
+/// @cond _internal
 namespace std
 {
 /// Streaming output for Chunk (forward to PropertyMap)
@@ -372,4 +373,6 @@ basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, con
 	return out << static_cast<const isis::util::PropertyMap &>( s );
 }
 }
+/// @endcond _internal
+
 #endif // CHUNK_H
