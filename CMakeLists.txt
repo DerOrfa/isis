@@ -97,9 +97,9 @@ endif(ISIS_DEBUG_LOG)
 # since ISIS stongly depends on the boost libraries we will configure them
 # globally.
 if(BUILD_TESTING)
-	find_package(Boost REQUIRED COMPONENTS system iostreams unit_test_framework)
+	find_package(Boost REQUIRED COMPONENTS iostreams unit_test_framework)
 else(BUILD_TESTING)
-	find_package(Boost REQUIRED COMPONENTS system iostreams)
+	find_package(Boost REQUIRED COMPONENTS iostreams)
 endif(BUILD_TESTING)
 
 ############################################################
