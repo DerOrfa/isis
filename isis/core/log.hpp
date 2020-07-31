@@ -44,7 +44,7 @@ public:
 	}
 	static Message send( const char file[], const char object[], int line, LogLevel level ) {
 		std::shared_ptr<util::MessageHandlerBase> &handle = Log<MODULE>::getHandle();
-		return Message( object, MODULE::name(), file, line, level, handle );
+		return Message( object, MODULE::name, file, line, level, handle );
 	}
 };
 

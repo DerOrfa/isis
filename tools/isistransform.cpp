@@ -12,8 +12,8 @@
 
 using namespace isis;
 
-struct TransformLog {static const char *name() {return "Transform";}; enum {use = _ENABLE_LOG};};
-struct TransformDebug {static const char *name() {return "TransformDebug";}; enum {use = _ENABLE_DEBUG};};
+struct TransformLog   {static constexpr char name[]="Transform";      static constexpr bool use = _ENABLE_LOG;};
+struct TransformDebug {static constexpr char name[]="TransformDebug"; static constexpr bool use = _ENABLE_DEBUG;};
 
 class : public data::ChunkOp
 {

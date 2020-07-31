@@ -43,6 +43,7 @@ public:
 	typedef _internal::ValueConverterMap::mapped_type::mapped_type Converter;
 
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
+	static constexpr auto NumOfTypes =  std::variant_size<ValueTypes>::value;
 
 	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
 	constexpr Value(T &&v):ValueTypes(v){}

@@ -5,8 +5,8 @@
 #include "../../core/image.hpp"
 
 namespace isis{
-	struct Qt5Log {static const char *name() {return "Qt5";}; enum {use = _ENABLE_LOG};};
-	struct Qt5Debug {static const char *name() {return "Qt5Debug";}; enum {use = _ENABLE_DEBUG};};
+	struct Qt5Log   {static constexpr char name[]="Qt5";      static constexpr bool use = _ENABLE_LOG;};
+	struct Qt5Debug {static constexpr char name[]="Qt5Debug"; static constexpr bool use = _ENABLE_DEBUG;};
 
 namespace qt5{
 

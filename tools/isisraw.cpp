@@ -3,8 +3,8 @@
 #include <isis/core/fileptr.hpp>
 
 
-struct RawLog {static const char *name() {return "Raw";}; enum {use = _ENABLE_LOG};};
-struct RawDebug {static const char *name() {return "RawDebug";}; enum {use = _ENABLE_DEBUG};};
+struct RawLog   {static constexpr char name[]="Raw";      static constexpr bool use = _ENABLE_LOG;};
+struct RawDebug {static constexpr char name[]="RawDebug"; static constexpr bool use = _ENABLE_DEBUG;};
 
 using namespace isis;
 
