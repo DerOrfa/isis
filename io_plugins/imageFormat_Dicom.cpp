@@ -28,9 +28,9 @@ util::PropertyMap readItem(DicomElement &token,std::multimap<uint32_t,data::Valu
 }
 void readDataItems(DicomElement &token,std::multimap<uint32_t,data::ValueArrayReference> &data_elements){
 	const uint32_t id=token.getID32();
-	
+
 	bool wide= (token.getVR()=="OW");
-	
+
 	for(token.next(token.getPosition()+8+4);token.getID32()==0xFFFEE000;token.next()){ //iterate through items and store them
 		const size_t len=token.getLength();
 		if(len){
@@ -39,7 +39,7 @@ void readDataItems(DicomElement &token,std::multimap<uint32_t,data::ValueArrayRe
 				data_elements.insert({id,token.dataAs<uint16_t>()});
 			else
 				data_elements.insert({id,token.dataAs<uint8_t>()});
-		} else 
+		} else
 			LOG(Debug,info) << "Ignoring zero length data item at " << token.getPosition();
 	}
 	assert(token.getID32()==0xFFFEE0DD);//we expect a sequence delimiter (will be eaten by the calling loop)
@@ -51,8 +51,8 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 	do{
 		//break the loop if we find a delimiter
 		if(
-			token.getID32()==0xFFFEE00D //Item Delim. Tag
-		){ 
+		    token.getID32()==0xFFFEE00D //Item Delim. Tag
+		){
 			token.next(token.getPosition()+8);
 			break;
 		}
@@ -68,21 +68,21 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 					inserted=data_elements.insert({token.getID32(),token.dataAs<uint16_t>()});
 				else
 					inserted=data_elements.insert({token.getID32(),token.dataAs<uint8_t>()});
-				
-				LOG(Debug,info) 
-					<< "Found " << inserted->second->getTypeName() << "-data for " << token.getIDString() << " at " << token.getPosition()
-					<< " it is " <<token.getLength() << " bytes long";
+
+				LOG(Debug,info)
+				    << "Found " << inserted->second->getTypeName() << "-data for " << token.getIDString() << " at " << token.getPosition()
+				    << " it is " <<token.getLength() << " bytes long";
 			}
 		}else if(vr=="SQ"){ // http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_7.5.html
 			uint32_t len=token.getLength();
 			const auto name=token.getName();
-			
+
 			//get to first item
 			if(token.implicit_vr)
 				token.next(token.getPosition()+4+4);//implicit SQ (4 bytes tag-id + 4 bytes length)
 			else
 				token.next(token.getPosition()+4+2+2+4);//explicit SQ (4 bytes tag-id + 2bytes "SQ" + 2bytes reserved + 4 bytes length)
-			
+
 			size_t start=token.getPosition();
 			LOG_IF(len==0xffffffff,Debug,verbose_info) << "Sequence of undefined length found (" << name << "), looking for items at " << start;
 			LOG_IF(len!=0xffffffff,Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start;
@@ -113,7 +113,7 @@ template<typename T> data::ValueArrayReference repackValueArray(data::ValueArray
 }
 template<typename T> data::ValueArrayReference repackValueArray(data::ValueArrayBase &data, bool invert){
 	data::ValueArrayReference ret=repackValueArray<T>(data);
-	
+
 	if(invert){
 		std::pair<util::ValueReference, util::ValueReference> minmax=ret->getMinMax();
 		const T min=minmax.first->as<T>();
@@ -132,7 +132,7 @@ class DicomChunk : public data::Chunk
 		auto rows=props.getValueAs<uint32_t>("Rows");
 		auto columns=props.getValueAs<uint32_t>("Columns");
 		//Number of Frames: 0028,0008
-		
+
 		//repack the pixel data into proper type
 		data::ValueArrayReference pixel;
 		auto color=props.getValueAs<std::string>("PhotometricInterpretation");
@@ -143,17 +143,17 @@ class DicomChunk : public data::Chunk
 		if(color=="COLOR" || color=="RGB"){
 			assert(signed_values==false);
 			switch(bits_allocated){
-				case  8:pixel=repackValueArray<util::color24>(data);break;
-				case 16:pixel=repackValueArray<util::color48>(data);break;
-				default:LOG(Runtime,error) << "Unsupportet bit-depth "<< bits_allocated << " for color image";
+			    case  8:pixel=repackValueArray<util::color24>(data);break;
+			    case 16:pixel=repackValueArray<util::color48>(data);break;
+			    default:LOG(Runtime,error) << "Unsupportet bit-depth "<< bits_allocated << " for color image";
 			}
 		}else if(color=="MONOCHROME2" || color=="MONOCHROME1"){
 			bool invert = (color=="MONOCHROME1");
 			switch(bits_allocated){
-				case  8:pixel=signed_values? repackValueArray< int8_t>(data):repackValueArray< uint8_t>(data,invert);break;
-				case 16:pixel=signed_values? repackValueArray<int16_t>(data):repackValueArray<uint16_t>(data,invert);break;
-				case 32:pixel=signed_values? repackValueArray<int32_t>(data):repackValueArray<uint32_t>(data,invert);break;
-				default:LOG(Runtime,error) << "Unsupportet bit-depth "<< bits_allocated << " for greyscale image";
+			    case  8:pixel=signed_values? repackValueArray< int8_t>(data):repackValueArray< uint8_t>(data,invert);break;
+			    case 16:pixel=signed_values? repackValueArray<int16_t>(data):repackValueArray<uint16_t>(data,invert);break;
+			    case 32:pixel=signed_values? repackValueArray<int32_t>(data):repackValueArray<uint32_t>(data,invert);break;
+			    default:LOG(Runtime,error) << "Unsupportet bit-depth "<< bits_allocated << " for greyscale image";
 			}
 		}else {
 			LOG(Runtime,error) << "Unsupportet photometric interpretation " << color;
@@ -174,18 +174,18 @@ public:
 		if(transferSyntax=="1.2.840.10008.1.2.4.90"){ //JPEG 2K
 			assert(data_elements.front()->getTypeID()==data::ByteArray::staticID());
 			static_cast<data::Chunk&>(*this)=
-					_internal::getj2k(data.castToValueArray<uint8_t>());
-			
-			LOG(Runtime,info) 
-				<< "Created " << this->getSizeAsString() << "-Image of type " << this->getTypeName() 
-				<< " from a " << data.getLength() << " bytes j2k stream";
-		} else 
+			        _internal::getj2k(data.castToValueArray<uint8_t>());
+
+			LOG(Runtime,info)
+			    << "Created " << this->getSizeAsString() << "-Image of type " << this->getTypeName()
+			    << " from a " << data.getLength() << " bytes j2k stream";
+		} else
 #endif //HAVE_OPENJPEG
 		{
 			static_cast<data::Chunk&>(*this)=getUncompressedPixel(data,props);
-			LOG(Runtime,info) 
-				<< "Created " << this->getSizeAsString() << "-Image of type " << this->getTypeName() 
-				<< " from a " << data.getLength() << " bytes of raw data";
+			LOG(Runtime,info)
+			    << "Created " << this->getSizeAsString() << "-Image of type " << this->getTypeName()
+			    << " from a " << data.getLength() << " bytes of raw data";
 		}
 		this->touchBranch(ImageFormat_Dicom::dicomTagTreeName)=props;
 	}
@@ -196,7 +196,7 @@ public:
 const char ImageFormat_Dicom::dicomTagTreeName[] = "DICOM";
 const char ImageFormat_Dicom::unknownTagName[] = "UnknownTag/";
 
-util::istring ImageFormat_Dicom::suffixes( io_modes modes )const 
+util::istring ImageFormat_Dicom::suffixes( io_modes modes )const
 {
 	if( modes == write_only )
 		return util::istring();
@@ -224,9 +224,9 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 			if( o_acDate ) { // add days since epoch from the date
 				const util::timestamp seqStart = o_seqStart->as<util::timestamp>()+o_acDate->as<util::date>().time_since_epoch();
 				object.setValueAs( "sequenceStart", seqStart);
-				LOG(Debug,verbose_info) 
-					<< "Merging Series Time " << *o_seqStart << " and Date " << *o_acDate << " as " 
-					<< std::make_pair("sequenceStart",object.property("sequenceStart"));
+				LOG(Debug,verbose_info)
+				    << "Merging Series Time " << *o_seqStart << " and Date " << *o_acDate << " as "
+				    << std::make_pair("sequenceStart",object.property("sequenceStart"));
 			}
 		}
 	}
@@ -238,9 +238,9 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 			if( o_acDate ) {
 				const util::timestamp acTime = o_acTime->as<util::timestamp>()+o_acDate->as<util::date>().time_since_epoch();
 				object.setValueAs<util::timestamp>("acquisitionTime", acTime);
-				LOG(Debug,verbose_info) 
-					<< "Merging Content Time " << *o_acTime << " and Date " << *o_acDate
-					<< " as " << std::make_pair("acquisitionTime",object.property("acquisitionTime"));
+				LOG(Debug,verbose_info)
+				    << "Merging Content Time " << *o_acTime << " and Date " << *o_acDate
+				    << " as " << std::make_pair("acquisitionTime",object.property("acquisitionTime"));
 			}
 		}
 	}
@@ -249,11 +249,11 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 	if ( hasOrTell( "StudyTime", dicomTree, warning ) && hasOrTell( "StudyDate", dicomTree, warning ) ) {
 		const util::date dt=dicomTree.getValueAs<util::date>("StudyDate");
 		const util::timestamp tm=dicomTree.getValueAs<util::timestamp>("StudyTime");
-			object.setValueAs("studyStart",tm+dt.time_since_epoch());
+		    object.setValueAs("studyStart",tm+dt.time_since_epoch());
 			dicomTree.remove("StudyTime");
 			dicomTree.remove("StudyDate");
 	}
-	
+
 	transformOrTell<int32_t>  ( prefix + "SeriesNumber",     "sequenceNumber",     object, warning );
 	transformOrTell<uint16_t>  ( prefix + "PatientsAge",     "subjectAge",     object, info );
 	transformOrTell<std::string>( prefix + "SeriesDescription", "sequenceDescription", object, warning );
@@ -271,7 +271,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 				std::swap( voxelSize[0], voxelSize[1] ); // the values are row-spacing (size in column dir) /column spacing (size in row dir)
 				break;
 			}
-			
+
 		}
 
 		if ( hasOrTell( prefix + "SliceThickness", object, warning ) ) {
@@ -280,7 +280,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 		} else {
 			voxelSize[2] = 1 / object.getValueAs<float>( "DICOM/CSASeriesHeaderInfo/SliceResolution" );
 		}
-		
+
 		object.setValueAs( "voxelSize", voxelSize );
 		transformOrTell<uint16_t>( prefix + "RepetitionTime", "repetitionTime", object, warning );
 		transformOrTell<float>( prefix + "EchoTime", "echoTime", object, warning );
@@ -292,9 +292,9 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 				dicomTree.remove( "SpacingBetweenSlices" );
 			} else
 				LOG( Runtime, warning )
-						<< "Cannot compute the voxel gap from the slice spacing ("
-						<< object.property( prefix + "SpacingBetweenSlices" )
-						<< "), because the slice thickness is not known";
+				        << "Cannot compute the voxel gap from the slice spacing ("
+				        << object.property( prefix + "SpacingBetweenSlices" )
+				        << "), because the slice thickness is not known";
 		}
 	}
 	transformOrTell<std::string>   ( prefix + "PerformingPhysiciansName", "performingPhysician", object, info );
@@ -431,14 +431,14 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 			dicomTree.remove( util::istring( unknownTagName ) + "(0019,1015)" );
 		else
 			LOG( Debug, warning )
-					<< prefix + util::istring( unknownTagName ) + "(0019,1015):" << dicomTree.property( util::istring( unknownTagName ) + "(0019,1015)" )
-					<< " differs from indexOrigin:" << object.property( "indexOrigin" ) << ", won't remove it";
+			        << prefix + util::istring( unknownTagName ) + "(0019,1015):" << dicomTree.property( util::istring( unknownTagName ) + "(0019,1015)" )
+			        << " differs from indexOrigin:" << object.property( "indexOrigin" ) << ", won't remove it";
 	}
 
 	if(
-		dicomTree.hasProperty( "SIEMENS CSA HEADER/MosaicRefAcqTimes" ) &&
-		dicomTree.hasProperty( util::istring( unknownTagName ) + "(0019,1029)" ) &&
-		dicomTree.property( util::istring( unknownTagName ) + "(0019,1029)" ) == dicomTree.property( "SIEMENS CSA HEADER/MosaicRefAcqTimes" )
+	    dicomTree.hasProperty( "SIEMENS CSA HEADER/MosaicRefAcqTimes" ) &&
+	    dicomTree.hasProperty( util::istring( unknownTagName ) + "(0019,1029)" ) &&
+	    dicomTree.property( util::istring( unknownTagName ) + "(0019,1029)" ) == dicomTree.property( "SIEMENS CSA HEADER/MosaicRefAcqTimes" )
 	) {
 		dicomTree.remove( util::istring( unknownTagName ) + "(0019,1029)" );
 	}
@@ -451,7 +451,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 			object.setValueAs( "fov", util::fvector3( {row, column, invalid_float} ) );
 		}
 	}
-	
+
 	auto windowCenterQuery=dicomTree.queryProperty("WindowCenter");
 	auto windowWidthQuery=dicomTree.queryProperty("WindowWidth");
 	if( windowCenterQuery && windowWidthQuery){
@@ -461,15 +461,15 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 		if(windowCenterVal->isFloat()){
 			windowCenter=windowCenterVal->as<double>();
 			dicomTree.remove("WindowCenter");
-		} else 
+		} else
 			windowCenter=windowCenterVal->as<util::dlist>().front(); // sometimes there are actually multiple windows, use the first
-			
+
 		if(windowWidthVal->isFloat()){
 			windowWidth=windowWidthVal->as<double>();
 			dicomTree.remove("WindowWidth");
-		} else 
+		} else
 			windowWidth = windowWidthVal->as<util::dlist>().front();
-			
+
 		object.setValueAs("window/min",windowCenter-windowWidth/2);
 		object.setValueAs("window/max",windowCenter+windowWidth/2);
 	}
@@ -497,7 +497,7 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 		LOG(Debug,warning) << "Guessing number of slices in the mosaic as " << images << ". This might be to many";
 	} else
 		images = source.getValueAs<uint16_t>( NumberOfImagesInMosaicProp );
-	
+
 	const util::vector4<size_t> tSize = source.getSizeAsVector();
 	const uint16_t matrixSize = std::ceil( std::sqrt( images ) );
 	const util::vector3<size_t> size( {tSize[0] / matrixSize, tSize[1] / matrixSize, images} );
@@ -551,8 +551,8 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 
 	// for every slice add acqTime to Multivalue
 
-	auto acqTimeQuery= dest.queryProperty( "acquisitionTime"); 
-	if(acqTimeQuery && haveAcqTimeList) 
+	auto acqTimeQuery= dest.queryProperty( "acquisitionTime");
+	if(acqTimeQuery && haveAcqTimeList)
 		*acqTimeQuery=util::PropertyValue(); //reset the selected ordering property to empty
 
 	for ( size_t slice = 0; slice < images; slice++ ) {
@@ -569,9 +569,9 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 		if(acqTimeQuery && haveAcqTimeList){
 			auto newtime=acqTime +  std::chrono::milliseconds((std::chrono::milliseconds::rep)* ( acqTimeIt ) );
 			acqTimeQuery->push_back(newtime);
-			LOG(Debug,verbose_info) 
-				<< "Computed acquisitionTime for slice " << slice << " as " << newtime
-				<< "(" << acqTime << "+" <<  std::chrono::milliseconds((std::chrono::milliseconds::rep)* ( acqTimeIt ) );
+			LOG(Debug,verbose_info)
+			    << "Computed acquisitionTime for slice " << slice << " as " << newtime
+			    << "(" << acqTime << "+" <<  std::chrono::milliseconds((std::chrono::milliseconds::rep)* ( acqTimeIt ) );
 			++acqTimeIt;
 		}
 	}
@@ -584,7 +584,7 @@ std::list<data::Chunk> ImageFormat_Dicom::load ( std::streambuf *source, std::li
 	std::basic_stringbuf<char> buff_stream;
 	boost::iostreams::copy(*source,buff_stream);
 	const auto buff = buff_stream.str();
-	
+
 	data::ValueArray<uint8_t> wrap((uint8_t*)buff.data(),buff.length(),data::ValueArray<uint8_t>::NonDeleter());
 	return load(wrap,formatstack,dialects,progress);
 }
@@ -595,14 +595,14 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 	const char prefix[4]={'D','I','C','M'};
 	if(memcmp(&source[128],prefix,4)!=0)
 		throwGenericError("Prefix \"DICM\" not found");
-	
+
 	size_t meta_info_length = _internal::DicomElement(source,128+4,boost::endian::order::little,false).getValue()->as<uint32_t>();
 	std::multimap<uint32_t,data::ValueArrayReference> data_elements;
-	
+
 	LOG(Debug,info)<<"Reading Meta Info begining at " << 158 << " length: " << meta_info_length-14;
 	_internal::DicomElement m(source,158,boost::endian::order::little,false);
 	util::PropertyMap meta_info=readStream(m,meta_info_length-14,data_elements);
-	
+
 	const auto transferSyntax= meta_info.getValueAsOr<std::string>("TransferSyntaxUID","1.2.840.10008.1.2");
 	boost::endian::order endian;
 	bool implicit_vr=false;
@@ -610,11 +610,11 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 		 endian=boost::endian::order::little;
 		 implicit_vr=true;
 	} else if(
-		transferSyntax.substr(0,19)=="1.2.840.10008.1.2.1" // Explicit VR Little Endian
+	    transferSyntax.substr(0,19)=="1.2.840.10008.1.2.1" // Explicit VR Little Endian
 #ifdef HAVE_OPENJPEG
-		|| transferSyntax=="1.2.840.10008.1.2.4.90" //JPEG 2000 Image Compression (Lossless Only)
+	    || transferSyntax=="1.2.840.10008.1.2.4.90" //JPEG 2000 Image Compression (Lossless Only)
 #endif //HAVE_OPENJPEG
-	){ 
+	){
 		 endian=boost::endian::order::little;
 	} else if(transferSyntax=="1.2.840.10008.1.2.2"){ //explicit big endian
 		 endian=boost::endian::order::big;
@@ -626,9 +626,9 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 	//the "real" dataset
 	LOG(Debug,info)<<"Reading dataset begining at " << 144+meta_info_length;
 	_internal::DicomElement dataset_token(source,144+meta_info_length,boost::endian::order::little,implicit_vr);
-	
+
 	util::PropertyMap props=_internal::readStream(dataset_token,source.getLength()-144-meta_info_length,data_elements);
-	
+
 	//extract CSA header from data_elements
 	auto private_code=props.queryProperty("Private Code for (0029,1000)-(0029,10ff)");
 	if(private_code && private_code->as<std::string>()=="SIEMENS CSA HEADER"){
@@ -638,7 +638,7 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 				util::PropertyMap &subtree=props.touchBranch(private_code->as<std::string>().c_str());
 				parseCSA(found->second->castToValueArray<uint8_t>(),subtree,dialects);
 				data_elements.erase(found);
-			} 
+			}
 		}
 	}
 
@@ -648,16 +648,32 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 		img_data.push_back(e_it->second);
 		data_elements.erase(e_it++);
 	}
-	
+
 	if(img_data.empty()){
 		throwGenericError("No image data found");
 	} else {
 		data::Chunk chunk(_internal::DicomChunk(std::move(img_data),transferSyntax,props));
-	
+
 		//we got a chunk from the file
 		sanitise( chunk, dialects );
 		const auto iType = chunk.queryValueAs<util::slist>( util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/" + "ImageType");
 
+		//handle philips scaling
+		float ri = chunk.getValueAsOr<float>("DICOM/Philips private sequence/Philips private sequence/RescaleIntercept",0);
+		float rs = chunk.getValueAsOr<float>("DICOM/Philips private sequence/Philips private sequence/RescaleSlope",1);
+
+		float si = chunk.getValueAsOr<float>("DICOM/UnknownTag/(2005,100d)",0);
+		float ss = chunk.getValueAsOr<float>("DICOM/UnknownTag/(2005,100e)",1);
+
+		data::scaling_pair scale(
+		    util::Value<float>(1/ss),
+		    util::Value<float>(-si/ss)
+		);
+
+		LOG( Runtime, info ) << "Applying Philips scaling of " << scale << " on data";
+		chunk.convertToType(data::ValueArray<float>::staticID(),scale);
+
+		//handle siemens mosaic data
 		if ( iType && std::find( iType->begin(), iType->end(), "MOSAIC" ) != iType->end() ) { // if we have an image type and its a mosaic
 			if( checkDialect(dialects, "keepmosaic") ) {
 				LOG( Runtime, info ) << "This seems to be an mosaic image, but dialect \"keepmosaic\" was selected";
@@ -665,17 +681,16 @@ std::list< data::Chunk > ImageFormat_Dicom::load(const data::ByteArray source, s
 			} else {
 				ret.push_back( readMosaic( chunk ) );
 			}
-		} else if(checkDialect(dialects, "forcemosaic") ) 
+		} else if(checkDialect(dialects, "forcemosaic") )
 			ret.push_back( readMosaic( chunk ) );
-		else 
+		else
 			ret.push_back( chunk );
-		
+
 		if( ret.back().hasProperty( "SiemensNumberOfImagesInMosaic" ) ) { // if its still there image was no mosaic, so I guess it should be used according to the standard
 			ret.back().rename( "SiemensNumberOfImagesInMosaic", "SliceOrientation" );
 		}
+	}
 
-	} 
-	
 	return ret;
 }
 
@@ -702,21 +717,21 @@ ImageFormat_Dicom::ImageFormat_Dicom()
 	_internal::dicom_dict[0x0019100c] = {"--","SiemensDiffusionBValue"};
 	_internal::dicom_dict[0x0019100e] = {"--","SiemensDiffusionGradientOrientation"};
 	_internal::dicom_dict.erase(0x00211010); // dcmtk says its ImageType but it isn't (at least not on Siemens)
-	
+
 	_internal::dicom_dict[0x00280106] = {"SS", "SmallestImagePixelValue"};
 	_internal::dicom_dict[0x00280107] = {"SS", "LargestImagePixelValue"};
-	
+
 	_internal::dicom_dict[0x00280108] = {"SS", "SmallestImagePixelValueInSeries"};
 	_internal::dicom_dict[0x00280109] = {"SS", "LargestImagePixelValueInSeries"};
-	
+
 	_internal::dicom_dict[0x00281050] = {"DS", "WindowCenter"};
 	_internal::dicom_dict[0x00281051] = {"DS", "WindowWidth"};
 
 	for( unsigned short i = 0x0010; i <= 0x00FF; i++ ) {
-		_internal::dicom_dict[0x00290000 + i] = 
-			{"--",util::istring( "Private Code for " ) + _internal::id2Name( 0x0029, i << 8 ) + "-" + _internal::id2Name( 0x0029, ( i << 8 ) + 0xFF )};
+		_internal::dicom_dict[0x00290000 + i] =
+		    {"--",util::istring( "Private Code for " ) + _internal::id2Name( 0x0029, i << 8 ) + "-" + _internal::id2Name( 0x0029, ( i << 8 ) + 0xFF )};
 	}
-	
+
 	//http://www.healthcare.siemens.com/siemens_hwem-hwem_ssxa_websites-context-root/wcm/idc/groups/public/@global/@services/documents/download/mdaw/mtiy/~edisp/2008b_ct_dicomconformancestatement-00073795.pdf
 	//@todo do we need this
 	for( unsigned short i = 0x0; i <= 0x02FF; i++ ) {
