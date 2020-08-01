@@ -134,7 +134,8 @@ struct Extractor {
 			return true;
 		else {
 			for (const PropertyMap::PropPath &p:to_extract) { // extract all memorized entries into branch "name" in out
-				LOG(Debug,verbose_info) << "Extracting " << p << " into " << name;
+				LOG_IF(!name.empty(),Debug,verbose_info) << "Extracting " << p << " into " << name;
+				LOG_IF(name.empty(),Debug,verbose_info) << "Extracting " << p << " into the root of the tree";
 				map.extract(p,name.empty()?out:out.touchBranch(name));
 			}
 			return false;
@@ -198,7 +199,7 @@ PropertyMap::mapped_type &PropertyMap::fetchEntry( container_type &root, const p
 	next++;
 
 	if ( next != pathEnd ) {//we are not at the end of the path (a proposed leaf in the PropMap)
-		const container_type::iterator found = root.find( *at );
+		const auto found = root.find( *at );
 		if ( found != root.end() ) {//and we found the entry
 			return fetchEntry( std::get<PropertyMap>( found->second ).container, next, pathEnd ); //continue there
 		} else { // if we should create a sub-map
@@ -240,7 +241,7 @@ bool PropertyMap::recursiveRemove( container_type &root, const propPathIterator 
 					root.erase( found ); // remove the now empty branch
 			} else {
 				LOG_IF( found->second.isBranch() && !found->second.branch().isEmpty(), Debug, warning )
-				        << "Deleting non-empty branch " << MSubject( found->first );
+					<< "Deleting non-empty branch " << MSubject( found->first );
 				root.erase( found );
 				ret = true;
 			}
@@ -654,9 +655,11 @@ bool PropertyMap::insert(const std::pair<PropPath,PropertyValue> &p){
 }
 
 void PropertyMap::extract(const PropPath &p,PropertyMap &dst){
-	auto found=findEntry(p);
+	Node &found=findEntry(p);
 	if(found){
-		dst.fetchEntry(p).swap(found);
+		Node &d_node=dst.fetchEntry(p);
+		assert(std::visit(IsEmpty(),d_node.variant()));
+		d_node.swap(found);
 		remove(p);
 	}
 }
