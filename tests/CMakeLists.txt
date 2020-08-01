@@ -18,10 +18,10 @@ if(BUILD_TESTING)
 
 	if(DOT_LIB OR DOT_A)
 		message(STATUS "${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} seems to be a static library wont use \"-DBOOST_TEST_DYN_LINK\"")
-	else(DOT_LIB OR DOT_A)
+	else()
 		add_definitions("-DBOOST_TEST_DYN_LINK")
 		message(STATUS "${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} seems to be a dynamic library adding \"-DBOOST_TEST_DYN_LINK\"")
-	endif(DOT_LIB OR DOT_A)
+	endif()
 
 	add_subdirectory(util)
 	add_subdirectory(data)
@@ -32,9 +32,9 @@ if(BUILD_TESTING)
 
 	if(ISIS_BUILD_FILTER )
 		add_subdirectory(Filter)
-	endif(ISIS_BUILD_FILTER)
+	endif()
 
-endif(BUILD_TESTING)
+endif()
 
 # addition option: build benchmarks
 option(ISIS_BUILD_BENCHMARKS "Build the ISIS stress tests. For internal use only" OFF)
@@ -42,4 +42,4 @@ option(ISIS_BUILD_BENCHMARKS "Build the ISIS stress tests. For internal use only
 if(ISIS_BUILD_BENCHMARKS)
   message(STATUS "Building stress tests")
   add_subdirectory(benchmarks)
-endif(ISIS_BUILD_BENCHMARKS)
+endif()

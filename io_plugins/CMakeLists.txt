@@ -41,7 +41,7 @@ if(ISIS_IOPLUGIN_FDF)
 	add_library(isisImageFormat_fdf SHARED imageFormat_fdf.cpp )
 	target_link_libraries(isisImageFormat_fdf ${isis_core_lib})
 	set(TARGETS ${TARGETS} isisImageFormat_fdf)
-endif(ISIS_IOPLUGIN_FDF)
+endif()
 
 ############################################################
 # NIFTI plugin
@@ -50,7 +50,7 @@ if(ISIS_IOPLUGIN_NIFTI_SA)
 	add_library(isisImageFormat_Nifti_sa SHARED imageFormat_nifti_sa.cpp imageFormat_nifti_dcmstack.cpp )
 	target_link_libraries(isisImageFormat_Nifti_sa ${isis_core_lib} ${isis_math_lib})
 	set(TARGETS ${TARGETS} isisImageFormat_Nifti_sa)
-endif(ISIS_IOPLUGIN_NIFTI_SA)
+endif()
 
 ############################################################
 # orthanc plugin
@@ -60,7 +60,7 @@ if(ISIS_IOPLUGIN_ORTHANC)
 	set_target_properties(isisImageFormat_orthanc PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${INC_JSONCPP}")
 	target_link_libraries(isisImageFormat_orthanc ${isis_core_lib} ACE ACE_INet jsoncpp Threads::Threads)
 	set(TARGETS ${TARGETS} isisImageFormat_orthanc)
-endif(ISIS_IOPLUGIN_ORTHANC)
+endif()
 
 ############################################################
 # TIFF plugin
@@ -73,7 +73,7 @@ if(ISIS_IOPLUGIN_TIFF_SA)
 	set_target_properties(isisImageFormat_tiff_sa PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${TJPEG_INCLUDE_DIR}")
 	target_link_libraries(isisImageFormat_tiff_sa ${TJPEG_LIBRARY} ${isis_core_lib})
 	set(TARGETS ${TARGETS} isisImageFormat_tiff_sa)
-endif(ISIS_IOPLUGIN_TIFF_SA)
+endif()
 
 if(ISIS_IOPLUGIN_ZISRAW)
 	find_path(JXR_INCLUDE_DIR "JXRGlue.h" PATH_SUFFIXES "jxrlib" DOC "libjxr include path")
@@ -89,7 +89,7 @@ if(ISIS_IOPLUGIN_ZISRAW)
 	
 	target_link_libraries(isisImageFormat_ZISRAW ${isis_core_lib} ${JXR_GLUE_LIBRARY} ${JXR_LIBRARY} Threads::Threads)
 	set(TARGETS ${TARGETS} isisImageFormat_ZISRAW)
-endif(ISIS_IOPLUGIN_ZISRAW)
+endif()
 
 if(ISIS_IOPLUGIN_VISTA_SA)
 	option(REGEN_PARSER "Regenerate the parser files" OFF)
@@ -124,7 +124,7 @@ if(ISIS_IOPLUGIN_VISTA_SA)
 	)
 	target_link_libraries(isisImageFormat_Vista_sa ${isis_core_lib})
 	set(TARGETS ${TARGETS} isisImageFormat_Vista_sa)
-endif(ISIS_IOPLUGIN_VISTA_SA)
+endif()
 
 
 ############################################################
@@ -134,7 +134,7 @@ if(ISIS_IOPLUGIN_NULL)
   add_library(isisImageFormat_Null SHARED imageFormat_Null.cpp)
   target_link_libraries(isisImageFormat_Null ${isis_core_lib})
   set(TARGETS ${TARGETS} isisImageFormat_Null)
-endif(ISIS_IOPLUGIN_NULL)
+endif()
 
 ############################################################
 # PNG plugin
@@ -146,7 +146,7 @@ if(ISIS_IOPLUGIN_PNG)
 	target_link_libraries(isisImageFormat_png ${isis_core_lib} PNG::PNG Threads::Threads)
 
 	set(TARGETS ${TARGETS} isisImageFormat_png)
-endif(ISIS_IOPLUGIN_PNG)
+endif()
 
 ############################################################
 # ImageMagic plugin
@@ -161,7 +161,7 @@ if(ISIS_IOPLUGIN_IMAGEMAGIC)
 	add_definitions("-DMAGICKCORE_HDRI_ENABLE=0" "-DMAGICKCORE_QUANTUM_DEPTH=16")
 
 	set(TARGETS ${TARGETS} isisImageFormat_ImageMagick)
-endif(ISIS_IOPLUGIN_IMAGEMAGIC)
+endif()
 
 ############################################################
 # COMP proxy plugin
@@ -187,7 +187,7 @@ if(ISIS_IOPLUGIN_COMP)
 
 	target_link_libraries(isisImageFormat_comp_proxy ${isis_core_lib} ZLIB::ZLIB ${BZIP2_LIBRARIES} Boost::iostreams)
 	set(TARGETS ${TARGETS} isisImageFormat_comp_proxy)
-endif(ISIS_IOPLUGIN_COMP)
+endif()
 
 ############################################################
 # TAR proxy plugin
@@ -196,7 +196,7 @@ if(ISIS_IOPLUGIN_TAR)
   add_library(isisImageFormat_tar_proxy SHARED imageFormat_tar.cpp)
   target_link_libraries(isisImageFormat_tar_proxy ${isis_core_lib} Boost::iostreams)
   set(TARGETS ${TARGETS} isisImageFormat_tar_proxy)
-endif(ISIS_IOPLUGIN_TAR)
+endif()
 
 ############################################################
 # FLIST proxy plugin
@@ -205,7 +205,7 @@ if(ISIS_IOPLUGIN_FLIST)
 	add_library(isisImageFormat_flist SHARED imageFormat_flist.cpp)
 	target_link_libraries(isisImageFormat_flist ${isis_core_lib})
 	set(TARGETS ${TARGETS} isisImageFormat_flist)
-endif(ISIS_IOPLUGIN_FLIST)
+endif()
 
 ############################################################
 # Dicom
@@ -226,30 +226,30 @@ if(ISIS_IOPLUGIN_DICOM)
 		target_link_libraries(isisImageFormat_Dicom PRIVATE ${isis_core_lib})
 	endif(OPENJPEG_INCLUDE_DIR AND OPENJPEG_INCLUDE_DIR)
 	set(TARGETS ${TARGETS} isisImageFormat_Dicom)
-endif(ISIS_IOPLUGIN_DICOM)
+endif()
 
 ###########################################################################
 # prepare all plugins for installation
 ###########################################################################
 if(WIN32)
 message(STATUS "Installing following plugins to ${CMAKE_INSTALL_PREFIX}/bin")
-else(WIN32)
+else()
 message(STATUS "Installing following plugins to ${CMAKE_INSTALL_PREFIX}/${ISIS_PLUGIN_INFIX}")
-endif(WIN32)
+endif()
 
 foreach(PLUGIN ${TARGETS})
   message(STATUS " == ${PLUGIN}")
   set_target_properties(${PLUGIN} PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
-endforeach(PLUGIN)
+endforeach()
 
 ###########################################################
 # actual install
 ###########################################################
 if(WIN32)
 install(TARGETS ${TARGETS} RUNTIME DESTINATION bin COMPONENT "IO_plugins")
-else(WIN32)
+else()
 install(TARGETS ${TARGETS} DESTINATION ${ISIS_PLUGIN_INFIX} COMPONENT "IO_plugins" )
-endif(WIN32)
+endif()
 
 # # uninstall target
 # configure_file(
