@@ -19,8 +19,6 @@ if(ISIS_QT5)
 	set(CMAKE_AUTOMOC ON)
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-	add_definitions(${Qt5Widgets_DEFINITIONS})
-
 	file(GLOB ISIS_QT5_LIBRARY_FILES "qt5/*.cpp")
 	file(GLOB ISIS_QT5_HEADER_FILES "qt5/*.hpp")
 	
@@ -32,7 +30,7 @@ if(ISIS_QT5)
 
 	# export header files
 	install(FILES ${ISIS_QT5_HEADER_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/isis/adapter/qt5 COMPONENT Development)
-endif(ISIS_QT5)
+endif()
 
 option(ISIS_ITK "Enable adapter to the ITK library" OFF)
 
@@ -54,7 +52,7 @@ if(ISIS_ITK)
 
 	# export header files
 	install(FILES ${ISIS_ITK_HEADER_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/isis/adapter/itk4 COMPONENT Development)
-endif(ISIS_ITK)
+endif()
 
 ############################################################
 # Install header and helper files

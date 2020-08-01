@@ -53,7 +53,7 @@ if(ISIS_QT5)
 
 	install(TARGETS isisview RUNTIME DESTINATION bin COMPONENT "CLI_Tools")
 	build_manpage(isisview "display MRI data")
-endif(ISIS_QT5)
+endif()
 
 if(ISIS_ITK)
 	add_executable(isistransform isistransform.cpp)
@@ -62,7 +62,7 @@ if(ISIS_ITK)
 	
 	install(TARGETS isistransform RUNTIME DESTINATION bin COMPONENT "CLI_Tools")
 	build_manpage(isistransform "geometricaly transform MR images")
-endif(ISIS_ITK)
+endif()
 
 ############################################################
 # optional components
@@ -84,5 +84,5 @@ if(ISIS_CALC)
 
 	install(TARGETS isiscalc RUNTIME DESTINATION bin COMPONENT "CLI Tools")
 	build_manpage(isiscalc "do math on image voxels (based on muparser)")
-endif(ISIS_CALC)
+endif()
 
