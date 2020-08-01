@@ -2,16 +2,14 @@
 #include <isis/core/io_interface.h>
 #include <isis/core/io_factory.hpp>
 #include <isis/core/tmpfile.hpp>
-#include <isis/core/io_factory.hpp>
 
 #include <filesystem>
-
+#include <fstream>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/copy.hpp>
 
-#include <boost/filesystem/fstream.hpp>
 #include <isis/core/fileptr.hpp>
 #include <boost/iostreams/categories.hpp>  // tags
 
@@ -19,9 +17,7 @@
 #include "imageFormat_compressed_lzma.hpp"
 #endif //HAVE_LZMA
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 namespace _internal
 {
@@ -102,7 +98,7 @@ public:
 	}
 	std::list<data::Chunk> load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override{
 		//try open file
-		std::ifstream file(filename.c_str());
+		std::ifstream file(filename);
 		file.exceptions(std::ios_base::badbit);
 
 		// set up progress bar if its enabled but don't fiddle with it if its set up already
@@ -142,7 +138,7 @@ public:
 
 		// set up the compression stream
 		std::ifstream input( tmpFile, std::ios_base::binary );
-		std::ofstream output( filename.c_str(), std::ios_base::binary );
+		std::ofstream output( filename, std::ios_base::binary );
 		input.exceptions( std::ios::badbit );
 		output.exceptions( std::ios::badbit );
 
@@ -166,7 +162,6 @@ public:
 		boost::iostreams::copy( input, out );
 	}
 };
-}
 }
 isis::image_io::FileFormat *factory()
 {
