@@ -135,7 +135,7 @@ std::string Message::merge(const std::string color_code)const
 	
 	std::string ret( str() );
 	size_t found = std::string::npos;
-	std::list<std::string>::const_iterator subj = m_subjects.begin();
+	auto subj = m_subjects.begin();
 
 	if ( ( found = ret.find( "{o}" ) ) != std::string::npos ){
 		ret.replace( found, 3, m_object );
@@ -145,13 +145,9 @@ std::string Message::merge(const std::string color_code)const
 	found = 0;
 
 	while ( ( found = ret.find( "{s}", found ) ) != std::string::npos ){
-		if(subj->empty())
-			ret.erase(found, 3);
-		else {
-			std::string insert=s_prefix + * ( subj++ ) + s_suffix;
-			ret.replace( found, 3, insert );
-			found+=insert.length();
-		}
+		std::string insert=s_prefix + * ( subj++ ) + s_suffix;
+		ret.replace( found, 3, insert );
+		found+=insert.length();
 	}
 
 	return  color_code+ret+reset_code;
