@@ -1,14 +1,8 @@
-#ifndef ENDIANESS_HPP
-#define ENDIANESS_HPP
-
+#pragma  once
 #include "types.hpp"
 #include "value.hpp"
 #include "common.hpp"
 #include <type_traits>
-
-#ifdef HAVE_BYTESWAP
-#include <byteswap.h>
-#endif //HAVE_BYTESWAP
 
 namespace isis
 {
@@ -37,7 +31,8 @@ template<> struct SwapImpl<1> {
 	template<typename TYPE> static TYPE doSwap( const TYPE &src ) {return src;}
 };
 
-#ifdef HAVE_BYTESWAP
+#if __has_include(<byteswap.h>)
+#include <byteswap.h>
 //specializations for 16 32 and 64 bit
 template<> struct SwapImpl<2> {
 	template<typename TYPE> static TYPE doSwap( const TYPE &src ) {
@@ -57,7 +52,7 @@ template<> struct SwapImpl<8> {
 		return *reinterpret_cast<const TYPE *>( &swapped );
 	}
 };
-#endif //HAVE_BYTESWAP
+#endif //__has_include(<byteswap.h>)
 
 
 
@@ -119,4 +114,3 @@ template<typename ITER, typename TITER> static  void endianSwapArray( const ITER
 
 }
 }
-#endif //ENDIANESS_HPP
