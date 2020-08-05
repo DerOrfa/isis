@@ -56,20 +56,7 @@ endif()
 ############################################################
 # build the math library
 ############################################################
-
-# add source files to this parameter list
-file(GLOB SRC_FILES ${_CPP_GLOB})
-file(GLOB HDR_FILES ${_HPP_GLOB})
-
-#add the core library
-add_lib(isis_math "${SRC_FILES}" "" "${isis_core_lib};${_DEPENDS}" ${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API})
-
-############################################################
-# Installation
-############################################################
-
-# install header files
-install(FILES ${HDR_FILES} DESTINATION include/isis/math COMPONENT Development)
+add_lib(isis_math "${_CPP_GLOB}" "${_HPP_GLOB}" "isis/math" "${isis_core_lib}" "${_DEPENDS}" ${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API})
 
 # write configuration file
 configure_file(isis_mathcfg.cmake.in ${CMAKE_BINARY_DIR}/ISISMathConfig.cmake @ONLY)

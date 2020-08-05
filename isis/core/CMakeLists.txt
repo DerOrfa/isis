@@ -18,10 +18,6 @@ else()
 	set(CURSES_LIBRARIES "")
 endif()
 
-# add source files to this parameter list
-file(GLOB CORE_SRC_FILES "*.cpp")
-file(GLOB CORE_HDR_FILES "*.hpp" "*.h")
-
 ############################################################
 # check for liborc
 ############################################################
@@ -53,14 +49,14 @@ set_source_files_properties( "valuearray_minmax.cpp" PROPERTIES COMPILE_FLAGS "-
 
 #add the core library
 add_lib(isis_core
-	"${CORE_SRC_FILES}"
+	"*.cpp" "*.hpp;*.h" "isis"
 	"Boost::headers;${CURSES_LIBRARIES}" #deps
 	"${LIBORC_LIB};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads;$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>" #private deps
 	${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API}
 )
 
 ############################################################
-# set the plugin directory and the system dependend shared
+# set the plugin directory and the system dependent shared
 # library naming conventions for data/io_factory.cpp
 ############################################################
 if(WIN32)
@@ -76,9 +72,6 @@ endif()
 ############################################################
 # Installation
 ############################################################
-
-# install header files
-install(FILES ${CORE_HDR_FILES} DESTINATION include/isis/core COMPONENT Development)
 
 # write configuration file
 configure_file(isis_corecfg.cmake.in ${CMAKE_BINARY_DIR}/ISISCoreConfig.cmake @ONLY)

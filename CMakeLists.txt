@@ -39,21 +39,10 @@ add_definitions(-D_ISIS_VERSION_PATCH=${ISIS_VERSION_PATCH})
 
 
 set(ISIS_CORE_VERSION_API "4.0.0")
-set(ISIS_QT_VERSION_API "0.0.0")
-string( REGEX MATCH "^[0-9]+" ISIS_QT_VERSION_SO ${ISIS_QT_VERSION_API})
 string( REGEX MATCH "^[0-9]+" ISIS_CORE_VERSION_SO ${ISIS_CORE_VERSION_API})
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED yes)
-
-############################################################
-# check for byteswap intrinsics
-############################################################
-CHECK_INCLUDE_FILES(byteswap.h HAVE_BYTESWAP)
-
-if(HAVE_BYTESWAP)
-	add_definitions(-DHAVE_BYTESWAP)
-endif()
 
 if(NOT WIN32)
 ############################################################
