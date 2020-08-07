@@ -4,9 +4,7 @@
 #include <string>
 #include <isis/core/selection.hpp>
 
-namespace isis
-{
-namespace test
+namespace isis::test
 {
 
 BOOST_AUTO_TEST_CASE( test_selection_init )
@@ -36,6 +34,5 @@ BOOST_AUTO_TEST_CASE( test_selection_copy )
 	sel = copy;
 	BOOST_CHECK_EQUAL( sel, "Val1" );
 	BOOST_CHECK_EQUAL( sel, 1 );
-}
 }
 }

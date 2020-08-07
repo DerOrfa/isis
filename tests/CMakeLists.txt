@@ -8,7 +8,14 @@
 # 
 ############################################################
 
-include_directories(${CMAKE_SOURCE_DIR})
+#makes and registers tests that need nothing but isis_core
+macro( makeTest filename)
+	get_filename_component(testname ${filename} NAME_WE)
+
+	add_executable( ${testname} ${filename} )
+	target_link_libraries( ${testname} isis_core Boost::unit_test_framework )
+	add_test(NAME ${testname} COMMAND ${testname})
+endmacro()
 
 if(BUILD_TESTING)
 	message(STATUS "Unit tests will be built (run with \"make test\")")

@@ -27,9 +27,7 @@
 #include <term.h>
 #endif
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 namespace _internal
 {
@@ -248,5 +246,4 @@ void DefaultMsgPrint::commit_pipe(const Message& mesg)
 	);
 }
 
-}
 }

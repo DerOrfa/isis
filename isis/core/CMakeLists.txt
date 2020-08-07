@@ -1,5 +1,5 @@
 ############################################################
-# build the core library
+# find jsoncpp
 ############################################################
 find_library(LIB_JSONCPP jsoncpp)
 find_path(INC_JSONCPP "json/config.h" PATH_SUFFIXES "jsoncpp" DOC "path where json/config.h can be found")
@@ -11,7 +11,6 @@ include_directories(${INC_JSONCPP})
 find_package(Curses QUIET)
 if(CURSES_LIBRARIES)
 	include_directories(${CURSES_CURSES_H_PATH})
-	add_definitions(-DHAVE_CURSES)
 	message(STATUS "curses form libraries ${CURSES_LIBRARIES} found. Enable colored logging.")
 else()
 	message(STATUS "curses form library not found. Logging won't be colored.")
@@ -47,11 +46,15 @@ endif()
 #see also https://stackoverflow.com/questions/41676311
 set_source_files_properties( "valuearray_minmax.cpp" PROPERTIES COMPILE_FLAGS "-Wno-ignored-attributes")
 
+if(CURSES_LIBRARIES)
+set_source_files_properties( "message.cpp" PROPERTIES COMPILE_FLAGS "-DHAVE_CURSES")
+endif()
+
 #add the core library
 add_lib(isis_core
-	"*.cpp" "*.hpp;*.h" "isis"
-	"Boost::headers;${CURSES_LIBRARIES}" #deps
-	"${LIBORC_LIB};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads;$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>" #private deps
+	"*.cpp" "*.hpp;*.h" "isis/core"
+	"Boost::headers" #deps
+	"${LIBORC_LIB};${CURSES_LIBRARIES};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads;$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>" #private deps
 	${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API}
 )
 
@@ -68,11 +71,3 @@ set_source_files_properties( "io_factory.cpp" PROPERTIES COMPILE_FLAGS
 	"-DPLUGIN_PATH=\\\"${CMAKE_INSTALL_PREFIX}/${ISIS_PLUGIN_INFIX}\\\" -DDL_SUFFIX=\\\"${CMAKE_SHARED_LIBRARY_SUFFIX}\\\" -DDL_PREFIX=\\\"${CMAKE_SHARED_LIBRARY_PREFIX}\\\""
 )
 endif()
-
-############################################################
-# Installation
-############################################################
-
-# write configuration file
-configure_file(isis_corecfg.cmake.in ${CMAKE_BINARY_DIR}/ISISCoreConfig.cmake @ONLY)
-install(FILES ${CMAKE_BINARY_DIR}/ISISCoreConfig.cmake DESTINATION share/isis/cmake COMPONENT Development)

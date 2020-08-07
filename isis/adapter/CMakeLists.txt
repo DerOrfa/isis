@@ -50,7 +50,3 @@ if(ISIS_ITK)
 		"0.0.0" "0.0.0"
 	)
 endif()
-
-# write configuration file
-configure_file(isis_adaptercfg.cmake.in ${CMAKE_BINARY_DIR}/ISISAdapterConfig.cmake @ONLY)
-install(FILES ${CMAKE_BINARY_DIR}/ISISAdapterConfig.cmake DESTINATION share/isis/cmake COMPONENT Development)
