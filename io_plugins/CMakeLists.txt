@@ -39,7 +39,7 @@ option(ISIS_IOPLUGIN_FLIST "Enable proxy plugin which gets filenames from a file
 ############################################################
 if(ISIS_IOPLUGIN_FDF)
 	add_library(isisImageFormat_fdf SHARED imageFormat_fdf.cpp )
-	target_link_libraries(isisImageFormat_fdf ${isis_core_lib})
+	target_link_libraries(isisImageFormat_fdf isis_core)
 	set(TARGETS ${TARGETS} isisImageFormat_fdf)
 endif()
 
@@ -48,7 +48,7 @@ endif()
 ############################################################
 if(ISIS_IOPLUGIN_NIFTI_SA)
 	add_library(isisImageFormat_Nifti_sa SHARED imageFormat_nifti_sa.cpp imageFormat_nifti_dcmstack.cpp )
-	target_link_libraries(isisImageFormat_Nifti_sa ${isis_core_lib} ${isis_math_lib})
+	target_link_libraries(isisImageFormat_Nifti_sa isis_math)
 	set(TARGETS ${TARGETS} isisImageFormat_Nifti_sa)
 endif()
 
@@ -58,7 +58,7 @@ endif()
 if(ISIS_IOPLUGIN_ORTHANC)
 	add_library(isisImageFormat_orthanc SHARED imageFormat_orthanc.cpp )
 	set_target_properties(isisImageFormat_orthanc PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${INC_JSONCPP}")
-	target_link_libraries(isisImageFormat_orthanc ${isis_core_lib} ACE ACE_INet jsoncpp Threads::Threads)
+	target_link_libraries(isisImageFormat_orthanc isis_core ACE ACE_INet jsoncpp Threads::Threads)
 	set(TARGETS ${TARGETS} isisImageFormat_orthanc)
 endif()
 
@@ -71,7 +71,7 @@ if(ISIS_IOPLUGIN_TIFF_SA)
 
 	add_library(isisImageFormat_tiff_sa SHARED imageFormat_tiff_sa.cpp )
 	set_target_properties(isisImageFormat_tiff_sa PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${TJPEG_INCLUDE_DIR}")
-	target_link_libraries(isisImageFormat_tiff_sa ${TJPEG_LIBRARY} ${isis_core_lib})
+	target_link_libraries(isisImageFormat_tiff_sa ${TJPEG_LIBRARY} isis_core)
 	set(TARGETS ${TARGETS} isisImageFormat_tiff_sa)
 endif()
 
@@ -87,7 +87,7 @@ if(ISIS_IOPLUGIN_ZISRAW)
 	add_library(isisImageFormat_ZISRAW SHARED imageFormat_ZISRAW.cpp imageFormat_ZISRAW_jxr.c)
 	set_target_properties(isisImageFormat_ZISRAW PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${JXR_INCLUDE_DIR};${JXR_WINDOWSMEDIAPHOTO_DIR};${JXR_WMSPECSTRING_DIR}")
 	
-	target_link_libraries(isisImageFormat_ZISRAW ${isis_core_lib} ${JXR_GLUE_LIBRARY} ${JXR_LIBRARY} Threads::Threads)
+	target_link_libraries(isisImageFormat_ZISRAW isis_core ${JXR_GLUE_LIBRARY} ${JXR_LIBRARY} Threads::Threads)
 	set(TARGETS ${TARGETS} isisImageFormat_ZISRAW)
 endif()
 
@@ -122,7 +122,7 @@ if(ISIS_IOPLUGIN_VISTA_SA)
 		Vista_sa/imageFormat_Vista_sa.cpp Vista_sa/vistaprotoimage.cpp 
 		Vista_sa/lex.cc Vista_sa/parse.cc
 	)
-	target_link_libraries(isisImageFormat_Vista_sa ${isis_core_lib})
+	target_link_libraries(isisImageFormat_Vista_sa isis_core)
 	set(TARGETS ${TARGETS} isisImageFormat_Vista_sa)
 endif()
 
@@ -132,7 +132,7 @@ endif()
 ############################################################
 if(ISIS_IOPLUGIN_NULL)
   add_library(isisImageFormat_Null SHARED imageFormat_Null.cpp)
-  target_link_libraries(isisImageFormat_Null ${isis_core_lib})
+  target_link_libraries(isisImageFormat_Null isis_core)
   set(TARGETS ${TARGETS} isisImageFormat_Null)
 endif()
 
@@ -143,7 +143,7 @@ if(ISIS_IOPLUGIN_PNG)
 	find_package(PNG REQUIRED)
 
 	add_library(isisImageFormat_png SHARED imageFormat_png.cpp)
-	target_link_libraries(isisImageFormat_png ${isis_core_lib} PNG::PNG Threads::Threads)
+	target_link_libraries(isisImageFormat_png isis_core PNG::PNG Threads::Threads)
 
 	set(TARGETS ${TARGETS} isisImageFormat_png)
 endif()
@@ -156,7 +156,7 @@ if(ISIS_IOPLUGIN_IMAGEMAGIC)
 
 	add_library(isisImageFormat_ImageMagick SHARED imageFormat_ImageMagick.cpp)
 	set_target_properties(isisImageFormat_ImageMagick PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${ImageMagick_INCLUDE_DIRS}")
-	target_link_libraries(isisImageFormat_ImageMagick ${isis_core_lib} ${ImageMagick_LIBRARIES})
+	target_link_libraries(isisImageFormat_ImageMagick isis_core ${ImageMagick_LIBRARIES})
 
 	add_definitions("-DMAGICKCORE_HDRI_ENABLE=0" "-DMAGICKCORE_QUANTUM_DEPTH=16")
 
@@ -185,7 +185,7 @@ if(ISIS_IOPLUGIN_COMP)
 		target_include_directories(isisImageFormat_comp_proxy PRIVATE ${INCPATH_LZMA})
 	endif(ISIS_IOPLUGIN_COMP_LZMA)
 
-	target_link_libraries(isisImageFormat_comp_proxy ${isis_core_lib} ZLIB::ZLIB ${BZIP2_LIBRARIES} Boost::iostreams)
+	target_link_libraries(isisImageFormat_comp_proxy isis_core ZLIB::ZLIB ${BZIP2_LIBRARIES} Boost::iostreams)
 	set(TARGETS ${TARGETS} isisImageFormat_comp_proxy)
 endif()
 
@@ -194,7 +194,7 @@ endif()
 ############################################################
 if(ISIS_IOPLUGIN_TAR)
   add_library(isisImageFormat_tar_proxy SHARED imageFormat_tar.cpp)
-  target_link_libraries(isisImageFormat_tar_proxy ${isis_core_lib} Boost::iostreams)
+  target_link_libraries(isisImageFormat_tar_proxy isis_core Boost::iostreams)
   set(TARGETS ${TARGETS} isisImageFormat_tar_proxy)
 endif()
 
@@ -203,7 +203,7 @@ endif()
 ############################################################
 if(ISIS_IOPLUGIN_FLIST)
 	add_library(isisImageFormat_flist SHARED imageFormat_flist.cpp)
-	target_link_libraries(isisImageFormat_flist ${isis_core_lib})
+	target_link_libraries(isisImageFormat_flist isis_core)
 	set(TARGETS ${TARGETS} isisImageFormat_flist)
 endif()
 
@@ -220,10 +220,10 @@ if(ISIS_IOPLUGIN_DICOM)
 		target_compile_definitions(isisImageFormat_Dicom PRIVATE "HAVE_OPENJPEG")
 		target_sources(isisImageFormat_Dicom PRIVATE imageFormat_DicomJ2k.cpp)
 		target_include_directories(isisImageFormat_Dicom PRIVATE ${OPENJPEG_INCLUDE_DIR})
-		target_link_libraries(isisImageFormat_Dicom PRIVATE ${isis_core_lib} ${OPENJPEG_LIBRARY})
+		target_link_libraries(isisImageFormat_Dicom PRIVATE isis_core ${OPENJPEG_LIBRARY})
 	else(OPENJPEG_INCLUDE_DIR AND OPENJPEG_INCLUDE_DIR)
 		message(WARNING "OpenJPEG not found, support for j2k-streams in dicom import (transfer syntax 1.2.840.10008.1.2.4.90) disabled")
-		target_link_libraries(isisImageFormat_Dicom PRIVATE ${isis_core_lib})
+		target_link_libraries(isisImageFormat_Dicom PRIVATE isis_core)
 	endif(OPENJPEG_INCLUDE_DIR AND OPENJPEG_INCLUDE_DIR)
 	set(TARGETS ${TARGETS} isisImageFormat_Dicom)
 endif()

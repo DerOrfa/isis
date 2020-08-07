@@ -21,14 +21,14 @@ add_executable( selectionTest selectionTest.cpp )
 add_executable( commonTest commonTest.cpp )
 add_executable( istringTest istringTest.cpp )
 
-target_link_libraries( commonTest ${Boost_LIBRARIES} ${isis_core_lib} )
-target_link_libraries( propertyTest ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries( valueTest ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries( vectorTest ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries( propMapTest ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries( singletonTest ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries( selectionTest ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries( istringTest ${Boost_LIBRARIES} ${isis_core_lib})
+target_link_libraries( commonTest isis_core Boost::unit_test_framework )
+target_link_libraries( propertyTest isis_core Boost::unit_test_framework  )
+target_link_libraries( valueTest isis_core Boost::unit_test_framework)
+target_link_libraries( vectorTest isis_core Boost::unit_test_framework)
+target_link_libraries( propMapTest isis_core Boost::unit_test_framework)
+target_link_libraries( singletonTest isis_core Boost::unit_test_framework)
+target_link_libraries( selectionTest isis_core Boost::unit_test_framework)
+target_link_libraries( istringTest isis_core Boost::unit_test_framework)
 
 ############################################################
 # add ctest targets

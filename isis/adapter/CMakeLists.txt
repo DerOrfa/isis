@@ -20,13 +20,19 @@ if(ISIS_QT5)
 	find_package(Qt5Widgets)
 
 	set(CMAKE_AUTOMOC ON)
-	add_lib(isis_adapter_qt5
+	add_lib(isis_qt5
 		"qt5/*.cpp" "qt5/*.hpp" "isis/adapter/qt5"
-		"${isis_core_lib};Qt5::Widgets" "Threads::Threads"
+		"isis_core-TYPE;Qt5::Widgets" "Threads::Threads"
 		${ISIS_QT_VERSION_SO} ${ISIS_QT_VERSION_API}
 	)
 	#qt puts its moc-results into the build directory, we need to find them there
-	target_include_directories(${isis_adapter_qt5_lib} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+	if(TARGET isis_qt5-STATIC)
+		target_include_directories(isis_qt5-STATIC PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+	endif()
+	if(TARGET isis_qt5-SHARED)
+		target_include_directories(isis_qt5-SHARED PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+	endif()
+
 endif()
 
 #option(ISIS_ITK "Enable adapter to the ITK library" OFF) #disabled for now
@@ -38,9 +44,9 @@ if(ISIS_ITK)
 	set_property(TARGET ITKCommon APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ITK_INCLUDE_DIRS})
 	set_property(TARGET ITKTransform APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ITK_INCLUDE_DIRS})
 
-	add_lib(isis_adapter_itk4
+	add_lib(isis_itk4
 		"itk4/*.cpp" "itk4/*.hpp" "isis/adapter/itk4"
-		"${isis_core_lib};${isis_math_lib}" "ITKCommon;ITKTransform"
+		"isis_core-TYPE;isis_math-TYPE" "ITKCommon;ITKTransform"
 		"0.0.0" "0.0.0"
 	)
 endif()

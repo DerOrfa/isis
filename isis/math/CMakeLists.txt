@@ -56,7 +56,7 @@ endif()
 ############################################################
 # build the math library
 ############################################################
-add_lib(isis_math "${_CPP_GLOB}" "${_HPP_GLOB}" "isis/math" "${isis_core_lib}" "${_DEPENDS}" ${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API})
+add_lib(isis_math "${_CPP_GLOB}" "${_HPP_GLOB}" "isis/math" "isis_core" "${_DEPENDS}" ${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API})
 
 # write configuration file
 configure_file(isis_mathcfg.cmake.in ${CMAKE_BINARY_DIR}/ISISMathConfig.cmake @ONLY)
