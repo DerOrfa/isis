@@ -26,7 +26,6 @@ if(BUILD_TESTING)
 	add_subdirectory(util)
 	add_subdirectory(data)
 	add_subdirectory(io)
-	add_subdirectory(ExternalLibraryAdapter)
 	add_subdirectory(math)
 	add_subdirectory(adapter)
 

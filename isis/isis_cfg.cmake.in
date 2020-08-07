@@ -2,13 +2,10 @@
 # ISIS cmake configuration file
 #
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED yes)
+get_filename_component(ISIS_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
 
-SET(ISIS_INSTALL_PREFIX @CMAKE_INSTALL_PREFIX@)
-SET(ISIS_INCLUDE_DIRS @CMAKE_INSTALL_PREFIX@/include/ @Boost_INCLUDE_DIR@ )
-SET(ISIS_CORE_REV_STRING @ISIS_CORE_REV_STRING@)
-SET(ISIS_CORE_VERSION_API @ISIS_CORE_VERSION_API@)
+find_dependency(Boost 1.55 REQUIRED COMPONENTS regex)
 
 set(ISIS_RUNTIME_LOG @ISIS_RUNTIME_LOG@ CACHE BOOL "Enable runtime logging through isis (note this only has an effect on your compile, not of the isis libraries)")
 set(ISIS_DEBUG_LOG @ISIS_DEBUG_LOG@ CACHE BOOL "Enable debug logging through isis (note this only has an effect on your compile, not of the isis libraries)")
@@ -16,25 +13,49 @@ set(ISIS_DEBUG_LOG @ISIS_DEBUG_LOG@ CACHE BOOL "Enable debug logging through isi
 # enable RUNTIME_LOG
 if(ISIS_RUNTIME_LOG)
   add_definitions(-D_ENABLE_LOG=1)
-else(ISIS_RUNTIME_LOG)
+else()
   add_definitions(-D_ENABLE_LOG=0)
-endif(ISIS_RUNTIME_LOG)
+endif()
 
 # enable DEBUG_LOG
 if(ISIS_DEBUG_LOG)
   add_definitions(-D_ENABLE_DEBUG=1)
   message(STATUS "Debug code enabled, this will will have a big impact on the performance")
-else(ISIS_DEBUG_LOG)
+else()
   add_definitions(-D_ENABLE_DEBUG=0)
-endif(ISIS_DEBUG_LOG)
+endif()
 
-# only needed for plugins
-SET(ISIS_PLUGIN_INFIX @ISIS_PLUGIN_INFIX@)
+if(NOT TARGET ISIS::isis_core-SHARED OR NOT TARGET ISIS::isis_core-STATIC)
+    include("${ISIS_CMAKE_DIR}/ISISTargets.cmake")
+endif()
 
 if(NOT ISIS_FIND_COMPONENTS)
-	list(APPEND ISIS_FIND_COMPONENTS ISISCore ISISMath ISISAdapter)
-endif(NOT ISIS_FIND_COMPONENTS)
+    message(STATUS "No additional components defined. Options are: Math Qt")
+endif()
 
-foreach(_COMP ${ISIS_FIND_COMPONENTS})
-	include("@CMAKE_INSTALL_PREFIX@/share/isis/cmake/${_COMP}Config.cmake")
-endforeach(_COMP ${ISIS_FIND_COMPONENTS})
+option(ISIS_STATIC_LIBS "Try to link the isis libraries statically" OFF)
+
+if(${ISIS_STATIC_LIBS})
+  if(TARGET ISIS::isis_qt5-STATIC)
+
+
+##add_library(<name> ALIAS <target>)
+
+if(Qt IN_LIST ${ISIS_FIND_COMPONENTS})
+    if(TARGET ISIS::isis_adapter_qt5-SHARED OR TARGET ISIS::isis_adapter_qt5-STATIC)
+        message(STATUS "Adding support for Qt5")
+        find_package(Qt5Widgets)
+    else()
+        message(ERROR "You requested support for ISIS::Qt5 but it not part of this installation")
+        message(ERROR "Please build ISIS again with Qt5  support")
+    endif()
+endif()
+
+if(Math IN_LIST ${ISIS_FIND_COMPONENTS})
+    if(TARGET ISIS::isis_math-SHARED OR TARGET ISIS::isis_math-STATIC)
+        message(STATUS "Adding support for ISIS::Math")
+    else()
+        message(ERROR "You requested support for Qt5 but it not part of this installation")
+        message(ERROR "Please build ISIS again with Qt5  support")
+    endif()
+endif()
