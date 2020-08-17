@@ -94,7 +94,7 @@ bool Application::addConfigFile(const std::string& filename)
 			auto param=configuration.queryBranch("parameters");
 			// if there is a "parameters" section in the file, use that as default parameters for the app
 			if(param){
-				for(PropertyMap::PropPath p:param->getLocalProps()){
+				for(PropertyMap::PropPath p:param->localProps()){
 					assert(p.size()==1);
 					ProgParameter &dst=parameters[p.front().c_str()];
 					PropertyValue &src=param->touchProperty(p);

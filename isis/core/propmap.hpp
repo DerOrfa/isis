@@ -412,12 +412,12 @@ public:
 	 * Get a list of the paths of all properties directly on this branch.
 	 * \returns a flat list of the paths to all properties in the PropertyMap
 	 */
-	PathSet getLocalProps()const;
+	PathSet localProps()const;
 	/**
 	 * Get a list of the paths of all sub-branches directly on this branch.
 	 * \returns a flat list of the paths to all properties in the PropertyMap
 	 */
-	PathSet getLocalBranches()const;
+	PathSet localBranches()const;
 
 	/**
 	 * Get a list of missing properties.

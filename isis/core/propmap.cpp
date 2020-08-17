@@ -543,11 +543,11 @@ bool PropertyMap::operator!=(const PropertyMap &other) const {return container !
 PropertyMap::PathSet PropertyMap::getKeys()const   {return genKeyList<TrueP>();}
 PropertyMap::PathSet PropertyMap::getMissing()const {return genKeyList<InvalidP>();}
 
-PropertyMap::PathSet PropertyMap::getLocalBranches() const
+PropertyMap::PathSet PropertyMap::localBranches() const
 {
 	return getLocal<PropertyMap>();
 }
-PropertyMap::PathSet PropertyMap::getLocalProps() const
+PropertyMap::PathSet PropertyMap::localProps() const
 {
 	return getLocal<PropertyValue>();
 }
