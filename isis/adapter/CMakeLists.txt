@@ -35,6 +35,12 @@ if(ISIS_QT5)
 
 endif()
 
+option(ISIS_MATLAB "Enable adapter to Matlab" OFF)
+
+if(ISIS_MATLAB)
+	add_subdirectory(matlab)
+endif()
+
 #option(ISIS_ITK "Enable adapter to the ITK library" OFF) #disabled for now
 
 if(ISIS_ITK)
