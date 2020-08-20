@@ -268,7 +268,9 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 			voxelSize[2] = dicomTree.getValueAs<float>( "SliceThickness" );
 			dicomTree.remove( "SliceThickness" );
 		} else {
-			voxelSize[2] = 1 / object.getValueAs<float>( "DICOM/CSASeriesHeaderInfo/SliceResolution" );
+			auto CSA_SliceRes = object.queryValueAs<float>( "DICOM/CSASeriesHeaderInfo/SliceResolution" );
+			if(CSA_SliceRes)
+				voxelSize[2] = 1 /  *CSA_SliceRes;
 		}
 
 		object.setValueAs( "voxelSize", voxelSize );
@@ -324,13 +326,18 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 
 	if ( hasOrTell( prefix + "ImagePositionPatient", object, info ) ) {
 		object.setValueAs( "indexOrigin", dicomTree.getValueAs<util::fvector3>( "ImagePositionPatient" ) );
-	} else if( object.hasProperty( prefix + "SIEMENS CSA HEADER/ProtocolSliceNumber" ) ) {
-		util::fvector3 orig( {0, 0, object.getValueAs<float>( prefix + "SIEMENS CSA HEADER/ProtocolSliceNumber" ) / object.getValueAs<float>( "DICOM/CSASeriesHeaderInfo/SliceResolution" )} );
-		LOG( Runtime, info ) << "Synthesize missing indexOrigin from SIEMENS CSA HEADER/ProtocolSliceNumber as " << orig;
-		object.setValueAs( "indexOrigin", orig );
 	} else {
-		object.setValueAs( "indexOrigin", util::fvector3() );
-		LOG( Runtime, warning ) << "Making up indexOrigin, because the image lacks this information";
+		auto CSA_SliceNumber = object.queryValueAs<int32_t>( prefix + "SIEMENS CSA HEADER/ProtocolSliceNumber" );
+		auto CSA_SliceRes =object.queryValueAs<float>("DICOM/CSASeriesHeaderInfo/SliceResolution");
+
+		if( CSA_SliceNumber && CSA_SliceRes ){
+			util::fvector3 orig {0,0,*CSA_SliceNumber / *CSA_SliceRes	};
+			LOG(Runtime, info) << "Synthesize missing indexOrigin from SIEMENS CSA HEADER/ProtocolSliceNumber as " << orig;
+			object.setValueAs("indexOrigin", orig);
+		} else {
+			object.setValueAs( "indexOrigin", util::fvector3() );
+			LOG( Runtime, warning ) << "Making up indexOrigin, because the image lacks this information";
+		}
 	}
 
 	transformOrTell<uint32_t>( prefix + "InstanceNumber", "acquisitionNumber", object, error );
