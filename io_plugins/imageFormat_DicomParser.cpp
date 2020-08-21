@@ -81,7 +81,9 @@ std::string DicomElement::getVR()const{
 util::PropertyMap::PropPath DicomElement::getName()const{
 	auto found=dicom_dict.find(getID32());
 	if(found!=dicom_dict.end())
-		return found->second.second;
+		return found->second.second.empty()?
+			util::istring( ImageFormat_Dicom::unknownTagName ) + getIDString().c_str():
+			found->second.second;
 	else{
 		return util::istring( ImageFormat_Dicom::unknownTagName ) + getIDString().c_str();
 	}

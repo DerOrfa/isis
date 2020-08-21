@@ -299,7 +299,7 @@ bool PropertyMap::remove( const PropPath &path )
 	try {
 		return recursiveRemove( container, path.begin(), path.end() );
 	} catch( const std::bad_variant_access &e ) {
-		LOG( Runtime, error ) << "Got errror " << e.what() << " when removing " << path << ", aborting the removal.";
+		LOG( Runtime, error ) << "Got error " << e.what() << " when removing " << path << ", aborting the removal.";
 		return false;
 	}
 }

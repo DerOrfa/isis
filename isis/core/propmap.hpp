@@ -833,7 +833,7 @@ template<typename T> const T* PropertyMap::tryFindEntry( const PropPath &path )c
 }
 template<typename T> T* PropertyMap::tryFindEntry( const PropPath &path ){
 	try {
-		auto &ref = findEntry( path );
+		Node &ref = findEntry( path );
 
 		if( ref )
 			return &std::get<T>( ref );

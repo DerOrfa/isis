@@ -49,6 +49,7 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00041512,{"UI","ReferencedTransferSyntaxUIDInFile"}}, //DICOM
     {0x00080005,{"CS","SpecificCharacterSet"}}, //DICOM
     {0x00080006,{"SQ","LanguageCodeSequence"}}, //DICOM
+	{0x00080008,{"CS","ImageType"}},
 	{0x00080012,{"DA","InstanceCreationDate"}}, //DICOM
 	{0x00080013,{"TM","InstanceCreationTime"}}, //DICOM
 	{0x00080014,{"UI","InstanceCreatorUID"}}, //DICOM
@@ -136,6 +137,7 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x0008103F,{"SQ","SeriesDescriptionCodeSequence"}}, //DICOM
 	{0x00081040,{"LO","InstitutionalDepartmentName"}}, //DICOM
 	{0x00081049,{"SQ","PhysiciansOfRecordIdentificationSequence"}}, //DICOM
+	{0x00081050,{"PN","PerformingPhysiciansName"}},
 	{0x00081052,{"SQ","PerformingPhysicianIdentificationSequence"}}, //DICOM
 	{0x00081062,{"SQ","PhysiciansReadingStudyIdentificationSequence"}}, //DICOM
     {0x00081070,{"PN","OperatorsName"}},//DICOM
@@ -292,6 +294,7 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00120053,{"CS","LongitudinalTemporalEventType"}}, //DICOM
 	{0x00120060,{"LO","ClinicalTrialCoordinatingCenterName"}}, //DICOM
 	{0x00120062,{"CS","PatientIdentityRemoved"}}, //DICOM
+	{0x00120063,{"LO","De-identification Method"}},
 	{0x00120064,{"SQ","DeidentificationMethodCodeSequence"}}, //DICOM
 	{0x00120071,{"LO","ClinicalTrialSeriesID"}}, //DICOM
 	{0x00120072,{"LO","ClinicalTrialSeriesDescription"}}, //DICOM
@@ -1186,6 +1189,9 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x0018A001,{"SQ","ContributingEquipmentSequence"}}, //DICOM
 	{0x0018A002,{"DT","ContributionDateTime"}}, //DICOM
 	{0x0018A003,{"ST","ContributionDescription"}}, //DICOM
+	{0x0019100a,{"--","SiemensNumberOfImagesInMosaic"}},
+	{0x0019100c,{"--","SiemensDiffusionBValue"}},
+	{0x0019100e,{"--","SiemensDiffusionGradientOrientation"}},
 	{0x0020000D,{"UI","StudyInstanceUID"}}, //DICOM
 	{0x0020000E,{"UI","SeriesInstanceUID"}}, //DICOM
 	{0x00200010,{"SH","StudyID"}}, //DICOM
@@ -1547,6 +1553,10 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00280101,{"US","BitsStored"}}, //DICOM
 	{0x00280102,{"US","HighBit"}}, //DICOM
 	{0x00280103,{"US","PixelRepresentation"}}, //DICOM
+	{0x00280106,{"SS", "SmallestImagePixelValue"}},
+	{0x00280107,{"SS", "LargestImagePixelValue"}},
+	{0x00280108,{"SS", "SmallestImagePixelValueInSeries"}},
+	{0x00280109,{"SS", "LargestImagePixelValueInSeries"}},
 	{0x00280122,{"FL","FloatPixelPaddingValue"}}, //DICOM
 	{0x00280123,{"FD","DoubleFloatPixelPaddingValue"}}, //DICOM
 	{0x00280124,{"FL","FloatPixelPaddingRangeLimit"}}, //DICOM
@@ -1560,6 +1570,8 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00280A04,{"LO","PixelSpacingCalibrationDescription"}}, //DICOM
 	{0x00281040,{"CS","PixelIntensityRelationship"}}, //DICOM
 	{0x00281041,{"SS","PixelIntensityRelationshipSign"}}, //DICOM
+	{0x00281050,{"DS", "WindowCenter"}},
+	{0x00281051,{"DS", "WindowWidth"}},
 	{0x00281052,{"DS","RescaleIntercept"}}, //DICOM
 	{0x00281053,{"DS","RescaleSlope"}}, //DICOM
 	{0x00281054,{"LO","RescaleType"}}, //DICOM
@@ -1890,8 +1902,11 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x00409096,{"SQ","RealWorldValueMappingSequence"}}, //DICOM
 	{0x00409098,{"SQ","PixelValueMappingCodeSequence"}}, //DICOM
 	{0x00409210,{"SH","LUTLabel"}}, //DICOM
+	{0x00409211,{"SS","Real World Value Last Value Mapped"}}, //DICOM
+	{0x00409212,{"FD","Real World Value LUT Data"}}, //DICOM
 	{0x00409213,{"FD","DoubleFloatRealWorldValueLastValueMapped"}}, //DICOM
 	{0x00409214,{"FD","DoubleFloatRealWorldValueFirstValueMapped"}}, //DICOM
+	{0x00409216,{"SS","Real World Value First Value Mapped"}}, //DICOM
 	{0x00409220,{"SQ","QuantityDefinitionSequence"}}, //DICOM
 	{0x00409224,{"FD","RealWorldValueIntercept"}}, //DICOM
 	{0x00409225,{"FD","RealWorldValueSlope"}}, //DICOM
@@ -4002,7 +4017,7 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x10000015,{"US","RETIRED_ShiftTableTriplet"}}, //DICOM/retired
 	//philips
 	{0x20010010,{"LO","Private Creator Group 2001"}},//PrivateTag
-	{0x20010011,{"LO","Philips private Attribute"}},//PrivateTag
+	{0x20010011,{"LO",""}},//PrivateTag
 	{0x20010090,{"LO","Private Creator Group 2001 (90)"}},//PrivateTag
 	{0x20011001,{"FL","ChemicalShift"}},//PrivateTag
 	{0x20011002,{"IS","ChemicalShiftNumberMR"}},//PrivateTag
@@ -4031,7 +4046,7 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x2001101b,{"FL","PrepulseDelay"}},//PrivateTag
 	{0x2001101c,{"CS","PrepulseType"}},//PrivateTag
 	{0x2001101d,{"IS","ReconstructionNumberMR"}},//PrivateTag
-	{0x2001101e,{"CS","Philips private Attribute"}},//PrivateTag
+	{0x2001101e,{"CS",""}},//PrivateTag
 	{0x2001101f,{"CS","RespirationSync"}},//PrivateTag
 	{0x20011020,{"LO","ScanningTechnique"}},//PrivateTag
 	{0x20011021,{"CS","SPIR"}},//PrivateTag
@@ -4046,7 +4061,7 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x20011035,{"SS","StackSliceNumber"}},//PrivateTag
 	{0x20011036,{"CS","StackType"}},//PrivateTag
 	{0x2001103f,{"CS","ZoomMode"}},//PrivateTag
-	{0x2001104e,{"CS","Philips private Attribute"}},//PrivateTag
+	{0x2001104e,{"CS",""}},//PrivateTag
 	{0x20011058,{"UL","ContrastTransferTaste"}},//PrivateTag
 	{0x2001105f,{"SQ","StackSequence"}},//PrivateTag
 	{0x20011060,{"SL","NumberOfStacks"}},//PrivateTag
@@ -4056,53 +4071,233 @@ std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict
 	{0x20011067,{"CS","LinearPresentationGLTrafoShapeSub"}},//PrivateTag
 	{0x20011068,{"SQ","Philips private sequence"}},//PrivateTag
 	{0x20011077,{"CS","GLTrafoType"}},//PrivateTag
-	{0x2001107a,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x2001107a,{"FL",""}},//PrivateTag
 	{0x2001107b,{"IS","AcquisitionNumber"}},//PrivateTag
 	{0x20011081,{"IS","NumberOfDynamicScans"}},//PrivateTag
-	{0x20011082,{"IS","Philips private Attribute"}},//PrivateTag
-	{0x20011083,{"DS","Philips private Attribute"}},//PrivateTag
-	{0x20011084,{"DS","Philips private Attribute"}},//PrivateTag
-	{0x20011085,{"DS","Philips private Attribute"}},//PrivateTag
-	{0x20011086,{"IS","Philips private Attribute"}},//PrivateTag
-	{0x20011088,{"DS","Philips private Attribute"}},//PrivateTag
-	{0x20011089,{"DS","Philips private Attribute"}},//PrivateTag
-	{0x2001108a,{"DS","Philips private Attribute"}},//PrivateTag
-	{0x2001108b,{"SH","Philips private Attribute"}},//PrivateTag
+	{0x20011082,{"IS",""}},//PrivateTag
+	{0x20011083,{"DS",""}},//PrivateTag
+	{0x20011084,{"DS",""}},//PrivateTag
+	{0x20011085,{"DS",""}},//PrivateTag
+	{0x20011086,{"IS",""}},//PrivateTag
+	{0x20011088,{"DS",""}},//PrivateTag
+	{0x20011089,{"DS",""}},//PrivateTag
+	{0x2001108a,{"DS",""}},//PrivateTag
+	{0x2001108b,{"SH",""}},//PrivateTag
 	{0x2001109f,{"US","PixelProcessingKernelSize"}},//PrivateTag
 	{0x200110a1,{"CS","IsRawImage"}},//PrivateTag
 	{0x200110f1,{"FL","ProspectiveMotionCorrection"}},//PrivateTag
 	{0x200110f2,{"FL","RetrospectiveMotionCorrection"}},//PrivateTag
-	{0x200110cc,{"ST","Philips private Attribute"}},//PrivateTag
-	{0x2001116b,{"LO","Philips private Attribute"}},//PrivateTag
+	{0x200110cc,{"ST",""}},//PrivateTag
+	{0x2001116b,{"LO",""}},//PrivateTag
 	{0x20019000,{"SQ","Philips private sequence"}},//PrivateTag
 	{0x20050010,{"LO","Private Creator Group 2005"}},//PrivateTag
-	{0x20050011,{"LO","Philips private Attribute"}},//PrivateTag
-	{0x20050012,{"LO","Philips private Attribute"}},//PrivateTag
-	{0x20050013,{"LO","Philips private Attribute"}},//PrivateTag
-	{0x20050014,{"LO","Philips private Attribute"}},//PrivateTag
-	{0x20050015,{"LO","Philips private Attribute"}},//PrivateTag
-	{0x20051071,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x20051072,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x20051073,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x20051074,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x20051075,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x20051076,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x20051077,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x20051078,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x20051079,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x2005107a,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x2005107b,{"CS","Philips private Attribute"}},//PrivateTag
-	{0x2005107e,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x20051081,{"CS","Philips private Attribute"}},//PrivateTag
+	{0x20050011,{"LO",""}},//PrivateTag
+	{0x20050012,{"LO",""}},//PrivateTag
+	{0x20050013,{"LO",""}},//PrivateTag
+	{0x20050014,{"LO",""}},//PrivateTag
+	{0x20050015,{"LO",""}},//PrivateTag
+    {0x20051000,{"FL",""}},//PrivateTag
+    {0x20051001,{"FL",""}},//PrivateTag
+    {0x20051002,{"FL",""}},//PrivateTag
+    {0x20051004,{"CS",""}},//PrivateTag
+    {0x20051008,{"FL",""}},//PrivateTag
+    {0x20051009,{"FL",""}},//PrivateTag
+    {0x2005100a,{"FL",""}},//PrivateTag
+    {0x2005100b,{"FL",""}},//PrivateTag
+    {0x2005100c,{"FL",""}},//PrivateTag
+    {0x2005100d,{"FL",""}},//PrivateTag
+    {0x2005100e,{"FL",""}},//PrivateTag
+    {0x2005100f,{"DS",""}},//PrivateTag
+    {0x20051010,{"DS",""}},//PrivateTag
+    {0x20051011,{"CS",""}},//PrivateTag
+    {0x20051012,{"CS",""}},//PrivateTag
+    {0x20051013,{"CS",""}},//PrivateTag
+    {0x20051014,{"CS",""}},//PrivateTag
+    {0x20051015,{"CS",""}},//PrivateTag
+    {0x20051016,{"CS",""}},//PrivateTag
+    {0x20051017,{"CS",""}},//PrivateTag
+    {0x20051018,{"LO",""}},//PrivateTag
+    {0x20051019,{"CS",""}},//PrivateTag
+    {0x2005101a,{"SS",""}},//PrivateTag
+    {0x2005101b,{"CS",""}},//PrivateTag
+    {0x2005101c,{"CS",""}},//PrivateTag
+    {0x2005101d,{"SS",""}},//PrivateTag
+    {0x2005101e,{"SH",""}},//PrivateTag
+    {0x2005101f,{"SH",""}},//PrivateTag
+    {0x20051020,{"SL",""}},//PrivateTag
+    {0x20051021,{"SS",""}},//PrivateTag
+    {0x20051022,{"IS",""}},//PrivateTag
+    {0x20051023,{"SS",""}},//PrivateTag
+    {0x20051025,{"SS",""}},//PrivateTag
+    {0x20051026,{"CS",""}},//PrivateTag
+    {0x20051027,{"CS",""}},//PrivateTag
+    {0x20051028,{"CS",""}},//PrivateTag
+    {0x20051029,{"CS",""}},//PrivateTag
+    {0x2005102a,{"IS",""}},//PrivateTag
+    {0x2005102b,{"SS",""}},//PrivateTag
+    {0x2005102c,{"CS",""}},//PrivateTag
+    {0x2005102d,{"IS",""}},//PrivateTag
+    {0x2005102e,{"CS",""}},//PrivateTag
+    {0x2005102f,{"CS",""}},//PrivateTag
+    {0x20051030,{"FL",""}},//PrivateTag
+    {0x20051031,{"CS",""}},//PrivateTag
+    {0x20051032,{"CS",""}},//PrivateTag
+    {0x20051033,{"FL",""}},//PrivateTag
+    {0x20051034,{"CS",""}},//PrivateTag
+    {0x20051035,{"CS",""}},//PrivateTag
+    {0x20051036,{"CS",""}},//PrivateTag
+    {0x20051037,{"CS",""}},//PrivateTag
+    {0x20051038,{"CS",""}},//PrivateTag
+    {0x20051039,{"CS",""}},//PrivateTag
+    {0x2005103a,{"SH",""}},//PrivateTag
+    {0x2005103b,{"CS",""}},//PrivateTag
+    {0x2005103c,{"CS",""}},//PrivateTag
+    {0x2005103d,{"SS",""}},//PrivateTag
+    {0x2005103e,{"SL",""}},//PrivateTag
+    {0x2005103f,{"CS",""}},//PrivateTag
+    {0x20051060,{"IS",""}},//PrivateTag
+    {0x20051061,{"CS",""}},//PrivateTag
+    {0x20051063,{"SS",""}},//PrivateTag
+    {0x2005106e,{"CS",""}},//PrivateTag
+    {0x2005106f,{"CS",""}},//PrivateTag
+    {0x20051070,{"LO",""}},//PrivateTag
+	{0x20051071,{"FL",""}},//PrivateTag
+	{0x20051072,{"FL",""}},//PrivateTag
+	{0x20051073,{"FL",""}},//PrivateTag
+	{0x20051074,{"FL",""}},//PrivateTag
+	{0x20051075,{"FL",""}},//PrivateTag
+	{0x20051076,{"FL",""}},//PrivateTag
+	{0x20051077,{"FL",""}},//PrivateTag
+	{0x20051078,{"FL",""}},//PrivateTag
+	{0x20051079,{"FL",""}},//PrivateTag
+	{0x2005107a,{"FL",""}},//PrivateTag
+	{0x2005107b,{"CS",""}},//PrivateTag
+	{0x2005107e,{"FL",""}},//PrivateTag
+    {0x20051081,{"CS",""}},//PrivateTag
 	{0x20051083,{"SQ","Philips private sequence"}},//PrivateTag
 	{0x20051084,{"SQ","Philips private sequence"}},//PrivateTag
 	{0x20051085,{"SQ","Philips private sequence"}},//PrivateTag
+    {0x20051086,{"SS",""}},//PrivateTag
+    {0x2005109f,{"CS",""}},//PrivateTag
+    {0x200510a0,{"FL",""}},//PrivateTag
+    {0x200510a1,{"CS",""}},//PrivateTag
+    {0x200510a2,{"CS",""}},//PrivateTag
+    {0x200510a8,{"DS",""}},//PrivateTag
+    {0x200510a9,{"CS",""}},//PrivateTag
+    {0x200510b0,{"FL",""}},//PrivateTag
+    {0x200510b1,{"FL",""}},//PrivateTag
+    {0x200510b2,{"FL",""}},//PrivateTag
+    {0x200510c0,{"CS",""}},//PrivateTag
+    {0x20051134,{"LT",""}},//PrivateTag
+    {0x20051199,{"UL",""}},//PrivateTag
+    {0x20051200,{"UL",""}},//PrivateTag
+	{0x20051201,{"UL",""}},//PrivateTag
+	{0x20051213,{"UL",""}},//PrivateTag
+	{0x20051245,{"SS",""}},//PrivateTag
+	{0x20051249,{"SS",""}},//PrivateTag
+	{0x20051251,{"SS",""}},//PrivateTag
+	{0x20051252,{"SS",""}},//PrivateTag
+	{0x20051253,{"SS",""}},//PrivateTag
+	{0x20051256,{"SS",""}},//PrivateTag
+	{0x20051325,{"CS",""}},//PrivateTag
+	{0x20051326,{"FL",""}},//PrivateTag
+	{0x20051327,{"CS",""}},//PrivateTag
+	{0x20051328,{"CS",""}},//PrivateTag
+	{0x20051329,{"FL",""}},//PrivateTag
+	{0x20051331,{"SS",""}},//PrivateTag
+	{0x20051334,{"CS",""}},//PrivateTag
+	{0x20051335,{"CS",""}},//PrivateTag
+	{0x20051336,{"FL",""}},//PrivateTag
+	{0x20051337,{"FL",""}},//PrivateTag
+	{0x20051338,{"FL",""}},//PrivateTag
+	{0x20051340,{"CS",""}},//PrivateTag
+	{0x20051341,{"CS",""}},//PrivateTag
+	{0x20051342,{"CS",""}},//PrivateTag
+	{0x20051343,{"CS",""}},//PrivateTag
+	{0x20051344,{"CS",""}},//PrivateTag
+	{0x20051345,{"CS",""}},//PrivateTag
+	{0x20051346,{"CS",""}},//PrivateTag
+	{0x20051347,{"FL",""}},//PrivateTag
+	{0x20051348,{"CS",""}},//PrivateTag
+	{0x20051349,{"FL",""}},//PrivateTag
+	{0x20051351,{"SS",""}},//PrivateTag
+	{0x20051352,{"SS",""}},//PrivateTag
+	{0x20051354,{"CS",""}},//PrivateTag
+	{0x20051355,{"FL",""}},//PrivateTag
+	{0x20051356,{"CS",""}},//PrivateTag
+	{0x20051357,{"SS",""}},//PrivateTag
+	{0x20051358,{"LO",""}},//PrivateTag
+	{0x20051359,{"FL",""}},//PrivateTag
+	{0x20051360,{"FL",""}},//PrivateTag
+	{0x20051362,{"FL",""}},//PrivateTag
+	{0x20051363,{"FL",""}},//PrivateTag
+	{0x20051364,{"CS",""}},//PrivateTag
+	{0x20051370,{"SS",""}},//PrivateTag
+	{0x20051381,{"IS",""}},//PrivateTag
+	{0x20051382,{"UL",""}},//PrivateTag
 	{0x20051389,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x20051391,{"PN",""}},//PrivateTag
+	{0x20051392,{"IS",""}},//PrivateTag
+	{0x20051393,{"IS",""}},//PrivateTag
+	{0x20051395,{"ST",""}},//PrivateTag
+	{0x20051396,{"CS",""}},//PrivateTag
+	{0x20051397,{"LO",""}},//PrivateTag
+	{0x20051398,{"CS",""}},//PrivateTag
+	{0x20051399,{"CS",""}},//PrivateTag
+	{0x20051400,{"CS",""}},//PrivateTag
+	{0x20051401,{"UL",""}},//PrivateTag
 	{0x20051402,{"SQ","Philips private sequence"}},//PrivateTag
+	{0x20051403,{"UL",""}},//PrivateTag
+	{0x20051404,{"SS",""}},//PrivateTag
+	{0x20051406,{"SS",""}},//PrivateTag
+	{0x20051409,{"DS",""}},//PrivateTag
+	{0x2005140a,{"DS",""}},//PrivateTag
+	{0x2005140b,{"LO",""}},//PrivateTag
 	{0x2005140f,{"SQ","Philips private sequence"}},//PrivateTag
-	{0x2005143c,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x2005143d,{"FL","Philips private Attribute"}},//PrivateTag
-	{0x2005143e,{"FL","Philips private Attribute"}},//PrivateTag
+	{0x20051410,{"IS",""}},//PrivateTag
+	{0x20051412,{"IS",""}},//PrivateTag
+	{0x20051413,{"IS",""}},//PrivateTag
+	{0x20051414,{"SL",""}},//PrivateTag
+	{0x20051415,{"SL",""}},//PrivateTag
+	{0x20051416,{"CS",""}},//PrivateTag
+	{0x20051418,{"CS",""}},//PrivateTag
+	{0x20051419,{"CS",""}},//PrivateTag
+	{0x2005141a,{"CS",""}},//PrivateTag
+	{0x2005141b,{"IS",""}},//PrivateTag
+	{0x2005141c,{"IS",""}},//PrivateTag
+	{0x2005141d,{"IS",""}},//PrivateTag
+	{0x20051426,{"CS",""}},//PrivateTag
+	{0x20051428,{"SL",""}},//PrivateTag
+	{0x20051429,{"CS",""}},//PrivateTag
+	{0x2005142a,{"CS",""}},//PrivateTag
+	{0x2005142b,{"CS",""}},//PrivateTag
+	{0x2005142c,{"CS",""}},//PrivateTag
+	{0x2005142d,{"CS",""}},//PrivateTag
+	{0x2005142e,{"FL",""}},//PrivateTag
+	{0x2005142f,{"FL",""}},//PrivateTag
+	{0x20051430,{"FL",""}},//PrivateTag
+	{0x20051431,{"FL",""}},//PrivateTag
+	{0x20051432,{"CS",""}},//PrivateTag
+	{0x20051435,{"CS",""}},//PrivateTag
+	{0x20051437,{"CS",""}},//PrivateTag
+	{0x2005143a,{"LT",""}},//PrivateTag
+	{0x2005143b,{"CS",""}},//PrivateTag
+	{0x2005143c,{"FL",""}},//PrivateTag
+	{0x2005143d,{"FL",""}},//PrivateTag
+	{0x2005143e,{"FL",""}},//PrivateTag
+	{0x2005143f,{"CS",""}},//PrivateTag
+	{0x20051440,{"FL",""}},//PrivateTag
+	{0x20051441,{"FL",""}},//PrivateTag
+	{0x20051442,{"FL",""}},//PrivateTag
+	{0x20051443,{"FL",""}},//PrivateTag
+	{0x20051444,{"IS",""}},//PrivateTag
+	{0x20051445,{"CS",""}},//PrivateTag
+	{0x20051446,{"FL",""}},//PrivateTag
+	{0x20051447,{"FL",""}},//PrivateTag
+	{0x20051448,{"FL",""}},//PrivateTag
+	{0x2005144d,{"CS",""}},//PrivateTag
+	{0x2005144e,{"CS",""}},//PrivateTag
+	{0x20051492,{"FL",""}},//PrivateTag
 	{0x20051580,{"SQ","Philips private sequence"}},//PrivateTag
 };
 }
