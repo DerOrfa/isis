@@ -709,7 +709,7 @@ void ImageFormat_Dicom::write( const data::Image &/*image*/, const std::string &
 ImageFormat_Dicom::ImageFormat_Dicom()
 {
 	for( unsigned short i = 0x0010; i <= 0x00FF; i++ ) {
-		_internal::dicom_dict[0x00290000 + i] =
+		tag(0x00290000 + i) =
 		    {"--",util::istring( "Private Code for " ) + _internal::id2Name( 0x0029, i << 8 ) + "-" + _internal::id2Name( 0x0029, ( i << 8 ) + 0xFF )};
 	}
 
@@ -718,9 +718,9 @@ ImageFormat_Dicom::ImageFormat_Dicom()
 	for( unsigned short i = 0x0; i <= 0x02FF; i++ ) {
 		char buff[7];
 		std::snprintf(buff,7,"0x%.4X",i);
-		_internal::dicom_dict[(0x6000<<16)+ i] = {"--",util::PropertyMap::PropPath("DICOM overlay info") / util::PropertyMap::PropPath(buff)};
+		tag((0x6000<<16)+ i) = {"--",util::PropertyMap::PropPath("DICOM overlay info") / util::PropertyMap::PropPath(buff)};
 	}
-	_internal::dicom_dict[0x60003000] = {"--","DICOM overlay data"};
+	tag(0x60003000) = {"--","DICOM overlay data"};
 }
 
 }
