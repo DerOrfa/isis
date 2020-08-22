@@ -6,6 +6,7 @@
 
 #include "isis/core/image.hpp"
 #include "MatlabDataArray.hpp"
+#include <algorithm>
 
 using namespace matlab::data;
 using namespace isis;
@@ -13,39 +14,37 @@ using namespace isis;
 namespace isis::mat
 {
 namespace _internal{
-template<typename T> struct ptrTransferOp
+// map from isis type to matlab buffer type with proper size
+template<typename T> struct makeBufferOp{
+	buffer_ptr_t<T> createBuffer(size_t elements, ArrayFactory &f)const{
+		return f.createBuffer<T>(elements);
+	}
+};
+template<typename T,int S> struct makeBufferOp<std::array<T,S>>
 {
-	TypedArray<T> operator()(std::shared_ptr<T> ptr, util::vector4<size_t> size, ArrayFactory &f)const
-	{
-		const T *begin = ptr.get(), *end = ptr.get() + util::product(size);
-		return f.createArray<T>({size[0], size[1], size[2], size[3]}, begin, end);
+	buffer_ptr_t<T> createBuffer(size_t elements, ArrayFactory &f)const{
+		return f.createBuffer<T>(elements*S);
+	}
+};
+template<typename T> struct makeBufferOp<util::color<T>>
+{
+	buffer_ptr_t<T> createBuffer(size_t elements, ArrayFactory &f)const{
+		return f.createBuffer<T>(elements*3);
 	}
 };
 
-template<typename T,int S> struct ptrTransferOp<std::array<T,S>>
-{
-	TypedArray<T> operator()(std::shared_ptr<std::array<T,S>> ptr, util::vector4<size_t> size, ArrayFactory &f)const
-	{
-		auto ret=f.createCellArray({size[0], size[1], size[2], size[3]});
-		const std::array<T,S> *s_it=ptr.get();
-		for(auto r_it=ret.begin();r_it!=ret.end();++r_it,++s_it){
-			*r_it = f.createArray<T>({S,1},std::begin(*s_it),std::end(*s_it));
-		}
-		return ret;
-	}
-};
-template<typename T> struct ptrTransferOp<util::color<T>>
-{
-	TypedArray<T> operator()(std::shared_ptr<util::color<T>> ptr, util::vector4<size_t> size, ArrayFactory &f)const
-	{
-		auto ret=f.createCellArray({size[0], size[1], size[2], size[3]});
-		const util::color<T> *s_it=ptr.get();
-		for(auto r_it=ret.begin();r_it!=ret.end();++r_it,++s_it){
-			*r_it = f.createArray<T>({3,1},{s_it->r,s_it->g,s_it->b});
-		}
-		return ret;
-	}
-};
+}
+template<typename SOURCE_TYPE,typename BUFFER_TYPE>
+Array makeArray(buffer_ptr_t<BUFFER_TYPE> &&buffer,util::vector4<size_t> size, ArrayFactory &f){
+	constexpr size_t size_fac=sizeof(SOURCE_TYPE)/sizeof(BUFFER_TYPE);
+	//emulate squeeze function (and reverse ordering)
+	std::vector<size_t> mat_size(5);
+	auto last=std::copy_if(size.rbegin(),size.rend(),mat_size.begin(),[](size_t s){return s>1;});
+	if(size_fac>1)
+		*(last++)=size_fac;
+	mat_size.resize(std::distance(mat_size.begin(),last));
+	return f.createArrayFromBuffer(mat_size, std::move(buffer),MemoryLayout::ROW_MAJOR);
 }
 Array chunkToArray(const data::Chunk &chk);
+Array imageToArray(const data::Image &img);
 }

@@ -7,6 +7,7 @@
 #include "mexAdapter.hpp"
 #include "common.hpp"
 #include "property_transfer.hpp"
+#include "image_transfer.hpp"
 #include "isis/core/io_factory.hpp"
 
 using namespace matlab::data;
@@ -28,11 +29,14 @@ public:
 
 		if(!fname.empty()) {
 			auto images = data::IOFactory::load(fname);
-			auto out = f.createStructArray({images.size(),1},{"metadata"});
+			auto out = f.createStructArray({images.size(),1},{"metadata","data"});
 			size_t i = 0;
 			while(!images.empty()) {
-				out[i++]["metadata"] = mat::branchToStruct(images.front());
+				data::Image &img=images.front();
+				out[i]["metadata"] = mat::branchToStruct(img);
+				out[i]["data"] = mat::imageToArray(img);
 				images.pop_front();
+				++i;
 			}
 			outputs[0]=out;
 		}

@@ -452,13 +452,13 @@ public:
 	 */
 	template<typename T> void copyToMem ( T *dst, size_t len) const {
 		if ( clean ) {
-			const scaling_pair scaling = getScalingTo ( util::typeName<T>() );
+			const scaling_pair scaling = getScalingTo ( util::typeID<T>() );
 
 			// we could do this using convertToType - but this solution does not need any additional temporary memory
-			for( const std::shared_ptr<Chunk> &ref :  lookup ) {
+			for( const auto &ref :  lookup ) {
 				const size_t cSize = ref->getVolume();
 
-				if ( !ref->copyToMem<T> ( dst, len, scaling ) ) {
+				if ( !ref->copyToMem( dst, cSize, scaling ) ) {
 					LOG ( Runtime, error ) << "Failed to copy raw data of type " << ref->typeName() << " from image into memory of type " << util::typeName<T>();
 				} else {
 					if ( len < cSize ) {
@@ -469,7 +469,7 @@ public:
 					len -= cSize;
 				}
 
-				dst += ref->getVolume(); // increment the cursor
+				dst += cSize; // increment the cursor
 			}
 		} else {
 			LOG ( Runtime, error ) << "Cannot copy from non clean images. Run reIndex first";
