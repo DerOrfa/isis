@@ -135,7 +135,7 @@ std::optional<util::Value> DicomElement::getValue(std::string vr){
 			assert(false);
 		}
 
-		LOG(Debug,verbose_info) << "Parsed " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << *ret;
+		LOG_IF(ret,Debug,verbose_info) << "Parsed " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << *ret;
 	} else {
 		LOG(Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
 	}
