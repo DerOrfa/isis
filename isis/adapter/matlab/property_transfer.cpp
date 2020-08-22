@@ -37,13 +37,24 @@ StructArray mat::branchToStruct(const util::PropertyMap &branch)
 	const auto props = branch.localProps();
 	const auto branches = branch.localBranches();
 	std::vector<std::string> names(props.size()+branches.size());
-	std::transform(props.begin(),props.end(),names.begin(),[](const util::PropertyMap::PropPath  &p){return p.toString();});
-	std::transform(branches.begin(),branches.end(),names.begin()+props.size(),[](const util::PropertyMap::PropPath  &p){return p.toString();});
+	auto name_gen = [](const util::PropertyMap::PropPath  &p){
+		static const std::regex matlab_fieldname("[^_[:alnum:]]",std::regex_constants::ECMAScript|std::regex_constants::optimize);
+		return std::regex_replace(p.toString(), matlab_fieldname, "_");
+	};
+	std::transform(props.begin(),props.end(),names.begin(),name_gen);
+	std::transform(branches.begin(),branches.end(),names.begin()+props.size(),name_gen);
+
+	//make names unique (todo might cause data loss)
+	std::sort(names.begin(),names.end());
+	names.resize(std::distance(names.begin(),std::unique(names.begin(),names.end())));//resize to new end
 
 	auto ret=f.createStructArray({1,1},names);
 
 	for(const auto &name:props){
-		ret[0][name.toString()] = propertyToArray(*branch.queryProperty(name));
+		ret[0][name_gen(name)] = propertyToArray(*branch.queryProperty(name));
+	}
+	for(const auto &name:branches){
+		ret[0][name_gen(name)] = branchToStruct(*branch.queryBranch(name));
 	}
 	return std::move(ret);
 }

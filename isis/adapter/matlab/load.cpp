@@ -19,11 +19,8 @@ public:
 	~MexFunction() override{mat::MatMessagePrint::enginePtr.reset();}
 	void operator()(ArgumentList outputs, ArgumentList inputs)override {
 		static ArrayFactory  f;
-		ENABLE_LOG(MatlabLog,mat::MatMessagePrint,verbose_info);
-		ENABLE_LOG(MatlabDebug,mat::MatMessagePrint,verbose_info);
-		util::enableLog<mat::MatMessagePrint>(verbose_info);
-		data::enableLog<mat::MatMessagePrint>(verbose_info);
-		image_io::enableLog<mat::MatMessagePrint>(verbose_info);
+		ENABLE_LOG(MatlabLog,mat::MatMessagePrint,notice);
+		ENABLE_LOG(MatlabDebug,mat::MatMessagePrint,notice);
 
 		auto fname = mat::getArgument<std::string>(inputs,0);
 
