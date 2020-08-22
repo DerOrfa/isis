@@ -1,20 +1,12 @@
 
 #include <isis/core/io_interface.h>
 #include <isis/core/io_factory.hpp>
-#include <isis/core/tmpfile.hpp>
-#include <isis/core/io_factory.hpp>
 
 #include <filesystem>
 
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filter/bzip2.hpp>
-#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/read.hpp>
 
-#include <boost/filesystem/fstream.hpp>
 #include <isis/core/fileptr.hpp>
-#include <boost/iostreams/categories.hpp>  // tags
-
 
 namespace isis::image_io
 {
@@ -104,7 +96,7 @@ public:
 				org_file = std::filesystem::path( std::string( tar_header.prefix ).substr( 0, 155 ) + std::string( tar_header.name ).substr( 0, 100 ) );
 			}
 
-			if( size == 0 ) //if there is no content skip this entry (there are allways two "empty" blocks at the end of a tar)
+			if( size == 0 ) //if there is no content skip this entry (there are always two "empty" blocks at the end of a tar)
 				continue;
 
 			if( tar_header.typeflag == '\0' || tar_header.typeflag == '0' ) { //only do regulars files

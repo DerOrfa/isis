@@ -1,4 +1,5 @@
 #include "imageFormat_Dicom.hpp"
+#include "imageFormat_DicomDictionary.hpp"
 #include <clocale>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/endian/buffers.hpp>
@@ -30,12 +31,12 @@ struct tag_vr_visitor
 		if(id==0x7fe00010)
 			return "OW"; //implicit pixel data are OW (http://dicom.nema.org/dicom/2013/output/chtml/part05/chapter_A.html)
 		else {
-			auto found=dicom_dict.find(id);
-			if(found==dicom_dict.end()){
+			auto found=query_tag(id);
+			if(!found){
 				LOG(Runtime,warning) << "Could not find tag " << id2Name(_tag->getID32()) << " in the dictionary and thus don't know its implicit VR";
 				return "--";
 			} else
-				return found->second.first;
+				return found->first;
 		}
 	}
 };
@@ -79,9 +80,11 @@ std::string DicomElement::getVR()const{
 	return std::visit(tag_vr_visitor(),tag);
 }
 util::PropertyMap::PropPath DicomElement::getName()const{
-	auto found=dicom_dict.find(getID32());
-	if(found!=dicom_dict.end())
-		return found->second.second;
+	auto found=query_tag(getID32());
+	if(found)
+		return found->second.empty()?
+			util::istring( ImageFormat_Dicom::unknownTagName ) + getIDString().c_str():
+			found->second;
 	else{
 		return util::istring( ImageFormat_Dicom::unknownTagName ) + getIDString().c_str();
 	}

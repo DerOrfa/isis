@@ -17,12 +17,12 @@
 
 */
 
-#ifndef IMAGEFORMAT_DICOM_HPP
-#define IMAGEFORMAT_DICOM_HPP
+#pragma once
 
 #include <isis/core/io_interface.h>
 #include <boost/endian/buffers.hpp>
 #include <functional>
+#include "imageFormat_DicomDictionary.hpp"
 
 namespace isis
 {
@@ -51,8 +51,6 @@ template <boost::endian::order Order> struct ExplicitVrTag:Tag<Order>{
 	char vr[2];
 	boost::endian::endian_buffer<Order, int_least16_t, 16> length;
 };
-
-extern std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dicom_dict;
 
 class DicomElement{
 	using value_generator = std::function<std::optional<util::Value>(const DicomElement *e)>;
@@ -135,5 +133,3 @@ public:
 };
 }
 }
-
-#endif // IMAGEFORMAT_DICOM_HPP
