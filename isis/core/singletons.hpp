@@ -6,6 +6,7 @@
 #include <iostream>
 #include <typeinfo>
 #include <limits.h>
+#include <typeindex>
 
 namespace isis
 {
@@ -31,52 +32,34 @@ namespace util
  */
 class Singletons
 {
-	template <typename C> class Singleton
-	{
-		static void destruct() {
-			if( _instance )delete _instance;
+	// a map typeid => unique_ptr<void> with dedicated delete functions, so we can hide the actual type from unique_ptr
+	// in order to keep the pointer (and in extend the registry) type free
+	using registry = std::map<std::type_index,std::unique_ptr<void,std::function<void(void const*)>>>;
 
-			_instance = 0;
-		}
-		static C *_instance;
-		Singleton () { }
-	public:
-		friend class Singletons;
-	};
-
-	typedef void( *destructer )();
-	typedef std::multimap<int, destructer> prioMap;
-
-	prioMap map;
-	Singletons();
+	Singletons()=default;
 	virtual ~Singletons();
-	static Singletons &getMaster();
+	static std::map<int, Singletons::registry> &getRegistryStack();
 public:
 	/**
 	 * The first call creates a singleton of type T with the priority PRIO (ascending order),
 	 * all repetetive calls return this object.
 	 * \return a reference to the same object of type T.
 	 */
-	template<typename T, int PRIO = INT_MAX-1 > static T &get() {
-		if ( !Singleton<T>::_instance ) {
-			Singleton<T>::_instance = new T();
-			prioMap &map = getMaster().map;
-			map.insert( map.find( PRIO ), std::make_pair( PRIO, Singleton<T>::destruct ) );
+	template<class T, int PRIO = INT_MAX-1, typename... ARGS> static T &get(ARGS&&... args) {
+		auto &registry=getRegistryStack()[PRIO];
+		auto singleton_it = registry.find(typeid(T));
+		if ( singleton_it==registry.end()) {
+			// create singleton in unique_ptr where only the deleter knows the type
+			registry::mapped_type ptr(
+				new T(&args...),
+				[](void const *p){delete(static_cast<T const*>(p));}
+			);
+			singleton_it=registry.emplace(typeid(T),std::move(ptr)).first;
 		}
-
-		return *Singleton<T>::_instance;
-	}
-	template<typename T, int PRIO = INT_MAX-1, typename P1> static T &get(P1 p1) {
-		if ( !Singleton<T>::_instance ) {
-			Singleton<T>::_instance = new T(p1);
-			prioMap &map = getMaster().map;
-			map.insert( map.find( PRIO ), std::make_pair( PRIO, Singleton<T>::destruct ) );
-		}
-
-		return *Singleton<T>::_instance;
+		assert(singleton_it!=registry.end());
+		return *(static_cast<T*>(singleton_it->second.get()));
 	}
 };
-template <typename C> C *Singletons::Singleton<C>::_instance = 0;
 
 }
 }

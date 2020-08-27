@@ -5,19 +5,18 @@ namespace isis
 namespace util
 {
 
-Singletons &Singletons::getMaster()
+std::map<int, Singletons::registry> & Singletons::getRegistryStack()
 {
-	static Singletons me;
-	return me;
+	static std::map<int, registry > registry_stack;
+	return registry_stack;
 }
 Singletons::~Singletons()
 {
-	while ( !map.empty() ) {
-		map.begin()->second();
-		map.erase( map.begin() );
+	auto &stack=getRegistryStack();
+	while ( !stack.empty() ) {//remove all registries beginning at the lowest priority
+		stack.erase( stack.begin() );
 	}
 }
-Singletons::Singletons() {}
 
 }
 }
