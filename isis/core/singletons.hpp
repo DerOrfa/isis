@@ -6,6 +6,7 @@
 #include <cassert>
 #include <typeindex>
 #include <memory>
+#include <functional>
 
 namespace isis::util
 {
@@ -14,7 +15,7 @@ namespace isis::util
  * Static class to handle singletons of a given type and priority.
  *
  * The special issues for these Singletons are: \n
- * 1) it's a template class - can be used for every type \n
+ * 1) It is using a static template function that can by used for any object class \n
  * 2) Singletons are deleted in ascending order of int values (0 first, INT_MAX last)
  *
  * \code
