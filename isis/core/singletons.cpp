@@ -1,8 +1,6 @@
 #include "singletons.hpp"
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 std::map<int, Singletons::registry> & Singletons::getRegistryStack()
@@ -18,5 +16,4 @@ Singletons::~Singletons()
 	}
 }
 
-}
 }

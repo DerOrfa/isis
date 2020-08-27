@@ -1,12 +1,11 @@
 #pragma once
 
 #include <map>
-#include <string>
-#include <iostream>
 #include <typeinfo>
 #include <climits>
 #include <cassert>
 #include <typeindex>
+#include <memory>
 
 namespace isis::util
 {
