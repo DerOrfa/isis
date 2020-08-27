@@ -1,5 +1,6 @@
 #include <isis/core/matrix.hpp>
 #include <boost/timer.hpp>
+#include <iostream>
 
 using namespace isis;
 
