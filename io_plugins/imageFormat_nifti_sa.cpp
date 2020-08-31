@@ -1338,21 +1338,21 @@ void ImageFormat_NiftiSa::sanitise( data::Chunk &object )
 
 	transformIfNotSet<util::fvector3> ( prefix + "ImagePositionPatient",    "indexOrigin", object, warning );
 	transformIfNotSet<float>          ( prefix + "EchoTime",                "echoTime", object, info );
-	transformIfNotSet<uint16_t>       ( prefix + "PatientsAge",             "subjectAge",     object, info );
+	transformIfNotSet<uint16_t>       ( prefix + "PatientAge",             "subjectAge",     object, info );
 	transformIfNotSet<std::string>    ( prefix + "SeriesDescription",       "sequenceDescription", object, warning );
-	transformIfNotSet<std::string>    ( prefix + "PatientsName",            "subjectName",        object, info );
-	transformIfNotSet<util::date>     ( prefix + "PatientsBirthDate",       "subjectBirth",       object, info );
-	transformIfNotSet<uint16_t>       ( prefix + "PatientsWeight",          "subjectWeigth",      object, info );
+	transformIfNotSet<std::string>    ( prefix + "PatientName",            "subjectName",        object, info );
+	transformIfNotSet<util::date>     ( prefix + "PatientBirthDate",       "subjectBirth",       object, info );
+	transformIfNotSet<uint16_t>       ( prefix + "PatientWeight",          "subjectWeigth",      object, info );
 	transformIfNotSet<std::string>    ( prefix + "PerformingPhysiciansName", "performingPhysician", object, info );
 	transformIfNotSet<uint16_t>       ( prefix + "NumberOfAverages",        "numberOfAverages",   object, warning );
 	transformIfNotSet<uint32_t>       ( prefix + "SIEMENS CSA HEADER/UsedChannelMask", "coilChannelMask", object, info );
 	transformIfNotSet<int16_t>        ( prefix + "FlipAngle", "flipAngle", object, warning );
 
-	if ( hasOrTell( prefix + "PatientsSex", object, info ) ) {
+	if ( hasOrTell( prefix + "PatientSex", object, info ) ) {
 		util::Selection isisGender({"male","female","other"} );
 		bool set = false;
 
-		switch ( object.getValueAs<std::string>( prefix + "PatientsSex" )[0] ) {
+		switch ( object.getValueAs<std::string>( prefix + "PatientSex" )[0] ) {
 		case 'M':
 			isisGender.set( "male" );
 			set = true;
@@ -1366,12 +1366,12 @@ void ImageFormat_NiftiSa::sanitise( data::Chunk &object )
 			set = true;
 			break;
 		default:
-			LOG( Runtime, warning ) << "Dicom gender code " << util::MSubject( object.queryProperty( prefix + "PatientsSex" ) ) <<  " not known";
+			LOG( Runtime, warning ) << "Dicom gender code " << util::MSubject( object.queryProperty( prefix + "PatientSex" ) ) <<  " not known";
 		}
 
 		if( set ) {
 			object.setValueAs( "subjectGender", isisGender );
-			object.remove( prefix + "PatientsSex" );
+			object.remove( prefix + "PatientSex" );
 		}
 	}
 

@@ -20,7 +20,6 @@
 #define TMPFILE_H
 #include <string>
 #include <filesystem>
-#include <boost/core/noncopyable.hpp>
 
 namespace isis
 {
@@ -32,12 +31,8 @@ namespace util
  * If its not there anymore, a warning will be send.
  * This inherits from std::filesystem::path and thus can be used as such.
  */
-class TmpFile: public std::filesystem::path, boost::noncopyable
+class TmpFile: public std::filesystem::path
 {
-private:
-	// dont do this
-	TmpFile( TmpFile & );
-	TmpFile &operator=( TmpFile & );
 public:
 	/** Create a temporary file.
 	 * This generates a temporary filename using the given prefix and suffix.
@@ -49,6 +44,8 @@ public:
 	TmpFile( std::string prefix = "", std::string suffix = "" );
 	///Will delete the temporary file if its still there.
 	~TmpFile();
+	TmpFile( TmpFile & )=delete;
+	TmpFile &operator=( TmpFile & )=delete;
 };
 }
 }

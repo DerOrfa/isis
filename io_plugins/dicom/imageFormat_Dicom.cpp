@@ -245,11 +245,11 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 	}
 
 	transformOrTell<int32_t>  ( prefix + "SeriesNumber",     "sequenceNumber",     object, warning );
-	transformOrTell<uint16_t>  ( prefix + "PatientsAge",     "subjectAge",     object, info );
+	transformOrTell<uint16_t>  ( prefix + "PatientAge",     "subjectAge",     object, info );
 	transformOrTell<std::string>( prefix + "SeriesDescription", "sequenceDescription", object, warning );
-	transformOrTell<std::string>( prefix + "PatientsName",     "subjectName",        object, info );
-	transformOrTell<util::date>       ( prefix + "PatientsBirthDate", "subjectBirth",       object, info );
-	transformOrTell<uint16_t>  ( prefix + "PatientsWeight",   "subjectWeigth",      object, info );
+	transformOrTell<std::string>( prefix + "PatientName",     "subjectName",        object, info );
+	transformOrTell<util::date>       ( prefix + "PatientBirthDate", "subjectBirth",       object, info );
+	transformOrTell<uint16_t>  ( prefix + "PatientWeight",   "subjectWeigth",      object, info );
 	// compute voxelSize and gap
 	{
 		util::fvector3 voxelSize( {invalid_float, invalid_float, invalid_float} );
@@ -268,7 +268,9 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 			voxelSize[2] = dicomTree.getValueAs<float>( "SliceThickness" );
 			dicomTree.remove( "SliceThickness" );
 		} else {
-			voxelSize[2] = 1 / object.getValueAs<float>( "DICOM/CSASeriesHeaderInfo/SliceResolution" );
+			auto CSA_SliceRes = object.queryValueAs<float>( "DICOM/CSASeriesHeaderInfo/SliceResolution" );
+			if(CSA_SliceRes)
+				voxelSize[2] = 1 /  *CSA_SliceRes;
 		}
 
 		object.setValueAs( "voxelSize", voxelSize );
@@ -324,13 +326,18 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 
 	if ( hasOrTell( prefix + "ImagePositionPatient", object, info ) ) {
 		object.setValueAs( "indexOrigin", dicomTree.getValueAs<util::fvector3>( "ImagePositionPatient" ) );
-	} else if( object.hasProperty( prefix + "SIEMENS CSA HEADER/ProtocolSliceNumber" ) ) {
-		util::fvector3 orig( {0, 0, object.getValueAs<float>( prefix + "SIEMENS CSA HEADER/ProtocolSliceNumber" ) / object.getValueAs<float>( "DICOM/CSASeriesHeaderInfo/SliceResolution" )} );
-		LOG( Runtime, info ) << "Synthesize missing indexOrigin from SIEMENS CSA HEADER/ProtocolSliceNumber as " << orig;
-		object.setValueAs( "indexOrigin", orig );
 	} else {
-		object.setValueAs( "indexOrigin", util::fvector3() );
-		LOG( Runtime, warning ) << "Making up indexOrigin, because the image lacks this information";
+		auto CSA_SliceNumber = object.queryValueAs<int32_t>( prefix + "SIEMENS CSA HEADER/ProtocolSliceNumber" );
+		auto CSA_SliceRes =object.queryValueAs<float>("DICOM/CSASeriesHeaderInfo/SliceResolution");
+
+		if( CSA_SliceNumber && CSA_SliceRes ){
+			util::fvector3 orig {0,0,*CSA_SliceNumber / *CSA_SliceRes	};
+			LOG(Runtime, info) << "Synthesize missing indexOrigin from SIEMENS CSA HEADER/ProtocolSliceNumber as " << orig;
+			object.setValueAs("indexOrigin", orig);
+		} else {
+			object.setValueAs( "indexOrigin", util::fvector3() );
+			LOG( Runtime, warning ) << "Making up indexOrigin, because the image lacks this information";
+		}
 	}
 
 	transformOrTell<uint32_t>( prefix + "InstanceNumber", "acquisitionNumber", object, error );
@@ -340,11 +347,11 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 			dicomTree.remove( "AcquisitionNumber" );
 	}
 
-	if ( hasOrTell( prefix + "PatientsSex", object, info ) ) {
+	if ( hasOrTell( prefix + "PatientSex", object, info ) ) {
 		util::Selection isisGender({"male", "female", "other"} );
 		bool set = false;
 
-		switch ( dicomTree.getValueAs<std::string>( "PatientsSex" )[0] ) {
+		switch ( dicomTree.getValueAs<std::string>( "PatientSex" )[0] ) {
 		case 'M':
 			isisGender.set( "male" );
 			set = true;
@@ -358,12 +365,12 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 			set = true;
 			break;
 		default:
-			LOG( Runtime, warning ) << "Dicom gender code " << util::MSubject( object.property( prefix + "PatientsSex" ) ) <<  " not known";
+			LOG( Runtime, warning ) << "Dicom gender code " << util::MSubject( object.property( prefix + "PatientSex" ) ) <<  " not known";
 		}
 
 		if( set ) {
 			object.setValueAs( "subjectGender", isisGender);
-			dicomTree.remove( "PatientsSex" );
+			dicomTree.remove( "PatientSex" );
 		}
 	}
 
@@ -701,34 +708,8 @@ void ImageFormat_Dicom::write( const data::Image &/*image*/, const std::string &
 
 ImageFormat_Dicom::ImageFormat_Dicom()
 {
-	//modify the dicionary
-	// override known entries
-	_internal::dicom_dict[0x00100010] = {"PN","PatientsName"};
-	_internal::dicom_dict[0x00100030] = {"DA","PatientsBirthDate"};
-	_internal::dicom_dict[0x00100040] = {"CS","PatientsSex"};
-	_internal::dicom_dict[0x00101010] = {"AS","PatientsAge"};
-	_internal::dicom_dict[0x00101030] = {"DS","PatientsWeight"};
-
-	_internal::dicom_dict[0x00080008] = {"CS","ImageType"};
-	_internal::dicom_dict[0x00081050] = {"PN","PerformingPhysiciansName"};
-
-	// override some Siemens specific stuff because it is SliceOrientation in the standard and mosaic-size for siemens - we will figure out while sanitizing
-	_internal::dicom_dict[0x0019100a] = {"--","SiemensNumberOfImagesInMosaic"};
-	_internal::dicom_dict[0x0019100c] = {"--","SiemensDiffusionBValue"};
-	_internal::dicom_dict[0x0019100e] = {"--","SiemensDiffusionGradientOrientation"};
-	_internal::dicom_dict.erase(0x00211010); // dcmtk says its ImageType but it isn't (at least not on Siemens)
-
-	_internal::dicom_dict[0x00280106] = {"SS", "SmallestImagePixelValue"};
-	_internal::dicom_dict[0x00280107] = {"SS", "LargestImagePixelValue"};
-
-	_internal::dicom_dict[0x00280108] = {"SS", "SmallestImagePixelValueInSeries"};
-	_internal::dicom_dict[0x00280109] = {"SS", "LargestImagePixelValueInSeries"};
-
-	_internal::dicom_dict[0x00281050] = {"DS", "WindowCenter"};
-	_internal::dicom_dict[0x00281051] = {"DS", "WindowWidth"};
-
 	for( unsigned short i = 0x0010; i <= 0x00FF; i++ ) {
-		_internal::dicom_dict[0x00290000 + i] =
+		tag(0x00290000 + i) =
 		    {"--",util::istring( "Private Code for " ) + _internal::id2Name( 0x0029, i << 8 ) + "-" + _internal::id2Name( 0x0029, ( i << 8 ) + 0xFF )};
 	}
 
@@ -737,9 +718,9 @@ ImageFormat_Dicom::ImageFormat_Dicom()
 	for( unsigned short i = 0x0; i <= 0x02FF; i++ ) {
 		char buff[7];
 		std::snprintf(buff,7,"0x%.4X",i);
-		_internal::dicom_dict[(0x6000<<16)+ i] = {"--",util::PropertyMap::PropPath("DICOM overlay info") / util::PropertyMap::PropPath(buff)};
+		tag((0x6000<<16)+ i) = {"--",util::PropertyMap::PropPath("DICOM overlay info") / util::PropertyMap::PropPath(buff)};
 	}
-	_internal::dicom_dict[0x60003000] = {"--","DICOM overlay data"};
+	tag(0x60003000) = {"--","DICOM overlay data"};
 }
 
 }

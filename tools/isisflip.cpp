@@ -3,7 +3,6 @@
 #include <isis/math/transform.hpp>
 
 #include <map>
-#include <boost/assign.hpp>
 
 using namespace isis;
 
@@ -38,8 +37,7 @@ bool swapProperties( data::Image &image, const unsigned short dim )
 int main( int argc, char **argv )
 {
 	ENABLE_LOG( data::Runtime, util::DefaultMsgPrint, error );
-	std::map<std::string, unsigned int> alongMap = boost::assign::map_list_of
-			( "row", 0 ) ( "column", 1 ) ( "slice", 2 ) ( "x", 3 ) ( "y", 4 ) ( "z", 5 );
+	std::map<std::string, unsigned int> alongMap = {{"row", 0 },{"column", 1},{"slice", 2 },{ "x", 3 },{ "y", 4 },{"z", 5 }};
 	data::IOApplication app( "isisflip", true, true );
 	util::Selection along({"row", "column", "slice", "x", "y", "z"} );
 	util::Selection flip({"image", "space", "both"} );

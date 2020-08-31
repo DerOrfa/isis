@@ -7,7 +7,7 @@
 # Date: Tue, 05 Apr 2011 10:50:31 +0200
 #
 ############################################################
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.15.0)
 
 ############################################################
 # set isis version number

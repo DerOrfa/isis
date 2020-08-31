@@ -214,11 +214,11 @@ if(ISIS_IOPLUGIN_DICOM)
 	find_library(OPENJPEG_LIBRARY openjp2)
 	find_path(OPENJPEG_INCLUDE_DIR openjpeg.h PATH_SUFFIXES openjpeg-2.3)
 
-	add_library(isisImageFormat_Dicom SHARED imageFormat_Dicom.cpp imageFormat_DicomParser.cpp imageFormat_DicomDictionary.cpp )
+	add_library(isisImageFormat_Dicom SHARED dicom/imageFormat_Dicom.cpp dicom/imageFormat_DicomParser.cpp dicom/imageFormat_DicomDictionary.cpp)
 	
 	if(OPENJPEG_INCLUDE_DIR AND OPENJPEG_INCLUDE_DIR)
 		target_compile_definitions(isisImageFormat_Dicom PRIVATE "HAVE_OPENJPEG")
-		target_sources(isisImageFormat_Dicom PRIVATE imageFormat_DicomJ2k.cpp)
+		target_sources(isisImageFormat_Dicom PRIVATE dicom/imageFormat_DicomJ2k.cpp)
 		target_include_directories(isisImageFormat_Dicom PRIVATE ${OPENJPEG_INCLUDE_DIR})
 		target_link_libraries(isisImageFormat_Dicom PRIVATE isis_core ${OPENJPEG_LIBRARY})
 	else(OPENJPEG_INCLUDE_DIR AND OPENJPEG_INCLUDE_DIR)
