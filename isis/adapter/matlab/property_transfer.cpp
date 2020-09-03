@@ -8,19 +8,19 @@ using namespace isis;
 using namespace matlab::data;
 
 namespace isis::mat::_internal{
-template<> Array propToArrayOp<util::date>::operator()(const util::PropertyValue &p){
+template<> Array propToArray<util::date>(const util::PropertyValue &p,ArrayFactory &f){
 	return f.createScalar(p.toString());
 }
-template<> Array propToArrayOp<util::timestamp>::operator()(const util::PropertyValue &p){
+template<> Array propToArray<util::timestamp>(const util::PropertyValue &p,ArrayFactory &f){
 	return f.createScalar(p.toString());
 }
-template<> Array propToArrayOp<util::duration>::operator()(const util::PropertyValue &p){
+template<> Array propToArray<util::duration>(const util::PropertyValue &p,ArrayFactory &f){
 	return f.createScalar(p.toString());
 }
-template<> Array propToArrayOp<util::Selection>::operator()(const util::PropertyValue &p){
+template<> Array propToArray<util::Selection>(const util::PropertyValue &p,ArrayFactory &f){
 	return f.createScalar(p.toString());
 }
-template<> Array propToArrayOp<std::string>::operator()(const util::PropertyValue &p){
+template<> Array propToArray<std::string>(const util::PropertyValue &p,ArrayFactory &f){
 	return f.createScalar(p.toString());
 }
 //terminator, creates the container
