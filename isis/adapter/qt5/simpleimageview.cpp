@@ -138,10 +138,11 @@ MriGraphicsView::MriGraphicsView(QWidget *parent):QGraphicsView(parent),crossHai
 void MriGraphicsView::wheelEvent(QWheelEvent * event) {
 	setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
-	if(event->angleDelta().x()>0)
-		scale(1.1,1.1);
-	else
-		scale(0.9,0.9);
+	qreal scaling = !event->pixelDelta().isNull() ?
+		event->pixelDelta().y()*.01:
+		event->angleDelta().y()*.001;
+
+	scale(1+scaling,1+scaling);
 }
 void MriGraphicsView::mouseMoveEvent(QMouseEvent * event){
 	if(event->buttons()==0)
