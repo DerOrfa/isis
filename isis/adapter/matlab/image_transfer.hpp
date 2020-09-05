@@ -14,24 +14,23 @@ using namespace isis;
 namespace isis::mat
 {
 namespace _internal{
+template<typename T,std::size_t S> buffer_ptr_t<T> makeStructBuffer(size_t elements, ArrayFactory &f, const std::array<T,S>&){
+    return f.createBuffer<T>(elements*S);
+}
+template<typename T> buffer_ptr_t<T> makeStructBuffer(size_t elements, ArrayFactory &f, const util::color<T>&){
+    return f.createBuffer<T>(elements*3);
+}
+template<typename T> buffer_ptr_t<std::complex<T>> makeStructBuffer(size_t elements, ArrayFactory &f, const std::complex<T>&){
+    return f.createBuffer<std::complex<T>>(elements*3);//this is actually available in matlab
+}
+
 // map from isis type to matlab buffer type with proper size
-template<typename T> struct makeBufferOp{
-	buffer_ptr_t<T> createBuffer(size_t elements, ArrayFactory &f)const{
-		return f.createBuffer<T>(elements);
-	}
-};
-template<typename T,int S> struct makeBufferOp<std::array<T,S>>
-{
-	buffer_ptr_t<T> createBuffer(size_t elements, ArrayFactory &f)const{
-		return f.createBuffer<T>(elements*S);
-	}
-};
-template<typename T> struct makeBufferOp<util::color<T>>
-{
-	buffer_ptr_t<T> createBuffer(size_t elements, ArrayFactory &f)const{
-		return f.createBuffer<T>(elements*3);
-	}
-};
+template<typename T> auto makeBuffer(size_t elements, ArrayFactory &f){
+    if constexpr (std::is_arithmetic_v<T>)
+        return f.createBuffer<T>(elements);
+    else
+        return makeStructBuffer(elements,f,T());
+}
 
 }
 template<typename SOURCE_TYPE,typename BUFFER_TYPE>

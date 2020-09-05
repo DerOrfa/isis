@@ -16,7 +16,7 @@ template<int ID = 0> std::map<size_t,std::function<Array(const data::Image&)>> m
 	map[util::typeID<image_type>()] = //this is
 		[&f](const data::Image &img)->Array{
 			const size_t elements=img.getVolume();
-			auto buffer = makeBufferOp<image_type>().createBuffer(elements,f);
+			auto buffer = makeBuffer<image_type>(elements,f);
 			img.copyToMem(reinterpret_cast<image_type*>(buffer.get()),elements );
 			return makeArray<image_type>(std::move(buffer),img.getSizeAsVector(),f);
 		};
@@ -36,7 +36,7 @@ Array chunkToArray(const data::Chunk &chk)
 
 	return chk.visit([size](auto ptr)->Array{
 		using element_type = typename decltype(ptr)::element_type;
-		auto buffer = _internal::makeBufferOp<element_type>().createBuffer(util::product(size),f);
+		auto buffer = _internal::makeBuffer<element_type>(util::product(size),f);
 		const size_t copy_bytes = util::product(size)*sizeof(element_type);
 		memcpy(buffer.get(),ptr.get(),copy_bytes);
 		return makeArray<element_type>( std::move(buffer),size,f);
