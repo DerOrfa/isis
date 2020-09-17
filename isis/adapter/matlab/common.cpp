@@ -39,5 +39,27 @@ template<> std::string isis::mat::_internal::getType<std::string>(const matlab::
 	}
 	return "";
 }
+template<> isis::util::slist isis::mat::_internal::getTypeList<std::string>(const matlab::data::Array arg,  const std::string& num_word){
+	static matlab::data::ArrayFactory f;
+
+	if (arg.getType() == matlab::data::ArrayType::CHAR) {
+		return {matlab::data::CharArray(arg).toAscii()};
+	}
+	else if(arg.getType() == matlab::data::ArrayType::MATLAB_STRING)
+	{
+		matlab::data::TypedArray<matlab::data::MATLABString> stringArray(arg);
+		return util::slist(stringArray.begin(),stringArray.end());
+	} else {
+		LOG(MatlabLog, error)
+			<< "The " << util::MSubject(num_word) << " parameter is not a string";
+	}
+	return {};
+}
+template<> std::list<isis::util::istring> isis::mat::_internal::getTypeList<isis::util::istring>(const matlab::data::Array arg,  const std::string& num_word){
+	auto source = getTypeList<std::string>(arg, num_word);
+	std::list<isis::util::istring> ret(source.size());
+	std::transform(source.begin(), source.end(), ret.begin(), [](const std::string &src)->util::istring {return src.c_str();});
+	return ret;
+}
 
 std::shared_ptr<matlab::engine::MATLABEngine> isis::mat::MatMessagePrint::enginePtr= nullptr;

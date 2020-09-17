@@ -51,7 +51,7 @@ Array imageToArray(const data::Image &img)
 		return found_transfer->second(img);
 	} else {
 		LOG(MathLog, error) << "No transfer function found for " << img.getMajorTypeName() << "-image";
-		return Array();
+		return {};
 	}
 }
 }

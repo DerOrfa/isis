@@ -6,6 +6,7 @@
 
 #include "isis/core/image.hpp"
 #include "MatlabDataArray.hpp"
+#include "common.hpp"
 #include <algorithm>
 
 using namespace matlab::data;
@@ -26,10 +27,13 @@ template<typename T> buffer_ptr_t<std::complex<T>> makeStructBuffer(size_t eleme
 
 // map from isis type to matlab buffer type with proper size
 template<typename T> auto makeBuffer(size_t elements, ArrayFactory &f){
-    if constexpr (std::is_arithmetic_v<T>)
+    if constexpr (std::is_arithmetic_v<T>) {
+        LOG(MathDebug,info) << "Creating native " << util::MSubject(util::typeName<T>()) << "-buffer for " << elements << " elements";
         return f.createBuffer<T>(elements);
-    else
-        return makeStructBuffer(elements,f,T());
+    } else {
+        LOG(MathDebug,info) << "Creating complex " << util::MSubject(util::typeName<T>()) << "-buffer for " << elements << " elements";
+        return makeStructBuffer(elements, f, T());
+    }
 }
 
 }
@@ -42,7 +46,11 @@ Array makeArray(buffer_ptr_t<BUFFER_TYPE> &&buffer,util::vector4<size_t> size, A
 	if(size_fac>1)
 		*(last++)=size_fac;
 	mat_size.resize(std::distance(mat_size.begin(),last));
-	return f.createArrayFromBuffer(mat_size, std::move(buffer),MemoryLayout::ROW_MAJOR);
+    LOG(MatlabDebug,info)
+        << "Making matlab array of size " << util::listToString(mat_size.begin(),mat_size.end())
+        << " from " << util::typeName<BUFFER_TYPE>() << " buffer";
+
+    return f.createArrayFromBuffer(mat_size, std::move(buffer),MemoryLayout::ROW_MAJOR);
 }
 Array chunkToArray(const data::Chunk &chk);
 Array imageToArray(const data::Image &img);
