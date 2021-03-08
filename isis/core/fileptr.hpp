@@ -13,9 +13,7 @@
 #define FILE_HANDLE int
 #endif
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 /**
  * Class to map files into memory.
@@ -39,6 +37,7 @@ class FilePtr: public ByteArray
 
 	size_t checkSize( bool write, FILE_HANDLE file, const std::filesystem::path &filename, size_t size = 0 );
 	bool m_good;
+	static rlim_t file_count;
 public:
 	/// empty creator - result will not be usefull until filled
 	FilePtr();
@@ -66,9 +65,15 @@ public:
 
 	bool good();
 	void release();
-};
 
-}
+	/**
+	 * Check if additional files can be opened.
+	 * This uses getrlimit to check if the already open FilePtr's plus the given amount would exceed the systems limits.
+	 * @param additional_files amount of files expected to be opened
+	 * @return true if amount is within the limit or the limit could be raised sufficiently, false otherwise
+	 */
+	static bool checkLimit(rlim_t additional_files);
+};
 }
 
 #endif

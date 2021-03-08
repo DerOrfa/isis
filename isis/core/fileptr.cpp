@@ -21,15 +21,14 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-namespace isis
+namespace isis::data
 {
-namespace data
-{
+
+rlim_t FilePtr::file_count=0;
 
 void FilePtr::Closer::operator()( void *p )
 {
 	LOG( Debug, verbose_info ) << "Unmapping and closing " << util::MSubject( filename ) << " it was mapped at " << p;
-
 	bool unmapped = false;
 #ifdef WIN32
 	unmapped = UnmapViewOfFile( p );
@@ -73,7 +72,8 @@ void FilePtr::Closer::operator()( void *p )
 		LOG( Runtime, warning )
 				<< "Closing of " << util::MSubject( filename )
 				<< " failed, the error was: " << util::MSubject( strerror( errno ) );
-	}
+	} else
+		--file_count;
 }
 
 bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const std::filesystem::path &filename )
@@ -180,7 +180,8 @@ FilePtr::FilePtr( const std::filesystem::path &filename, size_t len, bool write 
 	if( file == invalid ) {
 		LOG( Runtime, error ) << "Failed to open " << util::MSubject(filename) << ", the error was: " << util::getLastSystemError();
 		return;
-	}
+	} else
+		++file_count;
 
 	const size_t map_size = checkSize( write, file, filename, len ); // get the mapping size
 
@@ -200,6 +201,20 @@ void FilePtr::release()
 	m_good = false;
 }
 
-
+bool FilePtr::checkLimit(rlim_t additional_files)
+{
+	rlimit rlim;
+	rlim_t needed=file_count+additional_files+50;
+	getrlimit(RLIMIT_NOFILE, &rlim);
+	if(rlim.rlim_cur<needed){
+		if(rlim.rlim_max>needed){
+			rlim.rlim_cur=needed;
+			setrlimit(RLIMIT_NOFILE, &rlim);
+		} else {
+			return false;
+		}
+	}
+	return true;
 }
+
 }
