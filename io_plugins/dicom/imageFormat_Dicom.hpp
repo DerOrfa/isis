@@ -57,6 +57,7 @@ class DicomElement{
 	const data::ByteArray &source;
 	size_t position;
 	boost::endian::order endian;
+	bool is_eof=false;
 	typedef std::variant<
 	    ExplicitVrTag<boost::endian::order::big> *,
 	    ExplicitVrTag<boost::endian::order::little> *,
@@ -90,6 +91,7 @@ public:
 	bool next(size_t position);
 	bool next();
 	bool endian_swap()const;
+	bool eof(){return is_eof;}
 	template<typename T> data::TypedArray<T> dataAs()const{
 		return dataAs<T>(getLength()/sizeof(T));
 	}

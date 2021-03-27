@@ -35,15 +35,14 @@ void readDataItems(DicomElement &token, std::multimap<uint32_t, data::ValueArray
 	}
 	assert(token.getID32()==0xFFFEE0DD);//we expect a sequence delimiter (will be eaten by the calling loop)
 }
+util::PropertyMap readSequence(DicomElement &token,std::multimap<uint32_t,data::ValueArray> &data_elements,const std::function<bool(DicomElement &token)>& delimiter);
 util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArray> &data_elements){
 	size_t start=token.getPosition();
 	util::PropertyMap ret;
 
 	do{
-		//break the loop if we find a delimiter
-		if(
-		    token.getID32()==0xFFFEE00D //Item Delim. Tag
-		){
+		//break the loop if we find an item delimiter
+		if(token.getID32()==0xFFFEE00D){
 			token.next(token.getPosition()+8);
 			break;
 		}
@@ -64,8 +63,13 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 				    << "Found " << inserted->second.typeName() << "-data for " << token.getIDString() << " at " << token.getPosition()
 				    << " it is " <<token.getLength() << " bytes long";
 			}
+			if(!token.next())
+			    break;
 		}else if(vr=="SQ"){ // http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_7.5.html
-			uint32_t len=token.getLength();
+
+            static const auto undefined_length_delimiter=[](DicomElement &t){return false;};
+            uint32_t len=token.getLength();
+            assert(len<stream_len); //sequence length mus be shorter then the stream its in
 			const auto name=token.getName();
 
 			//get to first item
@@ -75,26 +79,49 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 				token.next(token.getPosition()+4+2+2+4);//explicit SQ (4 bytes tag-id + 2bytes "SQ" + 2bytes reserved + 4 bytes length)
 
 			const size_t start_sq=token.getPosition();
-			LOG_IF(len==0xffffffff,Debug,verbose_info) << "Sequence of undefined length found (" << name << "), looking for items at " << start_sq;
-			LOG_IF(len!=0xffffffff,Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start_sq;
 
-			//load items (which themself again are made of tags)
-			while(token.getPosition()-start_sq<len && token.getID32()!=0xFFFEE0DD){ //break the loop when we find the sequence delimiter tag or reach the end
-				assert(token.getID32()==0xFFFEE000);//must be an item-tag
-				const size_t item_len=token.getLength();
-				token.next(token.getPosition()+8);
-				util::PropertyMap subtree=readStream(token,item_len,data_elements);
-				ret.touchBranch(name).transfer(subtree);
-			}
-			LOG(Debug,verbose_info) << "Sequence " << name << " finished, continuing at " << token.getPosition()+token.getLength()+8;
+            std::function<bool(DicomElement &token)> delimiter;
+
+            if(len==0xffffffff){
+                LOG(Debug,verbose_info) << "Sequence of undefined length found (" << name << "), looking for items at " << start_sq;
+                delimiter=[start_sq,len](DicomElement &t){
+                    if(t.getID32()==0xFFFEE0DD) { //sequence delimiter
+                        t.next(t.getPosition()+8); // eat the delimiter and exit
+                        return true;
+                    } else
+                        return false;
+                };
+            } else {
+                LOG(Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start_sq;
+                delimiter=[start_sq,len](DicomElement &t){return t.getPosition()>=start_sq+len;};
+            }
+
+            util::PropertyMap subtree=readSequence(token,data_elements,delimiter);
+            ret.touchBranch(name).transfer(subtree);
+			LOG(Debug,verbose_info) << "Sequence " << name << " started at " << start_sq << " finished, continuing at " << token.getPosition();
 		}else{
 			auto value=token.getValue(vr);
 			if(value){
 				ret.touchProperty(token.getName())=*value;
 			}
-		}
-	}while(token.next() && token.getPosition()-start<stream_len);
+            if(!token.next())
+                break;
+        }
+	}while(token.getPosition()-start<stream_len);
 	return ret;
+}
+
+util::PropertyMap readSequence(DicomElement &token,std::multimap<uint32_t,data::ValueArray> &data_elements, const std::function<bool(DicomElement &token)>& delimiter){
+    util::PropertyMap ret;
+    //load items (which themself again are made of tags)
+    while(!delimiter(token) && !token.eof()){
+        assert(token.getID32()==0xFFFEE000);//must be an item-tag
+        const size_t item_len=token.getLength();
+        token.next(token.getPosition()+8);
+        util::PropertyMap buffer=readStream(token,item_len,data_elements);
+        ret.transfer(buffer);
+    }
+    return ret;
 }
 template<typename T>
 data::ValueArray repackValueArray(data::ValueArray &data){

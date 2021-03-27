@@ -99,8 +99,10 @@ bool DicomElement::next(){
 	return next(position+len+tagLength());
 }
 bool DicomElement::next(size_t _position){
-	if(source.getLength()<_position+8)
-		return false;
+	if(source.getLength()<_position+8) {
+	    is_eof=true;
+        return false;
+    }
 	position=_position;
 	switch(endian){
 	    case boost::endian::order::big:
