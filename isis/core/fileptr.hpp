@@ -5,6 +5,7 @@
 #include <filesystem>
 #include "bytearray.hpp"
 #include "endianess.hpp"
+#include <sys/resource.h>
 
 #ifdef WIN32
 #include <windows.h>
@@ -21,7 +22,7 @@ namespace isis::data
  *
  * Writing to a FilePtr mapping a file read-only is valid. It will not change the mapped file.
  *
- * This is inherting from ValueArray. Thus this, and all ValueArray created from it will be managed.
+ * This is inheriting from ValueArray. Thus this, and all ValueArray created from it will be managed.
  * The mapped file will automatically unmapped and closed after all pointers are deleted.
  */
 class FilePtr: public ByteArray
@@ -39,7 +40,7 @@ class FilePtr: public ByteArray
 	bool m_good;
 	static rlim_t file_count;
 public:
-	/// empty creator - result will not be usefull until filled
+	/// empty creator - result will not be useful until filled
 	FilePtr();
 	/**
 	 * Create a FilePtr, mapping the given file.

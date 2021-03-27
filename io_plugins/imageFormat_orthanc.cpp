@@ -107,6 +107,7 @@ public:
 		if(stat.is_valid()) {
 			ACE_CString type;
 			resp.get("Content-Type",type);
+			type=type.substr(0,type.find(';'));
 			if(type=="application/json"){
 				result=Json::Value();
 				s >> boost::get<Json::Value>(result);
