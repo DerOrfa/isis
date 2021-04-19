@@ -3,6 +3,7 @@
 #define FILEPTR_HPP
 
 #include <filesystem>
+#include <sys/resource.h>
 #include "bytearray.hpp"
 #include "endianess.hpp"
 #include <sys/resource.h>

@@ -211,7 +211,7 @@ void DefaultMsgPrint::commit_tty(const Message& mesg)
 
 #ifndef NDEBUG //if with debug-info
 		fprintf(
-			stderr,"%s:%s[%s:%d]%s\n",
+			stderr,"\r%s:%s[%s:%d]%s\n",
 			mesg.m_module.c_str(),
 			logLevelName( mesg.m_level ),
 			mesg.m_file.filename().c_str(),
@@ -220,7 +220,7 @@ void DefaultMsgPrint::commit_tty(const Message& mesg)
 		);
 #else
 		fprintf(
-			stderr,"%s:%s[%s]%s\n",
+			stderr,"\r%s:%s[%s]%s\n",
 			mesg.m_module.c_str(),
 			logLevelName( mesg.m_level ),
 			mesg.m_object.c_str(),

@@ -138,6 +138,7 @@ std::optional<util::Value> DicomElement::getValue(std::string vr){
 		}
 
 		LOG_IF(ret,Debug,verbose_info) << "Parsed " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << *ret;
+		LOG_IF(!ret,Runtime,verbose_info) << "Failed to parse " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position;
 	} else {
 		LOG(Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
 	}
@@ -360,7 +361,10 @@ namespace _internal{
 		std::optional<util::Value> ret;
 		uint16_t duration = 0;
 		auto as=string_generate(e);
-		assert(as && as->typeID()==util::typeID<std::string>());//AS must always be one string
+		if(!as)
+			return {}; //gracefully abort if reading the tag failed
+
+		assert(as->typeID()==util::typeID<std::string>());//AS must always be one string
 		std::string buff=std::get<std::string>(*as);
 
 		static boost::numeric::converter <
