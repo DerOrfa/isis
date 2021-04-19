@@ -27,6 +27,7 @@
 #include "log.hpp"
 #include "common.hpp"
 #include "singletons.hpp"
+#include "fileptr.hpp"
 
 
 namespace isis
@@ -399,19 +400,12 @@ std::list<Chunk> isis::data::IOFactory::loadPath(const std::filesystem::path& pa
 	if( m_feedback ) {
 		m_feedback->show( length, std::string( "Reading " ) + std::to_string(length) + " files from " + path.native() );
 	}
-	
-	rlimit rlim;
-	size_t open_files = io_formats.size() + length + 50; //just guessing todo find a way to get the actual amount of open files
+
 	bool no_mapping=false;
-	getrlimit(RLIMIT_NOFILE, &rlim);
-	if(rlim.rlim_cur<open_files){
-		if(rlim.rlim_max>open_files){
-			rlim.rlim_cur=open_files;
-			setrlimit(RLIMIT_NOFILE, &rlim);
-		} else {
-			LOG(Runtime,warning) << "Can't increase the limit for open files to " << length << ", falling back to remapped mode";
-			no_mapping=true;
-		}
+	// if we can handle the opened plugins plus the additional files
+	if(!data::FilePtr::checkLimit(io_formats.size() + length)){
+		LOG(Runtime,warning) << "Can't increase the limit for open files to " << length << ", falling back to remapped mode";
+		no_mapping=true;
 	}
 
 	for ( std::filesystem::directory_iterator i( path ); i != std::filesystem::directory_iterator(); ++i )  {

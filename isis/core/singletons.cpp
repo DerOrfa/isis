@@ -3,16 +3,22 @@
 namespace isis::util
 {
 
-std::map<int, Singletons::registry> & Singletons::getRegistryStack()
+Singletons::registry & Singletons::getRegistry()
 {
-	static std::map<int, registry > registry_stack;
-	return registry_stack;
+	static registry static_reg;
+	return static_reg;
 }
 Singletons::~Singletons()
 {
-	auto &stack=getRegistryStack();
-	while ( !stack.empty() ) {//remove all registries beginning at the lowest priority
-		stack.erase( stack.begin() );
+	// transfer all singletons (aka unique pointers) into a priority sorted list and delete them accordingly
+	auto &reg= getRegistry();
+	std::map<int,single_ptr> delete_stack;
+	for(auto &v:reg){//the mapped value of the registry reg is a PRIO/single_ptr pair
+		delete_stack.insert(std::move(v.second)); //exactly what insert expects (we use move here as unique_ptr can not be copied)
+	}//reg now is full of null-pointers
+	//remove all registries beginning at the lowest priority
+	while ( !delete_stack.empty() ) {
+		delete_stack.erase(delete_stack.begin() );
 	}
 }
 
