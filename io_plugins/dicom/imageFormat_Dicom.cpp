@@ -69,7 +69,6 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 
             static const auto undefined_length_delimiter=[](DicomElement &t){return false;};
             uint32_t len=token.getLength();
-            assert(len<stream_len); //sequence length mus be shorter then the stream its in
 			const auto name=token.getName();
 
 			//get to first item
@@ -92,6 +91,7 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
                         return false;
                 };
             } else {
+                assert(len<stream_len); //sequence length mus be shorter then the stream its in
                 LOG(Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start_sq;
                 delimiter=[start_sq,len](DicomElement &t){return t.getPosition()>=start_sq+len;};
             }

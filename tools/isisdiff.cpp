@@ -227,7 +227,7 @@ int main( int argc, char *argv[] )
 		std::filesystem::path sPath2 = ( src2.size() == 1 ) ? src2.front() : getCommonSource( images2 ).native();
 
 
-		LOG( DiffLog, notice ) << "Comparing " << images1.size() << " images from \"" << sPath1 << "\" and " << images2.size() << " from \"" << sPath2 << "\"";
+		LOG( DiffLog, notice ) << "Comparing " << images1.size() << " images from " << sPath1 << " and " << images2.size() << " from " << sPath2;
 
 		for (
 			auto first = images1.begin();

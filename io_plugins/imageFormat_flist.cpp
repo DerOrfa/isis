@@ -5,6 +5,7 @@
 #include <isis/core/io_interface.h>
 #include <isis/core/io_factory.hpp>
 #include <fstream>
+#include <isis/core/fileptr.hpp>
 
 namespace isis
 {
@@ -29,13 +30,16 @@ public:
 
 		while( !in.eof() ) {
 			in >> fnames ;
-			for( const std::string fname : util::stringToList<std::string>( fnames, linebreak ) ) {
+            auto filenames = util::stringToList<std::string>( fnames, linebreak );
+            bool raised = data::FilePtr::checkLimit(filenames.size());
+            LOG_IF(!raised,Runtime,error) << "Failed to raise the file limit by " << filenames.size() << " you'll probably run into trouble down the line";
+			for( const std::string fname :  filenames) {
 				LOG( Runtime, info ) << "loading " << fname;
 				try{
 					fcnt++;
 					ret.splice(ret.end(), data::IOFactory::loadChunks(fname, formatstack, dialects ));
 				} catch(data::IOFactory::io_error &e){
-					LOG(Runtime,error) << "Loading of " << fname << "(#" << fcnt << " in list) failed with " << e.what() << "(the plugin used was:" << e.which() << ")";
+					LOG(Runtime,error) << "Loading of " << fname << "(#" << fcnt << " in list) failed with " << e.what() << " (the plugin used was: " << e.which()->getName() << ")";
 				}
 			}
 		}
