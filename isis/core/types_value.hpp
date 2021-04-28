@@ -21,7 +21,7 @@ template<typename T> static constexpr size_t typeID(){
 	return _internal::variant_index<ValueTypes,std::remove_cv_t<T>>();
 }
 template<typename T> static constexpr bool knownType(){
-	const auto id=_internal::variant_index<ValueTypes,std::remove_cv_t<T>>();
+	const auto id=typeID<T>();
 	return id!=std::variant_npos;
 }
 
