@@ -5,6 +5,9 @@ include(CMakeFindDependencyMacro)
 find_dependency(Boost 1.55 REQUIRED)
 find_dependency(Threads REQUIRED)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 macro( select_lib name)
     if(${ISIS_STATIC_LIBS})
         if(TARGET ISIS::${name}-STATIC)
