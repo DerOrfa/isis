@@ -5,9 +5,6 @@ include(CMakeFindDependencyMacro)
 find_dependency(Boost 1.55 REQUIRED)
 find_dependency(Threads REQUIRED)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 macro( select_lib name)
     if(${ISIS_STATIC_LIBS})
         if(TARGET ISIS::${name}-STATIC)
@@ -61,7 +58,6 @@ else()
         set(Qt5Widgets_DIR "@Qt5Widgets_DIR@" CACHE PATH "Path to Qt5WidgetsConfig.cmake")
         find_package(Qt5Widgets)
         select_lib(isis_qt5)
-        find_package(Qt5Widgets)
     endif()
 
     if(Math IN_LIST ISIS_FIND_COMPONENTS)
