@@ -23,6 +23,7 @@
 #include <QWidget>
 #include <QGraphicsView>
 #include "../../core/image.hpp"
+#include "qimage_adapter.hpp"
 
 class QSlider;
 class QLabel;

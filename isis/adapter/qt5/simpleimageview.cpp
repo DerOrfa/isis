@@ -34,8 +34,7 @@
 #include <QFileDialog>
 #include <QGraphicsSceneEvent>
 
-namespace isis{
-namespace qt5{
+namespace isis::qt5{
 namespace _internal{
 	
 TransferFunction::TransferFunction(std::pair<util::Value, util::Value> in_minmax): minmax(in_minmax)
@@ -406,4 +405,4 @@ void SimpleImageView::onMouseMoved(QPointF pos){
 		value_label->setText(QString("Value: --"));
 }
 }
-}
+
