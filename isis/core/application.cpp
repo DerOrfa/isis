@@ -23,12 +23,12 @@
 #include <clocale>
 #include "application.hpp"
 #include "fileptr.hpp"
+#include "console_progress_bar.hpp"
+
 #define STR(s) _xstr_(s)
 #define _xstr_(s) std::string(#s)
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 Application::Application( const char name[], const char cfg[]): m_name( name )
@@ -171,7 +171,7 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 	}
 
 	if(!parameters["np"])
-		feedback().reset(new util::ConsoleFeedback);
+		feedback().reset(new util::ConsoleProgressBar);
 
 
 	const std::string loc=parameters["locale"];
@@ -258,7 +258,7 @@ std::shared_ptr<util::ProgressFeedback>& Application::feedback(){
 	return fbk;
 }
 }
-}
+
 #undef STR
 #undef _xstr_
 

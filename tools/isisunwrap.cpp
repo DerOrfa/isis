@@ -20,7 +20,6 @@ int main( int argc, char **argv )
 
 	for(data::Image &i:app.images){
 		auto size = i.getSizeAsVector();
-		boost::progress_display progress(size[traverse_dims[0]]*size[traverse_dims[1]]*size[traverse_dims[2]],std::clog << "Unwrapping " << i.identify());
 
 		for(size_t x=0;x<size[traverse_dims[0]];x++)
 			for(size_t y=0;y<size[traverse_dims[1]];y++)
@@ -39,7 +38,6 @@ int main( int argc, char **argv )
 							i.voxel<int16_t>(swap[0],swap[1],swap[2],swap[3])
 						);
 					}
-					++progress;
 				}
 	}
 

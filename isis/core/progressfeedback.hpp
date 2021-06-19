@@ -16,24 +16,22 @@
 
 */
 
-#ifndef PROGRESSFEEDBACK_HPP
-#define PROGRESSFEEDBACK_HPP
+#pragma once
+
 #include <stddef.h>
 #include <string>
-#include <boost/progress.hpp>
-#include <boost/core/noncopyable.hpp>
 #include <memory>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 /*
  * Basic class for any feedback given from longlasting processes about its progress (e.g. file loading)
  */
-class ProgressFeedback: boost::noncopyable // ProgressFeedback should not be copyable - would break the progress counting
+class ProgressFeedback // ProgressFeedback should not be copyable - would break the progress counting
 {
 public:
+	ProgressFeedback(const ProgressFeedback &)=delete;
+	ProgressFeedback()=default;
 	/**
 	 * Set the progress display to the given maximum value and "show" it.
 	 * This will also extend already displayed progress bars.
@@ -46,7 +44,7 @@ public:
 	 * \param step increment of the progress (default: 1)
 	 * \returns the actual amount of the "progress"
 	 */
-	virtual size_t progress( const std::string message = "", size_t step = 1 ) = 0;
+	virtual size_t progress(const std::string &message = "", size_t step = 1) = 0;
 	///Close/undisplay a progress display.
 	virtual void close() = 0;
 	/// \returns the current valued which represents 100%
@@ -57,23 +55,5 @@ public:
 	virtual void restart( size_t new_max ) = 0;
 	/// Increment the "progress" by one
 	ProgressFeedback &operator++();
-	virtual ~ProgressFeedback();
-};
-
-/*
- * Most simple implementation of a progress bar on the console
- */
-class ConsoleFeedback: public ProgressFeedback
-{
-	std::unique_ptr<boost::progress_display> disp;
-public:
-	void close();
-	size_t getMax();
-	size_t progress( const std::string message = "", size_t step = 1 );
-	void show( size_t max, std::string header );
-	size_t extend( size_t by );
-	void restart( size_t newmax);
 };
 }
-}
-#endif // PROGRESSFEEDBACK_HPP

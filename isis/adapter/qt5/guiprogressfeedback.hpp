@@ -25,8 +25,7 @@
 
 class QProgressBar;
 
-namespace isis{
-namespace qt5{
+namespace isis::qt5{
 	
 class GUIProgressFeedback : public QGroupBox, public util::ProgressFeedback
 {
@@ -39,7 +38,7 @@ public:
 	 * Set the progress display to the given maximum value and "show" it.
 	 * This will also extend already displayed progress bars.
 	 */
-	virtual void show( size_t max, std::string header = "" )override;
+	virtual void show( size_t max, std::string header )override;
 	/**
 	 * Set the actual "progress".
 	 * Behavior is undefined if show was not called before.
@@ -47,7 +46,7 @@ public:
 	 * \param step increment of the progress (default: 1)
 	 * \returns the actual amount of the "progress"
 	 */
-	virtual size_t progress( const std::string message = "", size_t step = 1 )override;
+	virtual size_t progress(const std::string &message, size_t step)override;
 	///Close/undisplay a progress display.
 	virtual void close()override;
 	/// \returns the current valued which represents 100%
@@ -59,7 +58,6 @@ signals:
 	void signalNewMax( int value );
 };
 
-}
 }
 
 #endif // GUIPROGRESSFEEDBACK_H

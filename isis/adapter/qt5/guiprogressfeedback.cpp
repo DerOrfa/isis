@@ -49,7 +49,7 @@ size_t isis::qt5::GUIProgressFeedback::getMax()
 	return progressbar->maximum();
 }
 
-size_t isis::qt5::GUIProgressFeedback::progress(const std::string message, size_t step)
+size_t isis::qt5::GUIProgressFeedback::progress(const std::string &message, size_t step)
 {
 	emit signalNewValue(progressbar->value()+step);
 	return progressbar->value();
