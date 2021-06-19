@@ -21,7 +21,7 @@ size_t isis::util::ConsoleProgressBar::progress(const std::string &, size_t step
 }
 void isis::util::ConsoleProgressBar::close()
 {
-	putc('\r',stdout);
+	putc('\n',stdout);
 	current=0;
 	prgs=0;
 	header.clear();
@@ -65,7 +65,7 @@ void isis::util::ConsoleProgressBar::updateScreenWidth()
 }
 void isis::util::ConsoleProgressBar::redraw()
 {
-	if(isatty(fileno(stdout))){ // only dran progress bars into ttys
+	if(isatty(fileno(stdout))){ // only draw progress bars into ttys
 		printf("\r%s |", display_header.c_str());
 //	printf("w:%d/%d\n",prgs,avail_prgs_width);
 		for(uint16_t i = 0; i < prgs; i++)

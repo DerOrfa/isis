@@ -21,6 +21,7 @@
  *****************************************************************/
 
 #include <clocale>
+#include <memory>
 #include "application.hpp"
 #include "fileptr.hpp"
 #include "console_progress_bar.hpp"
@@ -153,8 +154,8 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 	if ( ! parameters.isComplete() ) {
 		std::cerr << "Missing parameters: ";
 
-		for ( ParameterMap::iterator iP = parameters.begin(); iP != parameters.end(); iP++ ) {
-			if ( iP->second.isNeeded() ) {std::cerr << "-" << iP->first << "  ";}
+		for ( const auto &P: parameters ) {
+			if ( P.second.isNeeded() ) {std::cerr << "-" << P.first << "  ";}
 		}
 
 		std::cerr << std::endl;
@@ -171,7 +172,7 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 	}
 
 	if(!parameters["np"])
-		feedback().reset(new util::ConsoleProgressBar);
+		feedback() = std::make_shared<util::ConsoleProgressBar>();
 
 
 	const std::string loc=parameters["locale"];

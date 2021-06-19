@@ -153,7 +153,7 @@ std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameter
 	util::slist rf = parameters[std::string( "rf" ) + suffix];
 	util::slist dl = parameters[std::string( "rdialect" ) + suffix];
 	
-	bool no_progress = parameters["np"];
+	const bool no_progress = parameters["np"];
 
 	if( !no_progress && feedback ) {
 		data::IOFactory::setProgressFeedback( feedback );

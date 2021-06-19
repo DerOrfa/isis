@@ -19,6 +19,8 @@
 
 #include "qtapplication.hpp"
 
+#include <memory>
+
 isis::qt5::QtApplication::QtApplication( const char name[] ): Application( name )
 {}
 
@@ -30,9 +32,9 @@ QApplication &isis::qt5::QtApplication::getQApplication()
 bool isis::qt5::QtApplication::init( int &argc, char **argv, bool exitOnError )
 {
 	if ( m_qapp ) {
-		LOG( util::Debug, error ) << "The QApplication allready exists. This should not happen. I'll not touch it";
+		LOG( util::Debug, error ) << "The QApplication already exists. This should not happen. I'll not touch it";
 	} else {
-		m_qapp.reset( new QApplication( argc, argv ) );
+		m_qapp = std::make_unique<QApplication>( argc, argv );
 	}
 
 	return util::Application::init( argc, argv, exitOnError );
@@ -54,7 +56,7 @@ bool isis::qt5::IOQtApplication::init( int &argc, char **argv, bool exitOnError 
 	if( m_qapp ) {
 		LOG( util::Debug, error ) << "The QApplication allready exists. This should not happen. I'll not touch it";
 	} else {
-		m_qapp.reset( new QApplication( argc, argv ) );
+		m_qapp = std::make_unique<QApplication>( argc, argv );
 	}
 
 	return isis::data::IOApplication::init( argc, argv, exitOnError );
