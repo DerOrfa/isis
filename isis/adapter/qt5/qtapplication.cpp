@@ -18,7 +18,7 @@
 */
 
 #include "qtapplication.hpp"
-
+#include "common.hpp"
 #include <memory>
 
 isis::qt5::QtApplication::QtApplication( const char name[] ): Application( name )
@@ -53,13 +53,7 @@ QApplication &isis::qt5::IOQtApplication::getQApplication()
 
 bool isis::qt5::IOQtApplication::init( int &argc, char **argv, bool exitOnError )
 {
-	if( m_qapp ) {
-		LOG( util::Debug, error ) << "The QApplication allready exists. This should not happen. I'll not touch it";
-	} else {
-		m_qapp = std::make_unique<QApplication>( argc, argv );
-	}
-
-	return isis::data::IOApplication::init( argc, argv, exitOnError );
+	return _init(argc, argv) && isis::data::IOApplication::init(argc, argv, exitOnError );
 }
 
 
@@ -70,6 +64,15 @@ std::shared_ptr< isis::util::MessageHandlerBase > isis::qt5::IOQtApplication::ge
 
 int isis::qt5::IOQtApplication::exec(){
 	return getQApplication().exec();
+}
+bool isis::qt5::IOQtApplication::_init(int &argc, char **argv)
+{
+	if( m_qapp ) {
+		LOG( util::Debug, error ) << "The QApplication already exists. This should not happen. I'll not touch it";
+	} else {
+		m_qapp = std::make_unique<QApplication>( argc, argv );
+	}
+	return true;
 }
 
 std::shared_ptr< isis::util::MessageHandlerBase > isis::qt5::QtApplication::getLogHandler( std::string /*module*/, isis::LogLevel level )const

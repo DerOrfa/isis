@@ -24,8 +24,7 @@
 
 namespace ublas=boost::numeric::ublas;
 
-namespace isis{
-namespace math {
+namespace isis::math {
 namespace _internal{
 template <typename TYPE>
 bool inverseMatrix( const ublas::matrix<TYPE> &inMatrix, ublas::matrix<TYPE> &inverse )
@@ -217,5 +216,4 @@ data::dimensions mapScannerAxisToImageDimension(const data::Image &img, data::sc
 }
 
 
-}
 }

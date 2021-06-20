@@ -1,5 +1,6 @@
 #pragma once
 #include "common.hpp"
+#include <QImage>
 
 namespace isis::qt5{
 

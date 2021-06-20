@@ -149,9 +149,9 @@ std::list< Image > IOApplication::autoload( bool exitOnError,const std::string &
 }
 std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameters, bool exitOnError, const std::string &suffix,  std::shared_ptr<util::ProgressFeedback> feedback, util::slist* rejected)
 {
-	util::slist input = parameters[std::string( "in" ) + suffix];
-	util::slist rf = parameters[std::string( "rf" ) + suffix];
-	util::slist dl = parameters[std::string( "rdialect" ) + suffix];
+	const util::slist input = parameters[std::string( "in" ) + suffix];
+	const util::slist rf = parameters[std::string( "rf" ) + suffix];
+	const util::slist dl = parameters[std::string( "rdialect" ) + suffix];
 	
 	const bool no_progress = parameters["np"];
 
@@ -159,7 +159,7 @@ std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameter
 		data::IOFactory::setProgressFeedback( feedback );
 	}
 
-	std::list<util::istring> formatstack=util::makeIStringList(rf);
+	const std::list<util::istring> formatstack=util::makeIStringList(rf);
 
 	std::list< Image > tImages;
 	if(input.size()==1 && input.front()=="-"){
@@ -184,8 +184,8 @@ std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameter
 			exit( 1 );
 		} 
 	} else {
-		for( std::list<data::Image>::const_iterator a = tImages.begin(); a != tImages.end(); a++ ) {
-			for( std::list<data::Image>::const_iterator b = a; ( ++b ) != tImages.end(); ) {
+		for( auto a = tImages.begin(); a != tImages.end(); a++ ) {
+			for( auto b = a; ( ++b ) != tImages.end(); ) {
 				const data::Image &aref = *a, bref = *b;
 				LOG_IF( aref.getDifference( bref ).empty(), Runtime, warning ) << "The metadata of the images "
 						<< aref.identify(true,false) << ":" << std::distance<std::list<Image> ::const_iterator>( tImages.begin(), a )

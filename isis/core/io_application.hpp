@@ -31,11 +31,11 @@ namespace data
 
 class IOApplication: public util::Application
 {
-	bool m_input;
 	template< typename TYPE > std::list<data::TypedImage<TYPE> > convertTo( const std::list<data::Image> &src ) {
 		return std::list<data::TypedImage<TYPE> >( src.begin(), src.end() );
 	}
-
+protected:
+	bool m_input;
 public:
 	std::list<data::Image> images;
 	/**

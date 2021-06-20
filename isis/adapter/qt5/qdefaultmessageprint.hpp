@@ -6,9 +6,7 @@
 #include <QObject>
 #include <QDateTime>
 
-namespace isis
-{
-namespace qt5
+namespace isis::qt5
 {
 
 class LogEvent
@@ -46,7 +44,6 @@ private:
 
 };
 
-}
 }
 
 

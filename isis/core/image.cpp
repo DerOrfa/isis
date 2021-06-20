@@ -782,8 +782,8 @@ size_t Image::compare( const isis::data::Image &comp ) const
 Image::orientation Image::getMainOrientation()const
 {
 	LOG_IF( ! isValid() || ! clean, Debug, warning ) << "You should not run this on non clean image. Run reIndex first.";
-	util::fvector3 row = getValueAs<util::fvector3>( "rowVec" );
-	util::fvector3 column = getValueAs<util::fvector3>( "columnVec" );
+	auto row = getValueAs<util::fvector3>( "rowVec" );
+	auto column = getValueAs<util::fvector3>( "columnVec" );
 	util::normalize(row);
 	util::normalize(column);
 	LOG_IF( util::dot(row, column ) > 0.01, Runtime, warning ) << "The cosine between the columns and the rows of the image is bigger than 0.01";

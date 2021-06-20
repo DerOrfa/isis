@@ -17,21 +17,18 @@
 
 */
 
-#ifndef QT_APPLICATION_HPP
-#define QT_APPLICATION_HPP
+#pragma once
 
 #include <QGuiApplication>
-#include <QMatrix4x4>
 
-#include "../../core/application.hpp"
-#include "../../core/matrix.hpp"
 #include "../../core/io_application.hpp"
+#include "../../core/io_factory.hpp"
 #include "qdefaultmessageprint.hpp"
+#include "qimage_loader.hpp"
+#include "common.hpp"
 #include <QApplication>
 
-namespace isis
-{
-namespace qt5
+namespace isis::qt5
 {
 
 class QtApplication : public util::Application
@@ -39,9 +36,9 @@ class QtApplication : public util::Application
 	std::unique_ptr<QApplication> m_qapp;
 public:
 	QApplication &getQApplication();
-	QtApplication( const char name[] );
+	explicit QtApplication( const char name[] );
 	virtual bool init( int &argc, char **argv, bool exitOnError = true );
-	virtual std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const;
+	[[nodiscard]] virtual std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const;
 	int exec();
 };
 
@@ -50,15 +47,49 @@ class IOQtApplication : public data::IOApplication
 	int m_argc; //same as above
 	char **m_argv;
 	std::unique_ptr<QApplication> m_qapp;
+	bool _init(int &argc, char **argv);
 public:
 	QApplication &getQApplication();
-	IOQtApplication( const char name[], bool have_input = true, bool have_output = true );
+	explicit IOQtApplication( const char name[], bool have_input = true, bool have_output = true );
+	template<typename Obj> QMetaObject::Connection async_autoload(Obj *load_rcv, image_receive_slot<Obj> load_slot,const std::string &param_suffix="")
+	{
+		const util::slist input = parameters[std::string("in") + param_suffix];
+		const util::slist rf = parameters[std::string("rf") + param_suffix];
+		const util::slist dl = parameters[std::string("rdialect") + param_suffix];
+
+		const bool no_progress = parameters["np"];
+
+		if(!no_progress && feedback()){
+			data::IOFactory::setProgressFeedback(feedback());
+		}
+
+		const std::list<util::istring> formatstack = util::makeIStringList(rf);
+
+		LOG(Runtime, info)
+			<< "loading " << util::MSubject(input)
+			<< util::NoSubject(rf.empty() ? "" : std::string(" using the format stack: ") + util::listToString(rf.begin(), rf.end()))
+			<< util::NoSubject((!rf.empty() && !dl.empty()) ? " and" : "")
+			<< util::NoSubject(dl.empty() ? "" : std::string(" using the dialect: ") + util::listToString(dl.begin(), dl.end()));
+		return asyncLoad(input,formatstack,util::makeIStringList(dl),load_rcv,load_slot);
+	}
 	virtual bool init( int &argc, char **argv, bool exitOnError = true );
-	virtual std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const;
+	template<typename Obj> Obj* init( int &argc, char **argv, image_receive_slot<Obj> load_slot, bool exitOnError = true )
+	{
+		const bool ok = _init(argc,argv) && util::Application::init( argc, argv, exitOnError );
+		if ( !ok  )
+			return nullptr;
+
+		auto load_rcv = new Obj;
+		;
+		if ( m_input ) {
+			QMetaObject::Connection c=async_autoload(load_rcv,load_slot);
+			LOG_IF(!c,Runtime,error) << "Failed to create a connection with the receiver of the asynchronous load";
+		}
+
+		return load_rcv;
+	}
+	[[nodiscard]] virtual std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const;
 	int exec();
 };
 
 }
-}
-
-#endif // QT_APPLICATION_HPP

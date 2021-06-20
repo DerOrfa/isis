@@ -1,9 +1,7 @@
 #include "common.hpp"
 #include <string>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 std::string getLastSystemError()
@@ -64,5 +62,4 @@ std::filesystem::path getRootPath(std::list< std::filesystem::path > sources,boo
 }
 
 
-}
 }

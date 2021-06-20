@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QImage>
+#include <QStringList>
 #include "../../core/image.hpp"
 
 namespace isis{
@@ -16,6 +16,29 @@ namespace qt5{
 	{
 		ENABLE_LOG( Qt5Log, HANDLE, level );
 		ENABLE_LOG( Qt5Debug, HANDLE, level );
+	}
+
+	template<typename T>
+	QStringList slist_to_QStringList(const std::list<T> &list)
+	{
+		QStringList ret;
+		std::transform(
+			list.begin(),list.end(),
+			std::back_inserter(ret),
+			[](const T &f){return f.c_str();}
+		);
+		return ret;
+	}
+	template<typename T>
+	std::list<T> QStringList_to_slist(const QStringList &list)
+	{
+		std::list<T> ret;
+		std::transform(
+			list.begin(),list.end(),
+			std::back_inserter(ret),
+			[](const QString &f){return f.toStdString().c_str();}
+		);
+		return ret;
 	}
 }
 }
