@@ -33,6 +33,9 @@
 #include <QPushButton>
 #include <QFileDialog>
 #include <QGraphicsSceneEvent>
+#include <QStatusBar>
+#include "guiprogressfeedback.hpp"
+#include <memory>
 
 namespace isis::qt5{
 namespace _internal{
@@ -403,6 +406,24 @@ void SimpleImageView::onMouseMoved(QPointF pos){
 		value_label->setText(QString("Value: ")+QString::fromStdString(value));
 	} else 
 		value_label->setText(QString("Value: --"));
+}
+
+MainImageView::MainImageView()
+{
+	setCentralWidget(tabs = new QTabWidget(this));
+
+	auto progressFeedback=std::make_shared<GUIProgressFeedback>(true);
+	data::IOFactory::setProgressFeedback(progressFeedback);
+	statusBar()->addPermanentWidget(progressFeedback.get());
+//	progressFeedback->setParent(nullptr);
+	resize(800,600);
+}
+void MainImageView::images_loaded(isis::qt5::IsisImageList images, QStringList rejects)
+{
+	for(const data::Image &img:images){
+		auto v=new SimpleImageView(img,"",tabs);
+		tabs->addTab(v,img.identify(true,false).c_str());
+	}
 }
 }
 

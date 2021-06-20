@@ -46,13 +46,14 @@ public:
 	 * \param step increment of the progress (default: 1)
 	 * \returns the actual amount of the "progress"
 	 */
-	virtual size_t progress(const std::string &message, size_t step)override;
+	size_t progress(const std::string &message, size_t step)override;
 	///Close/undisplay a progress display.
-	virtual void close()override;
+	void close()override;
 	/// \returns the current valued which represents 100%
-	virtual size_t getMax()override;
+	size_t getMax()override;
 	/// extend the progress bars maximum by the given value
-	virtual size_t extend( size_t by )override;
+	size_t extend( size_t by )override;
+	void restart(std::size_t)override;
 signals:
 	void signalNewValue( int value );
 	void signalNewMax( int value );

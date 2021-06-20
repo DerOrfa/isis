@@ -57,12 +57,6 @@ public:
 		const util::slist rf = parameters[std::string("rf") + param_suffix];
 		const util::slist dl = parameters[std::string("rdialect") + param_suffix];
 
-		const bool no_progress = parameters["np"];
-
-		if(!no_progress && feedback()){
-			data::IOFactory::setProgressFeedback(feedback());
-		}
-
 		const std::list<util::istring> formatstack = util::makeIStringList(rf);
 
 		LOG(Runtime, info)
@@ -80,12 +74,10 @@ public:
 			return nullptr;
 
 		auto load_rcv = new Obj;
-		;
 		if ( m_input ) {
 			QMetaObject::Connection c=async_autoload(load_rcv,load_slot);
 			LOG_IF(!c,Runtime,error) << "Failed to create a connection with the receiver of the asynchronous load";
 		}
-
 		return load_rcv;
 	}
 	[[nodiscard]] virtual std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const;

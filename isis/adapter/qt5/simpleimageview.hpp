@@ -23,14 +23,15 @@
 #include <QWidget>
 #include <QGraphicsView>
 #include "../../core/image.hpp"
+#include "qimage_loader.hpp"
 #include "qimage_adapter.hpp"
+#include <QMainWindow>
 
 class QSlider;
 class QLabel;
 class QButtonGroup;
 
-namespace isis{
-namespace qt5{
+namespace isis::qt5{
 namespace _internal {
 
 class MriGraphicsView: public QGraphicsView
@@ -90,7 +91,15 @@ public:
     SimpleImageView(data::Image img, QString title="", QWidget *parent=nullptr);
 };
 
-}
+class MainImageView : public QMainWindow{
+	Q_OBJECT
+	QTabWidget *tabs= nullptr;
+public:
+	MainImageView();
+public slots:
+	void images_loaded(isis::qt5::IsisImageList images,QStringList rejects);
+};
+
 }
 
 #endif // SIMPLEIMAGEVIEW_HPP

@@ -62,3 +62,7 @@ void isis::qt5::GUIProgressFeedback::show(size_t max, std::string header)
 	setProperty("title",QString::fromStdString(header));
 	setProperty("visible",true);
 }
+void isis::qt5::GUIProgressFeedback::restart(std::size_t)
+{
+	emit signalNewValue(0);
+}
