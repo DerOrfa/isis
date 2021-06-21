@@ -41,7 +41,7 @@ protected:
 
 public:
 	GradientWidget(QWidget* parent, std::pair< double, double > in_image_rage, qreal bottom = 0, qreal top = 1);
-signals:
+Q_SIGNALS:
 	void scaleUpdated(qreal bottom, qreal top);
 };
 

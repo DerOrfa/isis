@@ -51,7 +51,7 @@ void isis::qt5::QProgressBarWrapper::show(size_t _max, std::string _header)
 		LOG(Debug,error) << "Calling show on progressbar wrapper without a progressbar";
 
 }
-size_t isis::qt5::QProgressBarWrapper::progress(const std::string &message, size_t step)
+size_t isis::qt5::QProgressBarWrapper::progress(size_t step)
 {
 	current+=step;
 	update();
@@ -127,19 +127,19 @@ void isis::qt5::QStatusBarProgress::onClose()
 	QProgressBarWrapper::close();
 }
 
-isis::qt5::GUIProgressFeedback::GUIProgressFeedback(bool autohide, QWidget* parent):QGroupBox(parent),QProgressBarWrapper(new QProgressBar(this)),show_always(!autohide)
+isis::qt5::QGroupBoxProgress::QGroupBoxProgress(bool autohide, QWidget* parent): QGroupBox(parent), QProgressBarWrapper(new QProgressBar(this)), show_always(!autohide)
 {
 	if(!autohide)
 		QWidget::show();
 	setLayout(new QHBoxLayout());
 	layout()->addWidget(progress_bar);
 }
-void isis::qt5::GUIProgressFeedback::close()
+void isis::qt5::QGroupBoxProgress::close()
 {
 	QGroupBox::setProperty("visible",true);
 	QProgressBarWrapper::close();
 }
-void isis::qt5::GUIProgressFeedback::show(size_t max, std::string header)
+void isis::qt5::QGroupBoxProgress::show(size_t max, std::string header)
 {
 	QGroupBox::setProperty("title",QString::fromStdString(header));
 	QGroupBox::setProperty("visible",true);

@@ -10,7 +10,7 @@ void isis::util::ConsoleProgressBar::show(size_t _max, std::string _header)
 	closed=false;
 	restart(_max);
 }
-size_t isis::util::ConsoleProgressBar::progress(const std::string &, size_t step)
+size_t isis::util::ConsoleProgressBar::progress(size_t step)
 {
 	if(closed) {
 		LOG(Debug, warning) << "Ignoring progress on a closed progress bar";
@@ -50,7 +50,7 @@ void isis::util::ConsoleProgressBar::restart(size_t new_max)
 	max=new_max;
 	current=0;
 	//trigger recalculation and redraw
-	progress("",0);
+	progress(0);
 }
 
 void isis::util::ConsoleProgressBar::updateScreenWidth()

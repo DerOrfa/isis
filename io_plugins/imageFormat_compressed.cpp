@@ -34,7 +34,7 @@ public:
 	struct category : boost::iostreams::dual_use_filter_tag, boost::iostreams::multichar_tag { };
 
 	void progress( std::streamsize n ) {
-		m_feedback.progress( "", n );
+		m_feedback.progress(n);
 	}
 	template<typename Source>
 	std::streamsize read( Source &src, char *s, std::streamsize n ) {

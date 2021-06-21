@@ -17,7 +17,7 @@ class ConsoleProgressBar : public ProgressFeedback
 	bool closed=true;
 public:
 	void show( size_t max, std::string header ) override;
-	size_t progress(const std::string &message, size_t step) override;
+	size_t progress(size_t step) override;
 	void close() override;
 	size_t getMax() override;
 	size_t extend(size_t by) override;

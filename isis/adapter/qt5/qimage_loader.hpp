@@ -28,7 +28,7 @@ private:
 public:
 	QtImageLoader(QObject *parent,util::slist input, std::list<util::istring> formatstack, std::list<util::istring> dialects);
 	void run()override;
-signals:
+Q_SIGNALS:
 	void imagesReady(isis::qt5::IsisImageList images,QStringList rejects);
 };
 

@@ -96,7 +96,7 @@ class MainImageView : public QMainWindow{
 	QTabWidget *tabs= nullptr;
 public:
 	MainImageView();
-public slots:
+public Q_SLOTS:
 	void images_loaded(isis::qt5::IsisImageList images,QStringList rejects);
 };
 

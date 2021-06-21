@@ -30,7 +30,6 @@ namespace isis::qt5{
 class QProgressBarWrapper:public QObject, public util::ProgressFeedback
 {
 	Q_OBJECT
-	std::function<void()> delete_handler;
 	size_t max=0,current=0;
 	void update();
 protected:
@@ -38,14 +37,14 @@ protected:
 public:
 	explicit QProgressBarWrapper(QProgressBar *_progressBar);
 	void show(size_t max, std::string header) override;
-	size_t progress(const std::string &message, size_t step) override;
+	size_t progress(size_t step) override;
 	void close() override;
 	size_t getMax() override;
 	size_t extend(size_t by) override;
 	void restart(size_t new_max) override;
-private slots:
+private Q_SLOTS:
 	void onBarDeleted(QObject *p= nullptr);
-signals:
+Q_SIGNALS:
 	void sigSetVal(int newval);
 };
 
@@ -56,20 +55,20 @@ public:
 	explicit QStatusBarProgress(QStatusBar *status_bar);
 	void show( size_t max, std::string header )override;
 	void close()override;
-private slots:
+private Q_SLOTS:
 	void onShow(quint64 max, QString header );
 	void onClose();
 	void onBarDeleted(QObject *p= nullptr);
-signals:
+Q_SIGNALS:
 	void sigShow(quint64 max, QString header );
 	void sigClose();
 };
 
-class GUIProgressFeedback : public QGroupBox, public QProgressBarWrapper
+class QGroupBoxProgress : public QGroupBox, public QProgressBarWrapper
 {
     bool show_always;
 public:
-	explicit GUIProgressFeedback(bool autohide=true,QWidget *parent=nullptr);
+	explicit QGroupBoxProgress(bool autohide=true, QWidget *parent=nullptr);
 	/**
 	 * Set the progress display to the given maximum value and "show" it.
 	 * This will also extend already displayed progress bars.
