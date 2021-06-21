@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef GUIPROGRESSFEEDBACK_H
-#define GUIPROGRESSFEEDBACK_H
+#pragma once
 
 #include <QGroupBox>
 #include "../../core/progressfeedback.hpp"
@@ -26,39 +25,41 @@
 class QProgressBar;
 
 namespace isis::qt5{
-	
-class GUIProgressFeedback : public QGroupBox, public util::ProgressFeedback
+
+class QProgressBarWrapper:public QObject, public util::ProgressFeedback
 {
-    Q_OBJECT
-    bool show_always;
-	QProgressBar *progressbar;
+	Q_OBJECT
+	std::function<void()> delete_handler;
+	size_t max=0,current=0;
+	void update();
+protected:
+	QProgressBar *progressBar;
 public:
-	GUIProgressFeedback(bool autohide=true,QWidget *parent=nullptr);
+	explicit QProgressBarWrapper(QProgressBar *_progressBar);
+	void show(size_t max, std::string header) override;
+	size_t progress(const std::string &message, size_t step) override;
+	void close() override;
+	size_t getMax() override;
+	size_t extend(size_t by) override;
+	void restart(size_t new_max) override;
+private slots:
+	void onBarDeleted(QObject *p= nullptr);
+signals:
+	void sigSetVal(int newval);
+};
+	
+class GUIProgressFeedback : public QGroupBox, public QProgressBarWrapper
+{
+    bool show_always;
+public:
+	explicit GUIProgressFeedback(bool autohide=true,QWidget *parent=nullptr);
 	/**
 	 * Set the progress display to the given maximum value and "show" it.
 	 * This will also extend already displayed progress bars.
 	 */
-	virtual void show( size_t max, std::string header )override;
-	/**
-	 * Set the actual "progress".
-	 * Behavior is undefined if show was not called before.
-	 * \param message message to be displayed (default: "")
-	 * \param step increment of the progress (default: 1)
-	 * \returns the actual amount of the "progress"
-	 */
-	size_t progress(const std::string &message, size_t step)override;
+	void show( size_t max, std::string header )override;
 	///Close/undisplay a progress display.
 	void close()override;
-	/// \returns the current valued which represents 100%
-	size_t getMax()override;
-	/// extend the progress bars maximum by the given value
-	size_t extend( size_t by )override;
-	void restart(std::size_t)override;
-signals:
-	void signalNewValue( int value );
-	void signalNewMax( int value );
 };
 
 }
-
-#endif // GUIPROGRESSFEEDBACK_H

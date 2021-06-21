@@ -14,7 +14,7 @@ class ConsoleProgressBar : public ProgressFeedback
 
 	void redraw();
 	void updateScreenWidth();
-
+	bool closed=true;
 public:
 	void show( size_t max, std::string header ) override;
 	size_t progress(const std::string &message, size_t step) override;

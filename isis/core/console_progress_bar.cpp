@@ -1,4 +1,5 @@
 #include "console_progress_bar.hpp"
+#include "common.hpp"
 #include <unistd.h>
 #include <termcap.h>
 
@@ -6,25 +7,33 @@ void isis::util::ConsoleProgressBar::show(size_t _max, std::string _header)
 {
 	header=_header;
 	start = std::chrono::system_clock::now();
+	closed=false;
 	restart(_max);
 }
 size_t isis::util::ConsoleProgressBar::progress(const std::string &, size_t step)
 {
-	updateScreenWidth();//@todo doing this all the time is probably not a good idea
-	current+=step;
-	uint16_t new_prgs = current*avail_prgs_width/max;
-	if(new_prgs!= prgs){
-		prgs=new_prgs;
-		redraw();
+	if(closed) {
+		LOG(Debug, warning) << "Ignoring progress on a closed progress bar";
+	} else {
+		updateScreenWidth();//@todo doing this all the time is probably not a good idea
+		current += step;
+		uint16_t new_prgs = current * avail_prgs_width / max;
+		if (new_prgs != prgs) {
+			prgs = new_prgs;
+			redraw();
+		}
 	}
 	return current;
 }
 void isis::util::ConsoleProgressBar::close()
 {
-	putc('\n',stdout);
-	current=0;
-	prgs=0;
-	header.clear();
+	if(!closed) {
+		putc('\n', stdout);
+		max = current = 0;
+		prgs = 0;
+		header.clear();
+	}
+	closed=true;
 }
 size_t isis::util::ConsoleProgressBar::getMax()
 {
