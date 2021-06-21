@@ -412,9 +412,8 @@ MainImageView::MainImageView()
 {
 	setCentralWidget(tabs = new QTabWidget(this));
 
-	auto progressFeedback=std::make_shared<GUIProgressFeedback>(true);
+	auto progressFeedback=std::make_shared<QStatusBarProgress>(statusBar());
 	data::IOFactory::setProgressFeedback(progressFeedback);
-	statusBar()->addPermanentWidget(progressFeedback.get());
 //	progressFeedback->setParent(nullptr);
 	resize(800,600);
 }

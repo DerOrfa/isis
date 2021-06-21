@@ -23,6 +23,7 @@
 #include "../../core/progressfeedback.hpp"
 
 class QProgressBar;
+class QStatusBar;
 
 namespace isis::qt5{
 
@@ -33,7 +34,7 @@ class QProgressBarWrapper:public QObject, public util::ProgressFeedback
 	size_t max=0,current=0;
 	void update();
 protected:
-	QProgressBar *progressBar;
+	QProgressBar *progress_bar;
 public:
 	explicit QProgressBarWrapper(QProgressBar *_progressBar);
 	void show(size_t max, std::string header) override;
@@ -47,7 +48,23 @@ private slots:
 signals:
 	void sigSetVal(int newval);
 };
-	
+
+class QStatusBarProgress : public QProgressBarWrapper{
+	Q_OBJECT
+	QStatusBar *status_bar;
+public:
+	explicit QStatusBarProgress(QStatusBar *status_bar);
+	void show( size_t max, std::string header )override;
+	void close()override;
+private slots:
+	void onShow(quint64 max, QString header );
+	void onClose();
+	void onBarDeleted(QObject *p= nullptr);
+signals:
+	void sigShow(quint64 max, QString header );
+	void sigClose();
+};
+
 class GUIProgressFeedback : public QGroupBox, public QProgressBarWrapper
 {
     bool show_always;
