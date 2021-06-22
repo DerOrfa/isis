@@ -38,7 +38,7 @@ public:
 	QApplication &getQApplication();
 	explicit QtApplication( const char name[] );
 	virtual bool init( int &argc, char **argv, bool exitOnError = true );
-	[[nodiscard]] virtual std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const;
+	[[nodiscard]] std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const override;
 	int exec();
 };
 

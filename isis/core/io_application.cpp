@@ -250,12 +250,6 @@ Image IOApplication::fetchImage()
 	return ret;
 }
 
-std::shared_ptr< util::MessageHandlerBase > IOApplication::getLogHandler( std::string module, LogLevel level ) const
-{
-	return isis::util::Application::getLogHandler( module, level );
-}
-
-
 }
 }
 

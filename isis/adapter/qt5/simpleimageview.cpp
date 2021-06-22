@@ -36,6 +36,7 @@
 #include <QStatusBar>
 #include "guiprogressfeedback.hpp"
 #include <memory>
+#include <QStyle>
 
 namespace isis::qt5{
 namespace _internal{
@@ -414,14 +415,17 @@ MainImageView::MainImageView()
 
 	auto progressFeedback=std::make_shared<QStatusBarProgress>(statusBar());
 	data::IOFactory::setProgressFeedback(progressFeedback);
-//	progressFeedback->setParent(nullptr);
+
+	auto log_btn=new QPushButton(style()->standardIcon(QStyle::SP_MessageBoxInformation),"");
+	log_btn->setToolTip("Click for logging");
+	statusBar()->addPermanentWidget(log_btn);
 	resize(800,600);
 }
 void MainImageView::images_loaded(isis::qt5::IsisImageList images, QStringList rejects)
 {
 	for(const data::Image &img:images){
 		auto v=new SimpleImageView(img,"",tabs);
-		tabs->addTab(v,img.identify(true,false).c_str());
+		tabs->addTab(v,QString::fromStdString(img.identify(true,false)));
 	}
 }
 }
