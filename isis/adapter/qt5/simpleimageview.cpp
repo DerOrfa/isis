@@ -35,6 +35,8 @@
 #include <QGraphicsSceneEvent>
 #include <QStatusBar>
 #include "guiprogressfeedback.hpp"
+#include "qdefaultmessageprint.hpp"
+#include "qlogwidget.hpp"
 #include <memory>
 #include <QStyle>
 
@@ -416,9 +418,11 @@ MainImageView::MainImageView()
 	auto progressFeedback=std::make_shared<QStatusBarProgress>(statusBar());
 	data::IOFactory::setProgressFeedback(progressFeedback);
 
-	auto log_btn=new QPushButton(style()->standardIcon(QStyle::SP_MessageBoxInformation),"");
+	auto log_btn=new QPushButton(style()->standardIcon(QStyle::SP_MessageBoxQuestion),"");
 	log_btn->setToolTip("Click for logging");
 	statusBar()->addPermanentWidget(log_btn);
+
+	(new QLogWidget(this))->registerButton(log_btn,true);
 	resize(800,600);
 }
 void MainImageView::images_loaded(isis::qt5::IsisImageList images, QStringList rejects)

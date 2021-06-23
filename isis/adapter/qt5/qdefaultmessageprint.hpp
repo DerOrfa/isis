@@ -34,11 +34,11 @@ Q_SIGNALS:
 	void commitMessage( qt5::LogEvent message );
 
 public:
-	virtual void commit( const util::Message &msg );
+	void commit( const util::Message &msg ) override;
 	void qmessageBelow( LogLevel level );
-	   QDefaultMessageHandler( LogLevel level );
-	virtual ~QDefaultMessageHandler();
-	const LogEventList &getMessageList() const;
+	explicit QDefaultMessageHandler( LogLevel level );
+	~QDefaultMessageHandler() override;
+	[[nodiscard]] const LogEventList &getMessageList() const;
 private:
 	LogLevel m_LogEventLogLevel;
 

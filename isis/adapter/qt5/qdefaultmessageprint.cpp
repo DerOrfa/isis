@@ -41,7 +41,7 @@ void isis::qt5::QDefaultMessageHandler::commit( const isis::util::Message &msg )
 	util::Singletons::get<LogEventList, 10>().push_back( qMessage );
 	
 	if(receivers(SIGNAL(commitMessage( qt5::LogEvent ))))
-		commitMessage( qMessage );
+		emit commitMessage( qMessage );
 	else { // fall back to util::DefaultMsgPrint of nobody is listening
 		util::DefaultMsgPrint pr(m_level);
 		pr.commit(msg);

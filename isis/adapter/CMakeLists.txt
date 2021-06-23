@@ -20,6 +20,7 @@ if(ISIS_QT5)
 	find_package(Qt5Widgets)
 
 	set(CMAKE_AUTOMOC ON)
+	set(CMAKE_AUTOUIC ON)
 	add_lib(isis_qt5
 		"qt5/*.cpp" "qt5/*.hpp" "isis/adapter/qt5"
 		"isis_core-TYPE;Qt5::Widgets" "Threads::Threads"
