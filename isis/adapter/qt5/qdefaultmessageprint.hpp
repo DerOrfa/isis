@@ -1,5 +1,4 @@
-#ifndef QDEFAULTMESSAGEPRINT_HPP
-#define QDEFAULTMESSAGEPRINT_HPP
+#pragma once
 
 #include "../../core/message.hpp"
 #include <QString>
@@ -12,11 +11,12 @@ namespace isis::qt5
 class LogEvent
 {
 public:
+	LogEvent()=default;
 	explicit LogEvent(const util::Message &msg);
 	QString merge();
-	std::string m_object, m_module;
-	std::filesystem::path m_file;
-	std::list<std::string> m_subjects;
+	QString m_object, m_module;
+	QString m_file;
+	QStringList m_subjects;
 	QDateTime m_timeStamp;
 	int m_line;
 	LogLevel m_level;
@@ -38,13 +38,9 @@ public:
 	void qmessageBelow( LogLevel level );
 	explicit QDefaultMessageHandler( LogLevel level );
 	~QDefaultMessageHandler() override;
-	[[nodiscard]] const LogEventList &getMessageList() const;
 private:
 	LogLevel m_PushMsgBoxLogLevel;
 
 };
 
 }
-
-
-#endif

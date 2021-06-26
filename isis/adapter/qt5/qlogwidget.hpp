@@ -22,6 +22,8 @@ Q_OBJECT
 	QAbstractButton *feedback_button=nullptr;
 protected:
 	QMetaObject::Connection feedback_connection;
+	void showLevel(LogLevel level, bool show=true);
+	void hideLevel(LogLevel level);
 public:
 	bool registerButton(QAbstractButton *btn, bool use_as_feedback);
 	explicit QLogWidget(QWidget *parent = nullptr);
@@ -29,6 +31,11 @@ public:
 private:
 	Ui::QLogWidget *ui;
 public Q_SLOTS:
-	void onLogEvent(LogEvent event);
+	void onLogEvent(isis::qt5::LogEvent event);
+	void onShowError(bool);
+	void onShowWarning(bool);
+	void onShowNotice(bool);
+	void onShowInfo(bool);
+	void onShowVerbose(bool);
 };
 }

@@ -5,14 +5,19 @@
 
 isis::qt5::LogEvent::LogEvent(const isis::util::Message& msg)
 {
-	m_file = msg.m_file;
+	m_file = QString::fromStdString(msg.m_file.native());
 	m_level = msg.m_level;
 	m_line = msg.m_line;
-	m_module = msg.m_module;
-	m_object = msg.m_object;
-	m_subjects = msg.m_subjects;
+	m_module = QString::fromStdString(msg.m_module);
+	m_object = QString::fromStdString(msg.m_object);
 	m_timeStamp.setTime_t(msg.m_timeStamp);
 	m_unformatted_msg = QString::fromStdString(msg.str());
+
+	std::transform(
+		msg.m_subjects.begin(),msg.m_subjects.end(),
+		std::back_inserter(m_subjects),
+		[](const std::string &s){return QString::fromStdString(s);}
+	);
 }
 
 QString isis::qt5::LogEvent::merge()
@@ -20,7 +25,7 @@ QString isis::qt5::LogEvent::merge()
 	QString ret=m_unformatted_msg;
 
 	for(const auto &subj:m_subjects)
-		ret.replace(QString("{o}"),QString::fromStdString(subj));
+		ret.replace(QString("{o}"),subj);
 	return  ret;
 }
 
@@ -66,8 +71,8 @@ void isis::qt5::QDefaultMessageHandler::commit( const isis::util::Message &msg )
 		}
 
  		std::stringstream text;
- 		text << util::logLevelName( msg.m_level ) << " in " << qMessage.m_file << ":" << qMessage.m_line;
-		msgBox.setWindowTitle( QString("%1 (%2)").arg(qMessage.m_module.c_str()).arg(qMessage.m_timeStamp.toString()) );
+ 		text << util::logLevelName( msg.m_level ) << " in " << msg.m_file << ":" << qMessage.m_line;
+		msgBox.setWindowTitle( QString("%1 (%2)").arg(qMessage.m_module).arg(qMessage.m_timeStamp.toString()) );
  		msgBox.setText( text.str().c_str() );
 		msgBox.setInformativeText( qMessage.merge() );
  		msgBox.exec();
@@ -75,7 +80,3 @@ void isis::qt5::QDefaultMessageHandler::commit( const isis::util::Message &msg )
 }
 
 isis::qt5::QDefaultMessageHandler::~QDefaultMessageHandler(){}
-const isis::qt5::LogEventList &isis::qt5::QDefaultMessageHandler::getMessageList() const
-{
-	return util::Singletons::get<LogEventList, 10>();
-}

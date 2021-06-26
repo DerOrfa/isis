@@ -28,8 +28,21 @@
 #include "common.hpp"
 #include <QApplication>
 
+
 namespace isis::qt5
 {
+template<typename Obj> using log_receive_slot = void (Obj::*) (qt5::LogEvent event);
+
+template<typename Obj> void registerLogReceiver(util::Application *app, Obj* rec_obj, log_receive_slot<Obj> rec_slot){
+	qRegisterMetaType<isis::qt5::LogEvent>("qt5::LogEvent");
+	for(auto &handler:app->resetLogging()){
+		auto qHander = std::dynamic_pointer_cast<QDefaultMessageHandler>(handler);
+		if(handler)
+			QObject::connect(qHander.get(),&QDefaultMessageHandler::commitMessage,rec_obj,rec_slot);
+		else
+			LOG(Runtime,error) << "Log handler is not QDefaultMessageHandler, won't connect to " << rec_obj->objectName().toStdString();
+	}
+}
 
 class QtApplication : public util::Application
 {

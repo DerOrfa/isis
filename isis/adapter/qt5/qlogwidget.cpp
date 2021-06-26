@@ -13,6 +13,7 @@
 isis::qt5::QLogWidget::QLogWidget(QWidget *parent):QWidget(parent), ui(new Ui::QLogWidget)
 {
 	ui->setupUi(this);
+
 }
 
 isis::qt5::QLogWidget::~QLogWidget()
@@ -42,4 +43,14 @@ void isis::qt5::QLogWidget::onLogEvent(LogEvent event)
 		}
 	}
 }
+void isis::qt5::QLogWidget::onShowError(bool toggled)  {showLevel(error,toggled);}
+void isis::qt5::QLogWidget::onShowWarning(bool toggled){showLevel(warning,toggled);}
+void isis::qt5::QLogWidget::onShowNotice(bool toggled) {showLevel(notice,toggled);}
+void isis::qt5::QLogWidget::onShowInfo(bool toggled)   {showLevel(info,toggled);}
+void isis::qt5::QLogWidget::onShowVerbose(bool toggled){showLevel(verbose_info,toggled);}
 
+void isis::qt5::QLogWidget::showLevel(LogLevel level, bool show)
+{
+
+}
+void isis::qt5::QLogWidget::hideLevel(LogLevel level){showLevel(level,false);}

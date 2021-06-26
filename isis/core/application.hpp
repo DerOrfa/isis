@@ -21,16 +21,13 @@
  *
  *****************************************************************/
 
-#ifndef APPLICATION_HPP
-#define APPLICATION_HPP
+#pragma once
 
 #include "progparameter.hpp"
 #include "propmap.hpp"
 #include "progressfeedback.hpp"
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 /**
@@ -73,7 +70,7 @@ public:
 	 * \param cfg the default path of the config file. If empty, no config file will be loaded
 	 * \note set \code parameters["cfg"].needed()=true \endcode to prevent the programm from running without given config file
 	 */
-	Application( const char name[], const char cfg[]="" );
+	explicit Application( const char name[], const char cfg[]="" );
 	virtual ~Application();
 
 	/**
@@ -141,7 +138,7 @@ public:
 	std::list<std::shared_ptr<MessageHandlerBase>> resetLogging();
 	/**
 	 * Virtual function to display a short help text.
-	 * Ths usually shall print the programm name plus all entries of parameters with their description.
+	 * Ths usually shall print the program name plus all entries of parameters with their description.
 	 */
 	virtual void printHelp( bool withHidden = false )const;
 	/// Set the logging level for the specified module
@@ -162,5 +159,3 @@ public:
 	static std::shared_ptr<util::ProgressFeedback>& feedback();
 };
 }
-}
-#endif // APPLICATION_HPP

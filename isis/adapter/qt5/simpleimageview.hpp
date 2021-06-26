@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef SIMPLEIMAGEVIEW_HPP
-#define SIMPLEIMAGEVIEW_HPP
+#pragma once
 
 #include <QWidget>
 #include <QGraphicsView>
@@ -93,6 +92,7 @@ public:
 
 class MainImageView : public QMainWindow{
 	Q_OBJECT
+
 	QTabWidget *tabs= nullptr;
 public:
 	MainImageView();
@@ -101,5 +101,3 @@ public Q_SLOTS:
 };
 
 }
-
-#endif // SIMPLEIMAGEVIEW_HPP
