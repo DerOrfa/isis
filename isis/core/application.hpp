@@ -57,7 +57,7 @@ class Application
 protected:
 	typedef void ( Application::*setLogFunction )( LogLevel level )const;
 	std::map<std::string, std::list<setLogFunction> > logs;
-	virtual std::shared_ptr<MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const;
+	virtual std::shared_ptr<MessageHandlerBase> makeLogHandler(isis::LogLevel level) const;
 
 public:
 
@@ -100,7 +100,7 @@ public:
 	 * addLogging<MyDebugModule>("MyLog");
 	 * \endcode will control \code LOG(MyLogModule,...) << ... \endcode and \code LOG(MyDebugModule,...) << ... \endcode through the parameter "-dMyLog".
 	 *
-	 * \note This does not set the logging handler. That is done by reimplementing getLogHandler( std::string module, isis::LogLevel level )const.
+	 * \note This does not set the logging handler. That is done by reimplementing makeLogHandler( std::string module, isis::LogLevel level )const.
 	 */
 	template<typename MODULE> void addLogging(std::string parameter_name) {
 		addLoggingParameter( parameter_name );
@@ -136,7 +136,7 @@ public:
 	
 	/**
 	 * (re)set log Handlers by calling setLog for each registered module.
-	 * Usefull if Application::getLogHandler was reimplemented and its behavior changes during runtime.
+	 * Usefull if Application::makeLogHandler was reimplemented and its behavior changes during runtime.
 	 */
 	void resetLogging();
 	/**
@@ -147,7 +147,7 @@ public:
 	/// Set the logging level for the specified module
 	template<typename MODULE> void setLog( LogLevel level ) const {
 		if ( !MODULE::use );
-		else _internal::Log<MODULE>::setHandler( getLogHandler( MODULE::name, level ) );
+		else _internal::Log<MODULE>::setHandler(makeLogHandler(level));
 
 		LOG( Debug, info ) << "Setting logging for module " << MSubject( MODULE::name ) << " to level " << level;
 	}

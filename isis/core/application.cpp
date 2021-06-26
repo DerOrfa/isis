@@ -241,7 +241,7 @@ void Application::printHelp( bool withHidden )const
 	}
 }
 
-std::shared_ptr< MessageHandlerBase > Application::getLogHandler( std::string /*module*/, isis::LogLevel level )const
+std::shared_ptr<MessageHandlerBase> Application::makeLogHandler(isis::LogLevel level) const
 {
 	return std::shared_ptr< MessageHandlerBase >( level ? new util::DefaultMsgPrint( level ) : 0 );
 }

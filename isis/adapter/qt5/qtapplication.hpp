@@ -38,7 +38,7 @@ public:
 	QApplication &getQApplication();
 	explicit QtApplication( const char name[] );
 	virtual bool init( int &argc, char **argv, bool exitOnError = true );
-	[[nodiscard]] std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const override;
+	[[nodiscard]] std::shared_ptr<util::MessageHandlerBase> makeLogHandler(isis::LogLevel level) const override;
 	int exec();
 };
 
@@ -80,7 +80,7 @@ public:
 		}
 		return load_rcv;
 	}
-	[[nodiscard]] virtual std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const;
+	[[nodiscard]] virtual std::shared_ptr<util::MessageHandlerBase> makeLogHandler(isis::LogLevel level) const;
 	int exec();
 };
 

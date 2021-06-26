@@ -57,7 +57,7 @@ bool isis::qt5::IOQtApplication::init( int &argc, char **argv, bool exitOnError 
 }
 
 
-std::shared_ptr< isis::util::MessageHandlerBase > isis::qt5::IOQtApplication::getLogHandler( std::string /*module*/, isis::LogLevel level )const
+std::shared_ptr<isis::util::MessageHandlerBase> isis::qt5::IOQtApplication::makeLogHandler(isis::LogLevel level) const
 {
 	return std::shared_ptr< isis::util::MessageHandlerBase >( level ? new isis::qt5::QDefaultMessageHandler( level ) : 0 );
 }
@@ -75,7 +75,7 @@ bool isis::qt5::IOQtApplication::_init(int &argc, char **argv)
 	return true;
 }
 
-std::shared_ptr< isis::util::MessageHandlerBase > isis::qt5::QtApplication::getLogHandler( std::string /*module*/, isis::LogLevel level )const
+std::shared_ptr<isis::util::MessageHandlerBase> isis::qt5::QtApplication::makeLogHandler(isis::LogLevel level) const
 {
 	return std::shared_ptr< isis::util::MessageHandlerBase >( level ? new isis::qt5::QDefaultMessageHandler( level ) : 0 );
 }
