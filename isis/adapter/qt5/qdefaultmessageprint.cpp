@@ -27,12 +27,12 @@ QString isis::qt5::LogEvent::merge()
 
 isis::qt5::QDefaultMessageHandler::QDefaultMessageHandler( isis::LogLevel level )
 	: MessageHandlerBase( level ),
-	  m_LogEventLogLevel( isis::error )
+	  m_PushMsgBoxLogLevel(isis::error )
 {}
 
 void isis::qt5::QDefaultMessageHandler::qmessageBelow ( isis::LogLevel level )
 {
-	m_LogEventLogLevel = level;
+	m_PushMsgBoxLogLevel = level;
 }
 
 void isis::qt5::QDefaultMessageHandler::commit( const isis::util::Message &msg )
@@ -47,7 +47,7 @@ void isis::qt5::QDefaultMessageHandler::commit( const isis::util::Message &msg )
 		pr.commit(msg);
 	}
 
-	if( m_LogEventLogLevel > msg.m_level ) {
+	if( m_PushMsgBoxLogLevel > msg.m_level ) {
 		QMessageBox msgBox;
 		std::string level;
 

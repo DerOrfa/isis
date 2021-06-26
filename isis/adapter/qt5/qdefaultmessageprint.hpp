@@ -40,7 +40,7 @@ public:
 	~QDefaultMessageHandler() override;
 	[[nodiscard]] const LogEventList &getMessageList() const;
 private:
-	LogLevel m_LogEventLogLevel;
+	LogLevel m_PushMsgBoxLogLevel;
 
 };
 
