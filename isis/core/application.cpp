@@ -181,16 +181,18 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 
 	return ! err;
 }
-void Application::resetLogging()
+std::list<std::shared_ptr<MessageHandlerBase>> Application::resetLogging()
 {
+	std::list<std::shared_ptr<MessageHandlerBase>> ret;
 	for( auto &ref: logs ) {
 		const std::string dname = std::string( "d" ) + ref.first;
 		assert( !parameters[dname].isEmpty() ); // this must have been set by addLoggingParameter (called via addLogging)
 		const LogLevel level = ( LogLevel )( uint16_t )parameters[dname].as<Selection>();
 		for( setLogFunction setter: ref.second ) {
-			( this->*setter )( level );
+			ret.push_back(std::move((this->*setter )( level )));
 		}
 	}
+	return std::move(ret);
 }
 
 void Application::printHelp( bool withHidden )const

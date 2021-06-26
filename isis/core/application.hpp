@@ -55,7 +55,7 @@ class Application
 	void addLoggingParameter( std::string name );
 
 protected:
-	typedef void ( Application::*setLogFunction )( LogLevel level )const;
+	typedef std::shared_ptr<MessageHandlerBase>( Application::*setLogFunction )( LogLevel level )const;
 	std::map<std::string, std::list<setLogFunction> > logs;
 	virtual std::shared_ptr<MessageHandlerBase> makeLogHandler(isis::LogLevel level) const;
 
@@ -136,20 +136,25 @@ public:
 	
 	/**
 	 * (re)set log Handlers by calling setLog for each registered module.
-	 * Usefull if Application::makeLogHandler was reimplemented and its behavior changes during runtime.
+	 * Useful if Application::makeLogHandler was reimplemented and its behavior changes during runtime.
 	 */
-	void resetLogging();
+	std::list<std::shared_ptr<MessageHandlerBase>> resetLogging();
 	/**
 	 * Virtual function to display a short help text.
 	 * Ths usually shall print the programm name plus all entries of parameters with their description.
 	 */
 	virtual void printHelp( bool withHidden = false )const;
 	/// Set the logging level for the specified module
-	template<typename MODULE> void setLog( LogLevel level ) const {
-		if ( !MODULE::use );
-		else _internal::Log<MODULE>::setHandler(makeLogHandler(level));
-
+	template<typename MODULE>
+	std::shared_ptr<MessageHandlerBase> setLog(LogLevel level ) const {
 		LOG( Debug, info ) << "Setting logging for module " << MSubject( MODULE::name ) << " to level " << level;
+		if ( !MODULE::use )return {};
+		else {
+			const auto handle=makeLogHandler(level);
+			_internal::Log<MODULE>::setHandler(handle);
+			return handle;
+		}
+
 	}
 	//get the version of the coreutils
 	static const std::string getCoreVersion( void );
