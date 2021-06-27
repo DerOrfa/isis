@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
 	log_btn->setToolTip("Click for logging");
 	main->statusBar()->addPermanentWidget(log_btn);
 	log_widget->registerButton(log_btn,true);
-	registerLogReceiver(&app,log_widget,&QLogWidget::onLogEvent);
+	app.registerLogReceiver(log_widget,&QLogWidget::onLogEvent);
 
 	main->show();
     return app.exec();

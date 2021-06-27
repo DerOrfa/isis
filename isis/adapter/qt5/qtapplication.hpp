@@ -33,38 +33,60 @@ namespace isis::qt5
 {
 template<typename Obj> using log_receive_slot = void (Obj::*) (qt5::LogEvent event);
 
-template<typename Obj> void registerLogReceiver(util::Application *app, Obj* rec_obj, log_receive_slot<Obj> rec_slot){
-	qRegisterMetaType<isis::qt5::LogEvent>("qt5::LogEvent");
-	for(auto &handler:app->resetLogging()){
-		auto qHander = std::dynamic_pointer_cast<QDefaultMessageHandler>(handler);
-		if(handler)
-			QObject::connect(qHander.get(),&QDefaultMessageHandler::commitMessage,rec_obj,rec_slot);
-		else
-			LOG(Runtime,error) << "Log handler is not QDefaultMessageHandler, won't connect to " << rec_obj->objectName().toStdString();
-	}
+namespace _internal{
+	template<class ISISApp> class QtApplicationBase : public ISISApp{
+		std::unique_ptr<QApplication> m_qapp;
+	protected:
+		void _init( int &argc, char **argv)
+		{
+			if ( m_qapp ) {
+				LOG( Debug, error ) << "The QApplication already exists. This should not happen. I'll not touch it";
+			} else{
+				m_qapp = std::make_unique<QApplication>(argc, argv);
+			}
+		}
+	public:
+		template<class... Args> explicit QtApplicationBase(Args&&... args): ISISApp(args...){}
+		std::shared_ptr<isis::util::MessageHandlerBase> makeLogHandler(isis::LogLevel level) const
+		{
+			return std::shared_ptr< isis::util::MessageHandlerBase >( level ? new isis::qt5::QDefaultMessageHandler( level ) : 0 );
+		}
+		int exec(){
+			if(m_qapp)
+				return m_qapp->exec();
+			else
+				LOG( Debug, error ) << "The QApplication was not yet created, you should run init() before using getQApplication.";
+			return -1;
+		}
+		virtual bool init( int &argc, char **argv, bool exitOnError )
+		{
+			_init(argc,argv);
+			return ISISApp::init( argc, argv, exitOnError );
+		}
+		template<typename Obj> void registerLogReceiver(Obj* rec_obj, log_receive_slot<Obj> rec_slot){
+			qRegisterMetaType<isis::qt5::LogEvent>("qt5::LogEvent");
+			for(auto &handler:this->resetLogging()){
+				auto qHander = std::dynamic_pointer_cast<QDefaultMessageHandler>(handler);
+				if(handler)
+					QObject::connect(qHander.get(),&QDefaultMessageHandler::commitMessage,rec_obj,rec_slot);
+				else
+				LOG(Runtime,error) << "Log handler is not QDefaultMessageHandler, won't connect to " << rec_obj->objectName().toStdString();
+			}
+		}
+	};
 }
 
-class QtApplication : public util::Application
+class QtApplication : public _internal::QtApplicationBase<util::Application>
 {
-	std::unique_ptr<QApplication> m_qapp;
 public:
-	QApplication &getQApplication();
 	explicit QtApplication( const char name[] );
-	virtual bool init( int &argc, char **argv, bool exitOnError = true );
-	[[nodiscard]] std::shared_ptr<util::MessageHandlerBase> makeLogHandler(isis::LogLevel level) const override;
-	int exec();
 };
 
-class IOQtApplication : public data::IOApplication
+class IOQtApplication : public _internal::QtApplicationBase<data::IOApplication>
 {
-	int m_argc; //same as above
-	char **m_argv;
-	std::unique_ptr<QApplication> m_qapp;
-	bool _init(int &argc, char **argv);
 public:
-	QApplication &getQApplication();
 	explicit IOQtApplication( const char name[], bool have_input = true, bool have_output = true );
-	template<typename Obj> QMetaObject::Connection async_autoload(Obj *load_rcv, image_receive_slot<Obj> load_slot,const std::string &param_suffix="")
+	template<typename Obj> QMetaObject::Connection asyncAutoload(Obj *load_rcv, image_receive_slot<Obj> load_slot, const std::string &param_suffix= "")
 	{
 		const util::slist input = parameters[std::string("in") + param_suffix];
 		const util::slist rf = parameters[std::string("rf") + param_suffix];
@@ -79,22 +101,19 @@ public:
 			<< util::NoSubject(dl.empty() ? "" : std::string(" using the dialect: ") + util::listToString(dl.begin(), dl.end()));
 		return asyncLoad(input,formatstack,util::makeIStringList(dl),load_rcv,load_slot);
 	}
-	virtual bool init( int &argc, char **argv, bool exitOnError = true );
 	template<typename Obj> Obj* init( int &argc, char **argv, image_receive_slot<Obj> load_slot, bool exitOnError = true )
 	{
-		const bool ok = _init(argc,argv) && util::Application::init( argc, argv, exitOnError );
-		if ( !ok  )
+		_init(argc,argv);
+		if ( !util::Application::init( argc, argv, exitOnError )  )
 			return nullptr;
 
 		auto load_rcv = new Obj;
 		if ( m_input ) {
-			QMetaObject::Connection c=async_autoload(load_rcv,load_slot);
+			QMetaObject::Connection c= asyncAutoload(load_rcv, load_slot);
 			LOG_IF(!c,Runtime,error) << "Failed to create a connection with the receiver of the asynchronous load";
 		}
 		return load_rcv;
 	}
-	[[nodiscard]] virtual std::shared_ptr<util::MessageHandlerBase> makeLogHandler(isis::LogLevel level) const;
-	int exec();
 };
 
 }
