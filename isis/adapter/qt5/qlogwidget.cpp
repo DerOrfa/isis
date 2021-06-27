@@ -6,14 +6,17 @@
 
 #include "qlogwidget.hpp"
 #include "ui_qlogwidget.h"
+#include "qlogstore.hpp"
 #include <QStyle>
 #include <QObjectCleanupHandler>
+#include <isis/core/singletons.hpp>
 
 
 isis::qt5::QLogWidget::QLogWidget(QWidget *parent):QWidget(parent), ui(new Ui::QLogWidget)
 {
 	ui->setupUi(this);
-
+	auto &log_store=isis::util::Singletons::get<isis::qt5::QLogStore, 10>();
+	ui->log_view->setModel(&log_store);
 }
 
 isis::qt5::QLogWidget::~QLogWidget()
@@ -26,11 +29,11 @@ bool isis::qt5::QLogWidget::registerButton(QAbstractButton *btn, bool use_as_fee
 		feedback_button=btn;
 	return feedback_connection=QObject::connect(btn,&QAbstractButton::clicked,this,&QWidget::show);
 }
-void isis::qt5::QLogWidget::onLogEvent(LogEvent event)
+void isis::qt5::QLogWidget::onLogEvent(int level)
 {
 	if(feedback_connection)//check if connection is still there (hence button most likely still there)
 	{
-		switch(event.m_level)
+		switch(level)
 		{
 			case error:
 				feedback_button->setIcon(style()->standardIcon(QStyle::SP_MessageBoxCritical));

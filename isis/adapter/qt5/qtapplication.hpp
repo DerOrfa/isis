@@ -31,7 +31,7 @@
 
 namespace isis::qt5
 {
-template<typename Obj> using log_receive_slot = void (Obj::*) (qt5::LogEvent event);
+//template<typename Obj> using log_receive_slot = void (Obj::*) (qt5::LogEvent event);
 
 namespace _internal{
 	template<class ISISApp> class QtApplicationBase : public ISISApp{
@@ -63,16 +63,16 @@ namespace _internal{
 			_init(argc,argv);
 			return ISISApp::init( argc, argv, exitOnError );
 		}
-		template<typename Obj> void registerLogReceiver(Obj* rec_obj, log_receive_slot<Obj> rec_slot){
-			qRegisterMetaType<isis::qt5::LogEvent>("qt5::LogEvent");
-			for(auto &handler:this->resetLogging()){
-				auto qHander = std::dynamic_pointer_cast<QDefaultMessageHandler>(handler);
-				if(handler)
-					QObject::connect(qHander.get(),&QDefaultMessageHandler::commitMessage,rec_obj,rec_slot);
-				else
-				LOG(Runtime,error) << "Log handler is not QDefaultMessageHandler, won't connect to " << rec_obj->objectName().toStdString();
-			}
-		}
+//		template<typename Obj> void registerLogReceiver(Obj* rec_obj, log_receive_slot<Obj> rec_slot){
+//			qRegisterMetaType<isis::qt5::LogEvent>("qt5::LogEvent");
+//			for(auto &handler:this->resetLogging()){
+//				auto qHander = std::dynamic_pointer_cast<QDefaultMessageHandler>(handler);
+//				if(handler)
+//					QObject::connect(qHander.get(),&QDefaultMessageHandler::commitMessage,rec_obj,rec_slot);
+//				else
+//					LOG(Runtime,error) << "Log handler is not QDefaultMessageHandler, won't connect to " << rec_obj->objectName().toStdString();
+//			}
+//		}
 	};
 }
 

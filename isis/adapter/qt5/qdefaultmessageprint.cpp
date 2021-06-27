@@ -1,39 +1,12 @@
 #include "qdefaultmessageprint.hpp"
+#include "qlogstore.hpp"
 #include "../../core/singletons.hpp"
 #include "../../core/image.hpp"
 #include <QMessageBox>
 
-isis::qt5::LogEvent::LogEvent(const isis::util::Message& msg)
-{
-	m_file = QString::fromStdString(msg.m_file.native());
-	m_level = msg.m_level;
-	m_line = msg.m_line;
-	m_module = QString::fromStdString(msg.m_module);
-	m_object = QString::fromStdString(msg.m_object);
-	m_timeStamp.setTime_t(msg.m_timeStamp);
-	m_unformatted_msg = QString::fromStdString(msg.str());
-
-	std::transform(
-		msg.m_subjects.begin(),msg.m_subjects.end(),
-		std::back_inserter(m_subjects),
-		[](const std::string &s){return QString::fromStdString(s);}
-	);
-}
-
-QString isis::qt5::LogEvent::merge()
-{
-	QString ret=m_unformatted_msg;
-
-	for(const auto &subj:m_subjects)
-		ret.replace(QString("{o}"),subj);
-	return  ret;
-}
-
 
 isis::qt5::QDefaultMessageHandler::QDefaultMessageHandler( isis::LogLevel level )
-	: MessageHandlerBase( level ),
-	  m_PushMsgBoxLogLevel(isis::error )
-{}
+: MessageHandlerBase( level ),  m_PushMsgBoxLogLevel(isis::error ){}
 
 void isis::qt5::QDefaultMessageHandler::qmessageBelow ( isis::LogLevel level )
 {
@@ -42,18 +15,17 @@ void isis::qt5::QDefaultMessageHandler::qmessageBelow ( isis::LogLevel level )
 
 void isis::qt5::QDefaultMessageHandler::commit( const isis::util::Message &msg )
 {
-	LogEvent qMessage(msg);
-	util::Singletons::get<LogEventList, 10>().push_back( qMessage );
-	
-	if(receivers(SIGNAL(commitMessage( qt5::LogEvent ))))
-		emit commitMessage( qMessage );
-	else { // fall back to util::DefaultMsgPrint of nobody is listening
+	auto &store=util::Singletons::get<QLogStore, 10>();
+	store.add(msg);
+
+	if(!store.isAttached()){ // fall back to util::DefaultMsgPrint of nobody is listening
 		util::DefaultMsgPrint pr(m_level);
 		pr.commit(msg);
 	}
 
 	if( m_PushMsgBoxLogLevel > msg.m_level ) {
 		QMessageBox msgBox;
+		LogEvent qMessage(msg);
 		std::string level;
 
 		switch( msg.m_level ) {

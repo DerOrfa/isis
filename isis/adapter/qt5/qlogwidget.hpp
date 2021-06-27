@@ -31,7 +31,7 @@ public:
 private:
 	Ui::QLogWidget *ui;
 public Q_SLOTS:
-	void onLogEvent(isis::qt5::LogEvent event);
+	void onLogEvent(int);
 	void onShowError(bool);
 	void onShowWarning(bool);
 	void onShowNotice(bool);

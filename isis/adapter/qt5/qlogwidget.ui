@@ -65,32 +65,19 @@
     </widget>
    </item>
    <item>
-    <widget class="QTableWidget" name="message_list">
-     <column>
-      <property name="text">
-       <string>time</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>severity</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>module</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>location</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>message</string>
-      </property>
-     </column>
+    <widget class="QTreeView" name="log_view">
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="showDropIndicator" stdset="0">
+      <bool>false</bool>
+     </property>
+     <property name="uniformRowHeights">
+      <bool>true</bool>
+     </property>
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
   </layout>
