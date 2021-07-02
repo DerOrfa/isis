@@ -1,5 +1,6 @@
 #include "qlogstore.hpp"
 #include <QBrush>
+#include <QMetaMethod>
 #include <iostream>
 
 isis::qt5::LogEvent::LogEvent(const isis::util::Message& msg)
@@ -27,62 +28,57 @@ QString isis::qt5::LogEvent::merge()const
 	return  ret;
 }
 
-int isis::qt5::QLogStore::rowCount(const QModelIndex &parent) const
-{
-	return events.count();
-}
-QVariant isis::qt5::QLogStore::data(const QModelIndex &index, int role) const
-{
-	if (!index.isValid())return {};
-	if (index.row() >= events.count())return {};
-
-	const auto &evt=events[index.row()];
-	switch(role){
-		case Qt::DisplayRole:
-			switch(index.column()){
-				case 0:return evt.m_timeStamp;
-				case 1:return evt.m_level;
-				case 2:return evt.m_module;
-				case 3:return evt.merge();
-			}
-		break;
-		case Qt::ForegroundRole:
-			switch(evt.m_level){
-				case error:return QBrush(Qt::red);
-				case warning:return QBrush(Qt::yellow);
-				case notice:return QBrush(Qt::green);
-				case info:
-				case verbose_info:return QBrush(Qt::gray);
-			}
-		break;
-	}
-
-	return {};
-}
 void isis::qt5::QLogStore::add(const isis::qt5::LogEvent &event)
 {
-	const auto end=events.count();
-	QAbstractListModel::beginInsertRows(QModelIndex(),end,end+1);
-	events.push_back(event);
-	QAbstractListModel::endInsertRows();
+	static const std::map<LogLevel,Qt::GlobalColor> color_map={
+		{error,Qt::red},
+		{warning,Qt::yellow},
+		{notice,Qt::green},
+		{info,Qt::gray},
+		{verbose_info,Qt::gray}
+	};
+	static const std::map<LogLevel,QString> severity_map={
+		{error,"error"},
+		{warning,"warning"},
+		{notice,"notice"},
+		{info,"info"},
+		{verbose_info,"verbose"}
+	};
+	QList<QStandardItem*> items{
+		new QStandardItem(),
+		new QStandardItem(severity_map.at(event.m_level)),
+		new QStandardItem(event.m_module),
+		new QStandardItem(event.merge())
+	};
+	items[0]->setData(event.m_timeStamp,Qt::DisplayRole);
+
+	const QBrush color(color_map.at(event.m_level));
+	for(QStandardItem* itm:items)
+		itm->setData(color,Qt::ForegroundRole);
+
+	appendRow(items);
+	emit notify(event.m_level);
 }
 bool isis::qt5::QLogStore::isAttached()
 {
-	return false;
+	return m_attached;
 }
-int isis::qt5::QLogStore::columnCount(const QModelIndex &parent) const
+void isis::qt5::QLogStore::connectNotify(const QMetaMethod &signal)
 {
-	return 4;
-}
-QVariant isis::qt5::QLogStore::headerData(int section, Qt::Orientation orientation, int role) const
-{
-	if(orientation==Qt::Horizontal && role == Qt::DisplayRole){
-		switch(section){
-			case 0:return "timestamp";
-			case 1:return "severity";
-			case 2:return "module";
-			case 3:return "message";
-		}
+	if(signal == QMetaMethod::fromSignal(&QAbstractListModel::rowsInserted)){
+		++m_attached;
 	}
-	return QAbstractListModel::headerData(section,orientation,role);
+	QStandardItemModel::connectNotify(signal);
+}
+void isis::qt5::QLogStore::disconnectNotify(const QMetaMethod &signal)
+{
+	assert(m_attached>0);
+	if(signal == QMetaMethod::fromSignal(&QAbstractListModel::rowsInserted)){
+		--m_attached;
+	}
+	QStandardItemModel::connectNotify(signal);
+}
+isis::qt5::QLogStore::QLogStore(QObject *parent) : QStandardItemModel(parent)
+{
+	setHorizontalHeaderLabels({"timestamp","severity","module","message"});
 }

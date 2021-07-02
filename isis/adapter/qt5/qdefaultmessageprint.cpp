@@ -16,13 +16,14 @@ void isis::qt5::QDefaultMessageHandler::qmessageBelow ( isis::LogLevel level )
 void isis::qt5::QDefaultMessageHandler::commit( const isis::util::Message &msg )
 {
 	auto &store=util::Singletons::get<QLogStore, 10>();
-	store.add(msg);
-
 	if(!store.isAttached()){ // fall back to util::DefaultMsgPrint of nobody is listening
 		util::DefaultMsgPrint pr(m_level);
 		pr.commit(msg);
 	}
+	//we still store the message though
+	store.add(msg);
 
+	//in case we really want to freak out an immediately to show an (error-)message
 	if( m_PushMsgBoxLogLevel > msg.m_level ) {
 		QMessageBox msgBox;
 		LogEvent qMessage(msg);
