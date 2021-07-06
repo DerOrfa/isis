@@ -22,10 +22,9 @@
 #include "io_interface.h"
 #include "progressfeedback.hpp"
 
-//????
 #include "chunk.hpp"
 #include "image.hpp"
-#include <boost/variant.hpp>
+#include <variant>
 
 namespace isis
 {
@@ -37,7 +36,7 @@ class IOFactory
 public:
 	typedef std::shared_ptr< image_io::FileFormat> FileFormatPtr;
 	typedef std::list<FileFormatPtr> FileFormatList;
-	typedef boost::variant<std::filesystem::path,std::streambuf*,ByteArray> load_source;
+	typedef std::variant<std::filesystem::path,std::streambuf*,ByteArray> load_source;
 	friend class util::Singletons;
 	class  io_error : public std::runtime_error{
 		FileFormatPtr p_format;

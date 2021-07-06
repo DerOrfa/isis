@@ -23,7 +23,6 @@
 
 #include "io_application.hpp"
 #include "io_factory.hpp"
-#include <boost/mpl/for_each.hpp>
 
 
 namespace isis

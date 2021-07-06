@@ -19,7 +19,6 @@
 #include "image.hpp"
 #include "vector.hpp"
 #include "property.hpp"
-#include <boost/token_iterator.hpp>
 
 #define _USE_MATH_DEFINES 1
 #include <math.h>

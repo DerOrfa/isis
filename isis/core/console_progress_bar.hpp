@@ -1,5 +1,5 @@
 #pragma once
-#include <isis/core/progressfeedback.hpp>
+#include "progressfeedback.hpp"
 #include <chrono>
 
 namespace isis::util
