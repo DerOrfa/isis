@@ -28,6 +28,13 @@
 
 namespace isis::math
 {
+template<typename T, size_t N> T getBiggestVecElemAbs(std::array<T,N> arr){
+	return *std::max_element(
+		std::begin(arr),std::end(arr),
+		[](const T &a, const T &b){return std::abs(a) < std::abs(b);}
+	);
+}
+
 /**
  * Transforms the image coordinate system into an other system by multiplying
  * the orientation matrix with a user defined transformation matrix. Additionally,

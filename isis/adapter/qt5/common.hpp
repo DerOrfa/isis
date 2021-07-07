@@ -42,3 +42,13 @@ namespace qt5{
 	}
 }
 }
+
+namespace std{
+
+template<typename CharT, typename Traits  > basic_ostream<CharT,Traits> &operator <<(basic_ostream<CharT,Traits> &stream,const QString &str)
+{
+	stream << str.toStdString(); //or: stream << str.toStdString(); //??
+	return stream;
+}
+
+}
