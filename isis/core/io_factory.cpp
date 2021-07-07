@@ -30,9 +30,7 @@
 #include "fileptr.hpp"
 
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 
 IOFactory::io_error::io_error(const char *what,FileFormatPtr format):std::runtime_error(what),p_format(format){}
@@ -196,7 +194,7 @@ IOFactory &IOFactory::get()
 
 std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback){
 	bool overridden=true;
-	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &v );
+	const std::filesystem::path* filename = std::get_if<std::filesystem::path>( &v );
 	if(formatstack.empty()){
 		if(filename){
 			overridden=false;
@@ -221,8 +219,8 @@ std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istr
 			LOG( Runtime, error ) << "No plugin supporting the requested format stack " << formatstack << " was found";
 		} else {
 			LOG_IF(filename, Runtime, error ) << "No plugin found to read " << *filename;
-			LOG_IF(boost::get<std::streambuf*>(&v), Runtime, error ) << "No plugin found to load from stream";
-			LOG_IF(boost::get<ByteArray>(&v), Runtime, error ) << "No plugin found to load from memory";
+			LOG_IF(std::holds_alternative<std::streambuf*>(v), Runtime, error ) << "No plugin found to load from stream";
+			LOG_IF(std::holds_alternative<ByteArray>(v), Runtime, error ) << "No plugin found to load from memory";
 		}
 	} else {
 		while( !readerList.empty() ) {
@@ -241,7 +239,7 @@ std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istr
 			LOG_IF(!filename, ImageIoDebug, info ) << "plugin to load " << with_dialect << ": " << format->getName();
 
 			try {
-				std::list<data::Chunk> loaded =boost::apply_visitor(
+				std::list<data::Chunk> loaded =std::visit(
 					[&](auto val) { return format->load( val, formatstack, use_dialects, feedback ); },
 					v
 				);
@@ -336,7 +334,7 @@ std::list< Image > IOFactory::chunkListToImageList( std::list<Chunk> &src, util:
 
 std::list< Chunk > IOFactory::loadChunks( const load_source &v, std::list<util::istring> formatstack, std::list<util::istring> dialects)
 {
-	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &v );
+	const std::filesystem::path* filename = std::get_if<std::filesystem::path>( &v );
 	if(filename)
 		assert(!std::filesystem::is_directory( *filename ));
 	return get().load_impl( v, formatstack, dialects, get().m_feedback );
@@ -377,7 +375,7 @@ std::list< Image > IOFactory::load( const util::slist &paths, std::list<util::is
 
 std::list<data::Image> IOFactory::load( const load_source &source, std::list<util::istring> formatstack, std::list<util::istring> dialects, isis::util::slist* rejected )
 {
-	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &source );
+	const std::filesystem::path* filename = std::get_if<std::filesystem::path>( &source );
 	if(filename)
 		return load( util::slist{filename->native()}, formatstack, dialects );
 	else {
@@ -489,5 +487,4 @@ IOFactory::FileFormatList IOFactory::getFormats()
 }
 
 
-}
 } // namespaces data isis

@@ -212,7 +212,7 @@ endif()
 ############################################################
 if(ISIS_IOPLUGIN_DICOM)
 	find_library(OPENJPEG_LIBRARY openjp2)
-	find_path(OPENJPEG_INCLUDE_DIR openjpeg.h PATH_SUFFIXES openjpeg-2.3)
+	find_path(OPENJPEG_INCLUDE_DIR openjpeg.h PATH_SUFFIXES openjpeg-2.3 openjpeg-2.4)
 
 	add_library(isisImageFormat_Dicom SHARED dicom/imageFormat_Dicom.cpp dicom/imageFormat_DicomParser.cpp dicom/imageFormat_DicomDictionary.cpp)
 	
