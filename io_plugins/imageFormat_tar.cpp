@@ -44,7 +44,7 @@ class ImageFormat_Tar: public FileFormat{
 
 				size |= reinterpret_cast<uint8_t *>( tar_header.size )[11];
 			} else if( tar_header.size[10] != 0 ) { //normal octal
-				//get the size
+				//get the size @todo use strtoll
 				std::stringstream buff( tar_header.size );
 				size = 0, next_header_in = 0;
 

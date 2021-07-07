@@ -46,8 +46,10 @@ namespace _internal{
 			}
 		}
 	public:
-		template<class... Args> explicit QtApplicationBase(Args&&... args): ISISApp(args...){}
-		std::shared_ptr<isis::util::MessageHandlerBase> makeLogHandler(isis::LogLevel level) const
+		template<class... Args> explicit QtApplicationBase(const char name[], Args&&... args): ISISApp(name, args...){
+			QCoreApplication::setApplicationName( name );
+		}
+		[[nodiscard]] std::shared_ptr<isis::util::MessageHandlerBase> makeLogHandler(isis::LogLevel level) const
 		{
 			return std::shared_ptr< isis::util::MessageHandlerBase >( level ? new isis::qt5::QDefaultMessageHandler( level ) : 0 );
 		}
@@ -58,21 +60,11 @@ namespace _internal{
 				LOG( Debug, error ) << "The QApplication was not yet created, you should run init() before using getQApplication.";
 			return -1;
 		}
-		virtual bool init( int &argc, char **argv, bool exitOnError )
+		virtual bool init( int &argc, char **argv, bool exitOnError = true )
 		{
 			_init(argc,argv);
 			return ISISApp::init( argc, argv, exitOnError );
 		}
-//		template<typename Obj> void registerLogReceiver(Obj* rec_obj, log_receive_slot<Obj> rec_slot){
-//			qRegisterMetaType<isis::qt5::LogEvent>("qt5::LogEvent");
-//			for(auto &handler:this->resetLogging()){
-//				auto qHander = std::dynamic_pointer_cast<QDefaultMessageHandler>(handler);
-//				if(handler)
-//					QObject::connect(qHander.get(),&QDefaultMessageHandler::commitMessage,rec_obj,rec_slot);
-//				else
-//					LOG(Runtime,error) << "Log handler is not QDefaultMessageHandler, won't connect to " << rec_obj->objectName().toStdString();
-//			}
-//		}
 	};
 }
 

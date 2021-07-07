@@ -4,4 +4,7 @@ makeTest( imageListTest.cpp )
 makeTest( valueArrayTest.cpp )
 makeTest( filePtrTest.cpp )
 makeTest( byteswapTest.cpp )
-makeTest( imageTest.cpp )
+
+add_executable( imageTest imageTest.cpp )
+target_link_libraries( imageTest isis_math Boost::unit_test_framework )
+add_test(NAME imageTest COMMAND imageTest)
