@@ -25,13 +25,13 @@
 #include <isis/core/progressfeedback.hpp>
 
 
-namespace isis{namespace image_io{namespace _internal{
+namespace isis::image_io::_internal{
 
 class WriterSpec{
 protected:
 	bool m_isInt,m_isFloat;
 	WriterSpec(std::string repn,std::string name, uint8_t prio, bool isInt, bool isFloat, uint8_t sizeFact, uint16_t storeTypeID);
-	uint16_t m_storeTypeID;
+	size_t m_storeTypeID;
 public:
 	uint8_t m_sizeFact,m_priority;
 	std::string m_vistaRepnName,m_vistaImageName;
@@ -107,16 +107,16 @@ public:
 	void store( std::list< data::Chunk >& out, const util::PropertyMap& root_map, uint16_t sequence, const std::shared_ptr< util::ProgressFeedback > &feedback );
 };
 class VistaOutputImage:public VistaProtoImage{
-	template<typename T> void insertSpec(std::map<unsigned short,std::shared_ptr<WriterSpec> > &map,std::string name,uint8_t prio){
+	template<typename T> void insertSpec(std::map<size_t ,std::shared_ptr<WriterSpec> > &map,std::string name,uint8_t prio){
 		map[util::typeID<T>()].reset(new typeSpecImpl<T>(name,prio));
 	}
 	size_t chunksPerVistaImage;
 	util::PropertyMap imageProps;
 	void writeMetadata(std::ofstream& out, const isis::util::PropertyMap& data, const std::string& title, size_t indent=0);
-	std::map<unsigned short,std::shared_ptr<WriterSpec> > isis2vista;
-	unsigned short storeTypeID;
+	std::map<size_t,std::shared_ptr<WriterSpec> > isis2vista;
+	size_t storeTypeID;
 	data::scaling_pair scaling;
-	template<typename FIRST,typename SECOND> static void typeFallback(unsigned short typeID){
+	template<typename FIRST,typename SECOND> static void typeFallback(unsigned short &typeID){
 		LOG(Runtime,notice) 
 			<< util::MSubject(util::typeName<FIRST>()) << " is not supported in vista falling back to "
 			<< util::MSubject(util::typeName<SECOND>());
@@ -131,6 +131,6 @@ public:
 };
 
 	
-}}}
+}
 
 #endif //VISTAPROTOIMAGE_HPP

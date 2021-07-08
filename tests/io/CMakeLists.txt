@@ -15,4 +15,7 @@
 makeTest(imageIONullTest.cpp)
 makeTest(imageIONiiTest.cpp)
 makeTest(imageIOTest.cpp)
-makeTest(imageIOVistaTest.cpp)
+
+add_executable( imageIOVistaTest imageIOVistaTest.cpp )
+target_link_libraries( imageIOVistaTest isis_math Boost::unit_test_framework )
+add_test(NAME imageIOVistaTest COMMAND imageIOVistaTest)

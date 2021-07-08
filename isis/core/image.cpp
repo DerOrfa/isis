@@ -838,7 +838,13 @@ size_t Image::getMajorTypeID() const
 	case util::typeID<util::color48>():
 	case util::typeID<std::complex< float >  >():
 	case util::typeID<std::complex< double > >():
-		LOG( Debug, info ) << "Using flat typeID for " << getChunk( 0 ).typeName() << " because I cannot compute min/max";
+	case util::typeID<util::fvector3>():
+	case util::typeID<util::fvector4>():
+	case util::typeID<util::dvector3>():
+	case util::typeID<util::dvector4>():
+	case util::typeID<util::ivector3>():
+	case util::typeID<util::ivector4>():
+		LOG( Debug, info ) << "Using flat typeID for " << getChunk( 0 ).typeName() << " because I cannot use min/max";
 		return getChunk( 0 ).getTypeID();
 		break;
 	default:
@@ -846,7 +852,7 @@ size_t Image::getMajorTypeID() const
 		LOG( Debug, info ) << "Determining  datatype of image with the value range " << minmax;
 
 		if( minmax.first.typeID() == minmax.second.typeID() ) { // ok min and max are the same type - trivial case
-			return minmax.first.typeID(); // btw: we do the shift, because min and max are Value - but we want the ID's ValueArray
+			return minmax.first.typeID();
 		} else if( minmax.first.fitsInto( minmax.second.typeID() ) ) { // if min fits into the type of max, use that
 			return minmax.second.typeID();
 		} else if( minmax.second.fitsInto( minmax.first.typeID() ) ) { // if max fits into the type of min, use that
