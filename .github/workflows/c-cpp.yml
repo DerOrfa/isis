@@ -19,7 +19,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=on -DISIS_USE_FFTW=on -DISIS_IOPLUGIN_NULL=on -DISIS_IOPLUGIN_VISTA_SA=on
+        cmake .. -DCMAKE_INSTALL_PREFIX=/tmp -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=on -DISIS_USE_FFTW=on -DISIS_IOPLUGIN_NULL=on -DISIS_IOPLUGIN_VISTA_SA=on
     - name: make
       run: |
         cd build
@@ -27,5 +27,5 @@ jobs:
     - name: test
       run: |
         cd build
-        export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH=/tmp/lib:$LD_LIBRARY_PATH
         make test --output-on-failure

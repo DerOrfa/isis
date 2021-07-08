@@ -3,7 +3,7 @@
 #include <isis/core/log.hpp>
 #include <isis/core/tmpfile.hpp>
 
-#define BOOST_TEST_MODULE "imageIONiiTest"
+#define BOOST_TEST_MODULE "imageIOVistaTest"
 #include <boost/test/unit_test.hpp>
 #include <filesystem>
 #include <iostream>
