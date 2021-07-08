@@ -333,7 +333,8 @@ VistaOutputImage::VistaOutputImage(data::Image src){
 			for(size_t time=0;time<imgSize[data::timeDim];time++){
 				push_back(src.getChunk(0,0,slice,time,false)); // store the chunks in the list dim-swapped
 				back().remove(acquisitionNumber);
-				back().remove(acquisitionTime);
+				if(back().hasProperty(acquisitionTime))
+					back().remove(acquisitionTime);
 			}
 		imageProps.remove(indexOrigin); // we use the positions of the chunks in this case
 	} else {

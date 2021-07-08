@@ -57,7 +57,6 @@ class ImageFormat_Null: public FileFormat
 				ch.setValueAs( "sequenceDescription", desc );
 
 				ch.setValueAs( "acquisitionNumber", s+size*t );
-				ch.setValueAs( "acquisitionTime", s+size*t );
 				ch.setValueAs( "typeID", ID );
 
 				ch.visit([s,t,size](auto ptr){
