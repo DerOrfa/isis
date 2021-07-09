@@ -16,8 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HISTOGRAM_H
-#define HISTOGRAM_H
+#pragma once
 
 #include "../core/image.hpp"
 #include <type_traits>
@@ -64,4 +63,4 @@ template<typename T> std::array<double,(size_t)std::exp2(sizeof(T)*8)> normalize
 }
 }
 
-#endif // HISTOGRAM_H
+

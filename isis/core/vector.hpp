@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef VECTOR_HPP
-#define VECTOR_HPP
+#pragma once
 
 #ifdef _MSC_VER
 #pragma warning(disable:4290)
@@ -214,4 +213,4 @@ operator<<( basic_ostream<charT, traits> &out, const std::array<TYPE, SIZE>& s )
 }
 }
 /// @endcond _internal
-#endif //VECTOR_HPP
+

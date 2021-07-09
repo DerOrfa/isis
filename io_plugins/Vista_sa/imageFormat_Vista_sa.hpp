@@ -15,8 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef IMAGEFORMAT_VISTA_SA_HPP
-#define IMAGEFORMAT_VISTA_SA_HPP
+#pragma once
 
 #include <isis/core/io_interface.h>
 #include <isis/core/fileptr.hpp>
@@ -58,4 +57,4 @@ protected:
 }
 }
 
-#endif // IMAGEFORMAT_VISTA_SA_HPP
+

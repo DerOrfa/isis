@@ -28,4 +28,4 @@ jobs:
       run: |
         cd build
         export LD_LIBRARY_PATH=/tmp/lib:$LD_LIBRARY_PATH
-        make test --output-on-failure
+        ctest --output-on-failure

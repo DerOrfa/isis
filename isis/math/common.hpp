@@ -1,11 +1,9 @@
-#ifndef MATH_COMMON_HPP
-#define MATH_COMMON_HPP
+#pragma once
 
 #include "../core/log.hpp"
 #include "../core/log_modules.hpp"
 
-namespace isis{
-namespace math{
+namespace isis::math{
 
 typedef MathDebug Debug;
 typedef MathLog Runtime;
@@ -25,5 +23,3 @@ template<typename HANDLE> void enableLog( LogLevel level )
 }
 }
 
-}
-#endif // MATH_COMMON_HPP

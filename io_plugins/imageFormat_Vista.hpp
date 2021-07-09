@@ -21,8 +21,7 @@
  *
  *****************************************************************/
 
-#ifndef IMAGEFORMAT_VISTA_H_
-#define IMAGEFORMAT_VISTA_H_
+#pragma once
 
 // global includes
 #include <viaio/VImage.h>
@@ -508,4 +507,4 @@ private:
 }
 }//namespace image_io isis
 
-#endif /* IMAGEFORMAT_VISTA_H_ */
+

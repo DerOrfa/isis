@@ -16,8 +16,7 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef VISTAPROTOIMAGE_HPP
-#define VISTAPROTOIMAGE_HPP
+#pragma once
 
 #include <list>
 #include <isis/core/image.hpp>
@@ -133,4 +132,4 @@ public:
 	
 }
 
-#endif //VISTAPROTOIMAGE_HPP
+

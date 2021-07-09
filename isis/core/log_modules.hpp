@@ -1,5 +1,4 @@
-#ifndef LOG_MOUDLES_HPP_INCLUDED
-#define LOG_MOUDLES_HPP_INCLUDED
+#pragma once
 
 namespace isis
 {
@@ -18,5 +17,3 @@ struct FilterDebug {static constexpr char name[]="FilterDebug"; static constexpr
 struct MathLog   {static constexpr char name[]="Math";      static constexpr bool use = _ENABLE_LOG;};
 struct MathDebug {static constexpr char name[]="MathDebug"; static constexpr bool use = _ENABLE_DEBUG;};
 }
-
-#endif //LOG_MOUDLES_HPP_INCLUDED

@@ -17,8 +17,7 @@
 
 */
 
-#ifndef CONVERTER_HPP
-#define CONVERTER_HPP
+#pragma once
 
 #include <memory>
 #include <boost/numeric/conversion/converter.hpp>
@@ -27,9 +26,7 @@
 
 /// @cond _internal
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 class Value;
 namespace _internal
@@ -55,6 +52,4 @@ public:
 }
 API_EXCLUDE_END;
 }
-}
 /// @endcond _internal
-#endif // CONVERTER_HPP

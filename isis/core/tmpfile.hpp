@@ -16,8 +16,7 @@
 
 */
 
-#ifndef TMPFILE_H
-#define TMPFILE_H
+#pragma once
 #include <string>
 #include <filesystem>
 
@@ -49,4 +48,4 @@ public:
 };
 }
 }
-#endif // TMPFILE_H
+

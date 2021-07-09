@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef IMAGE_H
-#define IMAGE_H
+#pragma once
 
 #include "chunk.hpp"
 
@@ -806,4 +805,4 @@ public:
 }
 }
 
-#endif // IMAGE_H
+

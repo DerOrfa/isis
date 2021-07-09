@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef IO_INTERFACE_H
-#define IO_INTERFACE_H
+#pragma once
 
 #ifdef __cplusplus
 #include <string>
@@ -197,4 +196,4 @@ extern "C" {
 }
 #endif
 
-#endif //IO_INTERFACE_H
+

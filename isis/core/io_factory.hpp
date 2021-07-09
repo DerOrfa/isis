@@ -12,8 +12,7 @@
 
 
 
-#ifndef IO_FACTORY_H
-#define IO_FACTORY_H
+#pragma once
 
 #include <map>
 #include <string>
@@ -138,4 +137,4 @@ private:
 }
 }
 
-#endif //IO_FACTORY_H
+

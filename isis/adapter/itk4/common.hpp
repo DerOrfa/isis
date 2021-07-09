@@ -1,5 +1,4 @@
-#ifndef ITK_COMMON_HPP
-#define ITK_COMMON_HPP
+#pragma once
 
 #include "../../core/log.hpp"
 #include "../../core/image.hpp"
@@ -26,4 +25,4 @@ namespace itk4{
 }
 }
 
-#endif //ITK_COMMON_HPP
+

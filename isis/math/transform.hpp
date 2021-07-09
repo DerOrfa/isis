@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef TRANSFORM_H
-#define TRANSFORM_H
+#pragma once
 
 #include "../core/image.hpp"
 #include "../core/matrix.hpp"
@@ -136,4 +135,4 @@ inverseMatrix(const util::Matrix<TYPE,SIZE,SIZE> &mat, bool &invertible )
 
 }
 
-#endif // TRANSFORM_H
+

@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef FFT_H
-#define FFT_H
+#pragma once
 
 #include "../../core/chunk.hpp"
 
@@ -32,4 +31,4 @@ bool fft(data::TypedChunk< std::complex<double > > &data, bool inverse, double s
 }
 }
 
-#endif // FFT_H
+

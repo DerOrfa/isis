@@ -1,6 +1,5 @@
 
-#ifndef FILEPTR_HPP
-#define FILEPTR_HPP
+#pragma once
 
 #include <filesystem>
 #include <sys/resource.h>
@@ -77,5 +76,3 @@ public:
 	static bool checkLimit(rlim_t additional_files);
 };
 }
-
-#endif

@@ -26,8 +26,7 @@
  *      Author: tuerke
  ******************************************************************/
 
-#ifndef ISIS_QMATRIXCONVERSION_HPP
-#define ISIS_QMATRIXCONVERSION_HPP
+#pragma once
 
 #include <QMatrix>
 #include "../../core/matrix.hpp"
@@ -77,4 +76,4 @@ QGenericMatrix< ROW, COLUMN, TYPE > Matrix2QMatrix( const util::Matrix<TYPE, COL
 }
 } // end namespace
 
-#endif //ISIS_QMATRIXCONVERSION_HPP
+
