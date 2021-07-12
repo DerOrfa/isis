@@ -78,7 +78,7 @@ void FilePtr::Closer::operator()( void *p )
 
 bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const std::filesystem::path &filename )
 {
-	void *ptr = NULL;
+	void *ptr = nullptr;
 	FILE_HANDLE mmaph = 0;
 	rlimit rlim;
 	getrlimit(RLIMIT_DATA,&rlim);
@@ -156,10 +156,7 @@ size_t FilePtr::checkSize( bool write, FILE_HANDLE file, const std::filesystem::
 	}
 }
 
-FilePtr::FilePtr(): m_good( false ) {}
-
-
-FilePtr::FilePtr( const std::filesystem::path &filename, size_t len, bool write ): m_good( false )
+FilePtr::FilePtr(const std::filesystem::path &filename, size_t len, bool write, size_t mapsize)
 {
 #ifdef WIN32
 	const FILE_HANDLE invalid = INVALID_HANDLE_VALUE;
@@ -178,19 +175,39 @@ FilePtr::FilePtr( const std::filesystem::path &filename, size_t len, bool write 
 #endif
 
 	if( file == invalid ) {
-		LOG( Runtime, error ) << "Failed to open " << util::MSubject(filename) << ", the error was: " << util::getLastSystemError();
+		LOG( Runtime, error ) << "Failed to open " << filename << ", the error was: " << util::getLastSystemError();
 		return;
-	} else
-		++file_count;
-
-	const size_t map_size = checkSize( write, file, filename, len ); // get the mapping size
-
-	if( map_size ) {
-		m_good = map( file, map_size, write, filename ); //and do the mapping
-		LOG( Debug, verbose_info ) << "Mapped " << map_size << " bytes of " << util::MSubject( filename ) << " at " << getRawAddress().get();
 	}
 
-	// from here on the pointer will be set if mapping succeded
+	const size_t file_size = checkSize(write, file, filename, len ); // get the mapping size
+
+	if(file_size > mapsize || write) {
+		m_good = map(file, file_size, write, filename); //and do the mapping
+		++file_count;
+		LOG(Debug, verbose_info) << "Mapped " << file_size << " bytes of " << filename << " at " << getRawAddress().get();
+	} else if(file_size>0){
+		static_cast<ValueArray*>(this)->operator=(ValueArray::make<uint8_t>(file_size));
+		if(!getRawAddress()){
+			LOG(Runtime,error) << "Failed creating memory for reading " << filename << ", the error was: " << util::getLastSystemError();
+			return;
+		}
+
+		size_t read_pos=0;
+		while (read_pos<file_size){
+			const auto result = read(file,getRawAddress(read_pos).get(),file_size);
+			if(result>0) {
+				read_pos += result;
+			} else if(result==0) {
+				LOG(Runtime,warning) << "Unexpected end reading " << filename << " (missing " << file_size-read_pos << " bytes)";
+				break;
+			} else {
+				LOG(Runtime, error) << "Error reading " << filename << ", the error was: " << util::getLastSystemError();
+				return;
+			}
+		}
+		m_good = true;
+	}
+	// from here on the pointer will be set if mapping succeeded
 }
 
 bool FilePtr::good() {return m_good;}

@@ -19,8 +19,7 @@
 
 #include "bytearray.hpp"
 
-namespace isis{
-namespace data{
+namespace isis::data{
 
 namespace _internal {
 
@@ -62,5 +61,4 @@ ValueArray ByteArray::atByID(unsigned short ID, std::size_t offset, std::size_t 
 }
 
 
-}
 }
