@@ -2,6 +2,7 @@
 #include <QBrush>
 #include <QMetaMethod>
 #include <iostream>
+#include <cassert>
 
 isis::qt5::LogEvent::LogEvent(const isis::util::Message& msg)
 {
