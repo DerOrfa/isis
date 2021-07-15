@@ -270,7 +270,7 @@ data::Chunk ImageFormat_ZISRAW::transferFromMosaic(std::list<SubBlock> segments,
 		auto op = [&s,pos,&feedback,&dst](){
 			data::Chunk c= s.getChunkGenerator()();
 			dst.copyFromTile(c,pos,false);
-			if(feedback)feedback->progress("",s.getSegmentSize());
+			if(feedback)feedback->progress(s.getSegmentSize());
 		};
 		jobs.emplace_back(op);
 	}
