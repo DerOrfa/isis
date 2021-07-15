@@ -16,8 +16,7 @@
 
 */
 
-#ifndef SORTEDCHUNKLIST_HPP
-#define SORTEDCHUNKLIST_HPP
+#pragma once
 
 #include "chunk.hpp"
 #include "vector.hpp"
@@ -162,4 +161,4 @@ public:
 }
 /// @endcond _internal
 
-#endif // SORTEDCHUNKLIST_HPP
+

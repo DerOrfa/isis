@@ -17,8 +17,7 @@
 
 */
 
-#ifndef TYPEPTR_CONVERTER_H
-#define TYPEPTR_CONVERTER_H
+#pragma once
 
 #include <memory>
 #include <map>
@@ -26,9 +25,7 @@
 
 /// @cond _internal
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 
 class ValueArray;
@@ -57,7 +54,5 @@ public:
 }
 API_EXCLUDE_END;
 }
-}
 
 /// @endcond _internal
-#endif // TYPEPTR_CONVERTER_H

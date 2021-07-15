@@ -12,13 +12,10 @@
 # configure targets
 ############################################################
 
-add_executable(imageIONullTest imageIONullTest.cpp)
-add_executable(imageIONiiTest imageIONiiTest.cpp)
-add_executable(imageIOTest imageIOTest.cpp)
-add_executable(imageIOVistaTest imageIOVistaTest.cpp)
+makeTest(imageIONullTest.cpp)
+makeTest(imageIONiiTest.cpp)
+makeTest(imageIOTest.cpp)
 
-target_link_libraries(imageIONullTest  isis_core Boost::unit_test_framework)
-target_link_libraries(imageIONiiTest   isis_core Boost::unit_test_framework)
-target_link_libraries(imageIOVistaTest isis_core Boost::unit_test_framework)
-target_link_libraries(imageIOTest      isis_core Boost::unit_test_framework)
-target_link_libraries(imageIOVistaTest isis_core Boost::unit_test_framework)
+add_executable( imageIOVistaTest imageIOVistaTest.cpp )
+target_link_libraries( imageIOVistaTest isis_math Boost::unit_test_framework )
+add_test(NAME imageIOVistaTest COMMAND imageIOVistaTest)

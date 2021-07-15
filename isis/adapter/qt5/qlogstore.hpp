@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <QAbstractListModel>
+#include <QStandardItemModel>
 #include <QDateTime>
 #include "qdefaultmessageprint.hpp"
 
@@ -26,16 +26,19 @@ public:
 	QString m_unformatted_msg;
 };
 
-class QLogStore : public QAbstractListModel
+class QLogStore : public QStandardItemModel
 {
 	Q_OBJECT
 	QList<LogEvent> events;
+	size_t m_attached=0;
 public:
-	int columnCount(const QModelIndex &parent) const override;
-	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
-	[[nodiscard]] int rowCount(const QModelIndex &parent) const override;
-	[[nodiscard]] QVariant data(const QModelIndex &index, int role) const override;
+	QLogStore(QObject *parent= nullptr);
 	void add(const LogEvent &event);
 	bool isAttached();
+Q_SIGNALS:
+	void notify(int);
+protected:
+	void connectNotify(const QMetaMethod &signal) override;
+	void disconnectNotify(const QMetaMethod &signal) override;
 };
 }

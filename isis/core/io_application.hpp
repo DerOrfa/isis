@@ -17,8 +17,7 @@
 
 */
 
-#ifndef DATA_IOAPPLICATION_HPP
-#define DATA_IOAPPLICATION_HPP
+#pragma once
 
 #include "application.hpp"
 #include "progressfeedback.hpp"
@@ -144,4 +143,4 @@ public:
 }
 }
 
-#endif // DATA_IOAPPLICATION_HPP
+

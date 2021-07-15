@@ -16,8 +16,7 @@
 
 */
 
-#ifndef PROGPARAMETER_HPP
-#define PROGPARAMETER_HPP
+#pragma once
 
 #include "property.hpp"
 #include <string>
@@ -164,4 +163,4 @@ operator<<( basic_ostream<charT, traits> &out, const isis::util::ProgParameter &
 }
 /// @endcond _internal
 
-#endif // PROGPARAMETER_HPP
+

@@ -1,5 +1,4 @@
-#ifndef ZIS_RAW_JXR_H
-#define ZIS_RAW_JXR_H
+#pragma once
 
 #include <stddef.h>
 
@@ -18,4 +17,4 @@ extern struct isis_type_map isis_types;
 }
 #endif
 
-#endif //ZIS_RAW_JXR_H
+

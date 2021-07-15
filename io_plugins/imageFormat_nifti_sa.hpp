@@ -17,8 +17,7 @@
 */
 
 
-#ifndef IMAGEFORMAT_NIFTI_SA_HPP
-#define IMAGEFORMAT_NIFTI_SA_HPP
+#pragma once
 
 #define NIFTI_TYPE_BINARY          1
 #define NIFTI_TYPE_UINT8           2
@@ -211,4 +210,4 @@ protected:
 
 }
 }
-#endif // IMAGEFORMAT_NIFTI_SA_HPP
+

@@ -17,8 +17,7 @@
 */
 
 
-#ifndef ISIS_MATRIX_HPP
-#define ISIS_MATRIX_HPP
+#pragma once
 
 #include "vector.hpp"
 
@@ -131,4 +130,4 @@ namespace std{
 		return begin(mat)+COLS*ROWS;
 	} 
 }
-#endif // ISIS_MATRIX_HPP
+

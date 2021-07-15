@@ -18,8 +18,7 @@
  * 
  */
 
-#ifndef DATABASE_H
-#define DATABASE_H
+#pragma once
 
 #include <string>
 #include <json/value.h>
@@ -243,4 +242,4 @@ isis::image_io::FileFormat *factory()
 }
 
 
-#endif // DATABASE_H
+

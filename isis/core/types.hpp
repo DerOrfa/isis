@@ -1,5 +1,4 @@
-#ifndef TYPES_HPP
-#define TYPES_HPP
+#pragma once
 
 #include <variant>
 #include <complex>
@@ -76,4 +75,4 @@ std::map< std::string, unsigned short> getTransposedTypeMap( bool withValues = t
 }
 
 
-#endif // TYPES_HPP
+

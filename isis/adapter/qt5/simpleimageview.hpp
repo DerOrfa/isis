@@ -87,7 +87,7 @@ protected Q_SLOTS:
 	void doSave();
 	void onMouseMoved(QPointF pos);
 public:
-    SimpleImageView(data::Image img, QString title="", QWidget *parent=nullptr);
+    explicit SimpleImageView(data::Image img, QString title="", QWidget *parent=nullptr);
 };
 
 class MainImageView : public QMainWindow{

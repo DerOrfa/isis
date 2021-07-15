@@ -5,6 +5,7 @@
 #pragma once
 
 #include <QAbstractButton>
+#include <QSortFilterProxyModel>
 #include "qdefaultmessageprint.hpp"
 
 QT_BEGIN_NAMESPACE
@@ -20,10 +21,9 @@ class QLogWidget : public QWidget
 {
 Q_OBJECT
 	QAbstractButton *feedback_button=nullptr;
+	QSortFilterProxyModel *proxy= nullptr;
 protected:
 	QMetaObject::Connection feedback_connection;
-	void showLevel(LogLevel level, bool show=true);
-	void hideLevel(LogLevel level);
 public:
 	bool registerButton(QAbstractButton *btn, bool use_as_feedback);
 	explicit QLogWidget(QWidget *parent = nullptr);
@@ -31,11 +31,7 @@ public:
 private:
 	Ui::QLogWidget *ui;
 public Q_SLOTS:
+	void updateSeverityFilter();
 	void onLogEvent(int);
-	void onShowError(bool);
-	void onShowWarning(bool);
-	void onShowNotice(bool);
-	void onShowInfo(bool);
-	void onShowVerbose(bool);
 };
 }

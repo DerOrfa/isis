@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef ISISPROPERTY_HPP
-#define ISISPROPERTY_HPP
+#pragma once
 
 #include "value.hpp"
 #include "log.hpp"
@@ -369,6 +368,6 @@ namespace std
 	};
 }
 /// @endcond _internal
-#endif
+
 
 

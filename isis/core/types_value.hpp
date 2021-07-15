@@ -17,9 +17,21 @@ typedef std::variant<
 , date, timestamp, duration
 > ValueTypes;
 
+/**
+ * Get the id of the type T
+ * @tparam T the type for which the id is requested
+ * @return the id of the type T if T is a known type
+ * @return std::variant_npos otherwise
+ */
 template<typename T> static constexpr size_t typeID(){
 	return _internal::variant_index<ValueTypes,std::remove_cv_t<T>>();
 }
+/**
+ * Check if T is a known type.
+ * @tparam T the type to be checked
+ * @return true if T is a known type
+ * @return false otherwise
+ */
 template<typename T> static constexpr bool knownType(){
 	const auto id=typeID<T>();
 	return id!=std::variant_npos;

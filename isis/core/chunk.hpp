@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef CHUNK_H
-#define CHUNK_H
+#pragma once
 
 #include "vector.hpp"
 #include "valuearray.hpp"
@@ -375,4 +374,4 @@ basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, con
 }
 /// @endcond _internal
 
-#endif // CHUNK_H
+

@@ -1,5 +1,4 @@
-#ifndef CLFFT_HPP
-#define CLFFT_HPP
+#pragma once
 
 #include "../../core/chunk.hpp"
 
@@ -15,4 +14,4 @@ bool fft(data::TypedChunk<std::complex<float > > &data, bool inverse, float scal
 }
 
 
-#endif // CLFFT_HPP
+

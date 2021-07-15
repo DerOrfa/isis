@@ -17,8 +17,7 @@
  * 
  */
 
-#ifndef GRADIENTWIDGET_H
-#define GRADIENTWIDGET_H
+#pragma once
 
 #include <QWidget>
 
@@ -45,4 +44,4 @@ Q_SIGNALS:
 	void scaleUpdated(qreal bottom, qreal top);
 };
 
-#endif // GRADIENTWIDGET_H
+

@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef NDIMENSIONAL_H
-#define NDIMENSIONAL_H
+#pragma once
 
 #define __need_size_t
 #include <stddef.h>
@@ -174,4 +173,4 @@ public:
 }
 }
 
-#endif // NDIMENSIONAL_H
+

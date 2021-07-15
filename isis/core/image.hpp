@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef IMAGE_H
-#define IMAGE_H
+#pragma once
 
 #include "chunk.hpp"
 
@@ -423,7 +422,8 @@ public:
 
 	/**
 	 * Get the maximum and the minimum voxel value of the image.
-	 * The results are converted to T. If they dont fit an error ist send.
+	 * The results are converted to T. If they don't fit an error ist send.
+	 * \note If the datatype is a vector the minimum/maximum across all elements is computed
 	 * \returns a pair of T storing the minimum and maximum values of the image.
 	 */
 	template<typename T> std::pair<T, T> getMinMaxAs() const {
@@ -432,7 +432,12 @@ public:
 		return std::make_pair ( minmax.first.as<T>(), minmax.second.as<T>() );
 	}
 
-	/// Get the maximum and the minimum voxel value of the image as a pair of ValueReference-objects.
+	/**
+	 * Get the maximum and the minimum voxel value of the image.
+	 * The results are converted to T. If they don't fit an error ist send.
+	 * \note If the datatype is a vector the minimum/maximum across all elements is computed
+	 * \returns a pair storing the minimum and maximum Values of the image.
+	 */
 	std::pair<util::Value, util::Value> getMinMax(bool unify=true) const;
 
 	/**
@@ -800,4 +805,4 @@ public:
 }
 }
 
-#endif // IMAGE_H
+

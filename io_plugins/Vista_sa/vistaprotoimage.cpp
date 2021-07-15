@@ -22,12 +22,7 @@
 #include <isis/core/io_interface.h>
 #include <fstream>
 
-namespace isis
-{
-namespace image_io
-{
-
-namespace _internal
+namespace isis::image_io::_internal
 {
 	
 template<typename T> data::ValueArray reader(data::ByteArray data, size_t offset, size_t size )
@@ -266,11 +261,11 @@ void WriterSpec::modHeaderImpl(isis::util::PropertyMap& props, const isis::util:
 	props.setValueAs<uint64_t>("nbands",  size[data::sliceDim]);
 
 }
-uint16_t WriterSpec::storeVImageImpl(std::list< isis::data::Chunk >& chunks, std::ofstream& out, isis::data::scaling_pair scaling)
+uint16_t WriterSpec::storeVImageImpl(std::list< data::Chunk >& chunks, std::ofstream& out, data::scaling_pair scaling)
 {
 	while(!chunks.empty()){
 		auto ref = chunks.front().convertByID( m_storeTypeID, scaling );
-		if(ref.isValid()) // if conversion failed
+		if(!ref.isValid()) // if conversion failed
 			return chunks.front().getTypeID(); // abort writing and return the failed type
 		
 		ref.endianSwap();
@@ -338,7 +333,8 @@ VistaOutputImage::VistaOutputImage(data::Image src){
 			for(size_t time=0;time<imgSize[data::timeDim];time++){
 				push_back(src.getChunk(0,0,slice,time,false)); // store the chunks in the list dim-swapped
 				back().remove(acquisitionNumber);
-				back().remove(acquisitionTime);
+				if(back().hasProperty(acquisitionTime))
+					back().remove(acquisitionTime);
 			}
 		imageProps.remove(indexOrigin); // we use the positions of the chunks in this case
 	} else {
@@ -354,18 +350,19 @@ VistaOutputImage::VistaOutputImage(data::Image src){
 	}
 	
 	
-	storeTypeID=0;
-	for(const_iterator c=begin();c!=end();c++){
+	storeTypeID=std::variant_npos;
+	for(auto c=begin();c!=end();c++){
 		unsigned short myID=c->getTypeID();
 		switch(myID){ // some types need fallbacks @todo messages should not be repeating
-			case util::typeID<int8_t>(): typeFallback<int8_t,int16_t>(myID);//fall back to short
-			case util::typeID<uint16_t>():typeFallback<uint16_t,int32_t>(myID); //fall back to int
-			case util::typeID<util::color48>():typeFallback<util::color48,util::color24>(myID);
+			case util::typeID<int8_t>(): typeFallback<int8_t,int16_t>(myID);break;//fall back to short
+			case util::typeID<uint16_t>():typeFallback<uint16_t,int32_t>(myID);break; //fall back to int
+			case util::typeID<util::color48>():typeFallback<util::color48,util::color24>(myID);break;
+			default:;
 		}
 
 		auto me = isis2vista.find(myID);
 		if(me!=isis2vista.end()){//if myID is a supported type
-			if(storeTypeID==0){
+			if(storeTypeID==std::variant_npos){
 				storeTypeID=myID;
 				continue;
 			}
@@ -385,7 +382,7 @@ VistaOutputImage::VistaOutputImage(data::Image src){
 		}
 	}
 	scaling = src.getScalingTo(storeTypeID); //@todo we only need this if we do a type conversion
-	assert(storeTypeID);
+	assert(storeTypeID!=std::variant_npos);
 
 }
 
@@ -480,6 +477,4 @@ void VistaOutputImage::writeMetadata(std::ofstream& out, const isis::util::Prope
 }
 
 
-}
-}
 }

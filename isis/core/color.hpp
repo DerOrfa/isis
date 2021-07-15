@@ -1,5 +1,4 @@
-#ifndef COLOR_HPP_INCLUDED
-#define COLOR_HPP_INCLUDED
+#pragma once
 
 #include <ostream>
 #include "common.hpp"
@@ -37,4 +36,4 @@ basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, con
 }
 }
 /// @endcond _internal
-#endif //COLOR_HPP_INCLUDED
+

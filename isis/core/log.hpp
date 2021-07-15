@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef LOG_H
-#define LOG_H
+#pragma once
 
 #include <string>
 #include "message.hpp"
@@ -62,4 +61,4 @@ public:
 #define LOG_IF(PRED,MODULE,LEVEL)\
 	if(!(MODULE::use && (PRED)));else isis::util::_internal::Log<MODULE>::send(__FILE__,__FUNCTION__,__LINE__,LEVEL)
 
-#endif
+

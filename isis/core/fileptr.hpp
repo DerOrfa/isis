@@ -1,6 +1,5 @@
 
-#ifndef FILEPTR_HPP
-#define FILEPTR_HPP
+#pragma once
 
 #include <filesystem>
 #include <sys/resource.h>
@@ -38,11 +37,11 @@ class FilePtr: public ByteArray
 	bool map( FILE_HANDLE file, size_t len, bool write, const std::filesystem::path &filename );
 
 	size_t checkSize( bool write, FILE_HANDLE file, const std::filesystem::path &filename, size_t size = 0 );
-	bool m_good;
+	bool m_good=false;
 	static rlim_t file_count;
 public:
 	/// empty creator - result will not be useful until filled
-	FilePtr();
+	FilePtr() = default;
 	/**
 	 * Create a FilePtr, mapping the given file.
 	 * if the write is true:
@@ -62,8 +61,9 @@ public:
 	 * \param filename the file to map into memory
 	 * \param len the requested length of the resulting ValueArray in bytes (automatically set if 0)
 	 * \param write the file be opened for writing (writing to the mapped memory will write to the file, otherwise it will cause a copy-on-write)
+	 * \param mapsize size below which the file will actually be copied into memory (instead of being mapped). Applies only when write is false.
 	 */
-	FilePtr( const std::filesystem::path &filename, size_t len = 0, bool write = false );
+	explicit FilePtr(const std::filesystem::path &filename, size_t len = 0, bool write = false, size_t mapsize = 2*1024*1024);
 
 	bool good();
 	void release();
@@ -77,5 +77,3 @@ public:
 	static bool checkLimit(rlim_t additional_files);
 };
 }
-
-#endif

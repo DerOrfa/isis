@@ -151,14 +151,6 @@ bool transformCoords( util::PropertyMap& propertyObject, const util::vector4< si
 	propertyObject.setValueAs( "sliceVec", slice );
 	return true;
 }
-
-template<typename T, size_t N> T getBiggestVecElemAbs(std::array<T,N> arr){
-	return *std::max_element(
-		std::begin(arr),std::end(arr),
-		[](const T &a, const T &b){return std::abs(a) < std::abs(b);}
-	);
-}
-
 }
 
 bool transformCoords(data::Chunk& chk, ublas::matrix< float > transform_matrix, bool transformCenterIsImageCenter)
@@ -202,9 +194,9 @@ data::dimensions mapScannerAxisToImageDimension(const data::Image &img, data::sc
 #pragma message("test me")
 	ublas::matrix<float> latchedOrientation = ublas::zero_matrix<float>( 4, 4 );
 	ublas::vector<float>mapping( 4 );
-	latchedOrientation( _internal::getBiggestVecElemAbs(img.getValueAs<util::fvector3>("rowVec")), 0 ) = 1;
-	latchedOrientation( _internal::getBiggestVecElemAbs(img.getValueAs<util::fvector3>("columnVec")), 1 ) = 1;
-	latchedOrientation( _internal::getBiggestVecElemAbs(img.getValueAs<util::fvector3>("sliceVec")), 2 ) = 1;
+	latchedOrientation( getBiggestVecElemAbs(img.getValueAs<util::fvector3>("rowVec")), 0 ) = 1;
+	latchedOrientation( getBiggestVecElemAbs(img.getValueAs<util::fvector3>("columnVec")), 1 ) = 1;
+	latchedOrientation( getBiggestVecElemAbs(img.getValueAs<util::fvector3>("sliceVec")), 2 ) = 1;
 	latchedOrientation( 3, 3 ) = 1;
 
 	for( size_t i = 0; i < 4; i++ ) {
