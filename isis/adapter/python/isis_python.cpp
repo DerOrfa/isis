@@ -3,8 +3,8 @@
 //
 
 #include "pybind11/pybind11.h"
+#include "pybind11/chrono.h"
 #include "pybind11/stl.h"
-#include "pybind11/complex.h"
 #include "../../core/image.hpp"
 #include "utils.hpp"
 
@@ -27,7 +27,23 @@ py::class_<data::Image>(m, "image", py::buffer_protocol())
 		 "get all chunks of pixel data that make the image",
 		 py::arg("copy_metadata")=false
 	)
-	.def("__getitem__", [](const data::Image &img, std::string path) {return img.property(path.c_str());	});
+	.def("__getitem__", [](const data::Image &img, std::string path){
+		return python::property2python(img.property(path.c_str()));
+	})
+	.def("__contains__", [](const data::Image &img, std::string path)->bool{return img.hasProperty(path.c_str());})
+	.def("__repr__", [](const data::Image &img) {
+		return img.identify(false,false)+" " + img.getSizeAsString() + " " + img.getMajorTypeName();
+	})
+	.def_property_readonly("shape", &data::Image::getSizeAsVector)
+	.def("identify", &data::Image::identify,"withpath"_a=true,"withdate"_a=false)
+	.def("getMetaData", [](const data::Image &img) {
+		std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>> ret;
+		for(auto &set:img.getFlatMap()){
+			ret.emplace(set.first.toString(),python::property2python(set.second));
+		}
+		return ret;
+	})
+;
 
 m.def("load",&python::load,
 	  "filepath"_a,

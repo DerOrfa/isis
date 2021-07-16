@@ -15,9 +15,11 @@ namespace _internal{
 			shape_v.push_back(shape.getDimSize(i));
 			strides_v.push_back(i?
 				shape_v[i-1]*strides_v[i-1]:
-				1
+				sizeof(T)
 			);
 		}
+		//numpy defaults to row major
+		if(strides_v.size()>1)std::swap(strides_v[0],strides_v[1]);
 		return py::buffer_info(
 			const_cast<T*>(ptr.get()),//its ok to drop the const here, we mark the buffer as readonly
 			shape_v, strides_v,
@@ -49,6 +51,17 @@ std::pair<std::list<data::Image>, util::slist> load_list(util::slist paths,util:
 }
 std::pair<std::list<data::Image>, util::slist> load(std::string path,util::slist formatstack,util::slist dialects){
 	return load_list({path},formatstack,dialects);
+}
+
+std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>> property2python(util::PropertyValue p)
+{
+	if(p.is<util::Selection>())
+		p.transform<std::string>();
+	switch(p.size()){
+		case 0:return {};
+		case 1:return p.front();
+		default:return std::list<util::ValueTypes>(p.begin(),p.end());
+	}
 }
 
 }
