@@ -39,11 +39,11 @@ public:
 	virtual boost::numeric::range_check_result generate(const Value &src, Value & dst )const = 0;
 	static std::shared_ptr<const ValueConverterBase> get() {return std::shared_ptr<const ValueConverterBase>();}
 public:
-	virtual ~ValueConverterBase() {}
+	virtual ~ValueConverterBase() = default;
 };
 
 API_EXCLUDE_BEGIN;
-class ValueConverterMap : public std::map< int , std::map<int, std::shared_ptr<const ValueConverterBase> > >
+class ValueConverterMap : public std::map< size_t, std::map<size_t, std::shared_ptr<const ValueConverterBase> > >
 {
 public:
 	ValueConverterMap();

@@ -805,7 +805,7 @@ public:
 //OK, thats about the foreplay. Now we get to the dirty stuff.
 ////////////////////////////////////////////////////////////////////////
 typedef std::shared_ptr<const ValueConverterBase> ConverterPtr;
-typedef std::map< int , std::map<int, ConverterPtr> > ConverterMap;
+typedef std::map< size_t , std::map<size_t, ConverterPtr> > ConverterMap;
 
 template<typename DST> struct MakeConvVisitor{
     template<typename SRC> std::shared_ptr<const ValueConverterBase> operator()(const SRC &)const{

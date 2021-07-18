@@ -153,7 +153,7 @@ void DCMStack::decodeMosaic()
 		util::fvector3 voxelSize = getValueAs<util::fvector3>( "DICOM/PixelSpacing" );
 		voxelSize[2] = getValueAs<float>( "DICOM/SpacingBetweenSlices" );
 		//remove the additional mosaic offset
-		//eg. if there is a 10x10 Mosaic, substract the half size of 9 Images from the offset
+		//eg. if there is a 10x10 Mosaic, subtract the half size of 9 Images from the offset
 		const util::fvector3 fovCorr = ( voxelSize ) * size * ( matrixSize - 1 ) / 2;
 
 		// correct the origin

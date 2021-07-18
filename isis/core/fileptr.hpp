@@ -51,7 +51,7 @@ class FilePtr: public ByteArray
 {
 	friend class _internal::FileHandle;
 	struct Closer {
-		FILE_HANDLE file,mmaph;
+		FILE_HANDLE file, mmaph;
 		size_t len;
 		std::filesystem::path filename;
 		bool write;
@@ -88,7 +88,7 @@ public:
 	 */
 	explicit FilePtr(const std::filesystem::path &filename, size_t len = 0, bool write = false, size_t mapsize = 2*1024*1024);
 
-	bool good() const;
+	[[nodiscard]] bool good() const;
 	void release();
 
 	/**
@@ -97,7 +97,6 @@ public:
 	 * @param additional_files amount of files expected to be opened
 	 * @return true if amount is within the limit or the limit could be raised sufficiently, false otherwise
 	 */
-	static bool checkLimit(rlim_t additional_files);
+	[[nodiscard]] static bool checkLimit(rlim_t additional_files);
 };
 }
-

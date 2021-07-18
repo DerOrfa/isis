@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE( test_ext_operators )
 		BOOST_REQUIRE_EQUAL(buff.multiply_me(_2str), Value(42 ) );
 		BOOST_REQUIRE_EQUAL(buff.divide_me(_2str), Value(21 ) );
 		BOOST_REQUIRE_EQUAL(buff.add(_2str), Value(23 ) );
-		BOOST_CHECK_EQUAL(buff.substract(_21str), Value(2 ) );
+		BOOST_CHECK_EQUAL(buff.subtract(_21str), Value(2 ) );
 	}
 
 	BOOST_CHECK(!Value(50).eq(_2strneg));
