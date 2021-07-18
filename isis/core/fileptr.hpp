@@ -16,6 +16,28 @@
 
 namespace isis::data
 {
+namespace _internal{
+	/// RAII-Object that will either transfer its handle to the mapping shared_ptr or free it after leaving context when conventional reading is done
+	class FileHandle{
+		std::filesystem::path filename;
+#ifdef WIN32
+		static const FILE_HANDLE invalid_handle = INVALID_HANDLE_VALUE;
+#else
+		static const FILE_HANDLE invalid_handle = -1;
+#endif
+		FILE_HANDLE handle=invalid_handle;
+
+	public:
+		FileHandle()=delete;
+		FileHandle(const FileHandle &) = delete;
+		explicit FileHandle(const std::filesystem::path &_filename);
+		~FileHandle();
+		operator FILE_HANDLE()const{return handle;}
+		bool good();
+		static bool closeHandle(FILE_HANDLE handle, const std::filesystem::path &filename);
+		FILE_HANDLE release();
+	};
+}
 /**
  * Class to map files into memory.
  * This can be used read only, or for read/write.
@@ -27,16 +49,17 @@ namespace isis::data
  */
 class FilePtr: public ByteArray
 {
+	friend class _internal::FileHandle;
 	struct Closer {
-		FILE_HANDLE file, mmaph;
+		FILE_HANDLE file,mmaph;
 		size_t len;
 		std::filesystem::path filename;
 		bool write;
 		void operator()( void *p );
 	};
-	bool map( FILE_HANDLE file, size_t len, bool write, const std::filesystem::path &filename );
+	bool map( _internal::FileHandle &&file, size_t len, bool write, const std::filesystem::path &filename );
 
-	size_t checkSize( bool write, FILE_HANDLE file, const std::filesystem::path &filename, size_t size = 0 );
+	size_t checkSize(bool write, const std::filesystem::path &filename, size_t size);
 	bool m_good=false;
 	static rlim_t file_count;
 public:
@@ -65,7 +88,7 @@ public:
 	 */
 	explicit FilePtr(const std::filesystem::path &filename, size_t len = 0, bool write = false, size_t mapsize = 2*1024*1024);
 
-	bool good();
+	bool good() const;
 	void release();
 
 	/**
@@ -77,3 +100,4 @@ public:
 	static bool checkLimit(rlim_t additional_files);
 };
 }
+

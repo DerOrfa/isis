@@ -28,9 +28,7 @@
 #include "message.hpp"
 #include "common.hpp"
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 using namespace std::filesystem;
@@ -50,6 +48,5 @@ TmpFile::~TmpFile()
 	} else {
 		LOG( Debug, warning ) << "Temporary file " << native() << " does not exist, won't delete it";
 	}
-}
 }
 }

@@ -40,15 +40,12 @@ void FilePtr::Closer::operator()( void *p )
 			<< " failed, the error was: " << util::MSubject( util::getLastSystemError() );
 
 #ifdef __APPLE__
-
 	if( write && futimes( file, NULL ) != 0 ) {
 		LOG( Runtime, warning )
 				<< "Setting access time of " << util::MSubject( filename )
 				<< " failed, the error was: " << util::MSubject( strerror( errno ) );
 	}
-
 #elif WIN32
-
 	if( write ) {
 		FILETIME ft;
 		SYSTEMTIME st;
@@ -59,24 +56,15 @@ void FilePtr::Closer::operator()( void *p )
 				<< "Setting access time of " << util::MSubject( filename.file_string() )
 				<< " failed, the error was: " << util::MSubject( util::getLastSystemError() );
 	}
-
 #endif
 
 #ifdef WIN32
-
-	if( !( CloseHandle( mmaph ) && CloseHandle( file ) ) ) {
-#else
-
-	if( ::close( file ) != 0 ) {
+	CloseHandle( mmaph );
 #endif
-		LOG( Runtime, warning )
-				<< "Closing of " << util::MSubject( filename )
-				<< " failed, the error was: " << util::MSubject( strerror( errno ) );
-	} else
-		--file_count;
+	_internal::FileHandle::closeHandle(file,filename);
 }
 
-bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const std::filesystem::path &filename )
+bool FilePtr::map( _internal::FileHandle &&file, size_t len, bool write, const std::filesystem::path &filename )
 {
 	void *ptr = nullptr;
 	FILE_HANDLE mmaph = 0;
@@ -91,6 +79,7 @@ bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const std::filesyst
 			LOG(Runtime,warning) << "Can't increase the limit for for mapped file size to " << len << ", this will crash..";
 		}
 	}
+	assert(file.good());
 
 #ifdef WIN32 //mmap is broken on windows - workaround stolen from http://crupp.de/2007/11/14/howto-port-unix-mmap-to-win32/
 	mmaph = CreateFileMapping( file, 0, write ? PAGE_READWRITE : PAGE_WRITECOPY, 0, 0, NULL );
@@ -112,14 +101,14 @@ bool FilePtr::map( FILE_HANDLE file, size_t len, bool write, const std::filesyst
 		}
 		return false;
 	} else {
-		const Closer cl = {file, mmaph, len, filename, write};
+		const Closer cl = {file.release(), mmaph, len, filename, write};
 		writing = write;
 		static_cast<ByteArray&>( *this ) = ByteArray( std::shared_ptr<uint8_t>(static_cast<uint8_t * const>( ptr ),cl), len );
 		return true;
 	}
 }
 
-size_t FilePtr::checkSize( bool write, FILE_HANDLE file, const std::filesystem::path &filename, size_t size )
+size_t FilePtr::checkSize(bool write, const std::filesystem::path &filename, size_t size)
 {
 	const auto currSize = std::filesystem::file_size( filename );
 	if ( std::numeric_limits<size_t>::max() < currSize ) {
@@ -158,34 +147,18 @@ size_t FilePtr::checkSize( bool write, FILE_HANDLE file, const std::filesystem::
 
 FilePtr::FilePtr(const std::filesystem::path &filename, size_t len, bool write, size_t mapsize)
 {
-#ifdef WIN32
-	const FILE_HANDLE invalid = INVALID_HANDLE_VALUE;
-	const int oflag = write ?
-					  GENERIC_READ | GENERIC_WRITE :
-					  GENERIC_READ; //open file readonly
-	const FILE_HANDLE file =
-		CreateFile( filename.file_string().c_str(), oflag, write ? 0 : FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
-#else
-	const FILE_HANDLE invalid = -1;
-	const int oflag = write ?
-					  O_CREAT | O_RDWR : //create file if its not there
-					  O_RDONLY; //open file readonly
-	const FILE_HANDLE file =
-		open( filename.native().c_str(), oflag, 0666 );
-#endif
-
-	if( file == invalid ) {
-		LOG( Runtime, error ) << "Failed to open " << filename << ", the error was: " << util::getLastSystemError();
+	_internal::FileHandle file(filename);
+	if(!file.good())
 		return;
-	}
 
-	const size_t file_size = checkSize(write, file, filename, len ); // get the mapping size
+	const size_t file_size = checkSize(write, filename, len); // get the mapping size
 
 	if(file_size > mapsize || write) {
-		m_good = map(file, file_size, write, filename); //and do the mapping
-		++file_count;
+		m_good = map(std::move(file), file_size, write, filename); //and do the mapping
 		LOG(Debug, verbose_info) << "Mapped " << file_size << " bytes of " << filename << " at " << getRawAddress().get();
-	} else if(file_size>0){
+	}
+	else if(file_size>0)
+	{
 		static_cast<ValueArray*>(this)->operator=(ValueArray::make<uint8_t>(file_size));
 		if(!getRawAddress()){
 			LOG(Runtime,error) << "Failed creating memory for reading " << filename << ", the error was: " << util::getLastSystemError();
@@ -210,7 +183,9 @@ FilePtr::FilePtr(const std::filesystem::path &filename, size_t len, bool write, 
 	// from here on the pointer will be set if mapping succeeded
 }
 
-bool FilePtr::good() {return m_good;}
+bool FilePtr::good() const {
+	return m_good && getRawAddress();
+}
 
 void FilePtr::release()
 {
@@ -232,6 +207,62 @@ bool FilePtr::checkLimit(rlim_t additional_files)
 		}
 	}
 	return true;
+}
+
+_internal::FileHandle::FileHandle(const std::filesystem::path &_filename):filename(_filename)
+{
+#ifdef WIN32
+	const int oflag = write ?
+					  GENERIC_READ | GENERIC_WRITE :
+					  GENERIC_READ; //open file readonly
+	handle =
+		CreateFile( filename.file_string().c_str(), oflag, write ? 0 : FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
+#else
+	const int oflag = write ?
+					  O_CREAT | O_RDWR : //create file if its not there
+					  O_RDONLY; //open file readonly
+	handle =
+		open( filename.native().c_str(), oflag, 0666 );
+#endif
+	if( good() )
+		++FilePtr::file_count;
+	else
+		LOG( Runtime, error ) << "Failed to open " << filename << ", the error was: " << util::getLastSystemError();
+}
+
+_internal::FileHandle::~FileHandle(){
+	if(handle != invalid_handle)
+		closeHandle(handle,filename);
+}
+
+bool _internal::FileHandle::good()
+{
+	return handle != invalid_handle;
+}
+
+bool _internal::FileHandle::closeHandle(int handle, const std::filesystem::path &filename)
+{
+	assert(handle!=invalid_handle);
+#ifdef WIN32
+	if( CloseHandle( handle ) ) ) {
+#else
+
+	if( ::close( handle ) != 0 ) {
+#endif
+		LOG( Runtime, warning )
+			<< "Closing of " << util::MSubject( filename )
+			<< " failed, the error was: " << util::MSubject( strerror( errno ) );
+		return false;
+	}
+
+	--FilePtr::file_count;
+	return true;
+}
+FILE_HANDLE _internal::FileHandle::release()
+{
+	FILE_HANDLE ret=handle;
+	handle=invalid_handle;
+	return ret;
 }
 
 }
