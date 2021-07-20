@@ -542,7 +542,7 @@ public:
 			LOG(Runtime,info) 
 				<< "Scalines " << r << " to " << r+actual_rows-1 
 				<< " written, compression ratio was " << std::to_string(100-(dat.first.getLength()*100 / (bytes_per_row*actual_rows)))+"%"; 
-			if(feedback)feedback->progress("",rowset_size);
+			if(feedback)feedback->progress(rowset_size);
 		}
 		IEND().write(outputFile);
 	}

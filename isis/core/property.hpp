@@ -15,16 +15,14 @@
 #include "value.hpp"
 #include "log.hpp"
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 /**
  * A very generic class to store values of properties.
  * PropertyValue may store a value of any type (defined in types.cpp) otherwise it's empty.
- * Non-empty ValueValues are equal-compareable.
- * But empty PropertyValues are neigther equal nor unequal to anything (not even to empty ValueValues).
+ * Non-empty ValueValues are equal-comparable.
+ * But empty PropertyValues are neither equal nor unequal to anything (not even to empty ValueValues).
  * @author Enrico Reimer
  */
 class PropertyValue
@@ -309,7 +307,7 @@ public:
 	/**
 	 * \copydetails PropertyValue::gt
 	 */
-	PropertyValue& substract( const PropertyValue &ref );
+	PropertyValue& subtract(const PropertyValue &ref );
 	/**
 	 * \copydetails PropertyValue::gt
 	 */
@@ -352,7 +350,6 @@ public:
 	PropertyValue operator/( const Value &second )const {PropertyValue lhs(*this); return lhs/=second;}
 };
 
-}
 }
 /// @cond _internal
 namespace std

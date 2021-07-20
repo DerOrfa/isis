@@ -9,7 +9,6 @@
 #endif
 
 #include <cstddef>
-
 #include <stdint.h>
 
 using std::size_t;

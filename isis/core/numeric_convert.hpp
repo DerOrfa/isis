@@ -6,9 +6,7 @@
 #include "valuearray.hpp"
 
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 API_EXCLUDE_BEGIN;
 /// @cond _internal
@@ -294,7 +292,6 @@ template<typename T> void numeric_copy( const T *src, T *dst, size_t size )
 	_internal::numeric_copy_impl<T>( src, dst, size );
 }
 
-}
 }
 
 

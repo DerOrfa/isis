@@ -170,7 +170,7 @@ public:
 	Value divide(const Value &ref )const;
 
 	Value& add(const Value &ref );
-	Value& substract(const Value &ref );
+	Value& subtract(const Value &ref );
 	Value& multiply_me(const Value &ref );
 	Value& divide_me(const Value &ref );
 
@@ -180,7 +180,7 @@ public:
 	Value operator/(const Value &ref )const{return divide(ref);};
 
 	Value& operator+=(const Value &ref ){return add(ref);};
-	Value& operator-=(const Value &ref ){return substract(ref);};
+	Value& operator-=(const Value &ref ){return subtract(ref);};
 	Value& operator*=(const Value &ref ){return multiply_me(ref);};
 	Value& operator/=(const Value &ref ){return divide_me(ref);};
 
