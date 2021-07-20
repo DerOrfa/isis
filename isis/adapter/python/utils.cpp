@@ -5,10 +5,21 @@
 #include "utils.hpp"
 #include <type_traits>
 #include "../../core/io_factory.hpp"
+#include "../../math/common.hpp"
 
 namespace isis::python{
 namespace _internal{
-	template<typename T> std::enable_if_t<std::is_arithmetic<T>::value, py::buffer_info>
+	py::capsule make_capsule(const std::shared_ptr<void> &ptr)
+	{
+		return py::capsule(new std::shared_ptr<void>(ptr), [](void *f)
+		{
+			LOG(Debug,info) << "Freeing shared_ptr capsule at " << f;
+			delete reinterpret_cast<std::shared_ptr<void> *>(f);
+		});
+	}
+
+
+template<typename T> std::enable_if_t<std::is_arithmetic<T>::value, py::buffer_info>
 	make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape){
 		std::vector<size_t> shape_v,strides_v;
 		for(size_t i=0;i<shape.getRelevantDims();i++){
@@ -32,12 +43,32 @@ namespace _internal{
 	}
 }
 
-py::buffer_info make_buffer(const data::Chunk &ch)
+py::array make_array(data::Chunk &ch)
 {
-	return ch.visit(
+	return py::array(ch.visit(
 		[&ch](auto ptr)->py::buffer_info{return _internal::make_buffer_impl(ptr,ch);}
-	);
+	),_internal::make_capsule(ch.getRawAddress()));
 }
+
+py::array make_array(data::Image &img)
+{
+	if(img.getRelevantDims() == img.getChunkAt(0,false).getRelevantDims()){ // only one chunk, no merging needed
+		LOG(Runtime,info) << "making cheap copy of single chunk image";
+		auto chk=img.getChunkAt(0,false);
+		return make_array(chk);
+	} else {
+		//we have to merge
+		LOG(Debug,info) << "merging " << img.copyChunksToVector(false).size() << " chunks into one image";
+		data::ValueArray whole_image=img.copyAsValueArray();
+		LOG(Runtime,info) << "created " << whole_image.bytesPerElem()*whole_image.getLength()/1024/1024 << "MB buffer from multi chunk image";
+
+		return py::array(whole_image.visit(
+			[&img](auto ptr)->py::buffer_info{return _internal::make_buffer_impl(ptr,img);}
+		),_internal::make_capsule(whole_image.getRawAddress()));
+	}
+}
+
+
 std::pair<std::list<data::Image>, util::slist> load_list(util::slist paths,util::slist formatstack,util::slist dialects)
 {
 	std::list<util::istring> _formatstack,_dialects;
@@ -62,6 +93,36 @@ std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>> property2p
 		case 1:return p.front();
 		default:return std::list<util::ValueTypes>(p.begin(),p.end());
 	}
+}
+void setup_logging(LogLevel level){
+//	util::enableLog<python::LoggerProxy>(level);
+//	data::enableLog<python::LoggerProxy>(level);
+//	image_io::enableLog<python::LoggerProxy>(level);
+//	math::enableLog<python::LoggerProxy>(level);
+	python::enableLog<python::LoggerProxy>(level);
+	LOG(Runtime,verbose_info) << "isis logging will be sent through the python logging module";
+}
+void free_logging(LogLevel level){
+	util::enableLog<util::DefaultMsgPrint>(level);
+	data::enableLog<util::DefaultMsgPrint>(level);
+	image_io::enableLog<util::DefaultMsgPrint>(level);
+	math::enableLog<util::DefaultMsgPrint>(level);
+	python::enableLog<util::DefaultMsgPrint>(level);
+	LOG(Runtime,verbose_info) << "isis logging will be sent through the default handler";
+}
+
+LoggerProxy::LoggerProxy(LogLevel level) : util::MessageHandlerBase(level){
+	auto logger= py::module_::import("logging");
+	LoggerProxy::severity_map[error]=logger.attr("ERROR");
+	LoggerProxy::severity_map[warning]=logger.attr("WARNING");
+	LoggerProxy::severity_map[notice]=logger.attr("INFO");
+	LoggerProxy::severity_map[info]=logger.attr("INFO");
+	LoggerProxy::severity_map[verbose_info]=logger.attr("DEBUG");
+	LoggerProxy::log=logger.attr("log");
+}
+void LoggerProxy::commit(const util::Message &msg)
+{
+	log(severity_map[msg.m_level],msg.merge(""));
 }
 
 }

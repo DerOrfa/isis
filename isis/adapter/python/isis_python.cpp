@@ -15,13 +15,24 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 using namespace isis;
 
+auto cleanup_callback = []() {
+	python::free_logging(verbose_info);
+};
+
+
 PYBIND11_MODULE(isis, m)
 {
-py::class_<data::Chunk>(m, "chunk", py::buffer_protocol())
-	.def_buffer([](const data::Chunk &ch)->py::buffer_info{return python::make_buffer(ch);	})
-	.def("__getitem__", [](const data::Chunk &ch, std::string path) {return ch.property(path.c_str());	});
+python::setup_logging();
+m.add_object("_cleanup", py::capsule(cleanup_callback));
 
-py::class_<data::Image>(m, "image", py::buffer_protocol())
+py::class_<data::Chunk>(m, "chunk")
+	.def("__array__",[](data::Chunk &ch){return python::make_array(ch);	})
+	.def("__getitem__", [](const data::Chunk &ch, std::string path){
+		return python::property2python(ch.property(path.c_str()));
+	})
+;
+py::class_<data::Image>(m, "image")
+	.def("__array__",[](data::Image &img){return python::make_array(img);	})
 	.def("getChunks",
 		 [](const data::Image &img, bool copy_metadata) {return img.copyChunksToVector(copy_metadata);	},
 		 "get all chunks of pixel data that make the image",
