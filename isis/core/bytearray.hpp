@@ -21,8 +21,7 @@
 #include "valuearray_typed.hpp"
 #include "endianess.hpp"
 
-namespace isis{
-namespace data{
+namespace isis::data{
 
 class ByteArray : public TypedArray<uint8_t>
 {
@@ -97,6 +96,5 @@ public:
 	 */
 	data::ValueArray atByID(unsigned short ID, size_t offset, size_t len = 0, bool swap_endianess = false );
 };
-}
 }
 
