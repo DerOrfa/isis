@@ -416,8 +416,8 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 					const float pixel_size=image_info.pixel_size*std::pow(pyramid.pyramid_factor,i);
 					ret.back().setValueAs<util::fvector3>("voxelSize",{pixel_size,pixel_size,1});
 					ret.back().setValueAs("pixelSize_micron",pixel_size*1000);
-					ret.back().setValueAs("pyramidLevel",i);
-					ret.back().setValueAs("sequenceNumber",i);
+					ret.back().setValueAs("pyramidLevel",(uint64_t)i);
+					ret.back().setValueAs("sequenceNumber",(uint64_t)i);
 					
 					const auto center=pyramid.xml_data.get_optional<std::string>("CenterPosition");
 					if(center){

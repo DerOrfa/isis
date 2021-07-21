@@ -215,15 +215,14 @@ isis::data::ValueArray isis::data::ValueArray::convertByID(unsigned short ID, sc
 
 isis::data::ValueArray isis::data::ValueArray::createByID(unsigned short ID, std::size_t len)
 {
-	const _internal::ValueArrayConverterMap::const_iterator f1 = converters().find( ID );
+	auto f1 = converters().find( ID );
 	_internal::ValueArrayConverterMap::mapped_type::const_iterator f2;
 	ValueArray ret;
 	// try to get a converter to convert the requested type into itself - they're there for all known types
 	if( f1 != converters().end() && ( f2 = f1->second.find( ID ) ) != f1->second.end() ) {
 		const ValueArrayConverterBase &conv = *( f2->second );
 		ret=conv.create( len );
-		if(!ret.isValid())
-			LOG_IF(!ret.isValid(),Runtime,error) << "The created array is not valid, this is not going to end well..";
+		LOG_IF(!ret.isValid(),Runtime,error) << "The created array is not valid, this is not going to end well..";
 	} else {
 		LOG( Debug, error ) << "There is no known array creator for " << util::getTypeMap()[ID];
 	}
