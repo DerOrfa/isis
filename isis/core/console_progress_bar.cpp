@@ -15,11 +15,12 @@ size_t isis::util::ConsoleProgressBar::progress(size_t step)
 	if(closed) {
 		LOG(Debug, warning) << "Ignoring progress on a closed progress bar";
 	} else {
-		updateScreenWidth();//@todo doing this all the time is probably not a good idea
 		current += step;
 		uint16_t new_prgs = current * avail_prgs_width / max;
 		if (new_prgs != prgs) {
-			prgs = new_prgs;
+			std::lock_guard guard(mtx);
+			updateScreenWidth();
+			prgs = current * avail_prgs_width / max;//calculate again, as avail_prgs_width  might have changed
 			redraw();
 		}
 	}
@@ -56,10 +57,9 @@ void isis::util::ConsoleProgressBar::restart(size_t new_max)
 void isis::util::ConsoleProgressBar::updateScreenWidth()
 {
 	char termbuf[2048];
-	if (tgetent(termbuf, getenv("TERM")) >= 0) {
+	auto termstr=getenv("TERM");
+	if (termstr && tgetent(termbuf, termstr) >= 0) {
 		avail_prgs_width = tgetnum("co") /* -2 */;
-	} else{
-		avail_prgs_width = default_screen_width;
 	}
 
 	//if display header is to long let it use at most half the witdh

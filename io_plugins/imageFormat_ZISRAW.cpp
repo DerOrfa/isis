@@ -13,20 +13,20 @@ DirectoryEntryDV getDVEntry(data::ByteArray &data, size_t offset){
 	const std::string_view type(reinterpret_cast<char*>(&data[offset]),2);
 	assert(type=="DV");
 	DirectoryEntryDV ret;
-	getScalar(data,ret.PixelType,offset+2);
-	getScalar(data,ret.FilePosition,offset+6);//@todo 12bytes??
-	getScalar(data,ret.Compression,offset+18);
-	getScalar(data,ret.PyramidType,offset+22);
-	getScalar(data,ret.DimensionCount,offset+28);
+	_internal::getScalar(data,ret.PixelType,offset+2);
+	_internal::getScalar(data,ret.FilePosition,offset+6);//4 bytes after this are reserved for FilePart
+	_internal::getScalar(data,ret.Compression,offset+18);
+	_internal::getScalar(data,ret.PyramidType,offset+22);
+	_internal::getScalar(data,ret.DimensionCount,offset+28);
 	ret.dims.resize(ret.DimensionCount);
 	size_t d_offset=offset+32;
 	for(DimensionEntry &dim:ret.dims){
 		dim.Dimension= std::string((char*)&data[d_offset]);
 		assert(dim.Dimension.size()<=4);
-		getScalar(data,dim.start,d_offset+4);
-		getScalar(data,dim.size,d_offset+8);
-		getScalar(data,dim.StartCoordinate,d_offset+12);
-		getScalar(data,dim.StoredSize,d_offset+16);
+		_internal::getScalar(data,dim.start,d_offset+4);
+		_internal::getScalar(data,dim.size,d_offset+8);
+		_internal::getScalar(data,dim.StartCoordinate,d_offset+12);
+		_internal::getScalar(data,dim.StoredSize,d_offset+16);
 		d_offset+=20;
 	}
 	return ret;
@@ -416,8 +416,8 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 					const float pixel_size=image_info.pixel_size*std::pow(pyramid.pyramid_factor,i);
 					ret.back().setValueAs<util::fvector3>("voxelSize",{pixel_size,pixel_size,1});
 					ret.back().setValueAs("pixelSize_micron",pixel_size*1000);
-					ret.back().setValueAs("pyramidLevel",i);
-					ret.back().setValueAs("sequenceNumber",i);
+					ret.back().setValueAs("pyramidLevel",(uint64_t)i);
+					ret.back().setValueAs("sequenceNumber",(uint64_t)i);
 					
 					const auto center=pyramid.xml_data.get_optional<std::string>("CenterPosition");
 					if(center){

@@ -30,7 +30,7 @@ namespace _internal{
 	public:
 		FileHandle()=delete;
 		FileHandle(const FileHandle &) = delete;
-		explicit FileHandle(const std::filesystem::path &_filename);
+		FileHandle(const std::filesystem::path &_filename, bool readonly);
 		~FileHandle();
 		operator FILE_HANDLE()const{return handle;}
 		bool good();
