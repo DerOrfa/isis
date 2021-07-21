@@ -66,7 +66,7 @@ class ImageFormat_ZISRAW : public FileFormat{
 		}
 	public:
 		std::string id;
-		size_t getSegmentSize();
+		size_t getSegmentSize()const;
 		/**
 		 * Create a segment from the source
 		 * \param source the ByteArray from the container (file)
