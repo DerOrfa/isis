@@ -36,9 +36,37 @@ template<typename T> std::enable_if_t<std::is_arithmetic<T>::value, py::buffer_i
 			shape_v, strides_v,
 			true);
 	}
+	py::buffer_info make_buffer_impl(const std::shared_ptr<util::color24> &ptr,const data::NDimensional<4> &shape){
+		std::vector<size_t> shape_v,strides_v;
+		shape_v.push_back(3);strides_v.push_back(1);
+		for(size_t i=0;i<shape.getRelevantDims();i++){
+			shape_v.push_back(shape.getDimSize(i));
+			strides_v.push_back(shape_v[i]*strides_v[i]);
+		}
+		//numpy defaults to row major
+		if(strides_v.size()>2)std::swap(strides_v[1],strides_v[2]);
+		return py::buffer_info(
+			const_cast<uint8_t*>(&ptr->r),//its ok to drop the const here, we mark the buffer as readonly
+			shape_v, strides_v,
+			true);
+	}
+	py::buffer_info make_buffer_impl(const std::shared_ptr<util::color48> &ptr,const data::NDimensional<4> &shape){
+		std::vector<size_t> shape_v,strides_v;
+		shape_v.push_back(3);strides_v.push_back(2);
+		for(size_t i=0;i<shape.getRelevantDims();i++){
+			shape_v.push_back(shape.getDimSize(i));
+			strides_v.push_back(shape_v[i]*strides_v[i]);
+		}
+		//numpy defaults to row major
+		if(strides_v.size()>2)std::swap(strides_v[1],strides_v[2]);
+		return py::buffer_info(
+			const_cast<uint16_t*>(&ptr->r),//its ok to drop the const here, we mark the buffer as readonly
+			shape_v, strides_v,
+			true);
+	}
 	template<typename T> std::enable_if_t<!std::is_arithmetic_v<T>, py::buffer_info>
 	make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape){
-		std::cerr << "Sorry nothing but scalar pixel types supported (for now)" << std::endl;
+		LOG(Runtime,error) << "Sorry nothing but scalar pixel types supported (for now)";
 		return {};
 	}
 }
@@ -95,10 +123,10 @@ std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>> property2p
 	}
 }
 void setup_logging(LogLevel level){
-//	util::enableLog<python::LoggerProxy>(level);
-//	data::enableLog<python::LoggerProxy>(level);
-//	image_io::enableLog<python::LoggerProxy>(level);
-//	math::enableLog<python::LoggerProxy>(level);
+	util::enableLog<python::LoggerProxy>(level);
+	data::enableLog<python::LoggerProxy>(level);
+	image_io::enableLog<python::LoggerProxy>(level);
+	math::enableLog<python::LoggerProxy>(level);
 	python::enableLog<python::LoggerProxy>(level);
 	LOG(Runtime,verbose_info) << "isis logging will be sent through the python logging module";
 }
