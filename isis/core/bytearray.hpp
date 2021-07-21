@@ -39,12 +39,12 @@ public:
 	 */
 	explicit ByteArray( size_t length );
 	ByteArray( const std::shared_ptr<uint8_t> &ptr, size_t length );
-	explicit ByteArray(const TypedArray<uint8_t> &ref);
+	ByteArray(const TypedArray<uint8_t> &ref);
 
-	template<typename T> T getScalar(size_t offset, bool swap_endianness){
+	template<typename T> T getScalar(size_t offset, bool swap_endianness)const{
 		const uint8_t *pos = begin();
-		T value = *reinterpret_cast<T*>(pos+offset);
-		return swap_endianness ? value : data::endianSwap(value);
+		T value = *reinterpret_cast<const T*>(pos+offset);
+		return swap_endianness ? data::endianSwap(value):value;
 	}
 
 	/**
