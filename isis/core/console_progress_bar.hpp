@@ -1,16 +1,19 @@
 #pragma once
 #include "progressfeedback.hpp"
 #include <chrono>
+#include <atomic>
+#include <mutex>
 
 namespace isis::util
 {
 class ConsoleProgressBar : public ProgressFeedback
 {
-	size_t max,current=0;
+	size_t max;
+	std::atomic<size_t > current=0;
 	std::chrono::system_clock::time_point start;
 	std::string header,display_header;
-	static constexpr uint16_t default_screen_width = 80;
-	uint16_t prgs=0,avail_prgs_width;
+	uint16_t prgs=0,avail_prgs_width=80;
+	std::mutex mtx;
 
 	void redraw();
 	void updateScreenWidth();
