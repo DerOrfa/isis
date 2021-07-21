@@ -4,18 +4,17 @@
 #include <functional>
 #include "imageFormat_ZISRAW_jxr.h"
 #include <fstream>
-#include <execution>
 
 namespace isis::image_io{
 
 namespace _internal{
 
 DirectoryEntryDV getDVEntry(data::ByteArray &data, size_t offset){
-	const std::string type(&data[offset],&data[offset+2]);
+	const std::string_view type(reinterpret_cast<char*>(&data[offset]),2);
 	assert(type=="DV");
 	DirectoryEntryDV ret;
 	getScalar(data,ret.PixelType,offset+2);
-	getScalar(data,ret.FilePosition,offset+6);
+	getScalar(data,ret.FilePosition,offset+6);//@todo 12bytes??
 	getScalar(data,ret.Compression,offset+18);
 	getScalar(data,ret.PyramidType,offset+22);
 	getScalar(data,ret.DimensionCount,offset+28);
@@ -238,7 +237,7 @@ ImageFormat_ZISRAW::Directory::Directory(data::ByteArray &source, const size_t o
 	size_t e_offset=128;
 	for(_internal::DirectoryEntryDV &dv:entries){
 		dv=_internal::getDVEntry(data,e_offset);
-		e_offset+=std::max(dv.size(),(size_t)128);
+		e_offset+=dv.size();
 	}
 	LOG(Runtime,info) << "Found dictionary with " << entries.size() << " entries";
 }
@@ -253,29 +252,33 @@ data::Chunk ImageFormat_ZISRAW::transferFromMosaic(std::list<SubBlock> segments,
 	int32_t xoffset=-boundaries["X"].min, yoffset=-boundaries["Y"].min;
 	
 	std::list<std::thread> jobs;
-	std:for_each(
-		std::execution::par_unseq,
-		segments.begin(),
-		segments.end(),
-		[&dst,&feedback,xoffset,yoffset](const SubBlock &s){
-			auto dims=s.getDimsInfo();
-			const auto &X=dims['X'],&Y=dims['Y'];;
-			const int xscale = X.StoredSize?X.size/X.StoredSize:1;
-			const int yscale = Y.StoredSize?Y.size/Y.StoredSize:1;
-			assert(X.start/xscale+xoffset>=0);
-			assert(Y.start/yscale+yoffset>=0);
+	for(SubBlock &s:segments){
+		auto dims = s.getDimsInfo();
+		const auto &X = dims['X'], &Y = dims['Y'];;
+		const int xscale = X.StoredSize ? X.size / X.StoredSize : 1;
+		const int yscale = Y.StoredSize ? Y.size / Y.StoredSize : 1;
+		assert(X.start / xscale + xoffset >= 0);
+		assert(Y.start / yscale + yoffset >= 0);
 
-			const std::array<size_t,4> pos={
-				size_t(X.start/xscale+xoffset),
-				size_t(Y.start/yscale+yoffset),
-				0,0
-			};
+		const std::array<size_t, 4> pos = {
+			size_t(X.start / xscale + xoffset),
+			size_t(Y.start / yscale + yoffset),
+			0, 0
+		};
 
-			const data::Chunk c= s.getChunkGenerator()();
+		auto op = [&s,pos,&feedback,&dst](){
+			data::Chunk c= s.getChunkGenerator()();
 			dst.copyFromTile(c,pos,false);
 			if(feedback)feedback->progress(s.getSegmentSize());
+		};
+		while(jobs.size()>std::thread::hardware_concurrency()){ // wait if we get to much jobs
+			jobs.front().join();
+			jobs.pop_front();
 		}
-	);
+		jobs.emplace_back(op);
+	}
+	for(auto &j:jobs)
+		j.join();
 	return dst;
 }
 

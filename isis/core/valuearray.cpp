@@ -18,7 +18,7 @@ void isis::data::_internal::DelProxy::operator()(const void* at)
 }
 
 std::shared_ptr<const void> isis::data::ValueArray::getRawAddress(size_t offset) const{
-	const std::shared_ptr<const void> b_ptr = std::visit(
+	std::shared_ptr<const void> b_ptr = std::visit(
 	    [](const auto &p){return std::static_pointer_cast<const void>(p);},
 	    static_cast<const ArrayTypes&>(*this)
 	);
@@ -222,7 +222,8 @@ isis::data::ValueArray isis::data::ValueArray::createByID(unsigned short ID, std
 	if( f1 != converters().end() && ( f2 = f1->second.find( ID ) ) != f1->second.end() ) {
 		const ValueArrayConverterBase &conv = *( f2->second );
 		ret=conv.create( len );
-		LOG_IF(!ret.isValid(),Runtime,error) << "The created array is not valid, this is not going to end well..";
+		if(!ret.isValid())
+			LOG_IF(!ret.isValid(),Runtime,error) << "The created array is not valid, this is not going to end well..";
 	} else {
 		LOG( Debug, error ) << "There is no known array creator for " << util::getTypeMap()[ID];
 	}
