@@ -117,7 +117,7 @@ public:
 	typename inner_iterator::difference_type operator- ( const ThisType &cmp ) const {
 		typename inner_iterator::difference_type dist = ( ch_idx - cmp.ch_idx ) * ch_len; // get the (virtual) distance from my current block to cmp's current block
 
-		if ( ch_idx >= cmp.ch_idx ) { //if I'm beyond cmp add my current pos to the distance, and substract his
+		if ( ch_idx >= cmp.ch_idx ) { //if I'm beyond cmp add my current pos to the distance, and subtract his
 			dist += currentDist() - cmp.currentDist();
 		} else {
 			dist += cmp.currentDist() - currentDist();

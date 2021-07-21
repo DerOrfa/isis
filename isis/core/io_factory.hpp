@@ -41,7 +41,7 @@ public:
 		FileFormatPtr p_format;
 	public:
 		io_error(const char *what,FileFormatPtr format);
-		IOFactory::FileFormatPtr which()const;
+		[[nodiscard]] IOFactory::FileFormatPtr which()const;
 	};
 
 private:

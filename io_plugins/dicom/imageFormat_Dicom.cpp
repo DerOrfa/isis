@@ -532,7 +532,7 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 	const auto rowVec = source.getValueAs<util::fvector3>( "rowVec" );
 	const auto columnVec = source.getValueAs<util::fvector3>( "columnVec" );
 	//remove the additional mosaic offset
-	//eg. if there is a 10x10 Mosaic, substract the half size of 9 Images from the offset
+	//eg. if there is a 10x10 Mosaic, subtract the half size of 9 Images from the offset
 	const util::fvector3 fovCorr = ( voxelSize + voxelGap ) * size * ( matrixSize - 1 ) / 2; // @todo this will not include the voxelGap between the slices
 	auto &origin = source.refValueAs<util::fvector3>( "indexOrigin" );
 	origin = origin + ( rowVec * fovCorr[0] ) + ( columnVec * fovCorr[1] );

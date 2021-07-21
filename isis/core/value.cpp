@@ -1,5 +1,4 @@
 #include "value.hpp"
-#include "valuearray_iterator.hpp"
 
 #include <sstream>
 
@@ -95,7 +94,6 @@ bool Value::convert(const Value &from, Value &to) {
 			    break;
 		    case boost::numeric::cInRange:
 			    return true;
-			    break;
 		}
 	} else {
 		LOG( Runtime, error )
@@ -146,7 +144,7 @@ bool Value::eq(const Value &ref )const {
 }
 
 Value Value::plus(const Value &ref )const{return Value(*this).add(ref);}
-Value Value::minus(const Value &ref )const{return Value(*this).substract(ref);}
+Value Value::minus(const Value &ref )const{return Value(*this).subtract(ref);}
 Value Value::multiply(const Value &ref )const{return Value(*this).multiply_me(ref);}
 Value Value::divide(const Value &ref )const{return Value(*this).divide_me(ref);}
 
@@ -158,7 +156,7 @@ Value& Value::add(const Value &ref )
 	return std::visit(op,static_cast<ValueTypes&>(*this));
 }
 
-Value& Value::substract(const Value &ref )
+Value& Value::subtract(const Value &ref )
 {
 	auto op=[&](auto ptr)->Value&{
 		return operatorWrapper_me(_internal::type_minus<decltype(ptr)>(), ref );
