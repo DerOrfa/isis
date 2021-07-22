@@ -26,6 +26,7 @@ PYBIND11_MODULE(isis, m)
 //m.add_object("_cleanup", py::capsule(cleanup_callback));
 
 py::class_<data::Chunk>(m, "chunk")
+	.def_property_readonly("nparray",[](data::Chunk &chk){return python::make_array(chk);	})
 	.def("__array__",[](data::Chunk &ch){return python::make_array(ch);	})
 	.def("__getitem__", [](const data::Chunk &ch, std::string path){
 		return python::property2python(ch.property(path.c_str()));
@@ -33,6 +34,7 @@ py::class_<data::Chunk>(m, "chunk")
 ;
 py::class_<data::Image>(m, "image")
 	.def("__array__",[](data::Image &img){return python::make_array(img);	})
+	.def_property_readonly("nparray",[](data::Image &img){return python::make_array(img);	})
 	.def("getChunks",
 		 [](const data::Image &img, bool copy_metadata) {return img.copyChunksToVector(copy_metadata);	},
 		 "get all chunks of pixel data that make the image",
