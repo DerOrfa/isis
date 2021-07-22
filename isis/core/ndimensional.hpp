@@ -50,14 +50,6 @@ template<unsigned short DIMS> class NDimensional
 			return {index};
 		}
 	}
-	constexpr bool _rangeCheck( const std::array<size_t,DIMS> &d, unsigned short DIM )const
-	{
-		return DIM ?
-			( d[DIM] < m_dim[DIM] ) && _rangeCheck( d, DIM - 1 ):
-			d[0] < m_dim[0];
-	}
-
-
 
 protected:
 	static constexpr size_t dims = DIMS;
@@ -92,8 +84,12 @@ public:
 	 * \param coord index to be checked (d[0] is most iterating element / lowest dimension)
 	 * \returns true if given index will get a reasonable result when used for getLinearIndex
 	 */
-	bool isInRange( const std::array<size_t,DIMS> &coord )const {
-		return _rangeCheck( coord, DIMS - 1 );
+	constexpr bool isInRange( const std::array<size_t,DIMS> &coord )const {
+		for(unsigned short i=0;i<DIMS;i++){
+			if(coord[i]>=m_dim[i])
+				return false;
+		}
+		return true;
 	}
 	/**
 	 * Get the size of the object in elements of TYPE.
