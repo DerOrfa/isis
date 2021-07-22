@@ -18,47 +18,46 @@ namespace _internal{
 		});
 	}
 
-
-template<typename T> std::enable_if_t<std::is_arithmetic<T>::value, py::buffer_info>
-	make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape){
+	std::pair<std::vector<size_t>,std::vector<size_t>>
+	make_shape(const data::NDimensional<4> &shape, size_t elem_size){
 		std::vector<size_t> shape_v,strides_v;
 		for(size_t i=0;i<shape.getRelevantDims();i++){
 			shape_v.push_back(shape.getDimSize(i));
 			strides_v.push_back(i?
-				shape_v[i-1]*strides_v[i-1]:
-				sizeof(T)
+								shape_v[i-1]*strides_v[i-1]:
+								elem_size
 			);
 		}
 		//numpy defaults to row major
-		if(strides_v.size()>1)std::swap(strides_v[0],strides_v[1]);
+		if(strides_v.size()>1){
+			std::swap(strides_v[0],strides_v[1]);
+			std::swap(shape_v[0],shape_v[1]);
+		}
+		return {shape_v,strides_v};
+	}
+
+
+	template<typename T> std::enable_if_t<std::is_arithmetic<T>::value, py::buffer_info>
+	make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape){
+		auto [shape_v, strides_v] = make_shape(shape,sizeof(T));
 		return py::buffer_info(
 			const_cast<T*>(ptr.get()),//its ok to drop the const here, we mark the buffer as readonly
-			shape_v, strides_v,
+			shape_v,strides_v,
 			true);
 	}
 	py::buffer_info make_buffer_impl(const std::shared_ptr<util::color24> &ptr,const data::NDimensional<4> &shape){
-		std::vector<size_t> shape_v,strides_v;
-		shape_v.push_back(3);strides_v.push_back(1);
-		for(size_t i=0;i<shape.getRelevantDims();i++){
-			shape_v.push_back(shape.getDimSize(i));
-			strides_v.push_back(shape_v[i]*strides_v[i]);
-		}
-		//numpy defaults to row major
-		if(strides_v.size()>2)std::swap(strides_v[1],strides_v[2]);
+		auto [shape_v, strides_v] = make_shape(shape,sizeof(util::color24));
+		shape_v.push_back(3);
+		strides_v.push_back(sizeof(uint8_t));
 		return py::buffer_info(
 			const_cast<uint8_t*>(&ptr->r),//its ok to drop the const here, we mark the buffer as readonly
 			shape_v, strides_v,
 			true);
 	}
 	py::buffer_info make_buffer_impl(const std::shared_ptr<util::color48> &ptr,const data::NDimensional<4> &shape){
-		std::vector<size_t> shape_v,strides_v;
-		shape_v.push_back(3);strides_v.push_back(2);
-		for(size_t i=0;i<shape.getRelevantDims();i++){
-			shape_v.push_back(shape.getDimSize(i));
-			strides_v.push_back(shape_v[i]*strides_v[i]);
-		}
-		//numpy defaults to row major
-		if(strides_v.size()>2)std::swap(strides_v[1],strides_v[2]);
+		auto [shape_v, strides_v] = make_shape(shape,sizeof(util::color48));
+		shape_v.push_back(3);
+		strides_v.push_back(sizeof(uint16_t));
 		return py::buffer_info(
 			const_cast<uint16_t*>(&ptr->r),//its ok to drop the const here, we mark the buffer as readonly
 			shape_v, strides_v,
@@ -66,7 +65,7 @@ template<typename T> std::enable_if_t<std::is_arithmetic<T>::value, py::buffer_i
 	}
 	template<typename T> std::enable_if_t<!std::is_arithmetic_v<T>, py::buffer_info>
 	make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape){
-		LOG(Runtime,error) << "Sorry nothing but scalar pixel types supported (for now)";
+		LOG(Runtime,error) << "Sorry nothing but scalar pixel types or color supported (for now)";
 		return {};
 	}
 }
