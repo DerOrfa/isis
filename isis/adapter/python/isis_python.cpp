@@ -22,8 +22,8 @@ auto cleanup_callback = []() {
 
 PYBIND11_MODULE(isis, m)
 {
-python::setup_logging();
-m.add_object("_cleanup", py::capsule(cleanup_callback));
+//python::setup_logging();
+//m.add_object("_cleanup", py::capsule(cleanup_callback));
 
 py::class_<data::Chunk>(m, "chunk")
 	.def("__array__",[](data::Chunk &ch){return python::make_array(ch);	})
