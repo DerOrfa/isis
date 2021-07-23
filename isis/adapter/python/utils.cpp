@@ -5,7 +5,7 @@
 #include "utils.hpp"
 #include <type_traits>
 #include "../../core/io_factory.hpp"
-#include "../../math/common.hpp"
+#include "logging.hpp"
 
 namespace isis::python{
 namespace _internal{
@@ -120,36 +120,6 @@ std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>> property2p
 		case 1:return p.front();
 		default:return std::list<util::ValueTypes>(p.begin(),p.end());
 	}
-}
-void setup_logging(LogLevel level){
-	util::enableLog<python::LoggerProxy>(level);
-	data::enableLog<python::LoggerProxy>(level);
-	image_io::enableLog<python::LoggerProxy>(level);
-	math::enableLog<python::LoggerProxy>(level);
-	python::enableLog<python::LoggerProxy>(level);
-	LOG(Runtime,verbose_info) << "isis logging will be sent through the python logging module";
-}
-void free_logging(LogLevel level){
-	util::enableLog<util::DefaultMsgPrint>(level);
-	data::enableLog<util::DefaultMsgPrint>(level);
-	image_io::enableLog<util::DefaultMsgPrint>(level);
-	math::enableLog<util::DefaultMsgPrint>(level);
-	python::enableLog<util::DefaultMsgPrint>(level);
-	LOG(Runtime,verbose_info) << "isis logging will be sent through the default handler";
-}
-
-LoggerProxy::LoggerProxy(LogLevel level) : util::MessageHandlerBase(level){
-	auto logger= py::module_::import("logging");
-	LoggerProxy::severity_map[error]=logger.attr("ERROR");
-	LoggerProxy::severity_map[warning]=logger.attr("WARNING");
-	LoggerProxy::severity_map[notice]=logger.attr("INFO");
-	LoggerProxy::severity_map[info]=logger.attr("INFO");
-	LoggerProxy::severity_map[verbose_info]=logger.attr("DEBUG");
-	LoggerProxy::log=logger.attr("log");
-}
-void LoggerProxy::commit(const util::Message &msg)
-{
-	log(severity_map[msg.m_level],msg.merge(""));
 }
 
 }

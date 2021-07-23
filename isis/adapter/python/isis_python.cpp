@@ -7,6 +7,7 @@
 #include "pybind11/stl.h"
 #include "../../core/image.hpp"
 #include "utils.hpp"
+#include "logging.hpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -15,15 +16,18 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 using namespace isis;
 
-auto cleanup_callback = []() {
-	python::free_logging(verbose_info);
-};
-
-
 PYBIND11_MODULE(isis, m)
 {
-//python::setup_logging();
-//m.add_object("_cleanup", py::capsule(cleanup_callback));
+
+python::setup_logging();
+m.add_object("_cleanup", py::capsule([]() {python::free_logging(verbose_info);}));
+
+m.def("setLoglevel", [](const char *level,const char *module)->void{
+	util::Selection rq_level({"error", "warning", "notice", "info", "verbose_info"});
+	if(!rq_level.set(level))
+		LOG(python::Debug,error) << "Not setting invalid logging level " << level << " for " << module;
+	python::setLogging(rq_level,module);
+},"level"_a="notice","module"_a="all");
 
 py::class_<data::Chunk>(m, "chunk")
 	.def_property_readonly("nparray",[](data::Chunk &chk){return python::make_array(chk);	})

@@ -11,7 +11,7 @@ if(NOT pybind11_POPULATED)
     add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
 endif()
 
-add_library(isis MODULE isis_python.cpp utils.cpp)
+add_library(isis MODULE isis_python.cpp utils.cpp logging.cpp)
 
 target_link_libraries(isis PRIVATE pybind11::module isis_core)
 
