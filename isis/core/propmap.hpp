@@ -21,11 +21,10 @@
 #include "istring.hpp"
 #include <set>
 #include <algorithm>
+#include <optional>
 #include <boost/property_tree/ptree_fwd.hpp>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 /// @cond _internal
 namespace _internal
@@ -862,7 +861,6 @@ template<typename T> T* PropertyMap::tryFetchEntry( const PropPath &path ) {
 }
 
 
-}
 }
 /// @cond _internal
 namespace std

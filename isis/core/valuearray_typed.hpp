@@ -49,10 +49,10 @@ public:
 	/// Create an invalid array of the correct type.
 	TypedArray():TypedArray(std::shared_ptr<TYPE>(),0){}//(makes sure me is valid)
 
-	iterator begin(){return me.get();}
-	iterator end(){return me.get()+getLength();}
-	const_iterator begin()const{return me.get();}
-	const_iterator end()const{return me.get()+getLength();}
+	iterator begin(){return iterator(me.get());}
+	iterator end(){return begin()+getLength();}
+	const_iterator begin()const{return const_iterator(me.get());}
+	const_iterator end()const{return begin()+getLength();}
 
     typename const_iterator::difference_type getDistanceTo(const const_iterator &it)const{
         return std::distance(begin(),it);
