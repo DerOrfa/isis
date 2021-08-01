@@ -26,8 +26,8 @@ namespace _internal {
 		std::map< char, DimensionEntry > getDimsMap()const;
 	};
 
-	template<typename T> void getScalar(data::ByteArray &data,T &variable,size_t offset){
-        data.at<T>(offset,1,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__).copyToMem(&variable,1);
+	template<typename T> void getScalar(const data::ByteArray &data, T &variable,size_t offset){
+		variable = data.getScalar<T>(offset, __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__);
 	}
 	DirectoryEntryDV getDVEntry(data::ByteArray &data,size_t offset);
 	
@@ -62,11 +62,11 @@ class ImageFormat_ZISRAW : public FileFormat{
 	protected:
 		data::ByteArray data;
 		template<typename T> void getScalar(T &variable,size_t offset){
-			return _internal::getScalar(data,variable,offset);
+			_internal::getScalar(data,variable,offset);
 		}
 	public:
 		std::string id;
-		size_t getSegmentSize();
+		size_t getSegmentSize()const;
 		/**
 		 * Create a segment from the source
 		 * \param source the ByteArray from the container (file)

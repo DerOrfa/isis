@@ -37,11 +37,15 @@ public:
 	 * If the requested length is 0 no memory will be allocated and the pointer will be "empty".
 	 * \param length amount of bytes in the new array
 	 */
-	ByteArray( size_t length );
+	explicit ByteArray( size_t length );
 	ByteArray( const std::shared_ptr<uint8_t> &ptr, size_t length );
 	ByteArray(const TypedArray<uint8_t> &ref);
-// 	ByteArray( uint8_t *const ptr, size_t length );
 
+	template<typename T> T getScalar(size_t offset, bool swap_endianness)const{
+		const uint8_t *pos = begin();
+		T value = *reinterpret_cast<const T*>(pos+offset);
+		return swap_endianness ? data::endianSwap(value):value;
+	}
 
 	/**
 	 * Get ValueArray of the requested type.
@@ -56,9 +60,9 @@ public:
 	 *
 	 * \param offset the position in the file to start from (in bytes)
 	 * \param len the requested length of the resulting ValueArray in elements (if that will go behind the end of the file, a warning will be issued).
-	 * \param swap_endianess if endianess should be swapped when reading data file (ignored when used on files opened for writing)
+	 * \param swap_endianness if endianness should be swapped when reading data file (ignored when used on files opened for writing)
 	 */
-	template<typename T> TypedArray<T> at( size_t offset, size_t len = 0, bool swap_endianess = false ) {
+	template<typename T> TypedArray<T> at( size_t offset, size_t len = 0, bool swap_endianness = false ) {
 		static_assert(util::knownType<T>(),"invalid type");
 		std::shared_ptr<T> ptr = std::static_pointer_cast<T>( getRawAddress( offset ) );
 
@@ -71,13 +75,13 @@ public:
 
 		LOG_IF( len * sizeof( T ) > ( getLength() - offset ), Debug, error )
 		        << "The requested length will be " << len * sizeof( T ) - ( getLength() - offset ) << " bytes behind the end of the file.";
-		LOG_IF( writing && swap_endianess, Debug, warning )
+		LOG_IF(writing && swap_endianness, Debug, warning )
 		        << "Ignoring request to swap byte order for writing (the systems byte order is " << __BYTE_ORDER__ << " and that will be used)";
 
-		if( writing || !swap_endianess ) { // if not endianess swapping was requested or T is not float (or if we are writing)
+		if( writing || !swap_endianness ) { // if not endianness swapping was requested or T is not float (or if we are writing)
 			return data::TypedArray<T>( ptr, len ); // return a cheap copy
 		} else { // flip bytes into a new ValueArray
-			LOG( Debug, verbose_info ) << "Byte swapping " <<  util::typeName<T>() << " for endianess";
+			LOG( Debug, verbose_info ) << "Byte swapping " <<  util::typeName<T>() << " for endianness";
 			TypedArray<T> ret=ValueArray::make<T>(len );
 			data::endianSwapArray( ptr.get(), ptr.get() + std::min( len, getLength() / sizeof( T ) ), ret.begin() );
 			return ret;

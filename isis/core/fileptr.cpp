@@ -147,7 +147,7 @@ size_t FilePtr::checkSize(bool write, const std::filesystem::path &filename, siz
 
 FilePtr::FilePtr(const std::filesystem::path &filename, size_t len, bool write, size_t mapsize)
 {
-	_internal::FileHandle file(filename);
+	_internal::FileHandle file(filename,!write);
 	if(!file.good())
 		return;
 
@@ -209,7 +209,7 @@ bool FilePtr::checkLimit(rlim_t additional_files)
 	return true;
 }
 
-_internal::FileHandle::FileHandle(const std::filesystem::path &_filename):filename(_filename)
+_internal::FileHandle::FileHandle(const std::filesystem::path &_filename, bool readonly):filename(_filename)
 {
 #ifdef WIN32
 	const int oflag = write ?
@@ -218,9 +218,9 @@ _internal::FileHandle::FileHandle(const std::filesystem::path &_filename):filena
 	handle =
 		CreateFile( filename.file_string().c_str(), oflag, write ? 0 : FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
 #else
-	const int oflag = write ?
-					  O_CREAT | O_RDWR : //create file if its not there
-					  O_RDONLY; //open file readonly
+	const int oflag = readonly ?
+					  O_RDONLY: //open file readonly
+					  O_CREAT | O_RDWR ; //create file if its not there
 	handle =
 		open( filename.native().c_str(), oflag, 0666 );
 #endif

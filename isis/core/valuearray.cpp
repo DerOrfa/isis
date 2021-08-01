@@ -18,7 +18,7 @@ void isis::data::_internal::DelProxy::operator()(const void* at)
 }
 
 std::shared_ptr<const void> isis::data::ValueArray::getRawAddress(size_t offset) const{
-	const std::shared_ptr<const void> b_ptr = std::visit(
+	std::shared_ptr<const void> b_ptr = std::visit(
 	    [](const auto &p){return std::static_pointer_cast<const void>(p);},
 	    static_cast<const ArrayTypes&>(*this)
 	);
@@ -215,7 +215,7 @@ isis::data::ValueArray isis::data::ValueArray::convertByID(unsigned short ID, sc
 
 isis::data::ValueArray isis::data::ValueArray::createByID(unsigned short ID, std::size_t len)
 {
-	const _internal::ValueArrayConverterMap::const_iterator f1 = converters().find( ID );
+	auto f1 = converters().find( ID );
 	_internal::ValueArrayConverterMap::mapped_type::const_iterator f2;
 	ValueArray ret;
 	// try to get a converter to convert the requested type into itself - they're there for all known types

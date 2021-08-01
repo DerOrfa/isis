@@ -84,5 +84,18 @@ public:
 		LOG_IF(at>=getLength(),Debug,error) << "Index " << at << " is behind the arrays length (" << getLength() << ")";
 		return *(begin()+at);
 	}
+	[[nodiscard]] std::shared_ptr<void> getRawAddress(size_t offset=0) override{
+		const std::shared_ptr<const void> ptr=const_cast<const TypedArray<TYPE>*>(this)->getRawAddress(offset );
+		return std::const_pointer_cast<void>( ptr );
+	};
+	[[nodiscard]] std::shared_ptr<const void> getRawAddress(size_t offset=0) const override{
+		std::shared_ptr<const TYPE> b_ptr= castTo<TYPE>();
+		if( offset ) {
+			_internal::DelProxy proxy( *this );
+			auto o_ptr=reinterpret_cast<const uint8_t*>(b_ptr.get());
+			return std::shared_ptr<const void>( o_ptr+offset, proxy );
+		} else
+			return std::static_pointer_cast<const void>(b_ptr);
+	};
 };
 }

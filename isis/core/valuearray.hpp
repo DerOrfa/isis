@@ -329,8 +329,9 @@ public:
 
 	bool isValid()const;
 
-	std::shared_ptr<void> getRawAddress( size_t offset = 0 );
-	std::shared_ptr<const void> getRawAddress( size_t offset = 0 )const;
+	/// return a shared pointer to void with optional offset in bytes
+	virtual std::shared_ptr<void> getRawAddress( size_t offset = 0 );
+	virtual std::shared_ptr<const void> getRawAddress( size_t offset = 0 )const;
 
 	/**
 	* Dynamically cast the ValueArray up to its actual TypedArray\<T\>. Constant version.

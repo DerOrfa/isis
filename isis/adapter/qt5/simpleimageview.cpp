@@ -398,7 +398,7 @@ void SimpleImageView::onMouseMoved(QPointF pos){
 	graphicsView->moveCrosshair(pos);
 	pos_label->setText(QString("Position: %1-%2").arg(pos.x()).arg(pos.y()));
 	
-	const QRect rect(0,0,m_img.getDimSize(data::rowDim),m_img.getDimSize(data::rowDim));
+	const QRect rect(0,0,m_img.getDimSize(data::rowDim),m_img.getDimSize(data::columnDim));
 	
 	if(rect.contains(pos.toPoint())){
 		const std::string value=m_img.getVoxelValue(pos.x(),pos.y(),curr_slice,curr_time).toString();
