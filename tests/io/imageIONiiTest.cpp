@@ -18,19 +18,22 @@ using namespace isis;
 #include <iostream>
 #include <string>
 
-namespace isis
+namespace isis::test
 {
-namespace test
-{
-const util::Selection formCodes({"SCANNER_ANAT", "ALIGNED_ANAT", "TALAIRACH", "MNI_152"} );
+const std::map<uint8_t, std::string> formCodes{
+	{0,"UNKNOWN"},
+	{1,"SCANNER_ANAT"}, //scanner-based anatomical coordinates
+	{2,"ALIGNED_ANAT"}, //coordinates aligned to another file's, or to anatomical "truth".
+	{3,"TALAIRACH"}, //coordinates aligned to Talairach-Tournoux Atlas; (0,0,0)=AC, etc
+	{4,"MNI_152"} //MNI 152 normalized coordinates
+};
 
 BOOST_AUTO_TEST_SUITE ( imageIONii_NullTests )
 
 BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 {
 	util::DefaultMsgPrint::stopBelow( warning );
-	util::Selection formCode = formCodes;
-	formCode.set( "SCANNER_ANAT" );
+	util::Selection formCode(formCodes,1);
 
 	std::list<data::Image> images = data::IOFactory::load( "nix.null" );
 	BOOST_REQUIRE( images.size() >= 1 );
@@ -132,5 +135,4 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 
 BOOST_AUTO_TEST_SUITE_END()
 
-}
 }

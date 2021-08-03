@@ -187,7 +187,7 @@ std::list<std::shared_ptr<MessageHandlerBase>> Application::resetLogging()
 	for( auto &ref: logs ) {
 		const std::string dname = std::string( "d" ) + ref.first;
 		assert( !parameters[dname].isEmpty() ); // this must have been set by addLoggingParameter (called via addLogging)
-		const LogLevel level = ( LogLevel )( uint16_t )parameters[dname].as<Selection>();
+		const LogLevel level = ( LogLevel )static_cast<int>(parameters[dname].as<Selection>());
 		for( setLogFunction setter: ref.second ) {
 			ret.push_back(std::move((this->*setter )( level )));
 		}

@@ -14,7 +14,7 @@ int main( int argc, char **argv )
 	
 	//set up all the dimensions to traverse trough (aka. all dims except the one we do the statistics accross)
 	std::vector<unsigned short> traverse_dims={0,1,2,3};
-	unsigned short wrap_dim=app.parameters["dim"].as<util::Selection>()-1;
+	unsigned short wrap_dim=static_cast<int>(app.parameters["dim"].as<util::Selection>());
 	traverse_dims.erase(traverse_dims.begin()+wrap_dim);
 
 

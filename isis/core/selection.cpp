@@ -9,16 +9,14 @@
 
 #include "selection.hpp"
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
-Selection::Selection(std::initializer_list<std::string> entries, const char *init_val ): m_set(0 )
+Selection::Selection(std::initializer_list<std::string> entries, const char *init_val )
 {
-	int ID = 1;
+	MapType::mapped_type ID = 0;
 	for( const auto &ref : entries ) {
-		const MapType::value_type pair( ref.c_str(), ID++ );
+		const MapType::value_type pair( {ref.begin(),ref.end()}, ID++ );
 
 		if( ! ent_map.insert( pair ).second ) {
 			LOG( Debug, error ) << "Entry " << pair << " could not be inserted";
@@ -28,41 +26,39 @@ Selection::Selection(std::initializer_list<std::string> entries, const char *ini
 	if( init_val[0] )
 		set( init_val );
 }
-Selection::Selection(): m_set( 0 ) {}
 
 Selection::operator int()const {return m_set;}
 Selection::operator util::istring()const
 {
-	if(m_set){
+	if(m_set==std::numeric_limits<MapType::mapped_type>::max())
+		return "<<NOT_SET>>";
+	else {
 		for( MapType::const_reference ref :  ent_map ) {
 			if ( ref.second == m_set )
 				return ref.first;
 		}
 		assert(false); // m_set should either be in the map or 0
-		return util::istring( "<<UNKNOWN>>" );
-	} else {
-		return util::istring( "<<NOT_SET>>" );
+		return "<<UNKNOWN>>";
 	}
 }
 Selection::operator std::string()const
 {
 	util::istring buff = *this;
-	return std::string( buff.begin(), buff.end() );
+	return { buff.begin(), buff.end() };
 }
 
-bool Selection::set( unsigned short entry )
+bool Selection::idExists(unsigned int entry)
 {
-	if( ent_map.size()+1 > entry ) {
-		m_set = entry;
-		return true;
-	} else {
-		return false;
-	}
-
+	return std::find_if(ent_map.begin(),ent_map.end(),[entry](auto &v){return v.second==entry;})!=ent_map.end();
+}
+void Selection::set( unsigned int entry )
+{
+	LOG_IF(!idExists(entry),Debug,error) << "The value you're trying to set doesn't exist in this selection";
+	m_set = entry;
 }
 bool Selection::set( const char *entry )
 {
-	MapType::const_iterator found = ent_map.find( entry );
+	auto found = ent_map.find( entry );
 
 	if ( found != ent_map.end() ) {
 		m_set = found->second;
@@ -74,14 +70,14 @@ bool Selection::set( const char *entry )
 }
 
 bool Selection::operator==( const Selection &ref )const{return comp_op(ref,std::equal_to<int>());}
-bool Selection::operator==( const char ref[] )    const{return std::equal_to<util::istring>()(*this, ref);}
-bool Selection::operator==( const int ref )       const{return std::equal_to<int>()(*this, ref);}
+bool Selection::operator==( const std::string_view &ref )const{return std::equal_to<util::istring>()(*this, {ref.begin(),ref.end()});}
+
+bool Selection::operator!=( const Selection &ref )const{return comp_op(ref,std::not_equal_to<int>());}
+bool Selection::operator!=( const std::string_view &ref )const{return std::not_equal_to<util::istring>()(*this, {ref.begin(),ref.end()});}
 
 bool Selection::operator<( const Selection &ref )const{return comp_op(ref,std::less<int>());}
-bool Selection::operator<( const int ref )       const{return std::greater<int>()(*this, ref);}
 
 bool Selection::operator>( const Selection &ref )const{return comp_op(ref,std::less<int>());}
-bool Selection::operator>( const int ref )       const{return std::greater<int>()(*this, ref);}
 
 std::list<util::istring> Selection::getEntries()const
 {
@@ -93,6 +89,5 @@ std::list<util::istring> Selection::getEntries()const
 		ret.push_back( ref.first );
 	}
 	return ret;
-}
 }
 }

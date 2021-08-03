@@ -63,7 +63,7 @@ int main( int argc, char *argv[] )
 		util::slist infiles = app.parameters["in"];
 		LOG_IF( infiles.size() > 1, RawLog, warning ) << "Cannot read multiple raw files at once, will only read " << infiles.front();
 		data::FilePtr src( infiles.front() );
-		const unsigned short rrepn = app.parameters["read_repn"].as<util::Selection>();
+		const unsigned short rrepn = static_cast<int>(app.parameters["read_repn"].as<util::Selection>());
 		util::ivector4 dims = app.parameters["rawdims"];
 		data::ValueArray dat;
 
