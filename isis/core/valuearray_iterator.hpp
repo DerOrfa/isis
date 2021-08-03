@@ -148,8 +148,8 @@ public:
 	
 	friend TypedArrayIterator<typename std::add_const_t<TYPE> >;
 
-	TypedArrayIterator(): p( NULL ) {}
-	TypedArrayIterator( TYPE *_p ): p( _p ) {}
+	TypedArrayIterator(): p(nullptr) {}
+	explicit TypedArrayIterator( TYPE *_p ): p( _p ) {}
 	TypedArrayIterator( const TypedArrayIterator<typename std::remove_const<TYPE>::type > &src ): p( src.p ) {}
 
 	TypedArrayIterator<TYPE>& operator++() {++p; return *this;}
