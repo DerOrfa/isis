@@ -93,7 +93,7 @@ public:
 		//sequential images
 		for(const auto &t:types){
 			ret.splice( ret.end(),
-			    makeImageByID(t.first, size, 0, std::string("sequencial ") + t.second + " Image" )
+			    makeImageByID(t.first, size, 0, std::string("sequential ") + t.second + " Image" )
 			);
 			if(feedback)feedback->progress();
 		}
@@ -142,7 +142,7 @@ public:
 		if(seqNumber<100){
 			//image 0 is a "normal" image
 			newChunks = makeImageByID(seqNumber, size, 0, "" ) ;
-		} else {//image 1 is a "interleaved" image
+		} else {//image 1 is an "interleaved" image
 			newChunks = makeImageByID(seqNumber-100, size, 100, "" ) ;
 			iCh = newChunks.begin();
 
@@ -162,12 +162,12 @@ public:
 		}
 
 		if( newChunks.size() != oldChunks.size() )
-			throwGenericError( "ammount of chunks differs" );
+			throwGenericError( "amount of chunks differs" );
 
-		std::list< data::Chunk >::iterator newCH = newChunks.begin();
+		auto newCH = newChunks.begin();
 
 		for( size_t i = 0; i < oldChunks.size(); ++i, ++newCH ) {
-			// check for the orientation seperately
+			// check for the orientation separately
 			if(
 			    util::fuzzyEqualV(newCH->getValueAs<util::fvector3>( "columnVec" ), oldChunks[i].getValueAs<util::fvector3>( "columnVec" ) ) == false ||
 			    util::fuzzyEqualV(newCH->getValueAs<util::fvector3>( "rowVec" ), oldChunks[i].getValueAs<util::fvector3>( "rowVec" ) ) == false

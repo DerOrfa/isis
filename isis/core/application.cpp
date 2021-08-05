@@ -187,7 +187,7 @@ std::list<std::shared_ptr<MessageHandlerBase>> Application::resetLogging()
 	for( auto &ref: logs ) {
 		const std::string dname = std::string( "d" ) + ref.first;
 		assert( !parameters[dname].isEmpty() ); // this must have been set by addLoggingParameter (called via addLogging)
-		const LogLevel level = ( LogLevel )( uint16_t )parameters[dname].as<Selection>();
+		const LogLevel level = ( LogLevel )static_cast<int>(parameters[dname].as<Selection>());
 		for( setLogFunction setter: ref.second ) {
 			ret.push_back(std::move((this->*setter )( level )));
 		}
@@ -201,7 +201,7 @@ void Application::printHelp( bool withHidden )const
 	std::cerr << this->m_name << " (using isis " << getCoreVersion() << ")" << std::endl;
 	std::cerr << "Usage: " << this->m_filename << " <options>" << std::endl << "Where <options> includes:" << std::endl;;
 
-	for ( ParameterMap::const_iterator iP = parameters.begin(); iP != parameters.end(); iP++ ) {
+	for (auto iP = parameters.begin(); iP != parameters.end(); iP++ ) {
 		std::string pref;
 
 		if ( iP->second.isNeeded() ) {
@@ -222,11 +222,11 @@ void Application::printHelp( bool withHidden )const
 		if ( iP->second.is<Selection>() ) {
 			const Selection &ref = iP->second.as<Selection>();
 			const std::list< istring > entries = ref.getEntries();
-			std::list< istring >::const_iterator i = entries.begin();
+			auto i = entries.begin();
 			std::cerr << "\t\tOptions are: \"" << *i << "\"";
 
 			for( i++ ; i != entries.end(); i++ ) {
-				std::list< istring >::const_iterator dummy = i;
+				auto dummy = i;
 				std::cout << ( ( ++dummy ) != entries.end() ? ", " : " or " ) << "\"" << *i << "\"";
 			}
 

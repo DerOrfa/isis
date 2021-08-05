@@ -17,10 +17,13 @@ template<> QVariant makeQVariant_impl<int64_t>(const int64_t &value){
 template<> QVariant makeQVariant_impl<uint64_t>(const uint64_t &value){
 	return QVariant(quint64(value));
 }
-template<> QVariant makeQVariant_impl(const util::color24 &value){
+template<> QVariant makeQVariant_impl<util::Selection>(const util::Selection &value){
+	return QString::fromStdString(value);
+}
+template<> QVariant makeQVariant_impl<util::color24>(const util::color24 &value){
 	return QVariant(QColor::fromRgb(value.r,value.g,value.b));
 }
-template<> QVariant makeQVariant_impl(const util::color48 &value){
+template<> QVariant makeQVariant_impl<util::color48>(const util::color48 &value){
 	return QVariant(QColor::fromRgba64(value.r,value.g,value.b));
 }
 template<typename T> QVariant makeQVariant_impl(const util::vector3<T> &value){

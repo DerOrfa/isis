@@ -216,7 +216,7 @@ bool IOApplication::autowrite ( const util::ParameterMap &parameters, std::list<
 	const util::slist dl = parameters[std::string( "wdialect" ) + suffix];
 	LOG( Runtime, info )
 			<< "Writing " << out_images.size() << " images"
-			<< ( repn ? std::string( " as " ) + ( std::string )repn : "" )
+			<< ( static_cast<int>(repn) ? std::string( " as " ) + ( std::string )repn : "" )
 			<< " to " << util::MSubject( output )
 			<< ( wf.empty() ? "" : std::string( " using the format: " ) + util::listToString(wf.begin(),wf.end()) )
 			<< ( ( !wf.empty() && !dl.empty() ) ? " and" : "" )
@@ -224,7 +224,7 @@ bool IOApplication::autowrite ( const util::ParameterMap &parameters, std::list<
 
 	if( repn != 0 ) {
 		for( std::list<Image>::reference ref :  out_images ) {
-			ref.convertToType( repn ); //noscale is 0 but 1 in the selection
+			ref.convertToType( static_cast<int>(repn) );
 		}
 	}
 

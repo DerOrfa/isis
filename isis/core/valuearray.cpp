@@ -42,9 +42,10 @@ std::string isis::data::ValueArray::typeName() const{
 isis::data::ValueArray::iterator isis::data::ValueArray::begin() {
 	return visit([](auto ptr)->iterator{
 		typedef typename decltype(ptr)::element_type element_type;
+		uint8_t *p = std::reinterpret_pointer_cast<uint8_t>(ptr).get();
 		return iterator(
-			( uint8_t * )ptr.get(), ( uint8_t * )ptr.get(), sizeof(element_type),
-			getValueFrom<element_type>, setValueInto<element_type>
+			p, p, sizeof(element_type),
+			&getValueFrom<element_type>, &setValueInto<element_type>
 		);
 	});
 }

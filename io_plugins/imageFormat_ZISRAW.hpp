@@ -2,8 +2,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <isis/core/io_factory.hpp>
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
 #include <memory>
 #include <future>
 
@@ -22,8 +21,8 @@ namespace _internal {
 		uint8_t PyramidType;
 		int32_t DimensionCount;
 		std::vector<DimensionEntry> dims;
-		size_t size()const{return 32+DimensionCount*20;}
-		std::map< char, DimensionEntry > getDimsMap()const;
+		[[nodiscard]] size_t size()const{return 32+DimensionCount*20;}
+		[[nodiscard]] std::map< char, DimensionEntry > getDimsMap()const;
 	};
 
 	template<typename T> void getScalar(const data::ByteArray &data, T &variable,size_t offset){
@@ -50,7 +49,7 @@ namespace _internal {
 	
 	struct bounds{
 		int32_t min=std::numeric_limits<int32_t>::max(),max=std::numeric_limits<int32_t>::min();
-		size_t size()const{return max-min+1;}
+		[[nodiscard]] size_t size()const{return max-min+1;}
 	};
 }
 
@@ -66,13 +65,13 @@ class ImageFormat_ZISRAW : public FileFormat{
 		}
 	public:
 		std::string id;
-		size_t getSegmentSize()const;
+		[[nodiscard]] size_t getSegmentSize()const;
 		/**
 		 * Create a segment from the source
 		 * \param source the ByteArray from the container (file)
 		 * \param offset the offset of the segment inside the container (this will be moved forward to the next segment)
 		 */
-		Segment(data::ByteArray &source, const size_t offset);
+		Segment(data::ByteArray &source, size_t offset);
 	};
 	class FileHeader:public Segment{
 	public:

@@ -39,7 +39,7 @@ namespace isis::util
  *
  * An application needs to be initialized explicitly with a call to init().
  *
- * Usage instructions and a short paramter list can be shown with the method printHelp().
+ * Usage instructions and a short parameter list can be shown with the method printHelp().
  *
  * See also: isis::data::IOApplication, isis::util::ParameterMap and \link isis::LogLevel isis::LogLevel \endlink
  */
@@ -64,11 +64,11 @@ public:
 	 * Default Constructor.
 	 *
 	 * Creates the application and its parameter map.
-	 * No programm parameter is parsed here. To do that use init()
+	 * No program parameter is parsed here. To do that use init()
 	 *
 	 * \param name name of the application.
 	 * \param cfg the default path of the config file. If empty, no config file will be loaded
-	 * \note set \code parameters["cfg"].needed()=true \endcode to prevent the programm from running without given config file
+	 * \note set \code parameters["cfg"].needed()=true \endcode to prevent the program from running without given config file
 	 */
 	explicit Application( const char name[], const char cfg[]="" );
 	virtual ~Application();
@@ -88,7 +88,7 @@ public:
 	 * then \code addLogging<MyLogModule>("MyLog"); \endcode will install a parameter "-dMyLog" which will control all calls to
 	 * \code LOG(MyLogModule,...) << ... \endcode if _ENABLE_LOG was set for the compilation. Otherwise this commands will not have an effect.
 	 *
-	 * Multiple MODLUES can have the same parameter name, so
+	 * Multiple MODULES can have the same parameter name, so
 	 * \code
 	 * struct MyLogModule   {static constexpr char name[]="MyModuleLog";static constexpr bool use = _ENABLE_LOG;};
 	 * struct MyDebugModule {static constexpr char name[]="MyModuleDbg";static constexpr bool use = _ENABLE_LOG;};
@@ -99,7 +99,7 @@ public:
 	 *
 	 * \note This does not set the logging handler. That is done by reimplementing makeLogHandler( std::string module, isis::LogLevel level )const.
 	 */
-	template<typename MODULE> void addLogging(std::string parameter_name) {
+	template<typename MODULE> void addLogging(const std::string& parameter_name) {
 		addLoggingParameter( parameter_name );
 		logs[parameter_name].push_back( &Application::setLog<MODULE> );
 	}
@@ -111,7 +111,7 @@ public:
 	void removeLogging( std::string name );
 
 	bool addConfigFile(const std::string &filename);
-	const PropertyMap &config()const;
+	[[nodiscard]] const PropertyMap &config()const;
 
 	/**
 	 * Add an example for the programs usage.
@@ -121,13 +121,13 @@ public:
 	void addExample( std::string parameters, std::string desc );
 
 	/**
-	 * Initializes the programm parameter map using argc/argv.
+	 * Initializes the program parameter map using argc/argv.
 	 * For every entry in parameters an corresponding command line parameter is searched and parsed.
 	 * A command line parameter corresponds to an entry of parameters if it string-equals caseless to this entry and is preceded by "-".
 	 *
-	 * \param argc ammount of command line parameters in argv
+	 * \param argc amount of command line parameters in argv
 	 * \param argv array of const char[] containing the command line parameters
-	 * \param exitOnError if true the programm will exit, if there is a problem during the initialisation (like missing parameters).
+	 * \param exitOnError if true the program will exit, if there is a problem during the initialisation (like missing parameters).
 	 */
 	virtual bool init( int argc, char **argv, bool exitOnError = true );
 	
@@ -147,14 +147,14 @@ public:
 		LOG( Debug, info ) << "Setting logging for module " << MSubject( MODULE::name ) << " to level " << level;
 		if ( !MODULE::use )return {};
 		else {
-			const auto handle=makeLogHandler(level);
+			auto handle=makeLogHandler(level);
 			_internal::Log<MODULE>::setHandler(handle);
 			return handle;
 		}
 
 	}
 	//get the version of the coreutils
-	static const std::string getCoreVersion( void );
+	static const std::string getCoreVersion( );
 	
 	static std::shared_ptr<util::ProgressFeedback>& feedback();
 };
