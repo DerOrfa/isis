@@ -457,7 +457,7 @@ void ImageFormat_NiftiSa::storeHeader( const util::PropertyMap &props, _internal
 
 	// store niftis original sform if its there
 	if( props.hasProperty( "nifti/sform_code" ) ) {
-		head->sform_code = static_cast<int>(props.getValueAs<util::Selection>( "nifti/sform_code" ));
+		head->sform_code = static_cast<decltype(head->sform_code)>(props.getValueAs<util::Selection>( "nifti/sform_code" ));
 
 		if( props.hasProperty( "nifti/srow_x" ) && props.hasProperty( "nifti/srow_y" ) && props.hasProperty( "nifti/srow_z" ) ) {
 			_internal::copyArray2Mem(props.getValueAs<util::fvector4>( "nifti/srow_x" ), head->srow_x );
@@ -469,7 +469,7 @@ void ImageFormat_NiftiSa::storeHeader( const util::PropertyMap &props, _internal
 
 	// store niftis original qform if its there
 	if( props.hasProperty( "nifti/qform_code" ) ) {
-		head->qform_code = static_cast<int>(props.getValueAs<util::Selection>( "nifti/qform_code" ));
+		head->qform_code = static_cast<decltype(head->sform_code)>(props.getValueAs<util::Selection>( "nifti/qform_code" ));
 
 		if( props.hasProperty( "nifti/quatern_b" ) && props.hasProperty( "nifti/quatern_c" ) && props.hasProperty( "nifti/quatern_d" ) &&
 			props.hasProperty( "nifti/qoffset" ) && props.hasProperty( "nifti/qfac" )

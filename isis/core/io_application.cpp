@@ -216,15 +216,15 @@ bool IOApplication::autowrite ( const util::ParameterMap &parameters, std::list<
 	const util::slist dl = parameters[std::string( "wdialect" ) + suffix];
 	LOG( Runtime, info )
 			<< "Writing " << out_images.size() << " images"
-			<< ( static_cast<int>(repn) ? std::string( " as " ) + ( std::string )repn : "" )
+			<< ( repn ? std::string( " as " ) + static_cast<std::string>(repn) : "" )
 			<< " to " << util::MSubject( output )
 			<< ( wf.empty() ? "" : std::string( " using the format: " ) + util::listToString(wf.begin(),wf.end()) )
 			<< ( ( !wf.empty() && !dl.empty() ) ? " and" : "" )
 			<< ( dl.empty() ? "" : std::string( " using the dialect: " ) + util::listToString(dl.begin(),dl.end()) );
 
-	if( repn != 0 ) {
+	if( repn ) {
 		for( std::list<Image>::reference ref :  out_images ) {
-			ref.convertToType( static_cast<int>(repn) );
+			ref.convertToType( static_cast<unsigned short>(repn) );
 		}
 	}
 
