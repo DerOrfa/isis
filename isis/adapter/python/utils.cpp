@@ -3,6 +3,7 @@
 //
 
 #include "utils.hpp"
+#include "pybind11/stl.h"
 #include <type_traits>
 #include "../../core/io_factory.hpp"
 #include "logging.hpp"
@@ -121,6 +122,52 @@ std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>> property2p
 		default:return std::list<util::ValueTypes>(p.begin(),p.end());
 	}
 }
+data::Image makeImage(py::buffer b, std::map<std::string, util::ValueTypes> metadata)
+{
+	static const TypeMap type_map;
+	/* Request a buffer descriptor from Python */
+	py::buffer_info buffer = b.request();
+	if(auto found_type=type_map.find(buffer.format);found_type!=type_map.end()) //a supported type was found
+	{
+		if(buffer.shape.size()>4)
+			throw std::runtime_error("Only up to 4 dimensions are allowed!");
 
+		if(buffer.shape.size()>1){
+			std::swap(buffer.shape[0],buffer.shape[1]);
+			std::swap(buffer.strides[0],buffer.strides[1]);
+		}
+
+
+		util::vector4<size_t> sizes;
+		std::copy(buffer.shape.begin(),buffer.shape.end(),sizes.begin());
+		std::fill(sizes.begin()+buffer.shape.size(),sizes.end(),1);
+
+
+		//@todo find a way to use the pyobject directly instead of making a copy
+		auto array=data::ValueArray::createByID(found_type->second,buffer.size);
+		LOG(Debug,info) << "Making an " << sizes << " image of type " << array.typeName();
+		LOG(Debug,info) << "strides are " << util::listToString(buffer.strides.begin(),buffer.strides.end());
+		assert(buffer.itemsize==array.bytesPerElem());
+		memcpy(array.getRawAddress().get(),buffer.ptr,array.bytesPerElem()*array.getLength());
+
+		auto chk=data::Chunk(array,sizes[0],sizes[1],sizes[2],sizes[3]);
+
+		for(auto &prop:metadata){
+//			LOG(Debug,verbose_info) << "Setting property " << prop.first << " as " << prop.second;
+			chk.touchProperty(prop.first.c_str())=prop.second;
+		}
+
+		auto missing=chk.getMissing();
+		if(missing.empty())
+			return data::Image(chk);
+		else{
+			LOG(Runtime,error) << "Cannot create image, following properties are missing: " << missing;
+			throw std::runtime_error("Invalid metadata!");
+		}
+
+	} else
+		throw std::runtime_error("Incompatible data type!");
+
+}
 }
 

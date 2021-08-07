@@ -37,6 +37,7 @@ py::class_<data::Chunk>(m, "chunk")
 	})
 ;
 py::class_<data::Image>(m, "image")
+	.def(py::init(&python::makeImage))
 	.def("__array__",[](data::Image &img){return python::make_array(img);	})
 	.def_property_readonly("nparray",[](data::Image &img){return python::make_array(img);	})
 	.def("getChunks",
@@ -44,6 +45,13 @@ py::class_<data::Image>(m, "image")
 		 "get all chunks of pixel data that make the image",
 		 py::arg("copy_metadata")=false
 	)
+	.def("keys", [](const data::Image &img) {
+		std::list<std::string> ret;
+		for(auto &set:img.getFlatMap()){
+			ret.push_back(set.first.toString());
+		}
+		return ret;
+	})
 	.def("__getitem__", [](const data::Image &img, std::string path){
 		return python::property2python(img.property(path.c_str()));
 	})
@@ -53,13 +61,6 @@ py::class_<data::Image>(m, "image")
 	})
 	.def_property_readonly("shape", &data::Image::getSizeAsVector)
 	.def("identify", &data::Image::identify,"withpath"_a=true,"withdate"_a=false)
-	.def("getMetaData", [](const data::Image &img) {
-		std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>> ret;
-		for(auto &set:img.getFlatMap()){
-			ret.emplace(set.first.toString(),python::property2python(set.second));
-		}
-		return ret;
-	})
 ;
 
 m.def("load",&python::load,
