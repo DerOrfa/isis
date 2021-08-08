@@ -159,7 +159,7 @@ API_EXCLUDE_END;
 			if ( found != root.end() ) {//and we found the entry
 				return findEntryImpl<CONST>( found->second.branch().container, next, pathEnd ); //continue there
 			}
-		} else if ( found != root.end() ) {// if its the leaf and we found the entry
+		} else if ( found != root.end() ) {// if it's the leaf and we found the entry
 			return found->second; // return that entry
 		}
 
@@ -170,7 +170,7 @@ API_EXCLUDE_END;
 	template<typename T> T* queryValueAsImpl( const PropPath &path, const std::optional<size_t> &at ) {
 		const auto &found = queryProperty( path );
 
-		if( found && found->size()>at.value_or(0) ) {// apparently it has a value so lets try use that
+		if( found && found->size()>at.value_or(0) ) {// apparently it has a value so let's try to use that
 			if( !found->is<T>() ) {
 				if( !found->transform<T>() ) {// convert to requested type
 					LOG( Runtime, warning ) << "Conversion of Property " << path << " from " << util::MSubject( found->getTypeName() ) << " to "
@@ -279,7 +279,7 @@ public:
 	 * \param path the path to the property
 	 * \returns the requested property or an empty property
 	 */
-	PropertyValue property( const PropPath &path )const;
+	const PropertyValue property( const PropPath &path )const;
 
 	/**
 	 * Access the property referenced by the path, create it if its not there.
@@ -505,7 +505,7 @@ public:
 		const PathSet empty_before=genKeyList<EmptyP>();
 		std::for_each( container.begin(), container.end(), Splicer<ITER>( first, last, PropPath(), lists_only) );
 		//some cleanup
-		//delete all thats empty now, but wasn't back then (we shouldn't delete what where empty before) / spliters are moved so source will become empty
+		//delete all that's empty now, but wasn't back then (we shouldn't delete what where empty before) / spliters are moved so source will become empty
 		const PathSet empty_after=genKeyList<EmptyP>();
 		std::list<PropPath> deletes;
 		std::set_difference(empty_after.begin(),empty_after.end(),empty_before.begin(),empty_before.end(),std::back_inserter(deletes));
@@ -617,7 +617,7 @@ public:
 
 		if( fetched->isEmpty() ) { // we just created one, so set its value to def
 			*fetched = def;
-		} else if( !fetched->is<T>() ) { // apparently it already has a value so lets try use that
+		} else if( !fetched->is<T>() ) { // apparently it already has a value so let's try to use that
 			if( !transform<T>( path, path ) ) {
 				throw std::logic_error(fetched->toString(true)+" cannot be transformed to "+util::typeName<T>() );
 			}
@@ -769,7 +769,7 @@ template<typename ITER> struct PropertyMap::Splicer {
 	void operator()( const std::monostate &val )const {}
 	void operator()( PropertyValue &val )const {
 		if(val.isEmpty())return; // abort if there is nothing to spliceAt
-		else if(lists_only && val.size() <= 1)return;  //abort if we don't want do move scalars
+		else if(lists_only && val.size() <= 1)return;  //abort if we don't want to move scalars
 
 		if( val.size() % blocks ) { // just copy all which cannot be properly spliced to the destination
 			LOG_IF( val.size() > 1, Runtime, warning ) << "Not splicing non scalar property " << MSubject( name ) << " because its length "

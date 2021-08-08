@@ -4,13 +4,9 @@
 
 namespace isis::util{
 
-Value::Value(const ValueTypes &v): ValueTypes(v){
-	LOG(Debug,verbose_info) << "Value copy created from " << v;
-}
+Value::Value(const ValueTypes &v): ValueTypes(v){}
 
-Value::Value(ValueTypes &&v): ValueTypes(v){
-	LOG(Debug,verbose_info) << "Value move created from " << v;
-}
+Value::Value(ValueTypes &&v): ValueTypes(v){}
 
 std::string Value::toString(bool with_typename)const{
 	std::stringstream o;

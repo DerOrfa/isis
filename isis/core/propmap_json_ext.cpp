@@ -13,8 +13,10 @@ namespace _internal {
 		for(const Json::Value &v:val){
 			if(v.isArray()) // flattening more-dimensional arrays
 				value2prop_array<T>(branch,path,v,wrapper);
-			else
-				property.push_back<T>(wrapper(v));
+			else{
+				const T val = wrapper(v);
+				property.push_back(std::move(val));
+			}
 		}
 	}
 	void object2Branch(PropertyMap &branch,Json::Value obj, char extra_token){

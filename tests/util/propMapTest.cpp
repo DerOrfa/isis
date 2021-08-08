@@ -77,6 +77,13 @@ BOOST_AUTO_TEST_CASE( propMap_set_test )
 	map1.setValueAs<bool>( "bool", false );
 	BOOST_CHECK_EQUAL( map1.property( "bool" ), false );
 
+	map1.touchProperty("variant_float") = util::ValueTypes(.5);
+	BOOST_CHECK_EQUAL( map1.property( "variant_float" ), .5 );
+	map1.touchProperty("variant_int") = util::ValueTypes(5);
+	BOOST_CHECK_EQUAL( map1.property( "variant_int" ), 5 );
+	map1.touchProperty("variant_string") = util::ValueTypes(std::string("5"));
+	BOOST_CHECK_EQUAL( map1.property( "variant_string" ), std::string("5") );
+
 }
 
 BOOST_AUTO_TEST_CASE( propMap_remove_test )
