@@ -35,8 +35,7 @@ API_EXCLUDE_BEGIN;
 namespace _internal
 {
 
-template<typename SRC,typename DST> constexpr bool is_num(){return std::is_arithmetic<SRC>::value && std::is_arithmetic<DST>::value;};
-template<typename SRC,typename DST> constexpr bool is_same(){return std::is_same_v<SRC, DST>;}
+template<typename SRC,typename DST> constexpr bool is_num(){return std::is_arithmetic_v<SRC> && std::is_arithmetic_v<DST>;}
 
 template<typename T_DUR> bool parseTimeString(const std::string &src, const char *format,std::chrono::time_point<std::chrono::system_clock,T_DUR> &dst){
 	std::tm t = {0,0,0,1,0,70,0,0,-1,0,nullptr};
@@ -44,24 +43,23 @@ template<typename T_DUR> bool parseTimeString(const std::string &src, const char
 	ss >> std::get_time(&t, format);
 	if(!ss.fail()) {
 		time_t tt = mktime(&t);
-		//@todo check in C++17
 		dst=std::chrono::round<T_DUR>(std::chrono::system_clock::from_time_t(tt));
 		if(ss.peek()=='.'){
 			float frac=0;
 			ss >> frac;
 			dst+=std::chrono::duration_cast<T_DUR>(std::chrono::duration<float>(frac));
 		}
-		LOG_IF(!ss.eof(),Debug,info) << ss.str() << "remained afer parsing timestamp" << src;
+		LOG_IF(!ss.eof(),Debug,info) << ss.str() << "remained after parsing timestamp" << src;
 		return true;
 	} else 
 		return false;
 }
 	
-//Define generator - this can be global because its using convert internally
+//Define generator - this can be global because it's using convert internally
 template<typename SRC, typename DST> class ValueGenerator: public ValueConverterBase
 {
 public:
-	Value create()const override {
+	[[nodiscard]] Value create()const override {
 		return DST();
 	}
 	boost::numeric::range_check_result generate(const Value &src, Value& dst )const override {
@@ -79,13 +77,12 @@ template<bool NUMERIC, bool SAME, typename SRC, typename DST> class ValueConvert
 {
 public:
 	static std::shared_ptr<const ValueConverterBase> get() {
-//uncomment this to see which conversions are not generated - be carefull, thats f***king much
-// 		std::cout 
+//uncomment this to see which conversions are not generated - be careful, that's that's a LOT
+// 		std::clog
 // 			<< "There will be no " << (SAME?"copy":NUMERIC?"numeric":"non-numeric") <<  " conversion for " 
 // 			<< typeName<SRC>() << " to " <<typeName<DST>() << std::endl;
-		return std::shared_ptr<const ValueConverterBase>();
+		return {};
 	}
-	~ValueConverter() override = default;
 };
 /////////////////////////////////////////////////////////////////////////////
 // trivial version -- for conversion of the same type
@@ -104,7 +101,6 @@ public:
 		dst=src;
 		return boost::numeric::cInRange;
 	}
-	~ValueConverter() override = default;
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -134,36 +130,27 @@ template<typename SRC, typename DST> boost::numeric::range_check_result num2num(
 	return NumericOverflowHandler::result;
 }
 
-std::ios_base::iostate formattedTimeParse(std::istringstream &ss,std::tm t,const std::string &format,const std::locale &locale){
-	const auto& tg = std::use_facet<std::time_get<char>>(locale);
-	std::ios_base::iostate err = std::ios_base::goodbit;
-
-	std::istreambuf_iterator<char> pos = tg.get(
-		std::istreambuf_iterator<char>(ss),std::istreambuf_iterator<char>(),
-		ss, err, &t,&format[0],&format[0]+format.size());
-	return err;
-}
-
-// if a converter from double is available first map to double and then convert that into DST
-template<typename DST> typename std::enable_if<std::is_arithmetic<DST>::value,boost::numeric::range_check_result>::type str2scalar( const std::string &src, DST &dst )
+template<typename DST> boost::numeric::range_check_result str2scalar( const std::string &src, DST &dst )
 {
-	return num2num<double, DST>( std::stod( src ), dst ); //@todo so we need an overflow-check here
-}
-// otherwise try direct mapping (rounding will fail)
-template<typename DST> typename std::enable_if<!std::is_arithmetic<DST>::value,boost::numeric::range_check_result>::type str2scalar( const std::string &src, DST &dst )
-{
-	LOG( Debug, warning ) << "using stringTo to convert from string to " <<typeName<DST>() << " no rounding can be done.";
-	if(!stringTo(src,dst)) {
-		dst = DST();
-		LOG( Runtime, error ) << "Miserably failed to interpret " << MSubject( src ) << " as " <<typeName<DST>() << " returning " << MSubject( DST() );
+	if constexpr(std::is_same_v<DST,std::string>){ //trivial copy
+		dst = src;
+		return boost::numeric::cInRange;
+	} else if constexpr(std::is_same_v<DST,Selection>){
+		if ( dst.set( src.c_str() ) )
+			return boost::numeric::cInRange;
+		else //if the string is not "part" of the selection we count this as positive overflow
+			return boost::numeric::cPosOverflow;
+	} else if constexpr(std::is_arithmetic_v<DST>){// if a converter from double is available first map to double and then convert that into DST
+		return num2num<double, DST>( std::stod( src ), dst ); //@todo so we need an overflow-check here
+	} else {// otherwise, try direct mapping (rounding will fail)
+
+		LOG( Debug, warning ) << "using stringTo to convert from string to " << typeName<DST>() << " no rounding can be done.";
+		if(!stringTo(src,dst)) {
+			dst = DST();
+			LOG( Runtime, error ) << "Miserably failed to interpret " << MSubject( src ) << " as " <<typeName<DST>() << " returning " << MSubject( DST() );
+		}
+		return boost::numeric::cInRange;
 	}
-	return boost::numeric::cInRange;
-}
-//this is trivial
-template<> boost::numeric::range_check_result str2scalar<std::string>( const std::string &src, std::string &dst )
-{
-	dst = src;
-	return boost::numeric::cInRange;
 }
 // needs special handling
 template<> boost::numeric::range_check_result str2scalar<date>( const std::string &src, date &dst )
@@ -185,7 +172,7 @@ template<> boost::numeric::range_check_result str2scalar<date>( const std::strin
 
 	dst=date();
 	
-	LOG(Runtime, error ) // if its still broken at least tell the user
+	LOG(Runtime, error ) // if it's still broken at least tell the user
 		<< "Miserably failed to interpret " << MSubject( src ) << " as " <<typeName<date>() << " returning " << MSubject( dst );
 	return boost::numeric::cInRange;
 }
@@ -204,12 +191,12 @@ template<> boost::numeric::range_check_result str2scalar<timestamp>( const std::
 
 	dst=timestamp();
 	
-	LOG(Runtime, error ) // if its still broken at least tell the user
+	LOG(Runtime, error ) // if it's still broken at least tell the user
 		<< "Miserably failed to interpret " << MSubject( src ) << " as " <<typeName<timestamp>() << " returning " << MSubject( dst );
 	return boost::numeric::cInRange;
 }
 // needs special handling
-template<> boost::numeric::range_check_result str2scalar<duration>( const std::string &src, duration &dst )
+template<> boost::numeric::range_check_result str2scalar<duration>(const std::string &src, duration &dst)
 {
 	// try to parse time format
 	static const char *formats[]={"%H:%M:%S"};
@@ -244,13 +231,6 @@ template<> boost::numeric::range_check_result str2scalar<bool>( const std::strin
 	}
 
 	return boost::numeric::cInRange;
-}
-template<> boost::numeric::range_check_result str2scalar<Selection>( const std::string &src, Selection &dst )
-{
-	if ( dst.set( src.c_str() ) )
-		return boost::numeric::cInRange;
-	else
-		return boost::numeric::cPosOverflow; //if the string is not "part" of the selection we count this as positive overflow
 }
 
 template<bool IS_NUM> struct Tokenizer { //jump from number to number in the string ignoring anything else
@@ -291,7 +271,7 @@ template<typename DST> struct StrTransformer {
 //helper to convert strings to FixedVectors
 template<typename DST, int NUM> boost::numeric::range_check_result convertStr2Vector(const Value &src, std::array<DST, NUM> &dstList )
 {
-	const std::list<std::string> srcList = Tokenizer<std::is_arithmetic<DST>::value>::run( std::get<std::string>(src) ); // tokenize the string based on the target type
+	const std::list<std::string> srcList = Tokenizer<std::is_arithmetic_v<DST>>::run( std::get<std::string>(src) ); // tokenize the string based on the target type
 	auto end = srcList.begin();
 	std::advance( end, std::min<size_t>( srcList.size(), NUM ) ); // use a max of NUM tokens
 	StrTransformer<DST> transformer; // create a transformer from string to DST
@@ -308,8 +288,8 @@ template<typename SRC, typename DST> struct IterableSubValueConv: SubValueConv<S
 	convertIter2Iter( const SRC_LST &srcLst, DST_LST &dstLst )const {
 		boost::numeric::range_check_result ret = boost::numeric::cInRange;
 
-		typename SRC_LST::const_iterator srcAt = srcLst.begin(), srcEnd = srcLst.end();
-		typename DST_LST::iterator dstBegin = dstLst.begin(), dstEnd = dstLst.end();
+		auto srcAt = srcLst.begin(), srcEnd = srcLst.end();
+		auto dstBegin = dstLst.begin(), dstEnd = dstLst.end();
 
 		Value elem_dst=DST();
 		while( srcAt != srcEnd ) { //slow and ugly, but flexible
@@ -322,7 +302,7 @@ template<typename SRC, typename DST> struct IterableSubValueConv: SubValueConv<S
 
 				*( dstBegin++ ) = std::get<DST>(elem_dst);
 			} else if( *srcAt != SRC() )
-				return boost::numeric::cPosOverflow; // abort and send positive overflow if source wont fit into destination
+				return boost::numeric::cPosOverflow; // abort and send positive overflow if source won't fit into destination
 
 			srcAt++;
 		}
@@ -333,15 +313,14 @@ template<typename SRC, typename DST> struct IterableSubValueConv: SubValueConv<S
 };
 template<typename CLASS, typename SRC, typename DST> static std::shared_ptr<const ValueConverterBase> getFor()
 {
-	std::shared_ptr<const ValueConverterBase> sub_conv = ValueConverter<is_num<SRC,DST>(), is_same<SRC,DST>(), SRC, DST>::get();
+	std::shared_ptr<const ValueConverterBase> sub_conv = ValueConverter<is_num<SRC,DST>(), std::is_same_v<SRC, DST>, SRC, DST>::get();
 
-	if ( sub_conv ) {
-		std::shared_ptr<CLASS > ret( new CLASS );
+	if (sub_conv) {
+		std::shared_ptr<CLASS> ret(new CLASS);
 		ret->sub_conv = sub_conv;
 		return ret;
-	} else {
-		return std::shared_ptr<const ValueConverterBase>();
-	}
+	} else
+		return {};
 }
 
 // special to string conversions
@@ -374,7 +353,6 @@ public:
 		assert(dst.is<DST>());
 		return num2num( std::get<SRC>(src), std::get<DST>(dst) );
 	}
-	~ValueConverter() override = default;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -393,7 +371,6 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return num2num( std::get<std::complex<SRC>>(src), std::get<std::complex<DST> >(dst) );
 	}
-	~ValueConverter() override = default;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -422,7 +399,6 @@ public:
 
 		return res;
 	}
-	~ValueConverter() override = default;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -442,7 +418,7 @@ public:
 		return getFor<ValueConverter<false, false, SRC, std::complex<DST> >, SRC, DST >();
 	}
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
-		std::complex<DST> &dstVal = std::get<std::complex<DST> >(dst);
+		auto &dstVal = std::get<std::complex<DST> >(dst);
 		Value real=DST();
 		boost::numeric::range_check_result ret = this->sub_conv->convert( src, real );
 
@@ -451,7 +427,6 @@ public:
 
 		return ret;
 	}
-	~ValueConverter() override = default;
 };
 
 
@@ -473,7 +448,6 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<vector4<SRC> >(src), std::get<vector4<DST> >(dst) );
 	}
-	~ValueConverter() override = default;
 };
 // vector3 => vector4
 template<typename SRC, typename DST > class ValueConverter<false, false, vector3<SRC>, vector4<DST> >:
@@ -490,7 +464,6 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<vector3<SRC> >(src), std::get<vector4<DST> >(dst) );
 	}
-	~ValueConverter() override = default;
 };
 // vector4 => vector3
 template<typename SRC, typename DST > class ValueConverter<false, false, vector4<SRC>, vector3<DST> >:
@@ -507,7 +480,6 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<vector4<SRC> >(src), std::get<vector3<DST> >(dst) );
 	}
-	~ValueConverter() override = default;
 };
 // vector3 => vector3
 template<typename SRC, typename DST > class ValueConverter<false, false, vector3<SRC>, vector3<DST> >:
@@ -524,7 +496,6 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<vector3<SRC> >(src), std::get<vector3<DST> >(dst) );
 	}
-	~ValueConverter() override = default;
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -551,7 +522,6 @@ public:
 
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( srcVal, dstVal );
 	}
-	~ValueConverter() override = default;
 };
 /////////////////////////////////////////////////////////////////////////////
 // vectorX to list version -- uses IterableSubValueConv::convertIter2Iter
@@ -574,7 +544,6 @@ public:
 
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<util::vector3<SRC> >(src), dstVal );
 	}
-	~ValueConverter() override = default;
 };
 template<typename SRC, typename DST > class ValueConverter<false, false, util::vector4<SRC>, std::list<DST> >:
 	public ValueGenerator<util::vector4<SRC>, std::list<DST> >, private IterableSubValueConv<SRC, DST >
@@ -593,7 +562,6 @@ public:
 		dstVal.resize( 4 );
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<util::vector4<SRC> >(src), dstVal );
 	}
-	~ValueConverter() override = default;
 };
 /////////////////////////////////////////////////////////////////////////////
 // list to vectorX version -- uses IterableSubValueConv::convertIter2Iter
@@ -612,7 +580,6 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<std::list<SRC> >(src), std::get<vector3<DST> >(dst) );
 	}
-	~ValueConverter() override = default;
 };
 template<typename SRC, typename DST > class ValueConverter<false, false, std::list<SRC>, vector4<DST> >:
 	public ValueGenerator<std::list<SRC>, vector4<DST> >, private IterableSubValueConv<SRC, DST >
@@ -628,12 +595,11 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return IterableSubValueConv<SRC, DST >::convertIter2Iter( std::get<std::list<SRC> >(src), std::get<vector4<DST> >(dst) );
 	}
-	~ValueConverter() override = default;
 };
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-// string to scalar -- uses stringTo (and in some cases mumeric conversion) to convert from string
+// string to scalar -- uses stringTo (and in some cases numeric conversion) to convert from string
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 template<typename DST> class ValueConverter<false, false, std::string, DST> : public ValueGenerator<std::string, DST>
 {
@@ -648,7 +614,6 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return str2scalar( std::get<std::string>(src), std::get<DST>(dst) );
 	}
-	~ValueConverter() override = default;
 };
 // cannot use the general str to all because that would be ambiguous with "all to complex"
 template<typename DST> class ValueConverter<false, false, std::string, std::complex<DST> > :
@@ -674,7 +639,6 @@ public:
 
 		return boost::numeric::cInRange;
 	}
-	~ValueConverter() override = default;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -693,9 +657,8 @@ public:
 	}
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		dst = toStringConv( std::get<SRC>(src), std::is_integral<SRC>() );
-		return boost::numeric::cInRange; // this should allways be ok
+		return boost::numeric::cInRange; // this should always be ok
 	}
-	~ValueConverter() override = default;
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -714,14 +677,13 @@ public:
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
-		std::list<DST> &dstList = std::get<std::list<DST> >(dst);
-		const std::list<std::string> srcList = Tokenizer<std::is_arithmetic<DST>::value>::run( std::get<std::string>(src) ); // tokenize the strin based on the target type
-		dstList.resize( srcList.size() ); // resize target to the ammount of found tokens
+		auto &dstList = std::get<std::list<DST> >(dst);
+		const std::list<std::string> srcList = Tokenizer<std::is_arithmetic_v<DST>>::run( std::get<std::string>(src) ); // tokenize the string based on the target type
+		dstList.resize( srcList.size() ); // resize target to the amount of found tokens
 		StrTransformer<DST> transformer; // create a transformer from string to DST
 		std::transform( srcList.begin(), srcList.end(), dstList.begin(), transformer ); // transform the found strings to the destination
 		return transformer.range_ok;
 	}
-	~ValueConverter() override = default;
 };
 template<typename DST> class ValueConverter<false, false, std::string, vector4<DST> >: public ValueGenerator<std::string, vector4<DST> >  //string => vector4
 {
@@ -736,7 +698,6 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return _internal::convertStr2Vector<DST, 4>( src, std::get<vector4<DST> >(dst) );
 	}
-	~ValueConverter() override = default;
 };
 
 template<typename DST> class ValueConverter<false, false, std::string, vector3<DST> >: public ValueGenerator<std::string, vector3<DST> >  //string => vector3
@@ -752,7 +713,6 @@ public:
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
 		return _internal::convertStr2Vector<DST, 3>( src, std::get<vector3<DST> >(dst) );
 	}
-	~ValueConverter() override = default;
 };
 
 template<typename T> class ValueConverter<false, false, std::string, color<T> >: public ValueGenerator<std::string, color<T> >  //string => color
@@ -767,19 +727,18 @@ public:
 		return std::shared_ptr<const ValueConverterBase>( ret );
 	}
 	boost::numeric::range_check_result convert(const Value &src, Value &dst )const override {
-		color<T> &dstVal = std::get<color<T> >(dst);
-		const std::list<std::string> srcList = Tokenizer<std::is_arithmetic<T>::value>::run( std::get<std::string>(src) ); // tokenize the string based on the target type
+		auto &dstVal = std::get<color<T> >(dst);
+		const std::list<std::string> srcList = Tokenizer<std::is_arithmetic_v<T>>::run( std::get<std::string>(src) ); // tokenize the string based on the target type
 		auto end = srcList.begin();
 		std::advance( end, std::min<size_t>( srcList.size(), 3 ) ); // use a max of 3 tokens
 		StrTransformer<T> transformer; // create a transformer from string to DST
 		std::transform( srcList.begin(), end, &dstVal.r, transformer ); // transform the found strings to the destination
 		return transformer.range_ok;
 	}
-	~ValueConverter() override = default;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Conversion timepoint => date (date is just a timestamp with days as resolution so it equals a rounding 
+// Conversion timepoint => date (date is just a timestamp with days as resolution, so it equals a rounding
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 template<> class ValueConverter<false, false, util::timestamp, util::date > : public ValueGenerator<util::timestamp, util::date>
 {
@@ -797,12 +756,11 @@ public:
 
 		return boost::numeric::cInRange;
 	}
-	~ValueConverter() override = default;
 };
 
 
 ////////////////////////////////////////////////////////////////////////
-//OK, thats about the foreplay. Now we get to the dirty stuff.
+//OK, that's about the foreplay. Now we get to the dirty stuff.
 ////////////////////////////////////////////////////////////////////////
 typedef std::shared_ptr<const ValueConverterBase> ConverterPtr;
 typedef std::map< size_t , std::map<size_t, ConverterPtr> > ConverterMap;
@@ -810,7 +768,7 @@ typedef std::map< size_t , std::map<size_t, ConverterPtr> > ConverterMap;
 template<typename DST> struct MakeConvVisitor{
     template<typename SRC> std::shared_ptr<const ValueConverterBase> operator()(const SRC &)const{
 		//create a converter based on the type traits and the types of SRC and DST
-		return ValueConverter<is_num<SRC,DST>(), is_same<SRC,DST>(), SRC, DST>::get();
+		return ValueConverter<is_num<SRC,DST>(), std::is_same_v<SRC, DST>, SRC, DST>::get();
     }
 };
 
@@ -819,13 +777,13 @@ template<int I=0> constexpr void makeInnerConv(const ValueTypes &src,ConverterMa
 	m_map[src.index()][I]= std::visit(vis,src);
     makeInnerConv<I+1>(src, m_map);
 }
-template<> constexpr void makeInnerConv<std::variant_size<ValueTypes>::value>(const ValueTypes &src,ConverterMap &){}
+template<> constexpr void makeInnerConv<util::Value::NumOfTypes>(const ValueTypes &src,ConverterMap &){}
 
 template<int I=0> constexpr void makeOuterConv(ConverterMap &m_map){
     makeInnerConv(ValueTypes{Value::TypeByIndex<I>()}, m_map);
 	makeOuterConv<I+1>(m_map);
 }
-template<> constexpr void makeOuterConv<std::variant_size<ValueTypes>::value>(ConverterMap &){}
+template<> constexpr void makeOuterConv<util::Value::NumOfTypes>(ConverterMap &){}
 
 ValueConverterMap::ValueConverterMap()
 {
