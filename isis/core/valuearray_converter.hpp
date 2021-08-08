@@ -45,7 +45,11 @@ public:
 API_EXCLUDE_BEGIN;
 namespace _internal
 {
-class ValueArrayConverterMap : public std::map< int , std::map<int, std::shared_ptr<const ValueArrayConverterBase> > >
+typedef std::shared_ptr<const ValueArrayConverterBase> ConverterPtr;
+typedef std::map< size_t, std::map<size_t, ConverterPtr> > ConverterMap;
+
+
+class ValueArrayConverterMap : public ConverterMap
 {
 public:
 	ValueArrayConverterMap();
