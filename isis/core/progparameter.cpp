@@ -18,12 +18,10 @@
 
 #include "progparameter.hpp"
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
-ProgParameter::ProgParameter(): m_hidden( false ), m_parsed( false )
+ProgParameter::ProgParameter()
 {
 	needed() = true;
 }
@@ -173,18 +171,18 @@ bool ParameterMap::parse( int argc, char **argv )
 bool ParameterMap::isComplete()const
 {
 	LOG_IF( ! parsed, Debug, error ) << "You did not run parse() yet. This is very likely an error";
-	return std::find_if( begin(), end(), neededP() ) == end();
+	return std::find_if( begin(), end(), []( const_reference ref ){return ref.second.isNeeded();} ) == end();
 }
 
-const ProgParameter ParameterMap::operator[] ( const std::string key ) const
+ProgParameter ParameterMap::operator[] ( const std::string key ) const
 {
-	std::map<std::string, ProgParameter>::const_iterator at = find( key );
+	auto at = find( key );
 
 	if( at != end() )
 		return at->second;
 	else {
 		LOG( Debug, error ) << "The requested parameter " << util::MSubject( key ) << " does not exist";
-		return ProgParameter();
+		return {};
 	}
 }
 ProgParameter &ParameterMap::operator[] ( const std::string key ) {return std::map<std::string, ProgParameter>::operator[]( key );}
@@ -194,5 +192,4 @@ ProgParameter::operator bool()const
 	return as<bool>();
 }
 
-}
 }

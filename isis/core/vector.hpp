@@ -44,7 +44,7 @@ namespace isis
 			x = op( *(src++), rhs);
 	}
 	template<typename TYPE1,typename TYPE2> using scalar_only = 
-		typename std::enable_if< std::is_scalar<TYPE1>::value && std::is_scalar<TYPE2>::value,int>;
+		typename std::enable_if< std::is_scalar_v<TYPE1> && std::is_scalar_v<TYPE2>,int>;
 	}
 	/// @endcond _internal
 

@@ -58,7 +58,7 @@ continousFind(ForwardIterator &current, const ForwardIterator end, const T &comp
 	current = std::lower_bound(current, end, compare, compOp);
 
 	if (current == end //if we're at the end
-		|| compOp(compare, *current) //or compare less than that iterator (eg. iterator greater than compare)
+		|| compOp(compare, *current) //or compare less than that iterator (e.g. iterator greater than compare)
 	)
 		return false;//we didn't find a match
 	else
@@ -137,24 +137,24 @@ TARGET listToString(
 /**
  * Try a static conversion from string to any type.
  * @param str the string to be reinterpreted as TARGET
- * @param target the refernce where the converted value will be stored
- * @return true if conversion was successful, false otherweise
+ * @param target the reference where the converted value will be stored
+ * @return true if conversion was successful, false otherwise
  */
 template<typename TARGET, typename traits>
 bool stringTo(const std::basic_string<char, traits> &str, TARGET& target){
 	std::stringstream stream(str.c_str());
 	stream>>target;
 	bool eof = stream.eof() || stream.tellg()>=str.length();
-	LOG_IF(stream.fail(),CoreDebug,error) << "Failed to read string "	<< str << " as number";
+	LOG_IF(stream.fail(),CoreDebug,error) << "Failed to read string "	<< str;
 	LOG_IF(!eof,CoreDebug,warning)
-		<< "Didn't use all " << str << " while converting it to " << target << " stoppet at " << str.substr(stream.tellg());
+		<< "Didn't use all " << str << " while converting it to " << target << " stopped at " << str.substr(stream.tellg());
 	return !stream.fail() && eof;
 }
 /**
  * Specialisation of stringTo for string to string conversion.
  * @param str the string to be reinterpreted as TARGET
- * @param target the refernce where the converted value will be stored
- * @return true if conversion was successful, false otherweise
+ * @param target the reference where the converted value will be stored
+ * @return true if conversion was successful, false otherwise
  */
 template<typename traits1,typename traits2>
 bool stringTo(const std::basic_string<char, traits1> &str, std::basic_string<char, traits2>& target){

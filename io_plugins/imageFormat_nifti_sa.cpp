@@ -349,35 +349,35 @@ void ImageFormat_NiftiSa::parseSliceOrdering( const std::shared_ptr< isis::image
 			for(short v=0;v<head->dim[4];v++)
 				for(unsigned short i = 0; i < head->dim[3]; i++ ){
 					assert(v*head->dim[3]+head->dim[3]>=i);
-					acqProp.push_back<uint32_t>(v*head->dim[3]+head->dim[3]-i);
+					acqProp.push_back(v*head->dim[3]+head->dim[3]-i);
 				}
 		}
 		break;
 		case NIFTI_SLICE_ALT_INC: { //interlaced increment
 			for(short v=0;v<head->dim[4];v++){
 				for( short i = 0; i < head->dim[3]; i+=2)
-					acqProp.push_back<uint32_t>(v*head->dim[3]+i);
+					acqProp.push_back(v*head->dim[3]+i);
 				for( short i = 1; i < head->dim[3]; i+=2)
-					acqProp.push_back<uint32_t>(v*head->dim[3]+i);
+					acqProp.push_back(v*head->dim[3]+i);
 			}
 		}
 		break;
 		case NIFTI_SLICE_ALT_DEC: {
 			for(short v=0;v<head->dim[4];v++){
-				for( short i = head->dim[3]-1; i>=0; i-=2)
-					acqProp.push_back<uint32_t>(v*head->dim[3]+i);
-				for( short i = head->dim[3]-2; i>=0; i-=2)
-					acqProp.push_back<uint32_t>(v*head->dim[3]+i);
+				for( auto i = head->dim[3]-1; i>=0; i-=2)
+					acqProp.push_back(v*head->dim[3]+i);
+				for( auto i = head->dim[3]-2; i>=0; i-=2)
+					acqProp.push_back(v*head->dim[3]+i);
 			}
 		}
 		break;
 		}
 
-		if( head->slice_duration ) {
+		if( head->slice_duration != 0) {
 			util::PropertyValue &acqTimeProp=current.touchProperty( "acquisitionTime");
-                        const util::timestamp start=current.getValueAsOr<util::timestamp>("sequenceStart",util::timestamp());
-			for(util::PropertyValue::const_iterator i=acqProp.begin();i!=acqProp.end();i++){
-				acqTimeProp.push_back(start+std::chrono::milliseconds(i->as<int>() * int(head->slice_duration * time_fac)));
+			const auto start=current.getValueAsOr<util::timestamp>("sequenceStart",util::timestamp());
+			for(util::Value &v:acqProp){
+				acqTimeProp.push_back(start+std::chrono::milliseconds(v.as<int>() * int(head->slice_duration * time_fac)));
 			}
 		}
 	}

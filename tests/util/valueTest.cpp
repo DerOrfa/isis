@@ -22,14 +22,13 @@
 
 #include <complex>
 
-namespace isis
-{
-namespace test
+namespace isis::test
 {
 
 using util::Value;
 using util::fvector4;
 using util::ivector4;
+
 
 // TestCase object instantiation
 BOOST_AUTO_TEST_CASE( test_type_init )
@@ -257,10 +256,9 @@ BOOST_AUTO_TEST_CASE( time_conversion_test )
 	std::ostringstream str;
 	util::timestamp rhs=util::timestamp()+std::chrono::hours(1)+std::chrono::minutes(1);
 	str << (rhs);
-	util::timestamp lhs=util::Value(str.str()).as<util::timestamp>();
+	auto lhs=util::Value(str.str()).as<util::timestamp>();
 	BOOST_CHECK_EQUAL(lhs, rhs); 
 	}
 }
 
-}
 }

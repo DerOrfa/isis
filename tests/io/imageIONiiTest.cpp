@@ -8,7 +8,6 @@
 #include <isis/core/image.hpp>
 #include <isis/core/io_factory.hpp>
 #include <isis/core/log.hpp>
-#include <isis/core/tmpfile.hpp>
 
 using namespace isis;
 

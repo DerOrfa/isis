@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE ( ident_image_test )
 		chunks[i].setValueAs<float>( "acquisitionTime", i );
 		chunks[i].setValue( "source", std::string("root/")+std::to_string(i) );
 		chunks[i].setValue( "sequenceStart",now);
-		chunks[i].setValue( "sequenceDescription","test");
+		chunks[i].setValue( "sequenceDescription",std::string("test"));
 	}
 
 	data::Image img( chunks );
