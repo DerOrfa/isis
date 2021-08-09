@@ -87,9 +87,9 @@ operator*( const util::Matrix<TYPE1, COLS, ROWS> &left, const util::Matrix<TYPE2
 	const util::Matrix<TYPE2, COLS, COLS2> rightT = util::transpose(right);
 	util::Matrix<result_type, COLS2, ROWS> ret;
 
-	for( size_t c = 0; c < COLS2; c++ ) { //result has as much columns as right
+	for( size_t c = 0; c < COLS2; c++ ) { //result has as many columns as right
 		const std::array<TYPE2, COLS> &rcol = rightT[c]; //columns of right are rows of rightT 
-		for( size_t r = 0; r < ROWS; r++ ) { //result has as much rows as left
+		for( size_t r = 0; r < ROWS; r++ ) { //result has as many rows as left
 			const std::array<TYPE1, COLS> &lrow = left[r];
 			ret[r][c] = std::inner_product( std::begin(lrow), std::end(lrow), std::begin(rcol), result_type() );
 		}
@@ -103,7 +103,7 @@ operator*( const util::Matrix<TYPE1, COLS, ROWS> &left, const std::array<TYPE2, 
 	typedef decltype(TYPE1()*TYPE2()) result_type;
 	std::array<result_type, ROWS> ret;
 
-	for( size_t r = 0; r < ROWS; r++ ) { //result has as much rows as left
+	for( size_t r = 0; r < ROWS; r++ ) { //result has as many rows as left
 		const std::array<TYPE1, COLS> &lrow = left[r];
 		ret[r] = std::inner_product( std::begin(lrow), std::end(lrow), std::begin(right), result_type() );
 	}

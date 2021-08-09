@@ -168,7 +168,7 @@ void Image::deduplicateProperties()
 		set.not_spliced.clear();
 		PropertyMap::deduplicate(maps); // call PropertyMap's deduplicate on the not_spliced
 
-		// and copy into the chunks whats left
+		// and copy into the chunks what's left
 		auto c=chunks.begin();
 		for(auto m=maps.begin();m!=maps.end();m++,c++){
 			LOG(Debug,verbose_info) << "Copying true splices " << **m << " into " << c->size() << " chunks";
@@ -270,7 +270,7 @@ bool Image::reIndex(util::slist* rejected)
 
 	//if there are many chunks, they must leave at least on dimension to the image to "sort" them in
 	const size_t timesteps = set.getHorizontalSize();
-	const unsigned short sortDims = dims - ( timesteps > 1 ? 1 : 0 ); // dont use the uppermost dim, if the timesteps are already there
+	const unsigned short sortDims = dims - ( timesteps > 1 ? 1 : 0 ); // don't use the uppermost dim, if the timesteps are already there
 
 	if ( chunk_dims >= Image::dims ) {
 		if ( lookup.size() > 1 ) {
@@ -280,8 +280,8 @@ bool Image::reIndex(util::slist* rejected)
 			return false;
 		}
 
-		//if there is only one chunk, its ok - the image will consist only of this one,
-		//and commonGet will allways return <0,set.begin()->getLinearIndex()>
+		//if there is only one chunk, it's ok - the image will consist only of this one,
+		//and commonGet will always return <0,set.begin()->getLinearIndex()>
 		//thus in this case voxel() equals set.begin()->voxel()
 	} else {// OK there is at least one dimension to sort in the chunks
 		LOG( Debug, info ) << "Computing strides for dimensions " << util::MSubject( chunk_dims + 1 ) << " to " << util::MSubject( sortDims );
@@ -422,7 +422,7 @@ bool Image::reIndex(util::slist* rejected)
 			LOG_IF( std::acos( util::dot(crossVec, *sliceVec ) )  > 180 / M_PI, Runtime, warning ) //angle more than one degree
 			        << "The existing sliceVec " << util::MSubject( sliceVec ) << " differs from the cross product of the row- and column vector " << util::MSubject( crossVec );
 		} else {
-			// We dont know anything about the slice-direction
+			// We don't know anything about the slice-direction
 			// we just guess its along the positive cross-product between row- and column direction
 			// so at least warn the user if we do that long shot
 			LOG( Runtime, info )
@@ -653,7 +653,7 @@ size_t Image::getChunkStride ( size_t base_stride )
 		return lookup.size() - ( lookup.size() % base_stride );
 	}
 
-	//we didn't find any break, so we assume its a linear image |c c ... c|
+	//we didn't find any break, so we assume it's a linear image |c c ... c|
 	LOG( Debug, info )
 	        << "No dimensional break found, assuming it to be at the end (" << lookup.size() << "/" << set.getHorizontalSize() << ")";
 	return lookup.size() / set.getHorizontalSize();
@@ -669,7 +669,7 @@ std::list<util::PropertyValue> Image::getChunksProperties( const util::PropertyM
 
 			if(unique){ // if unique
 				if( !prop || prop->isEmpty() || //if there is no (or an empty)  prop in ref skip it
-				    (prop && !ret.empty() &&  *prop == ret.back()) // if there is a prop, skip if its the same as the one inserted before
+				    (prop && !ret.empty() &&  *prop == ret.back()) // if there is a prop, skip if it's the same as the one inserted before
 				)
 					continue;
 			}
@@ -833,7 +833,7 @@ ValueArray Image::copyAsValueArray() const {
 
 size_t Image::getMajorTypeID() const
 {
-	switch( getChunk( 0 ).getTypeID() ) { // dont do smart typeID detection for types who cant do minmax
+	switch( getChunk( 0 ).getTypeID() ) { // don't do smart typeID detection for types who can't do minmax
 	case util::typeID<util::color24>():
 	case util::typeID<util::color48>():
 	case util::typeID<std::complex< float >  >():
@@ -888,7 +888,7 @@ bool Image::convertToType( short unsigned int ID, scaling_pair scaling )
 		retVal &= ref->convertToType( ID, scaling );
 	}
 
-	//apply scaling to the window if its there
+	//apply scaling to the window if it's there
 	auto windowMax = queryProperty("window/max");
 	auto windowMin = queryProperty("window/min");
 	if(windowMax)

@@ -68,7 +68,7 @@ void SortedChunkList::getproplist::operator()(const util::PropertyMap& c)
 		util::PropertyValue dummy=*p;
 		const std::vector< util::PropertyValue > splinters=dummy.splice(1);
 		insert(splinters.begin(),splinters.end());
-	} else if(p && p->size()==1) // otherwise just use it
+	} else if(p && p->size()==1) // otherwise, just use it
 		insert(*p);
 }
 
@@ -137,7 +137,7 @@ std::pair<std::shared_ptr<Chunk>, bool> SortedChunkList::primaryInsert( const Ch
 	LOG_IF( secondarySort.empty(), Debug, error ) << "There is no known secondary sorting left. Chunksort will fail.";
 	assert( ch.isValid() );
 	// compute the position of the chunk in the image space
-	// we dont have this position, but we have the position in scanner-space (indexOrigin)
+	// we don't have this position, but we have the position in scanner-space (indexOrigin)
 	const util::fvector3 origin = ch.getValueAs<util::fvector3>( indexOriginProb );
 	// and we have the transformation matrix
 	// [ rowVec ]
@@ -155,7 +155,7 @@ std::pair<std::shared_ptr<Chunk>, bool> SortedChunkList::primaryInsert( const Ch
 		})
 	);
 
-	// this is actually not the complete transform (it lacks the scaling for the voxel size), but its enough
+	// this is actually not the complete transform (it lacks the scaling for the voxel size), but it's enough
 	const util::fvector3 key{ util::dot( origin,rowVec ), util::dot( origin,columnVec ), util::dot( origin,sliceVec )};
 	const scalarPropCompare &secondaryComp = secondarySort.top();
 
@@ -245,7 +245,7 @@ std::shared_ptr<Chunk> SortedChunkList::insert_impl(const Chunk &ch){
 		}
 
 		for(const util::PropertyMap::PropPath & ref :  equalProps ) { // check all properties which where given to the constructor of the list
-			// if at least one of them has the property and they are not equal - do not insert
+			// if at least one of them has the property, and they are not equal - do not insert
 			if ( first.hasProperty( ref )  && !(first.property( ref ) == ch.property( ref ) )) { //"==" will be false if ch.property is empty or different
 				LOG( Debug, verbose_info )
 						<< "Ignoring chunk with different " << ref << ". Is " << util::MSubject( ch.property( ref ) )

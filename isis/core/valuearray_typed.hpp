@@ -41,7 +41,7 @@ public:
 		LOG_IF(!other.is<TYPE>(),Debug,info) << "Made a converted " << typeName() << " copy of a " << other.typeName() << " array";
 	}
 	/// Create a typed value array from scratch
-	TypedArray(size_t length):TypedArray(ValueArray::make<TYPE>(length), scaling_pair(1, 0)){} //this will call the constructor for creation from ValueArray but we know we won't need any conversion or scaling
+	TypedArray(size_t length):TypedArray(ValueArray::make<TYPE>(length), scaling_pair(1, 0)){} //this will call the constructor for creation from ValueArray, but we know we won't need any conversion or scaling
 	/// Basic copy constructor
 	TypedArray(const TypedArray<TYPE> &ref):TypedArray(static_cast<const ValueArray&>(ref), scaling_pair(1, 0)){}//same as above
 	TypedArray(TypedArray<TYPE> &&ref): ValueArray(std::move(ref)), me(castTo<TYPE>()){};

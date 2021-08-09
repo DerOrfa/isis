@@ -221,13 +221,15 @@ public:
 	 * \param scaling the scaling to be used if a conversion is necessary (computed automatically if not given)
 	 */
 	template<typename T> bool copyFromMem( const T *const src, size_t len, scaling_pair scaling = scaling_pair() ) {
-		ValueArray cont(const_cast<T *>( src ), len, NonDeleter() ); //its ok - we're not going to change it
+		ValueArray cont(const_cast<T *>( src ), len, NonDeleter() ); //it's ok - we're not going to change it
 		return cont.copyTo( *this, std::move(scaling) );
 	}
 
 	/**
 	 * Create a ValueArray of given type and length.
 	 * This allocates memory as needed but does not initialize it.
+	 * \param ID type ID of the requested data (as returned by util::typeID<T>())
+	 * \param len amount of elements in the array
 	 * \returns a Reference to a ValueArray pointing to the allocated memory. Or an empty Reference if the creation failed.
 	 */
 	static ValueArray createByID(unsigned short ID, size_t len );

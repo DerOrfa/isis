@@ -53,10 +53,12 @@ struct JoinTreeVisitor {
 	bool operator()( PropertyValue &first, PropertyValue &second )const { // if both are Values
 		if( first.isEmpty() || overwrite ) { // if ours is empty or overwrite is enabled
 			//replace ours by the other
-			if(delsource)first.transfer(second,true);
-			else first = second;
+			if(delsource)
+				first.transfer(second,true);
+			else
+				first = second;
 			return true;
-		} else { // otherwise put the other into rejected if its unequal to ours
+		} else { // otherwise, put the other into rejected if It's unequal to ours
 			if( first != second && !second.isEmpty())
 				rejects.insert( rejects.end(), prefix / name );
 			return false;
@@ -203,11 +205,11 @@ PropertyMap::mapped_type &PropertyMap::fetchEntry( container_type &root, const p
 		if ( found != root.end() ) {//and we found the entry
 			return fetchEntry( std::get<PropertyMap>( found->second ).container, next, pathEnd ); //continue there
 		} else { // if we should create a sub-map
-			//insert a empty branch (aka PropMap) at "*at" (and fetch the reference of that)
+			//insert an empty branch (aka PropMap) at "*at" (and fetch the reference of that)
 			LOG( Debug, verbose_info ) << "Creating an empty branch " << *at << " trough fetching";
 			return fetchEntry( std::get<PropertyMap>( root[*at] = PropertyMap() ).container, next, pathEnd ); // and continue there (default value of the variant is PropertyValue, so init it to PropertyMap)
 		}
-	} else { //if its the leaf
+	} else { //if it's the leaf
 		return root[*at]; // (create and) return that entry
 	}
 }
@@ -270,7 +272,7 @@ PropertyValue &PropertyMap::touchProperty( const PropertyMap::PropPath &path )
 {
 	return *tryFetchEntry<PropertyValue>( path );
 }
-PropertyValue PropertyMap::property(const PropertyMap::PropPath& path) const
+const PropertyValue PropertyMap::property(const PropertyMap::PropPath& path) const
 {
 	const auto prop = queryProperty(path);
 	return prop ? *prop : PropertyValue();
@@ -311,7 +313,7 @@ bool PropertyMap::remove( const PathSet &removeList, bool keep_needed )
 		auto found = tryFindEntry<PropertyValue>( key );
 
 		if( found ) { // remove everything which is there
-			if( !(found->isNeeded() && keep_needed) ) { // if its not needed or keep_need is not true
+			if( !(found->isNeeded() && keep_needed) ) { // if it's not needed or keep_need is not true
 				ret &= remove( key );
 			}
 		} else {
@@ -330,7 +332,7 @@ bool PropertyMap::remove( const PropertyMap &removeMap, bool keep_needed )
 	//remove everything that is also in second
 	for ( auto otherIt = removeMap.container.begin(); otherIt != removeMap.container.end(); otherIt++ ) {
 		//find the closest match for otherIt->first in this (use the value-comparison-functor of PropMap)
-		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first - so its the same property or propmap
+		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first - so it's the same property or propmap
 			if ( thisIt->second.isBranch() && otherIt->second.isBranch() ) { //both are a branch => recurse
 				PropertyMap &mySub = thisIt->second.branch();
 				const PropertyMap &otherSub = otherIt->second.branch();
@@ -378,7 +380,7 @@ void PropertyMap::diffTree( const container_type& other, DiffMap& ret, const Pro
 	//insert everything that is in this, but not in second or is on both but differs
 	for ( auto thisIt = container.begin(); thisIt != container.end(); thisIt++ ) {
 		//find the closest match for thisIt->first in other (use the value-comparison-functor of the container)
-		if ( continousFind( otherIt, other.end(), *thisIt, container.value_comp() ) ) { //otherIt->first == thisIt->first - so its the same property
+		if ( continousFind( otherIt, other.end(), *thisIt, container.value_comp() ) ) { //otherIt->first == thisIt->first - so it's the same property
 			if( thisIt->second.isBranch() && otherIt->second.isBranch() ) { // both are branches -- recursion step
 				const PropertyMap &thisMap = thisIt->second.branch(), &refMap = otherIt->second.branch();
 				thisMap.diffTree( refMap.container, ret, prefix / thisIt->first );
@@ -434,7 +436,7 @@ void PropertyMap::removeEqual ( const PropertyMap &other, bool removeNeeded )
 	//remove everything that is also in second and equal (or also empty)
 	for ( auto otherIt = other.container.begin(); otherIt != other.container.end(); otherIt++ ) {
 		//find the closest match for otherIt->first in this (use the value-comparison-functor of PropMap)
-		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first  - so its the same property
+		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first  - so it's the same property
 
 			//          if(thisIt->second.type()==typeid(PropertyValue) && otherIt->second.type()==typeid(PropertyValue)){ // if both are Values
 			if( std::visit( _internal::RemoveEqualCheck( removeNeeded ), thisIt->second.variant(), otherIt->second.variant() ) ) {
@@ -450,7 +452,7 @@ void PropertyMap::removeEqual ( const PropertyMap &other, bool removeNeeded )
 PropertyMap::PathSet PropertyMap::join( const PropertyMap &other, bool overwrite)
 {
 	PathSet rejects;
-	joinTree( const_cast<PropertyMap &>(other), overwrite, false, PropPath(), rejects );
+	joinTree( const_cast<PropertyMap &>(other), overwrite, false, {}, rejects );
 	LOG_IF(!rejects.empty(),Debug,info) << "The properties " << MSubject(rejects) << " where rejected during the join";
 	return rejects;
 }
@@ -490,7 +492,7 @@ void PropertyMap::joinTree( PropertyMap &other, bool overwrite, bool delsource, 
 				otherIt++;
 			}
 
-		} else { // ok we dont have that - just insert it
+		} else { // ok we don't have that - just insert it
 			if(delsource){ // if we don't need the source anymore
 				otherIt->second.swap(container[otherIt->first]); //swap it with the empty (because newly created) entry in the destination
 				other.container.erase(otherIt++);//remove now empty entry
@@ -518,7 +520,7 @@ bool PropertyMap::transform( const PropPath &from,  const PropPath &to, uint16_t
 		return false;
 
 	if ( src->getTypeID() == dstID ) { //same type - just rename it
-		if( from != to ) // if its not at the same place anyway
+		if( from != to ) // if it's not at the same place anyway
 			return rename(from,to);
 		else
 			LOG( Debug, info ) << "Not transforming " << MSubject( src ) << " into same type at same place.";
@@ -583,7 +585,7 @@ PropertyMap::PropPath PropertyMap::find( const key_type &key, bool allowProperty
 	    ( ( found->second.isProperty() && allowProperty ) || ( found->second.isBranch() && allowBranch ) )
 	  ) {
 		return found->first;
-	} else { // otherwise search in the branches
+	} else { // otherwise, search in the branches
 		for( container_type::const_reference ref :  container ) {
 			if( ref.second.isBranch() ) {
 				const PropPath foundPath = ref.second.branch().find( name.back(), allowProperty, allowBranch );
@@ -614,14 +616,14 @@ bool PropertyMap::rename( const PropPath &oldname,  const PropPath &newname, boo
 	if(newname != oldname){
 		mapped_type &new_e = fetchEntry( newname );
 		const bool empty=std::visit(IsEmpty(), new_e.variant());
-		if(!empty && !overwrite){ //abort if we're no supposed to overwrite'
+		if(!empty && !overwrite){ //abort if we're not supposed to overwrite'
 			LOG(Runtime,warning) << "Not overwriting " << std::make_pair( newname, new_e ) << " with " << *old_e;
 			return false;
 		}
 		LOG_IF( !empty , Runtime, warning ) << "Overwriting " << std::make_pair( newname, new_e ) << " with " << *old_e;
 		new_e.swap(old_e);
 		remove( oldname ); //can only fail if oldname is not there -- and if it wasn't we'd have aborted already
-	} else { //if its a lexical rename get the data out of the map
+	} else { //if it's a lexical rename get the data out of the map
 		mapped_type buff;old_e.swap(buff);
 		remove( oldname );
 		fetchEntry(newname).swap(buff);//and re-insert it with newname
@@ -695,14 +697,13 @@ void PropertyMap::deduplicate(std::list<std::shared_ptr<PropertyMap>> maps){
 std::ostream &PropertyMap::print( std::ostream &out, bool label )const
 {
 	FlatMap buff = getFlatMap();
-	size_t key_len = 0;
+	size_t key_len = std::max_element(
+		buff.begin(),buff.end(),
+		[](auto &a, auto &b){return a.first.length()<b.first.length();}
+	)->first.length();
 
-	for ( auto i = buff.begin(); i != buff.end(); i++ )
-		if ( key_len < i->first.length() )
-			key_len = i->first.length();
-
-	for ( auto i = buff.begin(); i != buff.end(); i++ )
-		out << i->first << std::string( key_len - i->first.length(), ' ' ) + ":" << i->second.toString( label ) << std::endl;
+	for (auto & i : buff)
+		out << i.first << std::string( key_len - i.first.length(), ' ' ) + ":" << i.second.toString( label ) << '\n';
 
 	return out;
 }

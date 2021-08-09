@@ -30,8 +30,8 @@ public:
 	typedef void ( *Setter )( void *, const util::Value & );
 protected:
 	const Getter getter;
-	const uint8_t *const p;
-	ConstValueAdapter( const uint8_t *const _p, Getter _getValueFunc );
+	const std::byte *const p;
+	ConstValueAdapter( const std::byte *const _p, Getter _getValueFunc );
 public:
 	// to make some algorithms work
 	bool operator==( const util::Value &val )const;
@@ -56,15 +56,15 @@ class WritingValueAdapter: public ConstValueAdapter
 	size_t byteSize;
 	template<bool BB> friend class GenericValueIterator; //allow the iterators (and only them) to create the adapter
 protected:
-	WritingValueAdapter( uint8_t *const _p, Getter _getValueFunc, Setter _setValueFunc, size_t _size );
+	WritingValueAdapter( std::byte *const _p, Getter _getValueFunc, Setter _setValueFunc, size_t _size );
 public:
 	WritingValueAdapter operator=( const util::Value &val );
-	void swapwith( const WritingValueAdapter &b )const; // the WritingValueAdapter is const not what its dereferencing
+	void swapwith( const WritingValueAdapter &b )const; // the WritingValueAdapter is const not what it's dereferencing
 };
 
 template<bool IS_CONST> class GenericValueIterator
 {
-	typedef typename std::conditional<IS_CONST, const uint8_t *, uint8_t *>::type ptr_type;
+	typedef typename std::conditional<IS_CONST, const std::byte *, std::byte *>::type ptr_type;
 	ptr_type p, start; //we need the starting position for operator[]
 	size_t byteSize;
 	ConstValueAdapter::Getter getValueFunc;

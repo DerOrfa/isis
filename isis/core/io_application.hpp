@@ -61,8 +61,8 @@ public:
 	static void addOutput( util::ParameterMap &parameters, const std::string &desc = "", const std::string &suffix = "", bool needed = true );
 	void addOutput( const std::string &desc = "", const std::string &suffix = "", bool needed = true );
 	
-	explicit IOApplication( const char name[], bool have_input = true, bool have_output = true, const char cfg[]="" );
-	~IOApplication() override;
+	explicit IOApplication( std::string_view name, bool have_input = true, bool have_output = true, std::string_view cfg="" );
+	~IOApplication();
 	bool init( int argc, char **argv, bool exitOnError = true ) override;
 	void printHelp( bool withHidden = false ) const override;
 

@@ -15,7 +15,7 @@
 #include <string>
 #include "message.hpp"
 #include "singletons.hpp"
-#include <limits.h>
+#include <climits>
 
 /// @cond _internal
 namespace isis::util::_internal

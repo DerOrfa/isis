@@ -40,7 +40,7 @@ Chunk::Chunk(const ValueArray &src, size_t nrOfColumns, size_t nrOfRows, size_t 
 {
 	const util::vector4<size_t> init_size={nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps};
 	init( init_size );
-	if(!(src.isValid() || ValueArray::getLength())){//creation of an zero-sized chunk from a zero sized Array was probably intentional
+	if(!(src.isValid() || ValueArray::getLength())){//creation of a zero-sized chunk from a zero sized Array was probably intentional
 		LOG(Debug,info) << "Creating a zero sized Chunk. Make sure you change that before using it";
 	} else {
 		LOG_IF(!src.isValid(),Runtime,error) << "Creating a chunk from an invalid ValueArray, thats not going to end well ...";

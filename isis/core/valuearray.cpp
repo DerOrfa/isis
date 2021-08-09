@@ -42,7 +42,7 @@ std::string isis::data::ValueArray::typeName() const{
 isis::data::ValueArray::iterator isis::data::ValueArray::begin() {
 	return visit([](auto ptr)->iterator{
 		typedef typename decltype(ptr)::element_type element_type;
-		uint8_t *p = std::reinterpret_pointer_cast<uint8_t>(ptr).get();
+		auto p = std::reinterpret_pointer_cast<std::byte>(ptr).get();
 		return iterator(
 			p, p, sizeof(element_type),
 			&getValueFrom<element_type>, &setValueInto<element_type>
@@ -258,7 +258,7 @@ std::size_t isis::data::ValueArray::compare(std::size_t start, std::size_t end, 
 	LOG_IF( _length + dst_start >= dst.getLength(), Runtime, error )
 	        << "End of the range (" << _length + dst_start << ") is behind the end of the destination (" << dst.getLength() << ")";
 
-	// lock the memory so we can mem-compare the elements (use uint8_t because some compilers do not like arith on void*)
+	// lock the memory, so we can mem-compare the elements (use uint8_t because some compilers do not like arith on void*)
 	const std::shared_ptr<const uint8_t>
 	src_s = std::static_pointer_cast<const uint8_t>( getRawAddress() ),
 	dst_s = std::static_pointer_cast<const uint8_t>( dst.getRawAddress() );

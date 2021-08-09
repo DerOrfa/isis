@@ -39,14 +39,21 @@ bool PropertyValue::operator!=( const Value& second ) const
 
 
 PropertyValue::PropertyValue ( ) : m_needed( false ) {}
-PropertyValue &PropertyValue::operator=(const PropertyValue& other){container=other.container;return *this;}
+PropertyValue &PropertyValue::operator=(const PropertyValue& other){
+	container=other.container;
+	return *this;
+}
+PropertyValue &PropertyValue::operator=(PropertyValue&& other){
+	container.swap(other.container);
+	return *this;
+}
 
 
 PropertyValue PropertyValue::copyByID( short unsigned int ID ) const
 {
 	PropertyValue ret;
-	for(const_iterator i=begin();i!=end();i++){
-		ret.push_back(i->copyByID(ID));
+	for(auto &v:*this){
+		ret.push_back(v.copyByID(ID));
 	}
 	return ret;
 }
@@ -71,6 +78,7 @@ const Value &PropertyValue::operator()() const{return front();}
 Value &PropertyValue::operator()(){return front();}
 
 void PropertyValue::push_back( const Value& ref ){insert(end(), ref);}
+void PropertyValue::push_back( Value&& ref ){insert(end(), ref);}
 
 PropertyValue::iterator PropertyValue::insert( iterator at, const Value& ref ){
 	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting inconsistent type " << MSubject(ref.toString(true)) << " in " << MSubject(*this);
@@ -276,13 +284,7 @@ PropertyValue& PropertyValue::operator -=( const Value &second ){ front().subtra
 PropertyValue& PropertyValue::operator *=( const Value &second ){front().multiply_me(second);return *this;}
 PropertyValue& PropertyValue::operator /=( const Value &second ){front().divide_me(second);return *this;}
 
-}
-/// @cond _internal
-namespace std{
-bool less< isis::util::PropertyValue >::operator()(const isis::util::PropertyValue& x, const isis::util::PropertyValue& y) const
-{
-	return x.lt(y);
-}
+bool PropertyValue::operator<(const isis::util::PropertyValue& y) const{return lt(y);}
 
 }
 /// @endcond _internal

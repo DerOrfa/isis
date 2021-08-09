@@ -60,7 +60,7 @@ public:
 	 * @note the images a re created from all loaded files, so loading mutilple files can very well result in only one image
 	 */
 	static std::list<data::Image> 
-	load( const util::slist &paths, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, util::slist* rejected=nullptr);
+	load( const util::slist &paths, const std::list<util::istring>& formatstack = {}, const std::list<util::istring>& dialects = {}, util::slist* rejected=nullptr);
 	/**
 	 * Load a data file or directory with given filename and dialect.
 	 * @param path file or directory to load
@@ -69,7 +69,7 @@ public:
 	 * @return list of images created from the loaded data
 	 */
 	static std::list<data::Image> 
-	load( const load_source &source, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, util::slist* rejected=nullptr);
+	load( const load_source &source, const std::list<util::istring>& formatstack = {}, const std::list<util::istring>& dialects = {}, util::slist* rejected=nullptr);
 
 	/**
 	 * Load data from a given filename/stream/memory and dialect into a chunklist.
@@ -80,8 +80,9 @@ public:
 	 */
 	static std::list<data::Chunk> loadChunks(const load_source &source, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {});
 
-	static bool write( const data::Image &image, const std::string &path, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {} );
-	static bool write( std::list<data::Image> images, const std::string &path, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {} );
+	static bool write(const data::Image &image, const std::string &path, const std::list<util::istring> &formatstack = {}, const std::list<
+		util::istring> &dialects = {} );
+	static bool write( std::list<data::Image> images, const std::string &path, std::list<util::istring> formatstack = {}, const std::list<util::istring> &dialects = {} );
 
 	/// Get a list of all known file-formats (aka. io-plugins loaded)
 	static FileFormatList getFormats();
@@ -99,7 +100,7 @@ public:
 	static FileFormatList getFileFormatList(std::list<util::istring> formatstack = {});
 
 	/// extract the format stack from a filename
-	static std::list<util::istring> getFormatStack( std::string filename );
+	static std::list<util::istring> getFormatStack( const std::string& filename );
 	/**
 	 *  Make images out of a (unordered) list of chunks.
 	 *  Uses the chunks in the chunklist to fit them together into images.
@@ -115,15 +116,15 @@ public:
 	 *
 	 * @return true if registration was successful, false otherwise
 	 * */
-	static bool registerFileFormat( const FileFormatPtr plugin, bool front=false );
+	static bool registerFileFormat( const FileFormatPtr& plugin, bool front=false );
 protected:
-	std::list<Chunk> loadPath(const std::filesystem::path& path, std::list<util::istring> formatstack = {}, std::list<util::istring> dialects = {}, util::slist *rejected=nullptr);
+	std::list<Chunk> loadPath(const std::filesystem::path& path, const std::list<util::istring>& formatstack = {}, const std::list<util::istring>& dialects = {}, util::slist *rejected=nullptr);
 
 	static IOFactory &get();
 	IOFactory();//shall not be created directly
 	FileFormatList io_formats;
 
-	bool registerFileFormat_impl( const FileFormatPtr plugin, bool front=false );
+	bool registerFileFormat_impl( const FileFormatPtr& plugin, bool front=false );
 	unsigned int findPlugins( const std::string &path );
 private:
 	/**
@@ -131,7 +132,7 @@ private:
 	 * Leading "." are stripped in the suffixes.
 	 */
 	std::map<util::istring, FileFormatList> io_suffix;
-	IOFactory &operator =( IOFactory & ); //dont do that
+	IOFactory &operator =( IOFactory & ); //don't do that
 };
 
 }
