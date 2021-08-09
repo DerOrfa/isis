@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE( test_type_is )
 	BOOST_CHECK(Value(42 ).is<int32_t>() );
 	BOOST_CHECK(Value((float)3.1415 ).is<float>());
 	BOOST_CHECK(Value(std::string("Hello World" ) ).is<std::string>());
-	BOOST_CHECK(Value("Hello char World" ).is<std::string>());
+	BOOST_CHECK(Value("Hello char World"s ).is<std::string>());
 }
 
 // TestCase operators()
@@ -77,13 +77,13 @@ BOOST_AUTO_TEST_CASE( test_operators )
 BOOST_AUTO_TEST_CASE( test_ext_operators )
 {
 	Value tInt1(21 ), tInt2(21 );
-	Value _21str("21"),_2str("2"),_2strneg("-2");
+	Value _21str("21"s),_2str("2"s),_2strneg("-2"s);
 
 	// proper operation
 	BOOST_CHECK_EQUAL(tInt1.plus(_21str), Value(21+21 ) );
 	BOOST_CHECK_EQUAL(tInt1.minus(_21str), Value(21-21 ) );
 	BOOST_CHECK_EQUAL(tInt1.multiply(_21str), Value(21*21 ) );
-	BOOST_CHECK_EQUAL(tInt1.divide(Value("2")), Value(10 ) ); // int(21/2)=10
+	BOOST_CHECK_EQUAL(tInt1.divide(Value("2"s)), Value(10 ) ); // int(21/2)=10
 
 	BOOST_CHECK_EQUAL(_2str.plus(Value(1)), _21str ); // "2" + "1" = "21"
 
@@ -141,9 +141,9 @@ BOOST_AUTO_TEST_CASE( type_comparison_test )
 	BOOST_CHECK(!a.eq(other));
 	BOOST_CHECK(!a.lt(other));
 	
-	BOOST_CHECK(Value("a").eq(a));
-	BOOST_CHECK(Value(" ").lt(a));
-	BOOST_CHECK(Value("bb").gt(a));
+	BOOST_CHECK(Value("a"s).eq(a));
+	BOOST_CHECK(Value(" "s).lt(a));
+	BOOST_CHECK(Value("bb"s).gt(a));
 	// Value<int>(1).eq(a); no conversion Selection=>int available
 	// a.eq(Value<std::string>("a")); no conversion String=>Selection available
 }
@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE( complex_conversion_test )
 	BOOST_CHECK_EQUAL( tDouble1.as<std::complex<double> >(), std::complex<double>( 3.5415, 3.5415 ) );
 
 	BOOST_CHECK_EQUAL( tFloat1.as<std::string>(), "(3.5415,3.5415)" );
-	BOOST_CHECK_EQUAL(Value("(3.5415,3.5415)" ).as<std::complex<float> >(), std::complex<float>(3.5415, 3.5415 ) );
+	BOOST_CHECK_EQUAL(Value("(3.5415,3.5415)"s ).as<std::complex<float> >(), std::complex<float>(3.5415, 3.5415 ) );
 
 	BOOST_CHECK_EQUAL(Value(3.5415f ).as<std::complex<float> >(), std::complex<float>(3.5415, 0 ) );
 	BOOST_CHECK_EQUAL(Value(-5 ).as<std::complex<float> >(), std::complex<float>(-5, 0 ) );
@@ -208,25 +208,25 @@ BOOST_AUTO_TEST_CASE( from_string_conversion_test )
 	util::enableLog<util::DefaultMsgPrint>(info);
 	// convert a string into a list of strings
 	const char *sentence[] = {"This", "is", "a", "sentence"};
-	Value sSentence("This is a sentence" );
+	Value sSentence("This is a sentence"s );
 	BOOST_CHECK_EQUAL( sSentence.as<util::slist>(), std::list<std::string>( sentence, sentence + 4 ) );
 
 	// convert a string into a list of numbers (pick the numbers, ignore the rest)
 	const int inumbers[] = {1, 2, 3, 4, 5};
 	const double dnumbers[] = {1, 2, 3, 4.4, 4.6};
-	Value sNumbers("1, 2, 3 and 4.4 or maybe 4.6" );
+	Value sNumbers("1, 2, 3 and 4.4 or maybe 4.6"s );
 	const util::color24 col24 = {1, 2, 3};
 	const util::color48 col48 = {100, 200, 300};
 
 	BOOST_CHECK_EQUAL( sNumbers.as<util::ilist>(), std::list<int>( inumbers, inumbers + 5 ) ); // 4.4 and 4.6 will be rounded
 	BOOST_CHECK_EQUAL( sNumbers.as<util::dlist>(), std::list<double>( dnumbers, dnumbers + 5 ) );
 
-	BOOST_CHECK_EQUAL(util::Value("<1|2|3>" ).as<util::fvector4>(), util::fvector4({1, 2, 3} ) ); //should also work for fvector
-	BOOST_CHECK_EQUAL(util::Value("<1|2|3|4|5>" ).as<util::fvector4>(), util::fvector4({1, 2, 3, 4} ) ); //elements behind end are ignored
-	BOOST_CHECK_EQUAL(util::Value("1,2,3,4,5>" ).as<util::ivector4>(), util::ivector4({1, 2, 3, 4} ) ); //elements behind end are ignored
+	BOOST_CHECK_EQUAL(util::Value("<1|2|3>"s ).as<util::fvector4>(), util::fvector4({1, 2, 3} ) ); //should also work for fvector
+	BOOST_CHECK_EQUAL(util::Value("<1|2|3|4|5>"s ).as<util::fvector4>(), util::fvector4({1, 2, 3, 4} ) ); //elements behind end are ignored
+	BOOST_CHECK_EQUAL(util::Value("1,2,3,4,5>"s ).as<util::ivector4>(), util::ivector4({1, 2, 3, 4} ) ); //elements behind end are ignored
 
-	BOOST_CHECK_EQUAL(util::Value("<1,2,3,4,5>" ).as<util::color24>(), col24 ); //elements behind end are ignored
-	BOOST_CHECK_EQUAL(util::Value("<100,200,300,4,5>" ).as<util::color48>(), col48 ); //elements behind end are ignored
+	BOOST_CHECK_EQUAL(util::Value("<1,2,3,4,5>"s ).as<util::color24>(), col24 ); //elements behind end are ignored
+	BOOST_CHECK_EQUAL(util::Value("<100,200,300,4,5>"s ).as<util::color48>(), col48 ); //elements behind end are ignored
 
 }
 
@@ -240,11 +240,11 @@ BOOST_AUTO_TEST_CASE( time_conversion_test )
 	
 	// strings are parsed in local time - so we need an offset
 	BOOST_CHECK_EQUAL(
-		util::Value("19700102000000.001").as<util::timestamp>(),
+		util::Value("19700102000000.001"s).as<util::timestamp>(),
 		the_day_after-std::chrono::seconds(timeinfo->tm_gmtoff)+std::chrono::hours(timeinfo->tm_isdst)
 	);
 	
-	BOOST_CHECK_EQUAL(util::Value("19700102").as<util::date>(), util::date()+std::chrono::days(1));
+	BOOST_CHECK_EQUAL(util::Value("19700102"s).as<util::date>(), util::date()+std::chrono::days(1));
 
 	{ //@todo %c is broken
 // 	std::ostringstream str;
