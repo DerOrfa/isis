@@ -67,7 +67,7 @@ public:
 	 * \param init_val the the starting selection id
 	 * \param map a map which maps specific numbers to options to be used
 	 */
-	template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+	template<typename T, std::enable_if_t<std::is_convertible_v<T,MapType::mapped_type>, int> = 0>
 	explicit Selection( const std::map<T, std::string> &map, MapType::mapped_type init_val={} );
 	/// Fallback constructor to enable creation of undefined selections
 	Selection()=default;
@@ -97,7 +97,7 @@ public:
 	 * The numbers correspond to the order the options where given at the creation of the selection (first option -> 0, second option -> 1 ...)
 	 * \returns number corresponding the currently set option or "0" if none is set
 	 */
-	template<typename T, std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, int> = 0>
+	template<typename T, std::enable_if_t<std::is_convertible_v<MapType::mapped_type,T> && !std::is_same_v<T, bool>, int> = 0>
 	explicit operator T()const{
 		LOG_IF(m_set && (m_set > std::numeric_limits<T>::max() || m_set < std::numeric_limits<T>::min()),Debug,error)
 			<< "The selection ID " << m_set.value() << " exceeds the numeric limits of the requested integer type ";
@@ -144,9 +144,15 @@ public:
 
 	/// \returns a list of all options
 	[[nodiscard]] std::list<util::istring> getEntries()const;
+	template<typename charT, typename traits>
+	friend std::basic_ostream<charT, traits> &operator<<( std::basic_ostream<charT, traits> &out, const isis::util::Selection &s )
+	{
+		return out << ( std::string )s;
+	}
+
 };
 
-template<typename T, std::enable_if_t<std::is_integral_v<T>, int>>
+template<typename T, std::enable_if_t<std::is_convertible_v<T,Selection::MapType::mapped_type>, int> = 0>
 Selection::Selection( const std::map< T, std::string >& map, MapType::mapped_type init_val):m_set(init_val)
 {
 	for( const auto &m : map) {
@@ -162,14 +168,3 @@ Selection::Selection( const std::map< T, std::string >& map, MapType::mapped_typ
 }
 
 }
-/// @cond _internal
-namespace std
-{
-/// Streaming output for selections.
-template<typename charT, typename traits>
-basic_ostream<charT, traits> &operator<<( basic_ostream<charT, traits> &out, const isis::util::Selection &s )
-{
-	return out << ( std::string )s;
-}
-}
-/// @endcond _internal
