@@ -324,7 +324,6 @@ void ImageFormat_NiftiSa::parseSliceOrdering( const std::shared_ptr< isis::image
 	}
 
 	//if the sequence is "normal"
-	current.setValueAs<uint32_t>( "acquisitionNumber", 0 );
 	const size_t dims = current.getRelevantDims();
 	assert( dims <= 4 ); // more than 4 dimensions are ... well, not expected
 
@@ -335,15 +334,18 @@ void ImageFormat_NiftiSa::parseSliceOrdering( const std::shared_ptr< isis::image
 	}
 
 	if( dims < 3 ) { // if there is only one slice, there is no use in numbering
+		//<std::remove_reference_t<decltype(head->dim[0])>>
+		current.setValueAs( "acquisitionNumber", 0 );
 		return;
 	} else {// if there are timesteps we have to get a bit dirty
 		util::PropertyValue &acqProp=current.touchProperty( "acquisitionNumber" );
 		
 		switch( head->slice_code ) { //set sub-property "acquisitionNumber" based on the slice_code and the offset
 		default:
-			LOG( Runtime, error ) << "Unknown slice code " << util::MSubject( ( int )head->slice_code ) << " falling back to NIFTI_SLICE_SEQ_INC";
+			LOG( Runtime, error ) << "Unknown slice code " << util::MSubject( static_cast<int>(head->slice_code) ) << " falling back to NIFTI_SLICE_SEQ_INC";
 		case 0:
 		case NIFTI_SLICE_SEQ_INC: //system assumes this anyway when the chunk is spliced up -- no explicit values needed
+		acqProp=0;
 		break;
 		case NIFTI_SLICE_SEQ_DEC:{
 			for(short v=0;v<head->dim[4];v++)
