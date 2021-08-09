@@ -196,13 +196,13 @@ public:
 
 	/**
 	 * Splices the chunk at the uppermost dimension and automatically sets indexOrigin and acquisitionNumber appropriately.
-	 * This automatically selects the upermost dimension of the chunk to be spliced and will compute the correct offsets
+	 * This automatically selects the uppermost dimension of the chunk to be spliced and will compute the correct offsets
 	 * for indexOrigin and acquisitionNumberOffset which will be applied to the resulting splices.
 	 *
 	 * E.g. autoSplice() on a chunk of the size 512x512x128, with rowVec 1,0,0, columnVec 0,1,0 and indexOrigin 0,0,0
 	 * will result in 128 chunks of the size 512x512x1, with constant rowVec's 1,0,0, and columnVec's 0,1,0  while the indexOrigin will be going from 0,0,0 to 0,0,128
 	 * (If voxelSize is 1,1,1 and voxelGap is 0,0,0). The acquisitionNumber will be reset to a simple incrementing counter starting at acquisitionNumberOffset.
-	 * \attention As this will also move alle properties into the "splinters" this chunk will be invalid afterwards
+	 * \attention As this will also move all properties into the "splinters" this chunk will be invalid afterwards
 	 */
 	std::list<Chunk> autoSplice( uint32_t acquisitionNumberStride = 0 )const;
 

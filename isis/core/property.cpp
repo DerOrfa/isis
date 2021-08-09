@@ -81,7 +81,7 @@ void PropertyValue::push_back( const Value& ref ){insert(end(), ref);}
 void PropertyValue::push_back( Value&& ref ){insert(end(), ref);}
 
 PropertyValue::iterator PropertyValue::insert( iterator at, const Value& ref ){
-	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting inconsistent type " << MSubject(ref.toString(true)) << " in " << MSubject(*this);
+	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
 	return container.insert(at,ref );
 }
 
@@ -90,7 +90,7 @@ void PropertyValue::transfer(isis::util::PropertyValue::iterator at, PropertyVal
 	if(ref.isEmpty()){
 		LOG(Debug,error) << "Not transferring empty Property";
 	} else {
-		LOG_IF(!isEmpty() && getTypeID()!=ref.getTypeID(),Debug,error) << "Inserting inconsistent type " << MSubject(ref.toString(true)) << " in " << MSubject(*this);
+		LOG_IF(!isEmpty() && getTypeID()!=ref.getTypeID(),Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
 		container.splice(at,ref.container );
 	}
 }
