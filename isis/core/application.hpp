@@ -49,7 +49,7 @@ class Application
 	std::filesystem::path m_filename;
 	PropertyMap configuration;
 	std::list<std::pair<std::string, std::string> > m_examples;
-	void addLoggingParameter( std::string name );
+	void addLoggingParameter( const std::string& name );
 
 protected:
 	typedef std::shared_ptr<MessageHandlerBase>( Application::*setLogFunction )( LogLevel level )const;
@@ -70,8 +70,7 @@ public:
 	 * \param cfg the default path of the config file. If empty, no config file will be loaded
 	 * \note set \code parameters["cfg"].needed()=true \endcode to prevent the program from running without given config file
 	 */
-	explicit Application( const char name[], const char cfg[]="" );
-	virtual ~Application();
+	explicit Application( std::string_view name, std::string_view cfg="" );
 
 	/**
 	 * Add a logging module.
@@ -108,7 +107,7 @@ public:
 	 * \param name the parameter name without "-d"
 	 * \note the logging module cannot be removed at runtime - its usage is controlled by the _ENABLE_LOG / _ENABLE_DEBUG defines at compile time.
 	 */
-	void removeLogging( std::string name );
+	void removeLogging( const std::string& name );
 
 	bool addConfigFile(const std::string &filename);
 	[[nodiscard]] const PropertyMap &config()const;
@@ -118,7 +117,7 @@ public:
 	 * \param parameters the parameter string for the example call
 	 * \param desc the description of the example
 	 */
-	void addExample( std::string parameters, std::string desc );
+	void addExample( const std::string& parameters, const std::string& desc );
 
 	/**
 	 * Initializes the program parameter map using argc/argv.
@@ -154,7 +153,7 @@ public:
 
 	}
 	//get the version of the coreutils
-	static const std::string getCoreVersion( );
+	static std::string getCoreVersion( );
 	
 	static std::shared_ptr<util::ProgressFeedback>& feedback();
 };

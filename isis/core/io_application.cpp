@@ -25,11 +25,9 @@
 #include "io_factory.hpp"
 
 
-namespace isis
+namespace isis::data
 {
-namespace data
-{
-	IOApplication::IOApplication( const char name[], bool have_input, bool have_output, const char cfg[] ):
+IOApplication::IOApplication( std::string_view name, bool have_input, bool have_output, std::string_view cfg ):
 	Application( name, cfg ), m_input( have_input )
 {
 	if ( have_input )
@@ -249,6 +247,5 @@ Image IOApplication::fetchImage()
 	return ret;
 }
 
-}
 }
 

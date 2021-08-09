@@ -119,7 +119,7 @@ bool ParameterMap::parse( int argc, char **argv )
 			std::list<std::string> matchingStrings;
 			for( ParameterMap::const_reference parameterRef :  *this ) {
 				if( parameterRef.first.find( pName ) == 0 ) {
-					if( parameterRef.first.length() == pName.length() ) { //if its an exact match
+					if( parameterRef.first.length() == pName.length() ) { //if it's an exact match
 						matchingStrings = std::list<std::string>( 1, pName ); //use that
 						break;// and stop searching for partial matches
 					} else
@@ -147,14 +147,14 @@ bool ParameterMap::parse( int argc, char **argv )
 			
 			// check if parameter can be empty (bool only)
 			if(match.is<bool>()){ //no parameters expected
-				match.parse(""); // ok thats it nothing else to do here
+				match.parse(""); // ok that's it nothing else to do here
 			} else { //go through all parameters 
 				i++;//skip the first one, that should be here (enables us to have parameters like "-20")
 				while( i < argc && !(argv[i][0] == '-' && argv[i][1] != 0) ) {  
 					i++;//collect the remaining parameters, while there are some ..
 				}
 
-				parsed = match.is<util::slist>() ? //dont do tokenizing if the target is an slist (is already done by the shell)
+				parsed = match.is<util::slist>() ? //don't do tokenizing if the target is a slist (is already done by the shell)
 					match.parse_list( util::slist( argv + start, argv + i ) ) :
 					match.parse( listToString( argv + start, argv + i, ",", "", "" ) );
 				LOG_IF(!parsed, Runtime, error )
