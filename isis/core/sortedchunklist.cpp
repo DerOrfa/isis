@@ -217,7 +217,21 @@ bool SortedChunkList::insert( const Chunk &ch )
 		LOG(Debug,info) << "Removed " << not_spliced.back() << " before splicing";
 		
 		bool ok=true;
-		for(const data::Chunk &c:chs.autoSplice()){
+		std::list<data::Chunk> spliced={chs};
+		while(spliced.front().queryProperty(secondarySort.top().propertyName)->size()>1){
+			const data::Chunk &front=spliced.front();
+			if(front.queryProperty(secondarySort.top().propertyName)->size() % front.getRelevantDims()){//this is not good
+				LOG(Runtime,error) << "Aborting to automatic splicing of chunk as amount of elements in splicing property does not fit amount of splices";
+				LOG(Runtime,error) << "Reverting to one chunk only. This is probably not going to end well ...";
+				spliced={chs};
+				break;
+			}
+			for(auto org=spliced.begin();org!=spliced.end();){
+				spliced.splice(org,org->autoSplice());//put results of splicing of org *before* org
+				org=spliced.erase(org); // remove the old spliced up chunk and have org point to the next
+			}
+		}
+		for(const data::Chunk &c:spliced){
 			std::shared_ptr<Chunk> inserted=insert_impl(c);
 			if(inserted){
 				not_spliced.back().second.push_back(inserted); //list all chunks those extracted props belong into
