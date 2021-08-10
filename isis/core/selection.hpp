@@ -152,7 +152,7 @@ public:
 
 };
 
-template<typename T, std::enable_if_t<std::is_convertible_v<T,Selection::MapType::mapped_type>, int> = 0>
+template<typename T, std::enable_if_t<std::is_convertible_v<T,Selection::MapType::mapped_type>, int>>
 Selection::Selection( const std::map< T, std::string >& map, MapType::mapped_type init_val):m_set(init_val)
 {
 	for( const auto &m : map) {
