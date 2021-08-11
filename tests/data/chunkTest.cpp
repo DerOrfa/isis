@@ -306,7 +306,7 @@ BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
 	ch1.setValueAs( "columnVec", util::fvector3( {0, 1, 0} ) );
 	ch1.setValueAs( "voxelSize", util::fvector3( {1, 1, 1} ) );
 	ch1.setValueAs( "voxelGap", util::fvector3( {1, 1, 1} ) );
-	ch1.setValueAs<uint32_t>( "acquisitionNumber", 0 );
+	ch1.setValueAs<uint32_t>( "acquisitionNumber", 2 );
 
 	const util::Value buff[] = {0, 1, 2};
 	std::copy( buff, buff + 3, std::back_inserter( ch1.touchProperty( "list_test" ) ) );
@@ -315,13 +315,13 @@ BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
 	for ( size_t i = 0; i < ch1.getVolume(); i++ )
 		*(ch1.begin()+i) = i;
 
-	const std::list<data::Chunk> splices = ch1.autoSplice( 2 );
+	const std::list<data::Chunk> splices = ch1.autoSplice();
 	unsigned short cnt = 0;
 	BOOST_CHECK_EQUAL( splices.size(), 3 );
 	for( const data::Chunk & ref :  splices ) {
-		BOOST_CHECK_EQUAL( ref.property( "indexOrigin" ), util::fvector3( {1, 1, 1 + static_cast<float>(cnt * 2)} ) );
+		BOOST_CHECK_EQUAL( ref.property( "indexOrigin"), util::fvector3( {1, 1, 1 + static_cast<float>(cnt * 2)} ) );
 		BOOST_CHECK_EQUAL( ref.property( "list_test" ), cnt );
-		BOOST_CHECK_EQUAL( ref.property( "acquisitionNumber" ), cnt*2 );// we ha a stride of 1, so acquisitionNumber should be 0 2 4 ..
+		BOOST_CHECK_EQUAL( ref.property( "acquisitionNumber" ), cnt+2*3 );// we had a acquisitionNumber of 2 so the new numbers should be 2(original)*3(with of the splice)+count
 		cnt++;
 	}
 }

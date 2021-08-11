@@ -1025,7 +1025,7 @@ BOOST_AUTO_TEST_CASE ( image_init_test_sizes_and_values )
 BOOST_AUTO_TEST_CASE ( image_splice_test )
 {
 	data::MemChunk<uint8_t> original( 10, 10, 10, 10 );
-	original.setValueAs<uint32_t>( "acquisitionNumber", 1 );
+	original.setValueAs<uint32_t>( "acquisitionNumber", 0 );
 	original.setValueAs( "indexOrigin", util::fvector3( {0, 0} ) );
 	original.setValueAs( "voxelSize", util::fvector3( {1, 1, 1} ) );
 	original.setValueAs( "rowVec", util::fvector3( {1, 0, 0} ) );
@@ -1041,7 +1041,7 @@ BOOST_AUTO_TEST_CASE ( image_splice_test )
 	BOOST_CHECK_EQUAL( chunks.size(), 100 );
 
 	for( size_t i = 0; i < chunks.size(); i++ ) {
-		BOOST_CHECK_EQUAL( chunks[i].getValueAs<int32_t>( "acquisitionNumber" ), i + 1 );
+		BOOST_CHECK_EQUAL( chunks[i].getValueAs<int32_t>( "acquisitionNumber" ), i );
 		BOOST_CHECK_EQUAL( chunks[i].getValueAs<util::fvector3>( "indexOrigin" ), util::fvector3( {0, 0, static_cast<float>(i % 10)} ) );
 	}
 }

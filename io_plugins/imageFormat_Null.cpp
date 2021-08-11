@@ -101,7 +101,7 @@ public:
 		// interleaved images
 		for(const auto &t:types){
 			std::list<data::Chunk> loaded= makeImageByID(t.first, size, 100, std::string("interleaved ") + t.second + " Image" ) ;
-			std::list< data::Chunk >::iterator ch = loaded.begin();
+			auto ch = loaded.begin();
 
 			for ( size_t t = 0; t < timesteps; t++ ) {
 				//even numbers

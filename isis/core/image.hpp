@@ -554,6 +554,7 @@ public:
 	/**
 	 * Automatically spliceAt the given dimension and all dimensions above.
 	 * e.g. spliceDownTo(sliceDim) will result in an image made of slices (aka 2d-chunks).
+	 * So getRelevantDims() on the chunks will be 2 (aka sliceDim).
 	 */
 	size_t spliceDownTo ( dimensions dim );
 
