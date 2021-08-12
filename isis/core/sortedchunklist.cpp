@@ -260,7 +260,8 @@ std::shared_ptr<Chunk> SortedChunkList::insert_impl(const Chunk &ch){
 
 		for(const util::PropertyMap::PropPath & ref :  equalProps ) { // check all properties which where given to the constructor of the list
 			// if at least one of them has the property, and they are not equal - do not insert
-			if ( first.hasProperty( ref )  && !(first.property( ref ) == ch.property( ref ) )) { //"==" will be false if ch.property is empty or different
+			auto *found = first.queryProperty( ref );
+			if ( found  && !(*found == ch.property( ref ) )) { //"==" will be false if ch.property is empty or different
 				LOG( Debug, verbose_info )
 						<< "Ignoring chunk with different " << ref << ". Is " << util::MSubject( ch.property( ref ) )
 						<< " but chunks already in the list have " << util::MSubject( first.property( ref ) );
