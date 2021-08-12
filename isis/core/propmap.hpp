@@ -773,9 +773,10 @@ template<typename ITER> struct PropertyMap::Splicer {
 		else if(lists_only && val.size() <= 1)return;  //abort if we don't want to move scalars
 
 		if( val.size() % blocks ) { // just copy all which cannot be properly spliced to the destination
-			LOG_IF( val.size() > 1, Runtime, warning ) << "Not splicing non scalar property " << MSubject( name ) << " because its length "
-			    << MSubject( val.size() ) << " doesn't fit the amount of targets(" << MSubject( blocks ) << ")"; //tell the user if its no scalar
-
+			if(val.size() > 1){
+				LOG_IF( val.size() > 1, Runtime, warning ) << "Not splicing non scalar property " << MSubject( name ) << " because its length "
+				<< MSubject( val.size() ) << " doesn't fit the amount of targets(" << MSubject( blocks ) << ")"; //tell the user if its no scalar
+			}
 			PropertyValue &first_prop = _internal::un_shared_ptr(*first).touchProperty( name );
 			first_prop.transfer(val);
 			ITER i = first;

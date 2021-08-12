@@ -884,11 +884,6 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 		return lookup.size();
 	}
 
-	util::vector4<size_t> image_size = getSizeAsVector();
-
-	for( int i = 0; i < dim; i++ )
-		image_size[i]=1;
-
 	// get a list of needed properties (everything which is missing in a newly created chunk plus everything which is needed for autosplice)
 	const std::list<util::PropertyMap::key_type> splice_needed = util::stringToList<util::PropertyMap::key_type>( util::PropertyMap::key_type( "voxelSize,voxelGap,rowVec,columnVec,sliceVec,indexOrigin,acquisitionNumber" ), ',' );
 	static util::PropertyMap::PathSet needed = MemChunk<short>( 1 ).getMissing();

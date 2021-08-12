@@ -219,7 +219,7 @@ public:
 	 * \attention As this will also move alle properties into the "splinters" this chunk will be invalid afterwards
 	 */
 	std::list<Chunk> spliceAt(isis::data::dimensions atDim)const;
-	std::list<Chunk> spliceAt(isis::data::dimensions atDim, const util::PropertyMap &propSource )const;
+	std::list<Chunk> spliceAt(isis::data::dimensions atDim, util::PropertyMap &&propSource )const;
 
 	/**
 	  * Flips the chunk along a dimension dim in image space.

@@ -194,7 +194,6 @@ bool SortedChunkList::insert( const Chunk &ch )
 
 	size_t sort_prop_size=ch.queryProperty(secondarySort.top().propertyName)->size();
 	if(sort_prop_size>1){ // secondary sort is multi value, we have to spliceAt the chunk and insert separately
-		// @todo handle cases where first level of splicing won't be enough
 		LOG(Runtime,info) << "Splicing chunk at top dim as secondary sorting property " << secondarySort.top().propertyName << " is a list of size " << sort_prop_size;
 		
 		// get rid of all not-to-be-splices props to save time
@@ -219,6 +218,7 @@ bool SortedChunkList::insert( const Chunk &ch )
 		//find splicing depth
 		bool ok=true;
 
+		//figure out the splicing depth based on the length of the secondary sort
 		dimensions splicedim=timeDim;
 		for(
 			size_t prod = 1;

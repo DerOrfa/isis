@@ -43,7 +43,7 @@ Chunk::Chunk(const ValueArray &src, size_t nrOfColumns, size_t nrOfRows, size_t 
 	if(!(src.isValid() || ValueArray::getLength())){//creation of a zero-sized chunk from a zero sized Array was probably intentional
 		LOG(Debug,info) << "Creating a zero sized Chunk. Make sure you change that before using it";
 	} else {
-		LOG_IF(!src.isValid(),Runtime,error) << "Creating a chunk from an invalid ValueArray, thats not going to end well ...";
+		LOG_IF(!src.isValid(),Runtime,error) << "Creating a chunk from an invalid ValueArray, that's not going to end well ...";
 		LOG_IF( NDimensional<4>::getVolume() == 0, Debug, warning ) << "Size " << init_size << " is invalid";
 	}
 	ValueArray::operator=(src);
@@ -208,53 +208,55 @@ std::list<Chunk> Chunk::autoSplice ( dimensions atDim )const
 		LOG(Runtime,error) << "Trying to splice a chunk without acquisitionNumber. Assuming " << acquisitionNumber;
 	}
 
-	// explode 	indexOrigin and acquisitionNumber with the size of the given dimension if they aren't already
-	auto explode_step = [&indexOrigin,&acquisitionNumber,distance,orgsize](dimensions dim,const util::dvector3 &offset)
-	{
-		if(indexOrigin.size()!=orgsize[dim]){
-			auto op = [offset=offset*distance[dim],dimsize=orgsize[dim], cnt=0](const util::Value &v)mutable->util::Value{
-				return v.as<util::dvector3>() + offset * (cnt++ % dimsize);
-			};
-			indexOrigin.explode(orgsize[dim],op);
-		}
-		if(acquisitionNumber.size()!=orgsize[dim]){
-			auto op = [dimsize=orgsize[dim], cnt=0](const util::Value &v)mutable->util::Value{
-				return v.as<uint32_t>() * dimsize + (cnt++ % dimsize) ;
-			};
-			acquisitionNumber.explode(orgsize[dim],op);
-		}
+	std::vector vecs{
+		getValueAs<util::dvector3>("rowVec"),
+		getValueAs<util::dvector3>("columnVec")
 	};
+	if(auto svec=queryProperty( "sliceVec" ); svec ) {
+		vecs.push_back(svec->as<util::dvector3>());
+	} else { // if sliceVec isn't given, compute it as Normal on rowVec and columnVec
+		assert( util::fuzzyEqual<float>( util::sqlen(vecs[0]), 1 ) );
+		assert( util::fuzzyEqual<float>( util::sqlen(vecs[1]), 1 ) );
+		vecs.push_back({
+			vecs[0][1] * vecs[1][2] - vecs[0][2] * vecs[1][1],
+			vecs[0][2] * vecs[1][0] - vecs[0][0] * vecs[1][2],
+			vecs[0][0] * vecs[1][1] - vecs[0][1] * vecs[1][0]
+		});
+	}
 
-	// go through each to-splice dimension and explode indexOrigin and acquisitionNumber accordingly
-	// so at the end we have wholeSpliceSize entries in there, if we didn't already
-	for(auto dimStep=getRelevantDims()-1;dimStep>=atDim;--dimStep){
-		switch( dimStep ) { // init offset with the given direction
-			case rowDim :
-				explode_step(rowDim,getValueAs<util::dvector3>("rowVec"));
-				break;
-			case columnDim:
-				explode_step(columnDim,getValueAs<util::dvector3>("columnVec" ));
-				break;
-			case sliceDim:{
-				const auto svec=queryProperty( "sliceVec" );
-				util::dvector3 sliceVec;
-				if( svec ) {
-					sliceVec=svec->as<util::dvector3>();
-				} else { // if sliceVec isn't given, compute it as Normal on rowVec and columnVec
-					const auto row = getValueAs<util::fvector3>( "rowVec" );
-					const auto column = getValueAs<util::fvector3>( "columnVec" );
-					assert( util::fuzzyEqual<float>( util::sqlen(row), 1 ) );
-					assert( util::fuzzyEqual<float>( util::sqlen(column), 1 ) );
-					sliceVec={
-						row[1] * column[2] - row[2] * column[1],
-						row[2] * column[0] - row[0] * column[2],
-						row[0] * column[1] - row[1] * column[0]
-					};
-				}
-				explode_step(sliceDim, sliceVec);
-			}break;
-			case timeDim :
-			default:;
+	// go through each to-splice dimension and explode indexOrigin and acquisitionNumber with the size of the given
+	// dimension if they aren't already
+	size_t stepsize=1;
+	for(auto dim=getRelevantDims()-1;dim>=atDim;--dim){
+		stepsize*=orgsize[dim];//expected size of the property grow with every processed dimension by this dimension
+		if(indexOrigin.size()<stepsize){
+			LOG_IF(stepsize%indexOrigin.size(),Runtime,error)
+			<< "The splicing stepsize " << stepsize
+			<< " is not a multiple of the amount of values in indexOrigin ("
+			<< indexOrigin.size() << "). This splice is most likely going to fail.";
+			if(dim<timeDim){
+				auto offset = vecs[dim] * distance[dim]; //direction and length to the next splice
+				auto op = [offset,dimsize=orgsize[dim], cnt=0](const util::Value &v)mutable->util::Value{
+					return v.as<util::dvector3>() + offset * (cnt++ % dimsize);
+				};
+				LOG(Debug,verbose_info) << "Stretching indexOrigin " << indexOrigin << " by " << orgsize[dim];
+				indexOrigin.explode(orgsize[dim],op);
+			} else // on timeDim indexOrigin is constant
+				indexOrigin.explode(orgsize[dim],[](const util::Value &v){return v;});
+			assert(indexOrigin.size()==stepsize);
+		}
+		if(acquisitionNumber.size()<stepsize){
+			LOG_IF(stepsize%acquisitionNumber.size(),Runtime,error)
+				<< "The splicing stepsize " << stepsize
+				<< " is not a multiple of the amount of values in acquisitionNumber ("
+				<< acquisitionNumber.size() << "). This splice is most likely going to fail.";
+			auto op = [dimsize=orgsize[dim], cnt=0](const util::Value &v)mutable->util::Value{
+				const auto iv = v.as<uint32_t>();
+				return util::Value(iv * dimsize + (cnt++ % dimsize));
+			};
+			LOG(Debug,verbose_info) << "Stretching acquisitionNumber " << acquisitionNumber << " by " << orgsize[dim];
+			acquisitionNumber.explode(orgsize[dim],op);
+			assert(acquisitionNumber.size()==stepsize);
 		}
 	}
 
@@ -263,11 +265,13 @@ std::list<Chunk> Chunk::autoSplice ( dimensions atDim )const
 	LOG(Debug,info) << "acquisitionNumber list is " << acquisitionNumber;
 
 	// do the actual splicing with the modified PropertyMap
-	return spliceAt(atDim,spliceMap);
+	return spliceAt(atDim,std::move(spliceMap));
 }
 
-std::list<Chunk> Chunk::spliceAt (dimensions atDim )const{return Chunk::spliceAt(atDim,*this);}
-std::list<Chunk> Chunk::spliceAt (dimensions atDim, const util::PropertyMap &propSource )const
+std::list<Chunk> Chunk::spliceAt (dimensions atDim )const{
+	return Chunk::spliceAt(atDim,util::PropertyMap(*this));
+}
+std::list<Chunk> Chunk::spliceAt (dimensions atDim, util::PropertyMap &&propSource )const
 {
 	std::list<Chunk> ret;
 
@@ -284,8 +288,7 @@ std::list<Chunk> Chunk::spliceAt (dimensions atDim, const util::PropertyMap &pro
 	for( const ValueArray &ref :  pointers ) {
 		ret.push_back( Chunk( ref, spliceSize[0], spliceSize[1], spliceSize[2], spliceSize[3] ) );
 	}
-	PropertyMap dummyMap(propSource);
-	dummyMap.splice(ret.begin(),ret.end(),false);//copy/spliceAt properties into spliced chunks @todo why is this not const
+	propSource.splice(ret.begin(),ret.end(),false);//copy/spliceAt properties into spliced chunks / this will empty propSource
 	return ret;
 }
 

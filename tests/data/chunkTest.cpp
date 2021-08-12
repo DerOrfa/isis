@@ -19,10 +19,6 @@ namespace test
 BOOST_AUTO_TEST_CASE ( chunk_init_test )
 {
 	const char *needed[] = {"indexOrigin", "acquisitionNumber", "voxelSize", "rowVec", "columnVec"};
-	ENABLE_LOG( CoreLog, util::DefaultMsgPrint, warning );
-	ENABLE_LOG( CoreDebug, util::DefaultMsgPrint, warning );
-	ENABLE_LOG( DataLog, util::DefaultMsgPrint, warning );
-	ENABLE_LOG( DataDebug, util::DefaultMsgPrint, warning );
 	data::MemChunk<float> ch( 4, 3, 2, 1 );
 
 	for( const char * str :  needed ) {
@@ -178,7 +174,7 @@ BOOST_AUTO_TEST_CASE ( chunk_scale_test )//Access Chunk elements via dimensional
 	BOOST_CHECK_EQUAL( scale.offset.as<double>(), 5 );
 }
 
-BOOST_AUTO_TEST_CASE ( chunk_data_test2 )//Access Chunk elements via linear index (threat it as ValueArray)
+BOOST_AUTO_TEST_CASE ( chunk_data_test2 )//Access Chunk elements via linear index (treat it as ValueArray)
 {
 	data::MemChunk<float> ch( 4, 3, 2, 1 );
 	data::TypedArray<float> ch_mirror(ch);//typed array, that uses the same memory as ch
@@ -298,7 +294,7 @@ BOOST_AUTO_TEST_CASE ( memchunk_copy_test )//Copy chunks
 	BOOST_CHECK_NE(ch3.begin(),ch4.begin());//but must be different memory
 }
 
-BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
+BOOST_AUTO_TEST_CASE ( chunk_basic_splice_test )
 {
 	data::MemChunk<float> ch1( 3, 3, 3 );
 	ch1.setValueAs( "indexOrigin", util::fvector3( {1, 1, 1} ) );
@@ -311,9 +307,8 @@ BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
 	const util::Value buff[] = {0, 1, 2};
 	std::copy( buff, buff + 3, std::back_inserter( ch1.touchProperty( "list_test" ) ) );
 
-
-	for ( size_t i = 0; i < ch1.getVolume(); i++ )
-		*(ch1.begin()+i) = i;
+//	for ( size_t i = 0; i < ch1.getVolume(); i++ )
+//		*(ch1.begin()+i) = i;
 
 	const std::list<data::Chunk> splices = ch1.autoSplice();
 	unsigned short cnt = 0;
@@ -322,6 +317,64 @@ BOOST_AUTO_TEST_CASE ( chunk_splice_test )//Copy chunks
 		BOOST_CHECK_EQUAL( ref.property( "indexOrigin"), util::fvector3( {1, 1, 1 + static_cast<float>(cnt * 2)} ) );
 		BOOST_CHECK_EQUAL( ref.property( "list_test" ), cnt );
 		BOOST_CHECK_EQUAL( ref.property( "acquisitionNumber" ), cnt+2*3 );// we had a acquisitionNumber of 2 so the new numbers should be 2(original)*3(with of the splice)+count
+		cnt++;
+	}
+}
+
+BOOST_AUTO_TEST_CASE ( chunk_depth_splice_test )
+{
+	data::MemChunk<float> ch1( 3, 3, 3 );
+	ch1.setValueAs( "indexOrigin", util::fvector3( {1, 1, 1} ) );
+	ch1.setValueAs( "rowVec", util::fvector3( {1, 0, 0} ) );
+	ch1.setValueAs( "columnVec", util::fvector3( {0, 1, 0} ) );
+	ch1.setValueAs( "voxelSize", util::fvector3( {1, 1, 1} ) );
+	ch1.setValueAs( "voxelGap", util::fvector3( {1, 1, 1} ) );
+	ch1.setValueAs<uint32_t>( "acquisitionNumber", 2 );
+
+//	for ( size_t i = 0; i < ch1.getVolume(); i++ )
+//		*(ch1.begin()+i) = i;
+
+	const std::list<data::Chunk> splices = ch1.autoSplice(data::columnDim);
+	unsigned short cnt = 0;
+	BOOST_CHECK_EQUAL( splices.size(), 3*3 );
+	for( const data::Chunk & ref :  splices ) {
+		std::cout << "indexOrigin:" << ref.property( "indexOrigin") << " acquisitionNumber:" <<ref.property( "acquisitionNumber" )<< '\n';
+		BOOST_CHECK_EQUAL(
+			ref.property( "indexOrigin"),
+			util::fvector3( {1.f, 1.f + (cnt%3) * 2, 1.f + (cnt/3) * 2} )
+		);
+		BOOST_CHECK_EQUAL( ref.property( "acquisitionNumber" ), cnt+2*3*3 );// we had a acquisitionNumber of 2 so the new numbers should be 2(original)*3(with of the splice)+count
+		cnt++;
+	}
+}
+
+BOOST_AUTO_TEST_CASE ( chunk_inverted_depth_splice_test )
+{
+	data::MemChunk<float> ch1( 3, 3, 3 );
+	ch1.setValueAs( "indexOrigin", util::fvector3( {1, 1, 1} ) );
+	ch1.setValueAs( "rowVec", util::fvector3( {1, 0, 0} ) );
+	ch1.setValueAs( "columnVec", util::fvector3( {0, 1, 0} ) );
+	ch1.setValueAs( "voxelSize", util::fvector3( {1, 1, 1} ) );
+
+	const util::Value buff[] = {2,1,0};
+	std::copy( buff, buff + 3, std::back_inserter( ch1.touchProperty( "acquisitionNumber" ) ) );
+
+//	for ( size_t i = 0; i < ch1.getVolume(); i++ )
+//		*(ch1.begin()+i) = i;
+
+	const std::list<data::Chunk> splices = ch1.autoSplice(data::columnDim);
+	unsigned short cnt = 0;
+	BOOST_CHECK_EQUAL( splices.size(), 3*3 );
+	for( const data::Chunk & ref :  splices ) {
+		std::cout << "indexOrigin:" << ref.property( "indexOrigin") << " acquisitionNumber:" <<ref.property( "acquisitionNumber" )<< '\n';
+		BOOST_CHECK_EQUAL(
+			ref.property( "indexOrigin"),
+			util::fvector3( {1.f, 1.f + cnt%3, 1.f + cnt/3} )
+		);
+		BOOST_CHECK_EQUAL(//first step spreads {2,1,0} out onto the three slices, then explodes that to
+			ref.property( "acquisitionNumber" ),
+			buff[cnt/3]*3+cnt%3
+		);// we had a acquisitionNumber of 2 so the new numbers should be 2(original)*3(with of the splice)+count
 		cnt++;
 	}
 }
