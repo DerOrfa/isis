@@ -3,6 +3,7 @@
 #include <boost/test/unit_test.hpp>
 #include <string>
 #include <isis/core/selection.hpp>
+#include <isis/core/stringop.hpp>
 
 namespace isis::test
 {
@@ -13,7 +14,7 @@ BOOST_AUTO_TEST_CASE( test_selection_init )
 	BOOST_CHECK( !sel ); //undefined, should be false
 	BOOST_CHECK_THROW( static_cast<int>(sel), std::bad_optional_access); //trying to use undefined Selection should throw
 	BOOST_CHECK_EQUAL( sel.getEntries().size(), 3 );
-	BOOST_CHECK_EQUAL( sel.getEntries(), util::stringToList<util::istring>( std::string( "Val1,Val2,Val3" ), ',' ) );
+	BOOST_CHECK_EQUAL( sel.getEntries(), util::stringToList<util::istring>( "Val1,Val2,Val3"s, ',' ) );
 }
 BOOST_AUTO_TEST_CASE( test_selection_set )
 {

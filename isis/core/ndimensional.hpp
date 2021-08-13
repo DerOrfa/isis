@@ -17,12 +17,11 @@
 #include <algorithm>
 #include <string>
 #include "common.hpp"
+#include "stringop.hpp"
 #include "vector.hpp"
 #include "progressfeedback.hpp"
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 
 /// Base class for anything that has dimensional size
@@ -170,7 +169,6 @@ public:
 	}
 };
 
-}
 }
 
 

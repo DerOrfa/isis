@@ -23,6 +23,7 @@
 
 #include "value_converter.hpp"
 #include "value.hpp"
+#include "stringop.hpp"
 #include <type_traits>
 
 #include <complex>

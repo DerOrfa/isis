@@ -49,7 +49,7 @@ public:
 	typedef _internal::ImageIteratorTemplate<ValueArray, true> const_iterator;
 	typedef iterator::reference reference;
 	typedef const_iterator::reference const_reference;
-	static const char *neededProperties;
+	static std::list<PropPath> neededProperties;
 protected:
 	_internal::SortedChunkList set;
 	std::vector<std::shared_ptr<Chunk> > lookup;
@@ -90,7 +90,7 @@ private:
 
 protected:
 	bool clean;
-	static const char *defaultChunkEqualitySet;
+	static std::list<isis::util::PropertyMap::PropPath> defaultChunkEqualitySet;
 
 	/**
 	 * Search for a dimensional break in all stored chunks.

@@ -12,6 +12,7 @@
 //
 
 #include "propmap.hpp"
+#include "stringop.hpp"
 #include <boost/iostreams/stream.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 

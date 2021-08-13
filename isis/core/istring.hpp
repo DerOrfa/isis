@@ -25,7 +25,7 @@ template<typename CharT, typename traits>
 std::list<util::istring> makeIStringList(const std::list<std::basic_string<CharT,traits>> &source){
 	std::list<util::istring> ret;
 	for(const std::string &ref:source)
-		ret.emplace_back(ref.c_str());
+		ret.emplace_back(ref.data(),ref.length());
 	return ret;
 }
 

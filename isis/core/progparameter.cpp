@@ -17,6 +17,7 @@
 */
 
 #include "progparameter.hpp"
+#include "stringop.hpp"
 
 namespace isis::util
 {

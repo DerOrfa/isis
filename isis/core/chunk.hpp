@@ -43,7 +43,7 @@ protected:
 	 */
 	Chunk(bool fakeValid=false);
 public:
-	static const char *neededProperties;
+	static std::list<PropPath> neededProperties;
 	typedef ValueArray::iterator iterator;
 	typedef ValueArray::const_iterator const_iterator;
 

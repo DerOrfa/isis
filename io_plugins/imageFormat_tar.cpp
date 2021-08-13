@@ -67,7 +67,7 @@ class ImageFormat_Tar: public FileFormat{
 		return red;
 	}
 protected:
-	util::istring suffixes( io_modes modes )const override {return "tar";}
+	std::list<util::istring> suffixes( io_modes modes )const override {return {"tar"};}
 public:
 	std::string getName()const override {return "tar reading proxy";};
 	void write( const data::Image &image, const std::string &filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )override {

@@ -25,7 +25,9 @@ namespace data
 
 Chunk::Chunk(bool fakeValid )
 {
-	util::Singletons::get<NeededsList<Chunk>, 0>().applyTo( *this );
+	for(const auto &needed: neededProperties)
+		addNeeded(needed);
+
 	if( fakeValid ) {
 		setValueAs( "indexOrigin", util::fvector3() );
 		setValueAs( "acquisitionNumber", 0 );

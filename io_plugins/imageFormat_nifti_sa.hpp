@@ -197,7 +197,7 @@ public:
 	std::list<util::istring> dialects()const override {return {"fsl","spm","withExtProtocols"};}
 
 protected:
-	util::istring suffixes( io_modes /*mode = both*/ )const override {return ".nii";};
+	std::list<util::istring> suffixes(io_modes /*mode = both*/ )const override {return {".nii"};};
 	void sanitise( data::Chunk &ch );
 	template <typename T> void transformIfNotSet( const util::PropertyMap::key_type &from, const util::PropertyMap::key_type &to, data::Chunk &object, LogLevel level ) {
 		if( !object.hasProperty( to ) ) {

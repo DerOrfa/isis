@@ -11,6 +11,7 @@
 //
 
 #include "property.hpp"
+#include "stringop.hpp"
 
 namespace isis::util
 {

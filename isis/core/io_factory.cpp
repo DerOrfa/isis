@@ -263,9 +263,9 @@ std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istr
 
 std::list<util::istring> IOFactory::getFormatStack( const std::string& filename ){
 	const std::filesystem::path fname( filename );
-	auto ret = util::stringToList<util::istring>( fname.filename().string(), '.' ); // get all suffixes (and the basename)
+	auto ret = util::stringToList<std::string>( fname.filename().string(), '.' ); // get all suffixes (and the basename)
 	if( !ret.empty() )ret.pop_front(); // remove the basename
-	return ret;
+	return util::makeIStringList(ret);
 }
 
 IOFactory::FileFormatList IOFactory::getFileFormatList( std::list<util::istring> format)

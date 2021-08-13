@@ -24,11 +24,7 @@
 #include <memory>
 
 /// @cond _internal
-namespace isis
-{
-namespace data
-{
-namespace _internal
+namespace isis::data::_internal
 {
 
 /*
@@ -85,7 +81,7 @@ public:
 	/**
 	 * Creates a sorted list and sets primary sorting as well as properties which should be equal across all chunks.
 	 */
-	SortedChunkList( util::PropertyMap::key_type comma_separated_equal_props );
+	SortedChunkList( const std::list<util::PropertyMap::PropPath> &list_of_equal_props );
 	std::list< std::pair< util::PropertyMap, std::list<std::shared_ptr<Chunk>> > > not_spliced;
 
 	/**
@@ -156,8 +152,6 @@ public:
 };
 
 
-}
-}
 }
 /// @endcond _internal
 

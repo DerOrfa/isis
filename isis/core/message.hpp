@@ -32,7 +32,7 @@ namespace util
  * Use this to mark the a volatile part of a logging message.
  * eg. \code LOG(Debug,info) << "Loading File " << MSubject(filename); \endcode
  * This will then be ignored when looking for repeating log-messages or can be used for text highlighting.
- * \note anything which is no string literal will aumatically used wrapped as Subject. Use NoSubject to prevent this.
+ * \note anything which is no string literal will automatically used wrapped as Subject. Use NoSubject to prevent this.
  */
 class MSubject : public std::string
 {

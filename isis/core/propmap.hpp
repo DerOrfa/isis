@@ -91,23 +91,6 @@ public:
 	///a flat map, matching complete paths as keys to the corresponding values
 	typedef std::map<PropPath, PropertyValue> FlatMap;
 
-	/// @cond _internal
-	template<typename T> class NeededsList: public std::list<PropPath>
-	{
-	public:
-		NeededsList() {
-			const std::list< PropertyMap::key_type > buff = util::stringToList<PropertyMap::key_type>( T::neededProperties ); //@todo really bad voodoo
-			assign( buff.begin(), buff.end() );
-		}
-		void applyTo( PropertyMap &props ) {
-			for( const PropPath & ref: *this ) {
-				props.addNeeded( ref );
-			}
-		}
-	};
-	/// @endcond _internal
-
-
 protected:
 	static Node &nullnode();
 	typedef PropPath::const_iterator propPathIterator;

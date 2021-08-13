@@ -114,7 +114,7 @@ class ImageFormat_ZISRAW : public FileFormat{
 	};
 	data::Chunk transferFromMosaic(std::list<SubBlock> segments,unsigned short,std::shared_ptr<util::ProgressFeedback> feedback);
 public:
-	util::istring suffixes(FileFormat::io_modes /*modes*/) const override {return ".czi";}
+	std::list<util::istring> suffixes(FileFormat::io_modes /*modes*/) const override {return ".czi";}
 
 	std::list< data::Chunk > load(
 		data::ByteArray source,

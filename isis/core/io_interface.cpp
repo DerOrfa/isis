@@ -147,9 +147,10 @@ void FileFormat::throwSystemError( int err, const std::string& desc )
 
 std::list< util::istring > FileFormat::getSuffixes( io_modes mode )const
 {
-	std::list<util::istring> ret = util::stringToList<util::istring>( suffixes( mode ).c_str() );
-	for( util::istring & ref :  ret ) {
-		ref.erase( 0, ref.find_first_not_of( '.' ) ); // remove leading . if there are some
+	std::list<util::istring> ret;
+
+	for( const util::istring & ref :  suffixes( mode ) ) {
+		ret.push_back(ref.substr(ref.find_first_not_of( '.' )));
 	}
 	ret.sort( _internal::moreCmp ); //start with the longest suffix
 	return ret;
