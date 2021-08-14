@@ -95,9 +95,7 @@ struct TreeInvalidCheck {
 		return std::visit( *this, node.variant() );
 	}//recursion
 	bool operator()( const std::monostate &val )const {return false;}
-	bool operator()( const PropertyValue &val )const {
-		return PropertyMap::InvalidP()( val );
-	}
+	bool operator()( const PropertyValue &val )const {return PropertyMap::invalidP( val );}
 	bool operator()( const PropertyMap &sub )const { //call my own recursion for each element
 		return std::find_if( sub.container.begin(), sub.container.end(), *this ) != sub.container.end();
 	}
@@ -180,6 +178,11 @@ std::string PropertyMap::PropPath::toString()const
 	std::stringstream out;
 	out << *this;
 	return out.str();
+}
+std::ostream &operator<<(std::ostream &os, const PropertyMap::PropPath &s)
+{
+	isis::util::listToOStream( s.begin(), s.end(), os, std::string( 1, s.pathSeperator ).c_str(), "", "" );
+	return os;
 }
 ///////////////////////////////////////////////////////////////////
 // Contructors
@@ -543,8 +546,8 @@ bool PropertyMap::operator==(const PropertyMap &other) const {return container =
 bool PropertyMap::operator!=(const PropertyMap &other) const {return container != other.container;}
 
 
-PropertyMap::PathSet PropertyMap::getKeys()const   {return genKeyList<TrueP>();}
-PropertyMap::PathSet PropertyMap::getMissing()const {return genKeyList<InvalidP>();}
+PropertyMap::PathSet PropertyMap::getKeys()const   {return genKeyList(trueP);}
+PropertyMap::PathSet PropertyMap::getMissing()const {return genKeyList(invalidP);}
 
 PropertyMap::PathSet PropertyMap::localBranches() const
 {
@@ -615,7 +618,7 @@ bool PropertyMap::rename( const PropPath &oldname,  const PropPath &newname, boo
 	}
 	if(newname != oldname){
 		mapped_type &new_e = fetchEntry( newname );
-		const bool empty=std::visit(IsEmpty(), new_e.variant());
+		const bool empty=new_e.isEmpty();
 		if(!empty && !overwrite){ //abort if we're not supposed to overwrite'
 			LOG(Runtime,warning) << "Not overwriting " << std::make_pair( newname, new_e ) << " with " << *old_e;
 			return false;
@@ -660,7 +663,7 @@ void PropertyMap::extract(const PropPath &p,PropertyMap &dst){
 	Node &found=findEntry(p);
 	if(found){
 		Node &d_node=dst.fetchEntry(p);
-		assert(std::visit(IsEmpty(),d_node.variant()));
+		assert(d_node.isEmpty());
 		d_node.swap(found);
 		remove(p);
 	}
@@ -726,6 +729,12 @@ PropertyValue& PropertyMap::setValue(const PropPath &path, const Value &val, con
 	return ret;
 }
 
+PropertyMap::PathSet PropertyMap::genKeyList(const PropertyMap::predicate_type &predicate) const
+{
+	PathSet k;
+	std::for_each( container.begin(), container.end(), WalkTree( k, PropPath(), predicate ) );
+	return k;
+}
 
 void PropertyMap::readPtree(const boost::property_tree::ptree &tree,bool skip_empty){
 	for(const auto &p:tree){
@@ -734,7 +743,7 @@ void PropertyMap::readPtree(const boost::property_tree::ptree &tree,bool skip_em
 		if(entry.empty()){
 			if(!entry.data().empty() || !skip_empty){
 				mapped_type &n = fetchEntry( key.c_str() );
-				if(std::visit(IsEmpty(),n.variant())){
+				if(n.isEmpty()){
 					n=PropertyValue(entry.data());
 				} else if(n.isProperty()){ //OK we got a property map all is good
 					std::get<PropertyValue>(n)=entry.data();
@@ -744,7 +753,7 @@ void PropertyMap::readPtree(const boost::property_tree::ptree &tree,bool skip_em
 			}
 		} else {
 			mapped_type &n = fetchEntry( key.c_str() );
-			if(std::visit(IsEmpty(),n.variant())){
+			if(n.isEmpty()){
 				n=PropertyMap();
 			}
 			if(n.isBranch()){ //OK we got a property map all is good
@@ -773,11 +782,79 @@ PropertyMap::Node& PropertyMap::nullnode(){
 	static Node node;
 	return node;
 }
-/// @cond _internal
-bool PropertyMap::TrueP::operator()( const PropertyValue &/*ref*/ ) const {return true;}
-bool PropertyMap::InvalidP::operator()( const PropertyValue &ref ) const {return ref.isNeeded() && ref.isEmpty();}
-bool PropertyMap::EmptyP::operator()(const PropertyValue& ref) const {return ref.isEmpty();};
-
 /// @endcond _internal
 
+PropertyMap &PropertyMap::Node::branch(){return std::get<PropertyMap>(*this);}
+const PropertyMap &PropertyMap::Node::branch() const{return std::get<PropertyMap>(*this);}
+bool PropertyMap::Node::operator==(const PropertyMap::Node &other)const{return variant()==other.variant();}
+bool PropertyMap::Node::operator!=(const PropertyMap::Node &other) const{return variant()!=other.variant();}
+PropertyMap::Node::operator bool() const{return !is<std::monostate>();}
+
+PropertyMap::Node::Node(const PropertyValue &val):std::variant<std::monostate, PropertyValue, PropertyMap>(val){}
+PropertyMap::Node::Node(const PropertyMap &map):std::variant<std::monostate, PropertyValue, PropertyMap>(map){}
+
+std::variant<std::monostate, PropertyValue, PropertyMap> &PropertyMap::Node::variant(){return *this;}
+const std::variant<std::monostate, PropertyValue, PropertyMap> &PropertyMap::Node::variant() const{return *this;}
+
+bool PropertyMap::Node::isBranch() const{return is<PropertyMap>();}
+bool PropertyMap::Node::isProperty() const{return is<PropertyValue>();}
+
+PropertyValue &PropertyMap::Node::operator->(){return std::get<PropertyValue>(*this);}
+PropertyValue &PropertyMap::Node::operator*(){return std::get<PropertyValue>(*this);}
+
+const PropertyValue &PropertyMap::Node::operator->() const{return std::get<PropertyValue>(*this);}
+const PropertyValue &PropertyMap::Node::operator*() const{return std::get<PropertyValue>(*this);}
+
+std::ostream &operator<<(std::ostream &os, const PropertyMap::Node &node)
+{
+	return std::visit([&](const auto &v)->std::ostream&{
+		if constexpr(!std::is_same_v<const std::monostate&, decltype(v)>)
+			os << v;
+		return os;
+	},node.variant());
 }
+bool PropertyMap::Node::isEmpty() const
+{
+	return std::visit([](const auto &v)->bool{
+		if constexpr(std::is_same_v<const std::monostate&, decltype(v)>)
+			return true;
+		else
+			return v.isEmpty();
+	},variant());
+}
+
+PropertyMap::WalkTree::WalkTree(
+	PropertyMap::PathSet &out,
+	const PropertyMap::PropPath &prefix,
+	const PropertyMap::predicate_type &predicate
+) : m_out( out ), name( prefix ), m_predicate(predicate) {}
+
+void PropertyMap::WalkTree::operator()(const std::monostate &val) const{} // non-op
+void PropertyMap::WalkTree::operator()(const std::pair<const istring, PropertyMap::Node> &ref) const//recursion
+{
+	std::visit( WalkTree( m_out, name / ref.first, m_predicate ), ref.second.variant() );
+}
+void PropertyMap::WalkTree::operator()(const PropertyValue &val) const
+{
+	if ( m_predicate( val ) )
+		m_out.insert( m_out.end(), name );
+}
+void PropertyMap::WalkTree::operator()(const PropertyMap &sub) const//call my own recursion for each element
+{
+	std::for_each( sub.container.begin(), sub.container.end(), *this );
+}
+
+const PropertyMap::predicate_type PropertyMap::trueP = [](const PropertyValue&){return true;};
+const PropertyMap::predicate_type PropertyMap::invalidP = [](const PropertyValue &ref ){return ref.isNeeded() && ref.isEmpty();};
+const PropertyMap::predicate_type PropertyMap::emptyP = [](const PropertyValue& ref){return ref.isEmpty();};
+
+std::ostream &operator<<(std::ostream &os, const PropertyMap &map)
+{
+	const isis::util::PropertyMap::FlatMap buff = map.getFlatMap();
+	isis::util::listToOStream( buff.begin(), buff.end(), os );
+	return os;
+}
+std::ostream &operator<<(std::ostream &os, const std::monostate &s){return os;}
+
+}
+
