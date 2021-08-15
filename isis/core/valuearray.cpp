@@ -309,4 +309,22 @@ bool isis::data::ValueArray::isInteger() const
 	    },static_cast<const ArrayTypes&>(*this)
 	);
 }
+std::ostream &isis::data::operator<<(std::ostream &os, const isis::data::ValueArray &array)
+{
+	assert(array.isValid());
+	if ( array.isValid() ){
+		os << "#" << array.getLength();
+		if(array.getLength()) {//@todo use list2stream
+			auto i = array.begin();
+			os << isis::util::Value(*i).toString(false);
+			for (++i; i < array.end(); i++)
+				os << "|" << isis::util::Value(*i).toString(false);
+		}
+	}
+	return os;
+}
 
+std::ostream &isis::data::operator<<(std::ostream &os, const isis::data::scaling_pair &pair)
+{
+	return os << std::make_pair(pair.scale,pair.offset);
+}

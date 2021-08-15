@@ -196,12 +196,7 @@ void enableLog(LogLevel level)
 namespace data
 {
 
-namespace _internal
-{
-}
-
 typedef DataLog Runtime;
-
 typedef DataDebug Debug;
 
 enum dimensions

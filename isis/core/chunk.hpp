@@ -17,13 +17,12 @@
 #include "log.hpp"
 #include "propmap.hpp"
 #include "common.hpp"
-#include <string.h>
+#include <cstring>
 #include <list>
+#include <ostream>
 #include "ndimensional.hpp"
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 
 class Chunk;
@@ -222,6 +221,8 @@ public:
 	void swapDim(unsigned short dim_a,unsigned short dim_b,std::shared_ptr<util::ProgressFeedback> feedback=std::shared_ptr<util::ProgressFeedback>());
 
 	bool isValid()const{return ValueArray::isValid() && util::PropertyMap::isValid();}
+
+	friend std::ostream &operator<<(std::ostream &os, const Chunk &chunk);
 };
 
 template<typename TYPE> class TypedChunk : public Chunk{
@@ -361,17 +362,3 @@ public:
 };
 
 }
-}
-/// @cond _internal
-namespace std
-{
-/// Streaming output for Chunk (forward to PropertyMap)
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::data::Chunk &s )
-{
-	return out << static_cast<const isis::util::PropertyMap &>( s );
-}
-}
-/// @endcond _internal
-
-

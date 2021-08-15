@@ -4,16 +4,12 @@
 #ifdef _MSC_VER
 #include <Windows.h>
 #else
-#include <strings.h>
+#include <cstring>
 #endif
 #include <algorithm>
 
 /// @cond _internal
-namespace isis
-{
-namespace util
-{
-namespace _internal
+namespace isis::util::_internal
 {
 
 std::locale const ichar_traits::loc = std::locale( "C" );
@@ -48,12 +44,10 @@ const char *ichar_traits::find( const char *s, size_t n, const char &a )
 				return s;
 		}
 
-	return NULL;
+	return nullptr;
 }
 
 
-}
-}
 }
 /// @endcond _internal
 

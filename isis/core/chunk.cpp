@@ -349,7 +349,9 @@ void Chunk::setVoxelValue (const util::Value &val, size_t nrOfColumns, size_t nr
 
 	begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )] = val;
 }
-
-
+std::ostream &operator<<(std::ostream &os, const Chunk &chunk)
+{
+	return os << static_cast<const isis::util::PropertyMap &>( chunk );
+}
 }
 }

@@ -27,6 +27,10 @@ bool ConstValueAdapter::operator>( const ConstValueAdapter &val )const {return g
 
 const std::unique_ptr<util::Value> ConstValueAdapter::operator->() const{return std::make_unique<util::Value>(getter(p));}
 const std::string ConstValueAdapter::toString( bool label ) const{ return getter(p).toString(label);}
+std::ostream &operator<<(std::ostream &os, const ConstValueAdapter &adapter)
+{
+	return os << isis::util::Value(adapter);
+}
 
 WritingValueAdapter::WritingValueAdapter( std::byte*const _p, ConstValueAdapter::Getter _getValueFunc, ConstValueAdapter::Setter _setValueFunc, size_t _byteSize )
 : ConstValueAdapter( _p, _getValueFunc ), setValueFunc( _setValueFunc ), byteSize(_byteSize) {}

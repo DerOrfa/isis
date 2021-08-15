@@ -286,6 +286,7 @@ PropertyValue& PropertyValue::operator *=( const Value &second ){front().multipl
 PropertyValue& PropertyValue::operator /=( const Value &second ){front().divide_me(second);return *this;}
 
 bool PropertyValue::operator<(const isis::util::PropertyValue& y) const{return lt(y);}
+std::ostream &operator<<(std::ostream &out, const PropertyValue &s){return out<<s.toString(true);}
 
 }
 /// @endcond _internal
