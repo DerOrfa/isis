@@ -182,7 +182,7 @@ BOOST_AUTO_TEST_CASE( propMap_rename_test )
 	BOOST_CHECK_EQUAL( map.property("Test11"), M_PI); // .. be here actually
 
 	util::enableLog<util::DefaultMsgPrint>(error); // block warning raised by next line
-	BOOST_CHECK( !map.rename("Test2","Test3") );//should not rename into existing stuff
+	BOOST_REQUIRE( !map.rename("Test2","Test3") );//should not rename into existing stuff
 	util::enableLog<util::DefaultMsgPrint>(notice); // back to normal
 	BOOST_CHECK_EQUAL( map.property("Test2"), ( int32_t )5); //should still be there
 	BOOST_CHECK_EQUAL( map.property("Test3"), util::fvector4( {1, 1, 1, 1} )); // as well as this
