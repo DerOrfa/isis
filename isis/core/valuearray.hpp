@@ -389,14 +389,12 @@ public:
 
 	friend std::ostream &operator<<(std::ostream &os, const ValueArray &array);
 /// delete-functor which does nothing (in case someone else manages the data).
-struct NonDeleter {
-	template<typename T> void operator()( T *p )const {
-		//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
-		LOG( Debug, verbose_info ) << "Not freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") as automatic deletion was disabled for it";
+	struct NonDeleter {
+		template<typename T> void operator()( T *p )const {
+			//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
+			LOG( Debug, verbose_info ) << "Not freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") as automatic deletion was disabled for it";
+		};
 	};
-};
-
-
 };
 
 }

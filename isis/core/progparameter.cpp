@@ -201,7 +201,7 @@ std::ostream &operator<<(std::ostream &os, const ProgParameter &parameter)
 	}
 
 	LOG_IF( parameter.isEmpty(), isis::CoreDebug, isis::error ) << "Program parameters must not be empty. Please set it to any value.";
-	assert( !s.isEmpty() );
+	assert( !parameter.isEmpty() );
 	os << "default=\"" << parameter.toString( false ) << "\", type=" << parameter.getTypeName();
 
 	if ( parameter.isNeeded() )
@@ -209,5 +209,4 @@ std::ostream &operator<<(std::ostream &os, const ProgParameter &parameter)
 
 	return os;
 }
-
 }

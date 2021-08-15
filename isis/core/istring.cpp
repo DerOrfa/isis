@@ -51,7 +51,7 @@ const char *ichar_traits::find( const char *s, size_t n, const char &a )
 }
 /// @endcond _internal
 
-std::ostream & std::operator<<(std::ostream& out, const isis::util::istring& s)
+std::ostream& std::operator<<(std::ostream& out, const isis::util::istring& s)
 {
 	return out.write(s.data(),s.size());
 }
