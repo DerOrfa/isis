@@ -117,7 +117,7 @@ class ImageFormat_Dicom: public FileFormat
 	static bool parseCSAValueList( const isis::util::slist &val, const util::PropertyMap::PropPath &name, const util::istring &vr, isis::util::PropertyMap &map );
 	static data::Chunk readMosaic( data::Chunk source );
 protected:
-	[[nodiscard]] util::istring suffixes( io_modes modes )const override;
+	[[nodiscard]] std::list<util::istring> suffixes(io_modes modes )const override;
 public:
 	ImageFormat_Dicom();
 	static const char dicomTagTreeName[];

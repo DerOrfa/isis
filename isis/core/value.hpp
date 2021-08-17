@@ -200,11 +200,7 @@ public:
 	bool apply(const Value &other);
 
 	//implement standard ostream
-	template<typename charT, typename traits>
-	friend std::basic_ostream<charT, traits>& operator<<( std::basic_ostream<charT, traits> &out, const Value &s )
-	{
-		return s.print(true,out);
-	}
+	friend std::ostream& operator<<( std::ostream &out, const Value &s );
 
 };
 

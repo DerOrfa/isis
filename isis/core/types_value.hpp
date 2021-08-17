@@ -98,37 +98,8 @@ namespace std{
 	};
 
 	/// streaming output for duration and timestamp
-	template<typename charT, typename traits>
-	basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::duration &s )
-	{
-		return out<<s.count()<<"ms";
-	}
-	template<typename charT, typename traits>
-	basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::timestamp &s )
-	{
-		const chrono::seconds sec=std::chrono::duration_cast<chrono::seconds>(s.time_since_epoch());
-		const time_t tme(sec.count());
-		if(s>=(isis::util::timestamp()+std::chrono::hours(24))) // if we have a real timepoint (not just time)
-			out<<std::put_time(std::localtime(&tme), "%c"); // write time and date
-		else {
-			out<<std::put_time(std::localtime(&tme), "%X"); // otherwise, write just the time
-		}
-		// and maybe with milliseconds
-		
-		chrono::milliseconds msec = s.time_since_epoch()-sec;
-		assert(msec.count()<1000);
-		if(msec.count()){
-			if(msec.count()<0)
-				msec+=chrono::seconds(1);
-			out << "+" << std::to_string(msec.count()) << "ms";
-		}
-		return out;
-	}
-	template<typename charT, typename traits>
-	basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::date &s )
-	{
-		const time_t tme(chrono::duration_cast<chrono::seconds>(s.time_since_epoch()).count());
-		return out<<std::put_time(std::localtime(&tme), "%x"); 
-	}
+	ostream& operator<<( ostream &out, const isis::util::duration &s );
+	ostream& operator<<( ostream &out, const isis::util::timestamp &s );
+	ostream& operator<<( ostream &out, const isis::util::date &s );
 }
 /// @endcond _internal

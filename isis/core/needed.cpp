@@ -14,11 +14,17 @@
 /// @cond _internal
 
 // Stuff needed for every Chunk
-const char *isis::data::Chunk::neededProperties = "indexOrigin,acquisitionNumber,voxelSize,rowVec,columnVec";
+std::list<isis::util::PropertyMap::PropPath>
+    isis::data::Chunk::neededProperties = {"indexOrigin","acquisitionNumber","voxelSize","rowVec","columnVec"};
 
 // Stuff needed for any Image
-const char *isis::data::Image::neededProperties = "voxelSize,rowVec,columnVec,sliceVec,sequenceNumber";
+std::list<isis::util::PropertyMap::PropPath>
+	isis::data::Image::neededProperties = {"voxelSize","rowVec","columnVec","sliceVec","sequenceNumber"};
 
-const char *isis::data::Image::defaultChunkEqualitySet = "sequenceNumber,voxelSize,rowVec,columnVec,sliceVec,coilChannelMask,echoTime,DICOM/EchoNumbers,DICOM/SIEMENS CSA HEADER/ImaCoilString";
+std::list<isis::util::PropertyMap::PropPath>
+    isis::data::Image::defaultChunkEqualitySet = {
+		"sequenceNumber","voxelSize","rowVec","columnVec","sliceVec","coilChannelMask","echoTime",
+		"DICOM/EchoNumbers","DICOM/SIEMENS CSA HEADER/ImaCoilString"
+	};
 
 /// @endcond _internal

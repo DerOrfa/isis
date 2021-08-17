@@ -25,7 +25,9 @@ namespace data
 
 Chunk::Chunk(bool fakeValid )
 {
-	util::Singletons::get<NeededsList<Chunk>, 0>().applyTo( *this );
+	for(const auto &needed: neededProperties)
+		addNeeded(needed);
+
 	if( fakeValid ) {
 		setValueAs( "indexOrigin", util::fvector3() );
 		setValueAs( "acquisitionNumber", 0 );
@@ -218,20 +220,29 @@ std::list<Chunk> Chunk::autoSplice ( uint32_t acquisitionNumberStride )const
 		}
 	}break;
 	case timeDim :
-		LOG_IF( acquisitionNumberStride == 0, Runtime, error ) << "Splicing at timeDim without acquisitionNumberStride will very likely make the next reIndex() fail";
 	default:;
 	}
 
 	// prepare some attributes
 	const util::fvector3 indexOriginOffset = atDim < data::timeDim ? offset * distance[atDim] : util::fvector3{0,0,0};
-	const bool acqWasList=queryProperty("acquisitionNumber")->size()==getDimSize(atDim);
-	const bool originWasList=queryProperty("indexOrigin")->size()==getDimSize(atDim);
+	const bool acqWasList=
+		queryProperty("acquisitionNumber")->size() &&
+		queryProperty("acquisitionNumber")->size()%getDimSize(atDim) == 0;
+	const bool originWasList=
+		queryProperty("indexOrigin")->size() &&
+		queryProperty("indexOrigin")->size()%getDimSize(atDim) == 0;
 
-	LOG( Debug, info ) << "Splicing chunk at dimenstion " << atDim + 1 << " with indexOrigin stride " << indexOriginOffset << " and acquisitionNumberStride " << acquisitionNumberStride;
+	LOG_IF( atDim==timeDim &&  !acqWasList && acquisitionNumberStride == 0, Runtime, error ) << "Splicing at timeDim without acquisitionNumberStride will very likely make the next reIndex() fail";
+
+	LOG(Debug, info ) << "Splicing chunk at dimension " << atDim + 1;
+	LOG_IF(!originWasList,Debug,info) << "indexOrigin stride is " << indexOriginOffset;
+	LOG_IF(!acqWasList,Debug,info) << "acquisitionNumberStride is " << acquisitionNumberStride;
+	LOG_IF(originWasList,Debug,info) << "indexOrigin-list will be split up into " << getDimSize(atDim) << " parts of " << queryProperty("indexOrigin")->size()/getDimSize(atDim) << " elements";
+	LOG_IF(acqWasList,Debug,info) << "acquisitionNumberStride will be split up into " << getDimSize(atDim) << " parts of " << queryProperty("acquisitionNumber")->size()/getDimSize(atDim) << " elements";
+
 	std::list<Chunk> ret = spliceAt((dimensions) atDim); // do low level spliceAt - get the chunklist
 
-	std::list<Chunk>::iterator it = ret.begin();
-	it++;// skip the first one
+	auto it = std::next(ret.begin(),1);// skip the first one
 
 	for( uint32_t cnt = 1; it != ret.end(); it++, cnt++ ) { // adapt some metadata in them
 		if(!originWasList){
@@ -338,7 +349,9 @@ void Chunk::setVoxelValue (const util::Value &val, size_t nrOfColumns, size_t nr
 
 	begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )] = val;
 }
-
-
+std::ostream &operator<<(std::ostream &os, const Chunk &chunk)
+{
+	return os << static_cast<const isis::util::PropertyMap &>( chunk );
+}
 }
 }

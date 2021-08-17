@@ -324,26 +324,22 @@ void ImageFormat_NiftiSa::parseSliceOrdering( const std::shared_ptr< isis::image
 	}
 
 	//if the sequence is "normal"
-	current.setValueAs<uint32_t>( "acquisitionNumber", 0 );
 	const size_t dims = current.getRelevantDims();
 	assert( dims <= 4 ); // more than 4 dimensions are ... well, not expected
 
-	if( head->slice_code <= NIFTI_SLICE_SEQ_INC  || head->slice_code > NIFTI_SLICE_ALT_DEC ) {
-		if( head->slice_duration == 0 ) { // and there is no slice duration, there is no use in numbering
-			return;
-		}
-	}
-
 	if( dims < 3 ) { // if there is only one slice, there is no use in numbering
+		//<std::remove_reference_t<decltype(head->dim[0])>>
+		current.setValueAs( "acquisitionNumber", 0 );
 		return;
 	} else {// if there are timesteps we have to get a bit dirty
 		util::PropertyValue &acqProp=current.touchProperty( "acquisitionNumber" );
 		
 		switch( head->slice_code ) { //set sub-property "acquisitionNumber" based on the slice_code and the offset
 		default:
-			LOG( Runtime, error ) << "Unknown slice code " << util::MSubject( ( int )head->slice_code ) << " falling back to NIFTI_SLICE_SEQ_INC";
+			LOG( Runtime, error ) << "Unknown slice code " << util::MSubject( static_cast<int>(head->slice_code) ) << " falling back to NIFTI_SLICE_SEQ_INC";
 		case 0:
 		case NIFTI_SLICE_SEQ_INC: //system assumes this anyway when the chunk is spliced up -- no explicit values needed
+		acqProp=0;
 		break;
 		case NIFTI_SLICE_SEQ_DEC:{
 			for(short v=0;v<head->dim[4];v++)
@@ -1391,7 +1387,6 @@ const util::Matrix4x4<float> ImageFormat_NiftiSa::nifti2isis{
 
 // define form codes
 const std::map<uint8_t, std::string> ImageFormat_NiftiSa::formCodes{
-	{0,"UNKNOWN"},
 	{1,"SCANNER_ANAT"}, //scanner-based anatomical coordinates
 	{2,"ALIGNED_ANAT"}, //coordinates aligned to another file's, or to anatomical "truth".
 	{3,"TALAIRACH"}, //coordinates aligned to Talairach-Tournoux Atlas; (0,0,0)=AC, etc

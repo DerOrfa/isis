@@ -74,7 +74,7 @@ class ImageFormat_Null: public FileFormat
 		return ret;
 	}
 protected:
-	util::istring suffixes( io_modes /*modes=both*/ )const override {return ".null"; }
+	std::list<util::istring> suffixes(io_modes /*modes=both*/ )const override {return {".null"}; }
 public:
 	std::string getName()const override {
 		return "Null";

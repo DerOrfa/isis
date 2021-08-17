@@ -17,6 +17,7 @@
 */
 
 #include "progparameter.hpp"
+#include "stringop.hpp"
 
 namespace isis::util
 {
@@ -191,5 +192,21 @@ ProgParameter::operator bool()const
 {
 	return as<bool>();
 }
+std::ostream &operator<<(std::ostream &os, const ProgParameter &parameter)
+{
+	const std::string &desc = parameter.description();
 
+	if ( ! desc.empty() ) {
+		os << desc << ", ";
+	}
+
+	LOG_IF( parameter.isEmpty(), isis::CoreDebug, isis::error ) << "Program parameters must not be empty. Please set it to any value.";
+	assert( !parameter.isEmpty() );
+	os << "default=\"" << parameter.toString( false ) << "\", type=" << parameter.getTypeName();
+
+	if ( parameter.isNeeded() )
+		os << " (needed)";
+
+	return os;
+}
 }

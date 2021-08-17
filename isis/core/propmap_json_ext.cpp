@@ -1,4 +1,5 @@
 #include "propmap.hpp"
+#include "stringop.hpp"
 #include <json/json.h>
 #include <memory>
 

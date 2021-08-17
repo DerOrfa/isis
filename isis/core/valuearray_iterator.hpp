@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <ostream>
 #include "value.hpp"
 
 namespace isis::data::_internal{
@@ -49,6 +50,8 @@ public:
 	const std::unique_ptr<util::Value> operator->() const; //maybe more trouble than worth it
 	const std::string toString( bool label = false )const;
 	operator util::Value()const{return getter(p);}
+
+	friend std::ostream &operator<<(std::ostream &os, const ConstValueAdapter &adapter);
 };
 class WritingValueAdapter: public ConstValueAdapter
 {
@@ -187,12 +190,6 @@ public:
 namespace std
 {
     void swap(const isis::data::_internal::WritingValueAdapter &a,const isis::data::_internal::WritingValueAdapter &b);
-	/// Streaming output for ConstValueAdapter (use it as a const Value)
-	template<typename charT, typename traits> basic_ostream<charT, traits>&
-	operator<<( basic_ostream<charT, traits> &out, const isis::data::_internal::ConstValueAdapter &v )
-	{
-		return out << isis::util::Value(v);
-	}
 }
 /// @endcond _internal
 

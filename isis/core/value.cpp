@@ -179,5 +179,9 @@ Value& Value::divide_me(const Value &ref )
 bool Value::apply(const isis::util::Value& other){
 	return convert(other,*this);
 }
+std::ostream &operator<<(std::ostream &out, const Value &s)
+{
+	return s.print(true,out);
+}
 
 }

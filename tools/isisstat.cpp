@@ -15,7 +15,7 @@ int main( int argc, char *argv[] )
 {
 	data::IOApplication app("isisstat");
 	
-	app.parameters["dim"]=util::Selection("row,column,slice,time","time");
+	app.parameters["dim"]=util::Selection({"row","column","slice","time"},"time");
 
 	app.addExample( "-in my_file.nii -out /tmp/raw.file -repn u8bit", "Write the image data of a nifti file in a u8bit raw file" );
 	app.addExample( "-in raw.file -read_repn s16bit -out new_image.nii -rawdims 384 384 12 -offset 500", "Read 384*384*12 s16bit blocks from a raw file skipping 500 bytes and store them as a nifti image." );

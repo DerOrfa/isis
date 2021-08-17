@@ -54,7 +54,9 @@ struct splicer {
 
 Image::Image ( ) : set( defaultChunkEqualitySet ), clean( false )
 {
-	util::Singletons::get<NeededsList<Image>, 0>().applyTo( *this );
+	for(const auto &needed: neededProperties)
+		addNeeded(needed);
+
 	set.addSecondarySort( "acquisitionNumber");
 	set.addSecondarySort( "acquisitionTime" );
 }
@@ -70,7 +72,7 @@ Image::Image ( const Chunk &chunk, dimensions min_dim ): Image()
 	}
 }
 
-Image::Image( const data::Image &ref ): set( "" )/*SortedChunkList has no default constructor - lets just make an empty (and invalid) set*/
+Image::Image( const data::Image &ref ): set({})/*SortedChunkList has no default constructor - lets just make an empty (and invalid) set*/
 {
 	( *this ) = ref; // set will be replaced here anyway
 }
@@ -915,7 +917,9 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 		image_size[i] = 1;
 
 	// get a list of needed properties (everything which is missing in a newly created chunk plus everything which is needed for autosplice)
-	const std::list<util::PropertyMap::key_type> splice_needed = util::stringToList<util::PropertyMap::key_type>( util::PropertyMap::key_type( "voxelSize,voxelGap,rowVec,columnVec,sliceVec,indexOrigin,acquisitionNumber" ), ',' );
+	static const std::list<util::PropertyMap::PropPath> splice_needed{
+		"voxelSize","voxelGap","rowVec","columnVec","sliceVec","indexOrigin","acquisitionNumber"
+	};
 	static util::PropertyMap::PathSet needed = MemChunk<short>( 1 ).getMissing();
 	needed.insert( splice_needed.begin(), splice_needed.end() );
 	// reset the Chunk set, so we can insert new splices

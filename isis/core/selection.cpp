@@ -94,4 +94,8 @@ Selection::stringCompareCheck(std::basic_string_view<char, util::_internal::icha
 		return {false,{}};
 	}
 }
+std::ostream &operator<<(std::ostream &out, const Selection &s)
+{
+	return out << ( std::string )s;
+}
 }

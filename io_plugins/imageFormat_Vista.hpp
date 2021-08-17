@@ -224,7 +224,7 @@ private:
 
 				if ( strcmp ( name, "sex" ) == 0 ) {
 					VGetAttrValue( &posn, NULL, VStringRepn, &val );
-					util::Selection genderSelection( "female,male,other" );
+					util::Selection genderSelection( {"female","male","other"} );
 
 					if ( std::string( ( VString ) val ) == "female" ) {
 						genderSelection.set( "female" );

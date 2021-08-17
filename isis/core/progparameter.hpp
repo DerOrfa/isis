@@ -21,6 +21,7 @@
 #include "property.hpp"
 #include <string>
 #include <map>
+#include <ostream>
 
 namespace isis::util
 {
@@ -85,6 +86,8 @@ public:
 
 	///\copydoc isHidden
 	bool &hidden();
+
+	friend std::ostream &operator<<(std::ostream &os, const ProgParameter &parameter);
 };
 
 /**
@@ -115,28 +118,5 @@ public:
 };
 
 }
-/// @cond _internal
-namespace std
-{
-/// Streaming output for ProgParameter - classes
-template<typename charT, typename traits> basic_ostream<charT, traits>&
-operator<<( basic_ostream<charT, traits> &out, const isis::util::ProgParameter &s )
-{
-	const std::string &desc = s.description();
-
-	if ( ! desc.empty() ) {
-		out << desc << ", ";
-	}
-
-	LOG_IF( s.isEmpty(), isis::CoreDebug, isis::error ) << "Program parameters must not be empty. Please set it to any value.";
-	assert( !s.isEmpty() );
-	out << "default=\"" << s.toString( false ) << "\", type=" << s.getTypeName();
-
-	if ( s.isNeeded() )out << " (needed)";
-
-	return out;
-}
-}
-/// @endcond _internal
 
 

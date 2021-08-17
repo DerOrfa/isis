@@ -20,7 +20,6 @@ using namespace isis;
 namespace isis::test
 {
 const std::map<uint8_t, std::string> formCodes{
-	{0,"UNKNOWN"},
 	{1,"SCANNER_ANAT"}, //scanner-based anatomical coordinates
 	{2,"ALIGNED_ANAT"}, //coordinates aligned to another file's, or to anatomical "truth".
 	{3,"TALAIRACH"}, //coordinates aligned to Talairach-Tournoux Atlas; (0,0,0)=AC, etc
@@ -31,11 +30,11 @@ BOOST_AUTO_TEST_SUITE ( imageIONii_NullTests )
 
 BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 {
-	util::DefaultMsgPrint::stopBelow( warning );
+//	util::DefaultMsgPrint::stopBelow( warning );
 	util::Selection formCode(formCodes,1);
 
 	std::list<data::Image> images = data::IOFactory::load( "nix.null" );
-	BOOST_REQUIRE( images.size() >= 1 );
+	BOOST_REQUIRE_GE( images.size(), 1 );
 
 //	data::enableLog<util::DefaultMsgPrint>(info);
 //	image_io::enableLog<util::DefaultMsgPrint>( info );
@@ -56,7 +55,7 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 				continue;
 			default:{}
 		}
-		if(null.getValueAs<uint32_t>("sequenceNumber")>=100)
+		if(null.property("sequenceNumber").gt(util::Value(100)))
 			continue;// @todo splicing of interleaved images (images with acquisitionNumber as an interleaved list) is currently broken
 
         std::filesystem::path niifile(std::string(std::tmpnam(nullptr))+"_ID"+null.property( "typeID" ).toString()+".nii");
@@ -78,8 +77,8 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 			null.touchProperty("window/max") = minmax.second;
 		}
 
-		std::list< data::Image > niftilist = data::IOFactory::load( niifile.native() );
-		BOOST_REQUIRE( niftilist.size() == 1 );
+		std::list< data::Image > niftilist = data::IOFactory::load( niifile );
+		BOOST_REQUIRE_EQUAL( niftilist.size(), 1 );
 		data::Image &nii = niftilist.front();
 
 		// nifti cannot store sequenceNumber - so its always "0"
@@ -124,7 +123,9 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 			const util::PropertyMap::DiffMap diff = niiChunks[i].getDifference( nullChunks[i] );
 
 			if( !diff.empty() )
-				std::cout << diff << std::endl;
+				std::cout
+					<< "There is a difference between \"" << null.identify(true,false) << "\" and \"" << nii.identify(true,false) << "\"\n"
+					<<  diff << std::endl;
 
 			BOOST_REQUIRE( diff.empty() );
 		}

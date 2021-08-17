@@ -78,18 +78,14 @@ void SortedChunkList::getproplist::operator()(const util::PropertyMap& c)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // constructor
-SortedChunkList::SortedChunkList( util::PropertyMap::key_type comma_separated_equal_props )
+SortedChunkList::SortedChunkList( const std::list<util::PropertyMap::PropPath> &p_list ) : equalProps(p_list)
 {
-	const std::list< isis::util::PropertyMap::key_type > p_list = util::stringToList<util::PropertyMap::key_type>( comma_separated_equal_props, ',' );
-	equalProps.insert( equalProps.end(), p_list.begin(), p_list.end() );
-	
 	//we need a list of protected props
 	//some are actually needed for the splicing and inserting...
 	protected_props.insert( p_list.begin(), p_list.end() );
 	//also those that are explicitly needed by the chunks
-	const auto &chunk_need= util::Singletons::get<util::PropertyMap::NeededsList<Chunk>, 0>();
-	protected_props.insert(chunk_need.begin(),chunk_need.end());
-	// source might be usefull as well
+	protected_props.insert(Chunk::neededProperties.begin(),Chunk::neededProperties.end());
+	// source might be useful as well
 	protected_props.insert("source");
 
 }
@@ -217,7 +213,21 @@ bool SortedChunkList::insert( const Chunk &ch )
 		LOG(Debug,info) << "Removed " << not_spliced.back() << " before splicing";
 		
 		bool ok=true;
-		for(const data::Chunk &c:chs.autoSplice()){
+		std::list<data::Chunk> spliced={chs};
+		while(spliced.front().queryProperty(secondarySort.top().propertyName)->size()>1){
+			const data::Chunk &front=spliced.front();
+			if(front.queryProperty(secondarySort.top().propertyName)->size() % front.getRelevantDims()){//this is not good
+				LOG(Runtime,error) << "Aborting to automatic splicing of chunk as amount of elements in splicing property does not fit amount of splices";
+				LOG(Runtime,error) << "Reverting to one chunk only. This is probably not going to end well ...";
+				spliced={chs};
+				break;
+			}
+			for(auto org=spliced.begin();org!=spliced.end();){
+				spliced.splice(org,org->autoSplice());//put results of splicing of org *before* org
+				org=spliced.erase(org); // remove the old spliced up chunk and have org point to the next
+			}
+		}
+		for(const data::Chunk &c:spliced){
 			std::shared_ptr<Chunk> inserted=insert_impl(c);
 			if(inserted){
 				not_spliced.back().second.push_back(inserted); //list all chunks those extracted props belong into

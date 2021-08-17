@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <ostream>
 
 #include "types_array.hpp"
 #include "color.hpp"
@@ -18,6 +19,7 @@ struct scaling_pair {
 	util::Value scale;
 	util::Value offset;
 	bool valid=false;
+	friend std::ostream &operator<<(std::ostream &os, const scaling_pair &pair);
 };
 
 class ValueArray;
@@ -384,40 +386,16 @@ public:
 	[[nodiscard]] bool isInteger() const;
 
 	void endianSwap();
+
+	friend std::ostream &operator<<(std::ostream &os, const ValueArray &array);
 /// delete-functor which does nothing (in case someone else manages the data).
-struct NonDeleter {
-	template<typename T> void operator()( T *p )const {
-		//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
-		LOG( Debug, verbose_info ) << "Not freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") as automatic deletion was disabled for it";
+	struct NonDeleter {
+		template<typename T> void operator()( T *p )const {
+			//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
+			LOG( Debug, verbose_info ) << "Not freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") as automatic deletion was disabled for it";
+		};
 	};
-};
 };
 
 }
-/// @cond _internal
-namespace std
-{
-// streaming for scaling_pair
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::data::scaling_pair &s )
-{
-	return out << std::make_pair(s.scale,s.offset);
-}
-// streaming for ValueArray
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::data::ValueArray &s )
-{
-	assert(s.isValid());
-	if ( s.isValid() ){
-		out << "#" << s.getLength();
-		if(s.getLength()) {//@todo use list2stream
-			auto i = s.begin();
-			out << isis::util::Value(*i).toString(false);
-			for (++i; i < s.end(); i++)
-				out << "|" << isis::util::Value(*i).toString(false);
-		}
-	}
-	return out;
-}
-}
-/// @endcond _internal
+
