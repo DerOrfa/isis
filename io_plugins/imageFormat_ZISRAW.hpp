@@ -81,14 +81,14 @@ class ImageFormat_ZISRAW : public FileFormat{
 		int64_t DirectoryPosition,MetadataPosition,AttachmentDirectoryPosition;
 		bool UpdatePending;
 
-		FileHeader(data::ByteArray &source, const size_t offset);
+		FileHeader(data::ByteArray &source, size_t offset);
 	};
 	class MetaData:public Segment{
 		int32_t XMLSize,AttachmentSize;
 		boost::property_tree::ptree xml_data;
 	public:
-		MetaData(data::ByteArray &source, const size_t offset, std::shared_ptr<std::ofstream> dump_stream);
-		boost::property_tree::ptree get(std::string subtree="")const;
+		MetaData(data::ByteArray &source, size_t offset, std::shared_ptr<std::ofstream> dump_stream);
+		[[nodiscard]] boost::property_tree::ptree get(std::string subtree="")const;
 	};
 	class SubBlock:public Segment{
 		int32_t MetadataSize,AttachmentSize;
@@ -100,12 +100,12 @@ class ImageFormat_ZISRAW : public FileFormat{
 		static std::map<std::string,_internal::bounds> getBoundaries(const std::list<SubBlock> &segments);
 	
 		_internal::DirectoryEntryDV DirectoryEntry;
-		std::function<data::Chunk()> getChunkGenerator()const;
+		[[nodiscard]] std::function<data::Chunk()> getChunkGenerator()const;
 		boost::property_tree::ptree xml_data;
-		bool isNormalImage()const;
-		std::string getPlaneID()const;
-		std::map< char, _internal::DimensionEntry > getDimsInfo()const;
-		std::array<int32_t,4> getSize()const;
+		[[nodiscard]] bool isNormalImage()const;
+		[[nodiscard]] std::string getPlaneID()const;
+		[[nodiscard]] std::map< char, _internal::DimensionEntry > getDimsInfo()const;
+		[[nodiscard]] std::array<int32_t,4> getSize()const;
 	};
 	class Directory:public Segment{
 	public:
@@ -114,7 +114,7 @@ class ImageFormat_ZISRAW : public FileFormat{
 	};
 	data::Chunk transferFromMosaic(std::list<SubBlock> segments,unsigned short,std::shared_ptr<util::ProgressFeedback> feedback);
 public:
-	std::list<util::istring> suffixes(FileFormat::io_modes /*modes*/) const override {return ".czi";}
+	[[nodiscard]] std::list<util::istring> suffixes(FileFormat::io_modes /*modes*/) const override {return {".czi"};}
 
 	std::list< data::Chunk > load(
 		data::ByteArray source,
@@ -123,9 +123,9 @@ public:
 		std::shared_ptr<util::ProgressFeedback> feedback
 	) override;
 
-	std::string getName() const override {return "Zeiss Integrated Software RAW";}
+	[[nodiscard]] std::string getName() const override {return "Zeiss Integrated Software RAW";}
 
-	std::list<util::istring> dialects() const override {return {"dump_xml","nopyramid", "max16G", "max8G", "max4G"};}
+	[[nodiscard]] std::list<util::istring> dialects() const override {return {"dump_xml","nopyramid", "max16G", "max8G", "max4G"};}
 
 	void write(const data::Image &/*image*/, const std::string &/*filename*/, std::list<util::istring> /*dialects*/, std::shared_ptr<util::ProgressFeedback> /*feedback*/) override{
 		throwGenericError("not yet implemented");
