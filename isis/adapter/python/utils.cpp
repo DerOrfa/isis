@@ -122,7 +122,39 @@ std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>> property2p
 		default:return std::list<util::ValueTypes>(p.begin(),p.end());
 	}
 }
-data::Image makeImage(py::buffer b, std::map<std::string, util::ValueTypes> metadata)
+
+std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>>
+getMetaDataFromPropertyMap(const util::PropertyMap &ob) {
+	std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>> ret;
+	for(auto &set:ob.getFlatMap()){
+		ret.emplace(set.first.toString(),python::property2python(set.second));
+	}
+	LOG(Debug,verbose_info) << "Transferred " << ret.size() << " properties from a PropertyMap";
+	return ret;
+}
+std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>>
+getMetaDataFromImage(const data::Image &img, bool merge_chunk_data) {
+	std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>>
+	    ret= getMetaDataFromPropertyMap(img);
+	if(merge_chunk_data){
+		for(const auto &set:img.getChunkAt(0,false).getFlatMap()){
+			// create an empty PropertyValue to collect all props
+			util::PropertyValue p;
+			for(auto &props:img.getChunksProperties(set.first)){ // for each PropertyValue "key" from each chunk
+				if(props.isEmpty()){
+					LOG(Runtime,warning) << "Not adding empty chunk property for " << set.first;
+				} else {
+					p.transfer(p.end(),props); //move all its contents into p
+				}
+			}
+			ret.emplace(set.first.toString(),python::property2python(p));//make p dictionary entry
+			LOG(Debug,verbose_info) << "Added " << p.size() << " distinct properties from chunks for " << set.first;
+		}
+	}
+	return ret;
+}
+
+data::Image makeImage(const py::buffer& b, std::map<std::string, util::ValueTypes> metadata)
 {
 	static const TypeMap type_map;
 	/* Request a buffer descriptor from Python */

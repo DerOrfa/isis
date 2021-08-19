@@ -31,7 +31,10 @@ m.def("setLoglevel", [](const char *level,const char *module)->void{
 },"level"_a="notice","module"_a="all");
 
 py::class_<data::ValueArray>(m, "ValueArray");
-py::class_<data::NDimensional<4>>(m, "4Dimensional");
+py::class_<data::NDimensional<4>>(m, "4Dimensional")
+	.def_property_readonly("shape",&data::NDimensional<4>::getSizeAsVector)
+	.def_property_readonly("relevantDims",&data::NDimensional<4>::getRelevantDims)
+;
 py::class_<util::PropertyMap>(m, "PropertyMap")
 	.def("keys", [](const util::PropertyMap &ob) {
 		std::list<std::string> ret;
@@ -44,13 +47,7 @@ py::class_<util::PropertyMap>(m, "PropertyMap")
 	.def("__getitem__", [](const util::PropertyMap &ob, std::string path){
 		return python::property2python(ob.property(path.c_str()));
 	})
-	.def("getMetaData", [](const util::PropertyMap &ob) {
-		std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>> ret;
-		for(auto &set:ob.getFlatMap()){
-			ret.emplace(set.first.toString(),python::property2python(set.second));
-		}
-		return ret;
-	})
+	.def("getMetaData", &python::getMetaDataFromPropertyMap)
 ;
 
 
@@ -72,6 +69,7 @@ py::class_<data::Image, data::NDimensional<4>, util::PropertyMap>(m, "image")
 	})
 	.def_property_readonly("shape", &data::Image::getSizeAsVector)
 	.def("identify", &data::Image::identify,"withpath"_a=true,"withdate"_a=false)
+	.def("getMetaData", &python::getMetaDataFromImage,"merge_chunk_data"_a=true)
 ;
 
 m.def("load",&python::load,
