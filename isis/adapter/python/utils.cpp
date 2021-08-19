@@ -101,7 +101,7 @@ std::pair<std::list<data::Image>, util::slist> load_list(util::slist paths,util:
 {
 	std::list<util::istring> _formatstack,_dialects;
 	util::slist rejects;
-	auto conversion= [](const std::string &s)->util::istring {return s.c_str();};
+	auto conversion= [](const std::string_view &s)->util::istring {return {s.data(),s.length()};};
 	std::transform(formatstack.begin(),formatstack.end(),std::back_inserter(_formatstack),conversion);
 	std::transform(dialects.begin(),dialects.end(),std::back_inserter(_dialects),conversion);
 

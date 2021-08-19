@@ -11,13 +11,12 @@ if(NOT pybind11_POPULATED)
     add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
 endif()
 
-add_library(isis MODULE isis_python.cpp utils.cpp logging.cpp)
+pybind11_add_module(pyisis isis_python.cpp logging.cpp utils.cpp)
 
-target_link_libraries(isis PRIVATE pybind11::module isis_core)
+#add_library(pyisis MODULE isis_python.cpp utils.cpp logging.cpp)
+target_link_libraries(pyisis PRIVATE pybind11::module isis_core)
+set_property(TARGET pyisis PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-set_property(TARGET isis PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-pybind11_extension(isis)
-pybind11_strip(isis)
-
-set_target_properties(isis PROPERTIES CXX_VISIBILITY_PRESET "hidden"	CUDA_VISIBILITY_PRESET "hidden")
+#pybind11_extension(pyisis)
+#pybind11_strip(pyisis)
+#set_target_properties(pyisis PROPERTIES CXX_VISIBILITY_PRESET "hidden"	CUDA_VISIBILITY_PRESET "hidden")

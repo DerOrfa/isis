@@ -16,7 +16,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 using namespace isis;
 
-PYBIND11_MODULE(isis, m)
+PYBIND11_MODULE(pyisis, m)
 {
 
 python::setup_logging();
