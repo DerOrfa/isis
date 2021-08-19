@@ -167,7 +167,7 @@ void VistaInputImage::transformFromFunctional()
 	//then splice up into volumes again
 	dst.remove( "vista/slice_time" );
 	dst.setValueAs<uint32_t>( "acquisitionNumber", 0 );
-	list< data::Chunk > ret = dst.autoSplice(1);
+	list< data::Chunk > ret = dst.autoSplice();
 	util::PropertyMap::DiffMap differences = front().getDifference( back() ); // figure out which properties differ between the timesteps
 	differences.erase( "acquisitionNumber" ); // this will be set later
 

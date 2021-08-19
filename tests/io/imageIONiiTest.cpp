@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 		nii.remove( "nifti/quatern_c" );
 		nii.remove( "nifti/quatern_d" );
 
-		nii.spliceDownTo( ( data::dimensions )null.getChunk( 0, 0 ).getRelevantDims() ); // make the chunks of the nifti have the same dimensionality as the origin
+		auto result=nii.spliceDownTo( static_cast<data::dimensions>(null.getChunk( 0, 0 ).getRelevantDims()) ); // make the chunks of the nifti have the same dimensionality as the origin
 
 		std::vector< data::Chunk > niiChunks = nii.copyChunksToVector();
 		std::vector< data::Chunk > nullChunks = null.copyChunksToVector();
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 			niiChunks[i].remove( "source" );
 			nullChunks[i].remove( "source" );
 
-			// @todo because of the spliceAt we get a big rounding error in indexOrigin (from summing up voxelSize)
+			// @todo because of the splicing we get a big rounding error in indexOrigin (from summing up voxelSize)
 			niiChunks[i].remove( "indexOrigin" );
 			nullChunks[i].remove( "indexOrigin" );
 
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 
 			if( !diff.empty() )
 				std::cout
-					<< "There is a difference between \"" << null.identify(true,false) << "\" and \"" << nii.identify(true,false) << "\"\n"
+					<< "There is a difference in the " << i << "th chunks from \"" << null.identify(true,false) << "\" and \"" << nii.identify(true,false) << "\"\n"
 					<<  diff << std::endl;
 
 			BOOST_REQUIRE( diff.empty() );

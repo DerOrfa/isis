@@ -71,6 +71,14 @@ public:
 		}
 	}
 
+	/**
+	 * Increase the size of the property by replacing every entry by factor results of op(original_value).
+	 * op is guaranteed to be run sequential, so internal increments can be used.
+	 * @param factor amount of entries each entry should be replaced with
+	 * @param op functor to compute the new entries from the old one
+	 * @return new length of the property
+	 */
+	size_t explode(size_t factor, std::function<Value(const Value &)> op);
 
 // 	void reserve(size_t size);
 // 	void resize( size_t size, const Value& clone );

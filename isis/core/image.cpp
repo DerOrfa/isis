@@ -26,31 +26,6 @@
 
 namespace isis::data
 {
-namespace _internal {
-struct splicer {
-	dimensions m_dim;
-	Image &m_image;
-	size_t m_amount;
-	splicer( dimensions dimemsion, size_t amount, Image &image ): m_dim( dimemsion ), m_image( image ), m_amount( amount ) {}
-	void operator()( std::shared_ptr<Chunk> &ptr ) {operator()(*ptr);}
-	void operator()( Chunk &ch ) {
-		const size_t topDim = ch.getRelevantDims() - 1;
-
-		if( topDim >= ( size_t ) m_dim ) { // ok we still have to spliceAt that
-			const size_t subSize = m_image.getSizeAsVector()[topDim];
-			assert( !( m_amount % subSize ) ); // there must not be any "remaining"
-			splicer sub( m_dim, m_amount / subSize, m_image );
-			for( Chunk ref : ch.autoSplice( uint32_t( m_amount / subSize ) ) )
-				sub( ref );
-
-		} else { // seems like we're done - insert it into the image
-			assert( ch.getRelevantDims() == ( size_t ) m_dim ); // index of the higest dim>1 (ch.getRelevantDims()-1) shall be equal to the dim below the requested splicing (m_dim-1)
-			LOG( Debug, verbose_info ) << "Inserting spliceAt result of size " << ch.getSizeAsVector() << " at " << ch.queryProperty( "indexOrigin" );
-			m_image.insertChunk( ch );
-		}
-	}
-};
-}
 
 Image::Image ( ) : set( defaultChunkEqualitySet ), clean( false )
 {
@@ -906,15 +881,10 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 	if( lookup[0]->getRelevantDims() < ( size_t ) dim ) {
 		LOG( Debug, error ) << "The dimensionality of the chunks of this image is already below " << dim << " cannot spliceAt it.";
 		return 0;
-	} else if( lookup[0]->getRelevantDims() == ( size_t ) dim ) {
+	} else if( lookup[0]->getRelevantDims() == dim ) {
 		LOG( Debug, info ) << "Skipping useless splicing, relevantDims is already " << lookup[0]->getRelevantDims();
 		return lookup.size();
 	}
-
-	util::vector4<size_t> image_size = getSizeAsVector();
-
-	for( int i = 0; i < dim; i++ )
-		image_size[i] = 1;
 
 	// get a list of needed properties (everything which is missing in a newly created chunk plus everything which is needed for autosplice)
 	static const std::list<util::PropertyMap::PropPath> splice_needed{
@@ -948,37 +918,16 @@ size_t Image::spliceDownTo( dimensions dim )   //rowDim = 0, columnDim, sliceDim
 	}
 	// do the splicing
 	std::vector<std::shared_ptr<Chunk> > buffer;
-	buffer.swap(lookup); // move the old lookup table into a buffer, so its empty when the splicer starts inserting the new chunks
-	std::for_each(buffer.begin(),buffer.end(),_internal::splicer( dim, util::product(image_size), *this ));
+	buffer.swap(lookup); // move the old lookup table into a buffer, so it is empty when the splicer starts inserting the new chunks
+	for(auto &c_ptr:buffer){
+		for(auto &c:c_ptr->autoSplice(dim)){
+			const bool inserted=insertChunk(c);
+			assert(inserted);//it was in there, should go in again
+		}
+	}
 	reIndex();
 	return lookup.size();
 }
-
-// size_t Image::foreachChunk( ChunkOp &op, bool copyMetaData )
-// {
-// 	size_t err = 0;
-//
-// 	if( checkMakeClean() ) {
-// 		util::vector4<size_t> imgSize = getSizeAsVector();
-// 		util::vector4<size_t> chunkSize = getChunk( 0, 0, 0, 0 ).getSizeAsVector();
-// 		util::vector4<size_t> pos;
-//
-// 		for( pos[timeDim] = 0; pos[timeDim] < imgSize[timeDim]; pos[timeDim] += chunkSize[timeDim] ) {
-// 			for( pos[sliceDim] = 0; pos[sliceDim] < imgSize[sliceDim]; pos[sliceDim] += chunkSize[sliceDim] ) {
-// 				for( pos[columnDim] = 0; pos[columnDim] < imgSize[columnDim]; pos[columnDim] += chunkSize[columnDim] ) {
-// 					for( pos[rowDim] = 0; pos[rowDim] < imgSize[rowDim]; pos[rowDim] += chunkSize[rowDim] ) {
-// 						Chunk ch = getChunk( pos[rowDim], pos[columnDim], pos[sliceDim], pos[timeDim], copyMetaData );
-//
-// 						if( op( ch, pos ) == false )
-// 							err++;
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-//
-// 	return err;
-// }
 
 size_t Image::getNrOfColumns() const
 {

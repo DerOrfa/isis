@@ -177,6 +177,16 @@ std::vector< PropertyValue > PropertyValue::splice( const size_t len )
 	assert(isEmpty());
 	return ret;
 }
+size_t PropertyValue::explode(size_t factor, std::function<Value(const Value &)> op)
+{
+	for(auto e=container.begin();e!=container.end();){
+		for(size_t i=0;i<factor;i++){
+			container.insert(e,op(*e));
+		}
+		e=container.erase(e);
+	}
+}
+
 
 
 // Value hooks
