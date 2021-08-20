@@ -4,6 +4,7 @@
 
 #include "utils.hpp"
 #include "pybind11/stl.h"
+#include "pybind11/chrono.h"
 #include <type_traits>
 #include "../../core/io_factory.hpp"
 #include "logging.hpp"
@@ -17,6 +18,28 @@ namespace _internal{
 			LOG(Debug,info) << "Freeing shared_ptr capsule at " << f;
 			delete reinterpret_cast<std::shared_ptr<void> *>(f);
 		});
+	}
+
+	//generic typecast plus some special cases
+	template<typename T> py::object type2object(const T &v){
+		return py::cast(v);
+	}
+	template<> py::object type2object<util::Selection>(const util::Selection &v){
+		return py::str(static_cast<std::string>(v));
+	}
+	template<> py::object type2object<util::date>(const util::date &v){
+		//pybind has no special conversion for date
+		// Lazy initialise the PyDateTime import
+		if (!PyDateTimeAPI) { PyDateTime_IMPORT; }
+
+		time_t tme(std::chrono::duration_cast<std::chrono::seconds>(v.time_since_epoch()).count());
+		std::tm localtime = *std::localtime(&tme);
+
+		py::handle handle(PyDate_FromDate(
+			localtime.tm_year + 1900,
+			localtime.tm_mon + 1,
+			localtime.tm_mday));
+		return py::reinterpret_steal<py::object>(handle);
 	}
 
 	std::pair<std::vector<size_t>,std::vector<size_t>>
@@ -111,31 +134,35 @@ std::pair<std::list<data::Image>, util::slist> load_list(util::slist paths,util:
 std::pair<std::list<data::Image>, util::slist> load(std::string path,util::slist formatstack,util::slist dialects){
 	return load_list({path},formatstack,dialects);
 }
-
-std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>> property2python(util::PropertyValue p)
+py::object value2object(const util::ValueTypes &val)
 {
-	if(p.is<util::Selection>())
-		p.transform<std::string>();
-	switch(p.size()){
-		case 0:return {};
-		case 1:return p.front();
-		default:return std::list<util::ValueTypes>(p.begin(),p.end());
+	return std::visit([](const auto &value)->py::object{
+		return _internal::type2object(value);
+	},val);
+}
+py::object property2object(const util::PropertyValue &val)
+{
+	switch(val.size()){
+		case 0:return py::none();
+		case 1:return value2object(val.front());
+		default:
+			py::list ret;
+			for(const auto &value:val)
+				ret.append(value2object(value));
+			return ret;
 	}
 }
 
-std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>>
-getMetaDataFromPropertyMap(const util::PropertyMap &ob) {
-	std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>> ret;
+py::dict getMetaDataFromPropertyMap(const util::PropertyMap &ob) {
+	py::dict ret;
 	for(auto &set:ob.getFlatMap()){
-		ret.emplace(set.first.toString(),python::property2python(set.second));
+		ret[set.first.toString().c_str()]=python::property2object(set.second);
 	}
 	LOG(Debug,verbose_info) << "Transferred " << ret.size() << " properties from a PropertyMap";
 	return ret;
 }
-std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>>
-getMetaDataFromImage(const data::Image &img, bool merge_chunk_data) {
-	std::map<std::string,std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>>>
-	    ret= getMetaDataFromPropertyMap(img);
+py::dict getMetaDataFromImage(const data::Image &img, bool merge_chunk_data) {
+	py::dict ret= getMetaDataFromPropertyMap(img);
 	if(merge_chunk_data){
 		for(const auto &set:img.getChunkAt(0,false).getFlatMap()){
 			// create an empty PropertyValue to collect all props
@@ -147,14 +174,14 @@ getMetaDataFromImage(const data::Image &img, bool merge_chunk_data) {
 					p.transfer(p.end(),props); //move all its contents into p
 				}
 			}
-			ret.emplace(set.first.toString(),python::property2python(p));//make p dictionary entry
+			ret[set.first.toString().c_str()]=python::property2object(p);//make p dictionary entry
 			LOG(Debug,verbose_info) << "Added " << p.size() << " distinct properties from chunks for " << set.first;
 		}
 	}
 	return ret;
 }
 
-data::Image makeImage(const py::buffer& b, std::map<std::string, util::ValueTypes> metadata)
+data::Image makeImage(py::buffer b, py::dict metadata)
 {
 	static const TypeMap type_map;
 	/* Request a buffer descriptor from Python */

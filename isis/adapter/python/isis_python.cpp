@@ -3,7 +3,6 @@
 //
 
 #include "pybind11/pybind11.h"
-#include "pybind11/chrono.h"
 #include "pybind11/stl.h"
 #include "../../core/image.hpp"
 #include "utils.hpp"
@@ -45,7 +44,7 @@ py::class_<util::PropertyMap>(m, "PropertyMap")
 	})
 	.def("__contains__", [](const util::PropertyMap &ob, std::string path)->bool{return ob.hasProperty(path.c_str());})
 	.def("__getitem__", [](const util::PropertyMap &ob, std::string path){
-		return python::property2python(ob.property(path.c_str()));
+		return python::property2object(ob.property(path.c_str()));
 	})
 	.def("getMetaData", &python::getMetaDataFromPropertyMap)
 ;
@@ -69,7 +68,11 @@ py::class_<data::Image, data::NDimensional<4>, util::PropertyMap>(m, "image")
 	})
 	.def_property_readonly("shape", &data::Image::getSizeAsVector)
 	.def("identify", &data::Image::identify,"withpath"_a=true,"withdate"_a=false)
-	.def("getMetaData", &python::getMetaDataFromImage,"merge_chunk_data"_a=true)
+	.def(
+		"getMetaData",
+		&python::getMetaDataFromImage,
+		"creates a flat dictionary of all properties of the image including those of all chunks if requested (default: True)",
+		"merge_chunk_data"_a=true)
 ;
 
 m.def("load",&python::load,
