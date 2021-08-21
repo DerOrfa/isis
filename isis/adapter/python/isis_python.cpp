@@ -51,13 +51,16 @@ py::class_<util::PropertyMap>(m, "PropertyMap")
 
 
 py::class_<data::Chunk, data::ValueArray, data::NDimensional<4>, util::PropertyMap>(m, "chunk")
-	.def_property_readonly("nparray",[](data::Chunk &chk){return python::make_array(chk);	})
-	.def("__array__",[](data::Chunk &ch){return python::make_array(ch);	})
+	.def(py::init([](const data::Chunk &chk){return data::Chunk(chk);}))
+	.def_property_readonly("nparray",[](data::Chunk &chk){return python::make_array(chk);})
+	.def("__array__",[](data::Chunk &ch){return python::make_array(ch);})
 ;
 py::class_<data::Image, data::NDimensional<4>, util::PropertyMap>(m, "image")
 	.def(py::init(&python::makeImage))
-	.def("__array__",[](data::Image &img){return python::make_array(img);	})
-	.def_property_readonly("nparray",[](data::Image &img){return python::make_array(img);	})
+	.def(py::init([](const data::Image &img){return data::Image(img);}))
+	.def(py::init([](const data::Chunk &chk){return data::Image(chk);}))
+	.def("__array__",[](data::Image &img){return python::make_array(img);})
+	.def_property_readonly("nparray",[](data::Image &img){return python::make_array(img);})
 	.def("getChunks",
 		 [](const data::Image &img, bool copy_metadata) {return img.copyChunksToVector(copy_metadata);	},
 		 "get all chunks of pixel data that make the image",

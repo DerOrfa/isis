@@ -74,7 +74,7 @@ namespace _internal{
 		shape_v.push_back(3);
 		strides_v.push_back(sizeof(uint8_t));
 		return py::buffer_info(
-			const_cast<uint8_t*>(&ptr->r),//its ok to drop the const here, we mark the buffer as readonly
+			const_cast<uint8_t*>(&ptr->r),//It's ok to drop the const here, we mark the buffer as readonly
 			shape_v, strides_v,
 			true);
 	}
@@ -83,7 +83,7 @@ namespace _internal{
 		shape_v.push_back(3);
 		strides_v.push_back(sizeof(uint16_t));
 		return py::buffer_info(
-			const_cast<uint16_t*>(&ptr->r),//its ok to drop the const here, we mark the buffer as readonly
+			const_cast<uint16_t*>(&ptr->r),//It's ok to drop the const here, we mark the buffer as readonly
 			shape_v, strides_v,
 			true);
 	}
@@ -96,9 +96,10 @@ namespace _internal{
 
 py::array make_array(data::Chunk &ch)
 {
-	return py::array(ch.visit(
-		[&ch](auto ptr)->py::buffer_info{return _internal::make_buffer_impl(ptr,ch);}
-	),_internal::make_capsule(ch.getRawAddress()));
+	//@todo maybe create with py::array_t<T,py::array::c_style> so we could skip the reshape
+	auto info = ch.visit([&ch](auto ptr){return _internal::make_buffer_impl(ptr,ch);});
+	auto array = py::array(info,_internal::make_capsule(ch.getRawAddress()));
+	return array;
 }
 
 py::array make_array(data::Image &img)
