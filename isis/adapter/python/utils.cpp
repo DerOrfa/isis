@@ -224,16 +224,16 @@ data::Image makeImage(py::buffer b, py::dict metadata)
 	static const TypeMap type_map;
 	/* Request a buffer descriptor from Python */
 	py::buffer_info buffer = b.request();
+	if(buffer.shape.size()>4)
+		throw std::runtime_error("Only up to 4 dimensions are allowed!");
+
+	if(buffer.shape.size()>1){
+		std::swap(buffer.shape[0],buffer.shape[1]);
+		std::swap(buffer.strides[0],buffer.strides[1]);
+	}
+
 	if(auto found_type=type_map.find(buffer.format);found_type!=type_map.end()) //a supported type was found
 	{
-		if(buffer.shape.size()>4)
-			throw std::runtime_error("Only up to 4 dimensions are allowed!");
-
-		if(buffer.shape.size()>1){
-			std::swap(buffer.shape[0],buffer.shape[1]);
-			std::swap(buffer.strides[0],buffer.strides[1]);
-		}
-
 
 		util::vector4<size_t> sizes;
 		std::copy(buffer.shape.begin(),buffer.shape.end(),sizes.begin());
@@ -250,8 +250,12 @@ data::Image makeImage(py::buffer b, py::dict metadata)
 		auto chk=data::Chunk(array,sizes[0],sizes[1],sizes[2],sizes[3]);
 
 		for(auto &prop:metadata){
-//			LOG(Debug,verbose_info) << "Setting property " << prop.first << " as " << prop.second;
-			chk.touchProperty(prop.first.c_str())=prop.second;
+			if(py::isinstance<py::str>(prop.first)){
+				LOG(Debug,verbose_info) << "Setting property " << prop.first;
+				chk.insert({prop.first.cast<std::string>(),object2property(prop.second)});
+			}
+			else
+				LOG(Runtime,error) << "Ignoring key " << prop.first << " as its not a string";
 		}
 
 		auto missing=chk.getMissing();
