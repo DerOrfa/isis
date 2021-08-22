@@ -650,11 +650,22 @@ void PropertyMap::removeUncommon( PropertyMap &common )const
 bool PropertyMap::insert(const std::pair<std::string,PropertyValue> &p){
 	return insert(std::make_pair(PropPath(p.first.c_str()),p.second));
 }
+bool PropertyMap::insert(std::pair<std::string,PropertyValue> &&p){
+	return insert(std::make_pair(PropPath(p.first.c_str()),std::move(p.second)));
+}
 
 bool PropertyMap::insert(const std::pair<PropPath,PropertyValue> &p){
 	PropertyValue &entry= touchProperty(p.first);
 	if(entry.isEmpty()){
 		entry=p.second;
+		return true;
+	} else
+		return false;
+}
+bool PropertyMap::insert(std::pair<PropPath,PropertyValue> &&p){
+	PropertyValue &entry = touchProperty(p.first);
+	if(entry.isEmpty()){
+		entry.swap(p.second);
 		return true;
 	} else
 		return false;

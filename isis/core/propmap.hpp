@@ -357,6 +357,8 @@ public:
 
 	bool insert(const std::pair<PropPath,PropertyValue> &p);
 	bool insert(const std::pair<std::string,PropertyValue> &p);
+	bool insert(std::pair<PropPath,PropertyValue> &&p);
+	bool insert(std::pair<std::string,PropertyValue> &&p);
 
 	/**
 	 * extract Property or branch from this PropertyMap and move it into dst.
