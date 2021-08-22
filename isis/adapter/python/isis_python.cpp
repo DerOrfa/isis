@@ -22,7 +22,15 @@ python::setup_logging();
 m.add_object("_cleanup", py::capsule([]() {python::free_logging(verbose_info);}));
 
 m.def("setLoglevel", [](const char *level,const char *module)->void{
-	util::Selection rq_level({"error", "warning", "notice", "info", "verbose_info"});
+	static const std::map<LogLevel,std::string> severity_map={
+		{error,"error"},
+		{warning,"warning"},
+		{notice,"notice"},
+		{info,"info"},
+		{verbose_info,"verbose"}
+	};
+	util::Selection rq_level(severity_map,notice);
+
 	if(!rq_level.set(level)){
 		LOG(python::Debug,error) << "Not setting invalid logging level " << level << " for " << module;
 	}
