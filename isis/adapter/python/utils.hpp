@@ -44,4 +44,7 @@ data::Image makeImage(py::buffer b, py::dict metadata);
 
 py::object value2object(const util::ValueTypes &val);
 py::object property2object(const util::PropertyValue &val);
+
+util::Value object2value(pybind11::handle ob);
+util::PropertyValue object2property(pybind11::handle ob);
 }

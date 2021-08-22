@@ -11,6 +11,24 @@
 
 namespace isis::python{
 namespace _internal{
+typedef std::variant< //a reduced adapter to prevent ambiguous conversions (e.g. signed/unsigned)
+		  bool, int, double
+		, util::dvector3, util::ivector3
+		, util::dvector4, util::ivector4
+		, std::string
+		, std::complex<double>
+		, util::timestamp, util::duration
+	> reduced_adapter_wo_lists;
+typedef std::variant< //a reduced adapter to prevent ambiguous conversions (e.g. signed/unsigned)
+bool, int, double
+	, util::dvector3, util::ivector3
+	, util::dvector4, util::ivector4
+	, std::string
+	, util::slist, util::ilist, util::dlist
+	, std::complex<double>
+	, util::timestamp, util::duration
+	> reduced_adapter_w_lists;
+
 	py::capsule make_capsule(const std::shared_ptr<void> &ptr)
 	{
 		return py::capsule(new std::shared_ptr<void>(ptr), [](void *f)
@@ -153,6 +171,25 @@ py::object property2object(const util::PropertyValue &val)
 			return ret;
 	}
 }
+util::Value object2value(pybind11::handle ob)
+{
+	return std::visit([](auto &&v)->util::Value{return v;},ob.cast<_internal::reduced_adapter_w_lists>());
+}
+util::PropertyValue object2property(pybind11::handle ob)
+{
+	//tell pybind to try to make it one of the supported value types (except lists)
+	// @todo this is messy, maybe better expose PropertyValue to python directly
+	try{
+		return std::visit([](auto &&v)->util::Value{return v;},ob.cast<_internal::reduced_adapter_wo_lists>());
+	} catch(py::cast_error&){} //ignore error
+
+	//try again as list
+	util::PropertyValue ret;
+	for(auto v:ob)
+		ret.push_back(object2value(v));
+	return ret;
+}
+
 
 py::dict getMetaDataFromPropertyMap(const util::PropertyMap &ob) {
 	py::dict ret;
