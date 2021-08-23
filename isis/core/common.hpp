@@ -38,7 +38,7 @@ namespace isis
 namespace util
 {
 /**
-* Continously searches in a sorted list using the given less-than comparison.
+* Continuously searches in a sorted list using the given less-than comparison.
 * It starts at current and increments it until the referenced value is not less than the compare-value anymore.
 * Then it returns.
 * \param current the current-position-iterator for the sorted list.
@@ -74,7 +74,7 @@ Write a list of elements to a std::basic_ostream
 \param start starting iterator of input
 \param end end iterator of input
 \param o the output stream to write into
-\param delim delimiter used to seperate the elements (default: " ")
+\param delim delimiter used to separate the elements (default: " ")
 \param prefix will be send to the stream as start (default: "")
 \param suffix will be send to the stream at the end (default: "")
 */

@@ -13,7 +13,7 @@
 #pragma once
 
 #define __need_size_t
-#include <stddef.h>
+#include <cstddef>
 #include <algorithm>
 #include <string>
 #include "common.hpp"
@@ -60,7 +60,7 @@ template<unsigned short DIMS> class NDimensional
 
 protected:
 	static constexpr size_t dims = DIMS;
-	NDimensional() {}
+	NDimensional() = default;
 public:
 	/**
 	 * Initializes the size-vector.
@@ -68,9 +68,7 @@ public:
 	 * \param d array with sizes to use. (d[0] is most iterating element / lowest dimension)
 	 */
 	void init(const std::array<size_t,DIMS> &d ) {m_dim = d;}
-	NDimensional( const NDimensional &src ) {//@todo default copier should do the job
-		init( src.m_dim );
-	}
+	NDimensional( const NDimensional &src ) = default;
 	/**
 	 * Compute linear index from n-dimensional index,
 	 * \param coord array of indexes (d[0] is most iterating element / lowest dimension)
@@ -98,11 +96,11 @@ public:
 	 * Get the size of the object in elements of TYPE.
 	 * \returns \f$ \prod_{i=0}^{DIMS-1} getDimSize(i) \f$
 	 */
-	size_t getVolume()const {
+	[[nodiscard]] size_t getVolume()const {
 		return _dimStride( DIMS );
 	}
 	///\returns the size of the object in the given dimension
-	size_t getDimSize( size_t idx )const {
+	[[nodiscard]] size_t getDimSize( size_t idx )const {
 		return m_dim[idx];
 	}
 

@@ -181,7 +181,7 @@ bool Value::apply(const isis::util::Value& other){
 }
 std::ostream &operator<<(std::ostream &out, const Value &s)
 {
-	return s.print(true,out);
+	return s.print(false,out);
 }
 
 }
