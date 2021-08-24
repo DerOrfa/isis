@@ -14,6 +14,7 @@
 #include "propmap.hpp"
 #include "stringop.hpp"
 #include <boost/iostreams/stream.hpp>
+#include <utility>
 #include <boost/property_tree/xml_parser.hpp>
 
 namespace isis::util
@@ -186,10 +187,10 @@ std::ostream &operator<<(std::ostream &os, const PropertyMap::PropPath &s)
 	return os;
 }
 ///////////////////////////////////////////////////////////////////
-// Contructors
+// Constructors
 ///////////////////////////////////////////////////////////////////
 
-PropertyMap::PropertyMap( const PropertyMap::container_type &src ): container( src ) {}
+PropertyMap::PropertyMap( PropertyMap::container_type src ): container(std::move( src )) {}
 
 ///////////////////////////////////////////////////////////////////
 // The core tree traversal functions
@@ -313,7 +314,7 @@ bool PropertyMap::remove( const PropPath &path )
 bool PropertyMap::remove( const PathSet &removeList, bool keep_needed )
 {
 	bool ret = true;
-	for( PathSet::const_reference key :  removeList ) {
+	for( const PropPath &key :  removeList ) {
 		auto found = tryFindEntry<PropertyValue>( key );
 
 		if( found ) { // remove everything which is there
@@ -334,17 +335,17 @@ bool PropertyMap::remove( const PropertyMap &removeMap, bool keep_needed )
 	bool ret = true;
 
 	//remove everything that is also in second
-	for ( auto otherIt = removeMap.container.begin(); otherIt != removeMap.container.end(); otherIt++ ) {
+	for ( const auto &otherPair : removeMap.container) {
 		//find the closest match for otherIt->first in this (use the value-comparison-functor of PropMap)
-		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first - so it's the same property or propmap
-			if ( thisIt->second.isBranch() && otherIt->second.isBranch() ) { //both are a branch => recurse
+		if ( continousFind( thisIt, container.end(), otherPair, container.value_comp() ) ) { //thisIt->first == otherIt->first - so it's the same property or propmap
+			if ( thisIt->second.isBranch() && otherPair.second.isBranch() ) { //both are a branch => recurse
 				PropertyMap &mySub = thisIt->second.branch();
-				const PropertyMap &otherSub = otherIt->second.branch();
+				const PropertyMap &otherSub = otherPair.second.branch();
 				ret &= mySub.remove( otherSub );
 
 				if( mySub.isEmpty() ) // delete my branch, if its empty
 					container.erase( thisIt++ );
-			} else if( thisIt->second.isProperty() && otherIt->second.isProperty() ) {
+			} else if( thisIt->second.isProperty() && otherPair.second.isProperty() ) {
 				container.erase( thisIt++ ); // so delete this (they are equal - kind of)
 			} else { // this is a leaf
 				LOG( Debug, warning ) << "Not deleting branch " << MSubject( thisIt->first ) << " because its no subtree on one side";
@@ -438,12 +439,12 @@ void PropertyMap::removeEqual ( const PropertyMap &other, bool removeNeeded )
 	auto thisIt = container.begin();
 
 	//remove everything that is also in second and equal (or also empty)
-	for ( auto otherIt = other.container.begin(); otherIt != other.container.end(); otherIt++ ) {
+	for ( auto otherPair : other.container ) {
 		//find the closest match for otherIt->first in this (use the value-comparison-functor of PropMap)
-		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { //thisIt->first == otherIt->first  - so it's the same property
+		if ( continousFind( thisIt, container.end(), otherPair, container.value_comp() ) ) { //thisIt->first == otherIt->first  - so it's the same property
 
 			//          if(thisIt->second.type()==typeid(PropertyValue) && otherIt->second.type()==typeid(PropertyValue)){ // if both are Values
-			if( std::visit( _internal::RemoveEqualCheck( removeNeeded ), thisIt->second.variant(), otherIt->second.variant() ) ) {
+			if( std::visit( _internal::RemoveEqualCheck( removeNeeded ), thisIt->second.variant(), otherPair.second.variant() ) ) {
 				container.erase( thisIt++ ); // so delete this if both are empty _or_ equal
 				continue; // keep iterator from incrementing again
 			} else
@@ -550,16 +551,6 @@ bool PropertyMap::operator!=(const PropertyMap &other) const {return container !
 PropertyMap::PathSet PropertyMap::getKeys()const   {return genKeyList(trueP);}
 PropertyMap::PathSet PropertyMap::getMissing()const {return genKeyList(invalidP);}
 
-PropertyMap::PathSet PropertyMap::localBranches() const
-{
-	return getLocal<PropertyMap>();
-}
-PropertyMap::PathSet PropertyMap::localProps() const
-{
-	return getLocal<PropertyValue>();
-}
-
-
 void PropertyMap::addNeeded( const PropPath &path )
 {
 	touchProperty( path ).needed() = true;
@@ -582,7 +573,7 @@ PropertyMap::PropPath PropertyMap::find( const key_type &key, bool allowProperty
 
 	LOG_IF( name.size() > 1, Debug, warning ) << "Stripping search key " << MSubject( name ) << " to " << name.back();
 
-	// if the searched key is on this brach return its name
+	// if the searched key is on this branch return its name
 	auto found = container.find( name.back() );
 
 	if( found != container.end() &&
@@ -637,14 +628,19 @@ bool PropertyMap::rename( const PropPath &oldname,  const PropPath &newname, boo
 
 void PropertyMap::removeUncommon( PropertyMap &common )const
 {
-#pragma message("getDifference is waste of time here")
-	const DiffMap difference = common.getDifference( *this );
-	for( const DiffMap::value_type & ref :  difference ) {
-		if ( ! ref.second.first.isEmpty() ) {
-			LOG( Debug, verbose_info ) << "Detected difference in " << ref << " removing from common";
-			common.remove( ref.first );//if there is something in common, remove it
-		}
-	}
+	//make a list of all properties which are not equal (or not there) and thus should be removed from common
+	key_predicate uncommon_entry_predicate = [this](const PropPath &path, const PropertyValue &val)->bool{
+		auto found = this->queryProperty(path);
+		if(found){
+			return
+				!(found->isEmpty() && val.isEmpty()) && //if both are empty they are considered "common" -> should not be removed
+				!(*found == val); // should not be removed if they are equal, yes otherwise
+		} else
+			return true; //not found, obviously not common
+	};
+	// common is probably the smaller tree, so walk through that
+	auto to_be_removed = common.genKeyList(uncommon_entry_predicate); // other propertyMap is captured above as this
+	common.remove( to_be_removed );
 }
 
 bool PropertyMap::insert(const std::pair<std::string,PropertyValue> &p){
@@ -695,10 +691,9 @@ void PropertyMap::deduplicate(std::list<std::shared_ptr<PropertyMap>> maps){
 	assert(!maps.empty());
 
 	util::PropertyMap common=*maps.front();  //copy all props from the first chunk
-	auto p=maps.begin();
 
 	// common now has all props (from the first chunk)
-	for(++p;p!=maps.end();++p)
+	for(auto p=std::next(maps.cbegin());p!=maps.cend();++p)
 		(*p)->removeUncommon( common );//remove everything which isn't common from common
 
 	//then remove remaining common props from the chunks
@@ -741,11 +736,18 @@ PropertyValue& PropertyMap::setValue(const PropPath &path, const Value &val, con
 	return ret;
 }
 
-PropertyMap::PathSet PropertyMap::genKeyList(const PropertyMap::predicate_type &predicate) const
+PropertyMap::PathSet PropertyMap::genKeyList(const PropertyMap::key_predicate &predicate) const
 {
 	PathSet k;
-	std::for_each( container.begin(), container.end(), WalkTree( k, PropPath(), predicate ) );
+	std::for_each( container.begin(), container.end(), WalkTree( k, predicate ) );
 	return k;
+}
+PropertyMap::PathSet PropertyMap::genKeyList(const PropertyMap::leaf_predicate &predicate) const
+{
+	auto key_predicate = [predicate](const PropPath &path, const PropertyValue &val)->bool{
+		return predicate(val);
+	};
+	return genKeyList(key_predicate);
 }
 
 void PropertyMap::readPtree(const boost::property_tree::ptree &tree,bool skip_empty){
@@ -835,30 +837,25 @@ bool PropertyMap::Node::isEmpty() const
 	},variant());
 }
 
-PropertyMap::WalkTree::WalkTree(
-	PropertyMap::PathSet &out,
-	const PropertyMap::PropPath &prefix,
-	const PropertyMap::predicate_type &predicate
-) : m_out( out ), name( prefix ), m_predicate(predicate) {}
+PropertyMap::WalkTree::WalkTree(PropertyMap::PathSet &out,const PropertyMap::key_predicate &predicate)
+: m_out( out ), m_key_predicate(predicate){}
 
-void PropertyMap::WalkTree::operator()(const std::monostate &val) const{} // non-op
-void PropertyMap::WalkTree::operator()(const std::pair<const istring, PropertyMap::Node> &ref) const//recursion
+void PropertyMap::WalkTree::operator()(const std::pair<PropertyMap::key_type, PropertyMap::Node> &ref)//recursion
 {
-	std::visit( WalkTree( m_out, name / ref.first, m_predicate ), ref.second.variant() );
-}
-void PropertyMap::WalkTree::operator()(const PropertyValue &val) const
-{
-	if ( m_predicate( val ) )
-		m_out.insert( m_out.end(), name );
-}
-void PropertyMap::WalkTree::operator()(const PropertyMap &sub) const//call my own recursion for each element
-{
-	std::for_each( sub.container.begin(), sub.container.end(), *this );
+	name.push_back(ref.first);
+	if(ref.second.isBranch()){
+		for(const auto &v: ref.second.branch().container)
+			operator()(v);
+	} else if(ref.second.isProperty()){
+		if ( m_key_predicate(name, *ref.second ) )
+			m_out.insert( m_out.end(), name );
+	}
+	name.pop_back();
 }
 
-const PropertyMap::predicate_type PropertyMap::trueP = [](const PropertyValue&){return true;};
-const PropertyMap::predicate_type PropertyMap::invalidP = [](const PropertyValue &ref ){return ref.isNeeded() && ref.isEmpty();};
-const PropertyMap::predicate_type PropertyMap::emptyP = [](const PropertyValue& ref){return ref.isEmpty();};
+const PropertyMap::leaf_predicate PropertyMap::trueP = [](const PropertyValue&){return true;};
+const PropertyMap::leaf_predicate PropertyMap::invalidP = [](const PropertyValue &ref ){return ref.isNeeded() && ref.isEmpty();};
+const PropertyMap::leaf_predicate PropertyMap::emptyP = [](const PropertyValue& ref){return ref.isEmpty();};
 
 std::ostream &operator<<(std::ostream &os, const PropertyMap &map)
 {
