@@ -636,13 +636,13 @@ size_t Image::getChunkStride ( size_t base_stride )
 	return lookup.size() / set.getHorizontalSize();
 }
 
-std::list<util::PropertyValue> Image::getChunksProperties( const util::PropertyMap::key_type &key, bool unique )const
+std::list<util::PropertyValue> Image::getChunksProperties( const util::PropertyMap::PropPath &key, bool unique )const
 {
 	std::list<util::PropertyValue > ret;
 
 	if( clean ) {
-		for( const std::shared_ptr<const Chunk> &ref :  lookup ) {
-			const auto prop = ref->queryProperty( key );
+		for( const auto &ref :  lookup ) {
+			const auto prop = std::const_pointer_cast<const Chunk>(ref)->queryProperty( key );
 
 			if(unique){ // if unique
 				if( !prop || prop->isEmpty() || //if there is no (or an empty)  prop in ref skip it

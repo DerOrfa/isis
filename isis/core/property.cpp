@@ -66,8 +66,7 @@ std::string PropertyValue::toString( bool labeled )const
 	} else if(size()==1)
 		return front().toString(labeled);
 	else{
-		const PropertyValue buff=copyByID(typeID<std::string>());
-		std::string ret=listToString(buff.begin(),buff.end(),",","[","]");
+		std::string ret=listToString(begin(),end(),",","[","]");
 		if(labeled && !isEmpty())
 			ret+="("+getTypeName()+"["+std::to_string(size())+"])";
 		return ret;

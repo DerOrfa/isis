@@ -1,11 +1,9 @@
 #include "fftw.hxx"
 #include <fftw3.h>
-#include <memory>
 #include <type_traits>
-#include "../../core/chunk.hpp"
 #include "../../core/valuearray_typed.hpp"
 
-
+#ifdef HAVE_FFTW
 class PlanObj{
 	fftw_plan plan;
 	isis::data::TypedArray<std::complex< double >> buffer;
@@ -20,7 +18,14 @@ public:
 	}
 	operator fftw_plan(){return plan;}
 };
+void isis::math::fftw::_internal::fft_impl(isis::data::TypedChunk< std::complex< double > > &data, bool inverse)
+{
+	PlanObj p(data,inverse ? FFTW_BACKWARD:FFTW_FORWARD);
+	fftw_execute(p);
+}
+#endif
 
+#ifdef HAVE_FFTWf
 class PlanObjF{
 	fftwf_plan plan;
 	isis::data::TypedArray<std::complex< float >> buffer;
@@ -35,15 +40,9 @@ public:
 	}
 	operator fftwf_plan(){return plan;}
 };
-
-
 void isis::math::fftw::_internal::fft_impl(isis::data::TypedChunk< std::complex< float > > &data, bool inverse)
 {
 	PlanObjF p(data,inverse ? FFTW_BACKWARD:FFTW_FORWARD);
 	fftwf_execute(p);
 }
-void isis::math::fftw::_internal::fft_impl(isis::data::TypedChunk< std::complex< double > > &data, bool inverse)
-{
-	PlanObj p(data,inverse ? FFTW_BACKWARD:FFTW_FORWARD);
-	fftw_execute(p);
-}
+#endif

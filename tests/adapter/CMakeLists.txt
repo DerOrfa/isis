@@ -1,6 +1,6 @@
 
 if(ISIS_QT5)
-	find_package(Qt5Widgets)
+	find_package(Qt5 COMPONENTS Widgets)
 	add_executable( qt5test qt5test.cpp )
 	target_link_libraries( qt5test isis_qt5 Boost::unit_test_framework)
 	add_test(NAME qt5test COMMAND qt5test)

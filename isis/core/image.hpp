@@ -371,7 +371,7 @@ public:
 	 * \param key the name of the property to search for
 	 * \param unique when true empty, non existing or consecutive duplicates won't be added
 	 */
-	std::list<util::PropertyValue> getChunksProperties ( const util::PropertyMap::key_type &key, bool unique = false ) const;
+	std::list<util::PropertyValue> getChunksProperties ( const util::PropertyMap::PropPath &key, bool unique = false ) const;
 
 	/**
 	 * Get a list of the properties of the chunks for the given key.
