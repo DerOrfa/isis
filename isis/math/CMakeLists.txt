@@ -38,13 +38,14 @@ if(ISIS_USE_FFTW)
 		include_directories(${FFTW_INCLUDE_DIRS} ${FFTWf_INCLUDE_DIRS})
 		list(APPEND _DEPENDS ${FFTW_LDFLAGS} ${FFTWf_LDFLAGS} ${FFTW_LIBRARIES} ${FFTWf_LIBRARIES})
 		message(STATUS "fftw libraries: ${FFTW_LIBRARIES} ${FFTWf_LIBRARIES}")
+		add_definitions("-DHAVE_FFTW")
 	else()
 		message(FATAL_ERROR "Implement fftw lookup")
 	endif()
 
 	list(APPEND _CPP_GLOB "details/fftw.cpp")
 
-	add_definitions("-DHAVE_FFTW")
+	add_definitions("-DHAVE_FFTWf")
 endif()
 
 
