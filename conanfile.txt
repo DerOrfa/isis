@@ -7,6 +7,7 @@ fftw/[~=3]
 lzma/[~=5]@bincrafters/stable
 openjpeg/[~=2]
 libpng/[>1.2]
+pybind11/[>2.6.0]
 
 [options]
 fftw:precision=single
