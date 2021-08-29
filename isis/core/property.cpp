@@ -127,6 +127,7 @@ bool PropertyValue::transform(uint16_t dstID)
 		container.swap(ret.container);
 		return true;
 	}
+	return container.size();
 }
 
 
