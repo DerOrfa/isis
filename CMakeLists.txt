@@ -58,6 +58,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 ############################################################
+# conan based dependency resolution
+############################################################
+option(USE_CONAN "Use conan for dependencies" OFF)
+if(USE_CONAN)
+	include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+endif()
+
+############################################################
 # Logging options are global for all components in the tree
 ############################################################
 option(ISIS_RUNTIME_LOG "Enable runtime logging" ON)
@@ -151,7 +159,7 @@ set(CPACK_PACKAGE_VERSION_MAJOR ${ISIS_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${ISIS_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${ISIS_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${ISIS_CORE_REV_STRING}-${CMAKE_SYSTEM_NAME}-${CMAKE_BUILD_TYPE})
-#SET(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${ISIS_VERSION_MAJOR}.${ISIS_VERSION_MINOR}")
+SET(CPACK_PACKAGING_INSTALL_PREFIX "/usr") #prevent the productbuild generator from stuffing files into "/Applications"
 set(CPACK_NSIS_MODIFY_PATH ON)
 set(CPACK_NSIS_URL_INFO_ABOUT "http:\\\\\\\\isis-group.github.com/isis")
 include(CPack)

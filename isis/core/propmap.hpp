@@ -102,12 +102,13 @@ protected:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// internal predicates
 	/////////////////////////////////////////////////////////////////////////////////////////
-	typedef std::function<bool(const PropertyValue &val)> predicate_type;
+	typedef std::function<bool(const PropertyValue &val)> leaf_predicate;
+	typedef std::function<bool(const PropPath &path, const PropertyValue &val)> key_predicate;
 	/// allways true
-	static const predicate_type trueP;
+	static const leaf_predicate trueP;
 	/// true when the Property is needed and empty
-	static const predicate_type invalidP;
-	static const predicate_type emptyP;
+	static const leaf_predicate invalidP;
+	static const leaf_predicate emptyP;
 
 	void readPtree(const boost::property_tree::ptree &tree, bool skip_empty=true);
 
@@ -119,7 +120,6 @@ protected:
 	template<typename ITER> struct Splicer;
 	struct IsEmpty;
 
-	template<typename T> PathSet getLocal()const;
 API_EXCLUDE_END;
 /// @endcond _internal
 
@@ -216,7 +216,8 @@ API_EXCLUDE_END;
 	template<typename T> T* tryFetchEntry( const PropPath &path );
 
 	/// create a list of keys for every entry for which the given scalar predicate is true.
-	PathSet genKeyList(const predicate_type &predicate)const;
+	PathSet genKeyList(const leaf_predicate &predicate)const;
+	PathSet genKeyList(const key_predicate &predicate)const;
 
 	/**
 	 * Adds a property with status needed.
@@ -240,7 +241,7 @@ public:
 	// constructors
 	/////////////////////////////////////////////////////////////////////////////////////////
 	PropertyMap() = default;
-	explicit PropertyMap( const container_type &cont );
+	explicit PropertyMap( container_type cont );
 
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Common rw-accessors
@@ -256,6 +257,11 @@ public:
 
 	/// @copydoc queryProperty( const PropPath &path )const
 	PropertyValue* queryProperty( const PropPath &path );
+
+	/* Get PropertyMaps or PropertyValues at the local level
+	 * \returns a PathSet to all PropertyMaps or PropertyValues on this branch
+	 */
+	template<typename T> PathSet getLocal()const;
 
 	/**
 	 * Get the property at the path, or an empty one if there is none.
@@ -357,6 +363,8 @@ public:
 
 	bool insert(const std::pair<PropPath,PropertyValue> &p);
 	bool insert(const std::pair<std::string,PropertyValue> &p);
+	bool insert(std::pair<PropPath,PropertyValue> &&p);
+	bool insert(std::pair<std::string,PropertyValue> &&p);
 
 	/**
 	 * extract Property or branch from this PropertyMap and move it into dst.
@@ -389,17 +397,6 @@ public:
 	 * \returns a flat list of the paths to all properties in the PropertyMap
 	 */
 	PathSet getKeys()const;
-
-	/**
-	 * Get a list of the paths of all properties directly on this branch.
-	 * \returns a flat list of the paths to all properties in the PropertyMap
-	 */
-	PathSet localProps()const;
-	/**
-	 * Get a list of the paths of all sub-branches directly on this branch.
-	 * \returns a flat list of the paths to all properties in the PropertyMap
-	 */
-	PathSet localBranches()const;
 
 	/**
 	 * Get a list of missing properties.
@@ -722,13 +719,10 @@ public:
 /// @cond _internal
 struct PropertyMap::WalkTree {
 	PathSet &m_out;
-	const PropPath &name;
-	const predicate_type &m_predicate;
-	WalkTree( PathSet &out, const PropPath &prefix, const predicate_type &predicate);
-	void operator()( const std::monostate &val )const;
-	void operator()( container_type::const_reference ref ) const;
-	void operator()( const PropertyValue &val )const;
-	void operator()( const PropertyMap &sub )const;
+	PropPath name={};
+	const key_predicate &m_key_predicate;
+	WalkTree( PathSet &out, const key_predicate &predicate);
+	void operator()( const std::pair<PropertyMap::key_type, PropertyMap::Node> &ref );
 };
 template<typename ITER> struct PropertyMap::Splicer {
 	const ITER &first, &last;

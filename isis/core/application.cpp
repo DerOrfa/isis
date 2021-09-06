@@ -103,11 +103,11 @@ bool Application::addConfigFile(const std::string& filename)
 			auto param=configuration.queryBranch("parameters");
 			// if there is a "parameters" section in the file, use that as default parameters for the app
 			if(param){
-				for(PropertyMap::PropPath p:param->localProps()){
+				for(PropertyMap::PropPath p:param->getLocal<PropertyValue>()){
 					assert(p.size()==1);
 					ProgParameter &dst=parameters[p.front().c_str()];
 					PropertyValue &src=param->touchProperty(p);
-					if(!dst.isParsed()){ // don't touch it, if its not just the default
+					if(!dst.isParsed()){ // don't touch it, if It's not just the default
 						LOG(Runtime,verbose_info) << "Setting parameter " << std::make_pair(p,src) << " from configuration";
 						if(dst.isEmpty())
 							dst.swap(src);

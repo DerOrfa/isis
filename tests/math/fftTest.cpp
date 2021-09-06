@@ -6,9 +6,7 @@
 #include <isis/math/fft.hpp>
 #include <isis/math/common.hpp>
 
-namespace isis
-{
-namespace test
+namespace isis::test
 {
 
 BOOST_AUTO_TEST_CASE( sinus_fft_test )
@@ -123,5 +121,4 @@ BOOST_AUTO_TEST_CASE( sinus_fftw_test )
 			}
 }
 
-}
 }

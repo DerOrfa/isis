@@ -428,10 +428,12 @@ BOOST_AUTO_TEST_CASE( deduplicate_test )
 {
 	// should move all int32_t which are >1 to dst
 	std::list<std::shared_ptr<PropertyMap>> maps;
-	
-	for(int i=0;i<3;i++)
-		maps.emplace_back(new PropertyMap(getFilledMap()));
-	
+
+	PropertyMap reference=getFilledMap();
+
+	for(int i=0;i<5;i++)
+		maps.push_back(std::make_shared<PropertyMap>(reference));
+
 	int n=0;
 	for(auto &m:maps){
 		m->setValueAs("sub/Test1",++n);
@@ -440,10 +442,13 @@ BOOST_AUTO_TEST_CASE( deduplicate_test )
 	PropertyMap comm;
 	comm.deduplicate(maps);
 
-	BOOST_CHECK(!comm.hasProperty("sub/Test1"));
+	// all but "sub/Test1" is common
+	auto commonList=reference.getKeys();
+	commonList.erase("sub/Test1");
+	BOOST_CHECK_EQUAL(comm.getKeys(),commonList);
 
 	for(auto &m:maps){
-		BOOST_CHECK(m->hasProperty("sub/Test1"));
+		BOOST_CHECK_EQUAL(m->getKeys(),PropertyMap::PathSet{"sub/Test1"});
 	}
 }
 

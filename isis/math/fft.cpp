@@ -9,7 +9,7 @@
 #include "details/clfft.hxx"
 #endif //HAVE_CLFFT
 
-#ifdef HAVE_FFTW
+#if defined(HAVE_FFTW) || defined(HAVE_FFTWf)
 #include "details/fftw.hxx"
 #endif //HAVE_FFTW
 
@@ -35,7 +35,7 @@ isis::data::TypedChunk< std::complex< float > > isis::math::fft_single(isis::dat
 	if(cl::fft(data,inverse,scale))//if it fails, fall through
 		return data;
 #endif
-#if HAVE_FFTW
+#if HAVE_FFTWf
 	LOG(Runtime,info) << "Using single precision fftw to transform " << data.getSizeAsString() << " data";
 	if(fftw::fft(data,inverse,scale))//if it fails fall through
 		return data;
