@@ -9,16 +9,14 @@
 
 #include "selection.hpp"
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
-Selection::Selection(std::initializer_list<std::string> entries, const char *init_val ): m_set(0 )
+Selection::Selection(std::initializer_list<std::string> entries, const char *init_val )
 {
-	int ID = 1;
+	MapType::mapped_type ID = 0;
 	for( const auto &ref : entries ) {
-		const MapType::value_type pair( ref.c_str(), ID++ );
+		const MapType::value_type pair( {ref.begin(),ref.end()}, ID++ );
 
 		if( ! ent_map.insert( pair ).second ) {
 			LOG( Debug, error ) << "Entry " << pair << " could not be inserted";
@@ -28,41 +26,24 @@ Selection::Selection(std::initializer_list<std::string> entries, const char *ini
 	if( init_val[0] )
 		set( init_val );
 }
-Selection::Selection(): m_set( 0 ) {}
 
-Selection::operator int()const {return m_set;}
-Selection::operator util::istring()const
+Selection::operator bool() const
 {
-	if(m_set){
-		for( MapType::const_reference ref :  ent_map ) {
-			if ( ref.second == m_set )
-				return ref.first;
-		}
-		assert(false); // m_set should either be in the map or 0
-		return util::istring( "<<UNKNOWN>>" );
-	} else {
-		return util::istring( "<<NOT_SET>>" );
-	}
-}
-Selection::operator std::string()const
-{
-	util::istring buff = *this;
-	return std::string( buff.begin(), buff.end() );
+	return static_cast<bool>(m_set);
 }
 
-bool Selection::set( unsigned short entry )
+bool Selection::idExists(unsigned int entry)
 {
-	if( ent_map.size()+1 > entry ) {
-		m_set = entry;
-		return true;
-	} else {
-		return false;
-	}
-
+	return std::find_if(ent_map.begin(),ent_map.end(),[entry](auto &v){return v.second==entry;})!=ent_map.end();
+}
+void Selection::set( unsigned int entry )
+{
+	LOG_IF(!idExists(entry),Debug,error) << "The value you're setting doesn't exist in this selection";
+	m_set = entry;
 }
 bool Selection::set( const char *entry )
 {
-	MapType::const_iterator found = ent_map.find( entry );
+	auto found = ent_map.find( entry );
 
 	if ( found != ent_map.end() ) {
 		m_set = found->second;
@@ -73,15 +54,22 @@ bool Selection::set( const char *entry )
 	}
 }
 
-bool Selection::operator==( const Selection &ref )const{return comp_op(ref,std::equal_to<int>());}
-bool Selection::operator==( const char ref[] )    const{return std::equal_to<util::istring>()(*this, ref);}
-bool Selection::operator==( const int ref )       const{return std::equal_to<int>()(*this, ref);}
+bool Selection::operator==( const Selection &ref )const{return comp_op(ref,std::equal_to<>());}
+bool Selection::operator!=( const Selection &ref )const{return comp_op(ref,std::not_equal_to<>());}
 
-bool Selection::operator<( const Selection &ref )const{return comp_op(ref,std::less<int>());}
-bool Selection::operator<( const int ref )       const{return std::greater<int>()(*this, ref);}
+bool Selection::operator==( std::basic_string_view<char,util::_internal::ichar_traits> ref )const{
+	auto [valid, iter] = stringCompareCheck(ref);
+	return valid && iter->second == *m_set;
+}
+bool Selection::operator!=( std::basic_string_view<char,util::_internal::ichar_traits> ref )const{
+	auto [valid, iter] = stringCompareCheck(ref);
+	return valid && iter->second != *m_set;
+}
 
-bool Selection::operator>( const Selection &ref )const{return comp_op(ref,std::less<int>());}
-bool Selection::operator>( const int ref )       const{return std::greater<int>()(*this, ref);}
+
+bool Selection::operator<( const Selection &ref )const{return comp_op(ref,std::less<>());}
+
+bool Selection::operator>( const Selection &ref )const{return comp_op(ref,std::less<>());}
 
 std::list<util::istring> Selection::getEntries()const
 {
@@ -94,5 +82,20 @@ std::list<util::istring> Selection::getEntries()const
 	}
 	return ret;
 }
+std::pair<bool, Selection::MapType::const_iterator>
+Selection::stringCompareCheck(std::basic_string_view<char, util::_internal::ichar_traits> ref) const
+{
+	if(m_set){
+		auto found=ent_map.find(ref);
+		LOG_IF(found!=ent_map.end(), Runtime,warning) << "The string you're comparing to does not exist in this map";
+		return {found!=ent_map.end(), found};
+	} else {
+		LOG(Debug,warning) << "Comparing to unset Selection is always false";
+		return {false,{}};
+	}
+}
+std::ostream &operator<<(std::ostream &out, const Selection &s)
+{
+	return out << ( std::string )s;
 }
 }

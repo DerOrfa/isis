@@ -10,7 +10,8 @@
 
 #include <cstddef>
 #include <stdint.h>
+#include <string>
 
 using std::size_t;
-
+using namespace std::literals::string_literals;
 

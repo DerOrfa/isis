@@ -13,7 +13,7 @@ class FakedRawFormat: public image_io::FileFormat
 {
 	std::string getName()const override {return "";};
 	std::list< data::Chunk > load( const std::filesystem::path &, std::list<util::istring> /*formatstack*/, std::list<util::istring> /*dialects*/, std::shared_ptr<util::ProgressFeedback> /*feedback*/ ) override  {return std::list< data::Chunk>();}
-	util::istring suffixes( io_modes /*modes = both*/ ) const override {return "";}
+	std::list<util::istring> suffixes( io_modes /*modes = both*/ ) const override {return {};}
 	void write( const data::Image & /*image*/, const std::string & /*filename*/, std::list<util::istring> /*dialect*/, std::shared_ptr<util::ProgressFeedback> /*progress*/ ) override {}
 	std::pair< std::string, std::string > makeBasename( const std::string &filename )const override {
 		return std::make_pair( filename, std::string( "" ) );
@@ -63,7 +63,7 @@ int main( int argc, char *argv[] )
 		util::slist infiles = app.parameters["in"];
 		LOG_IF( infiles.size() > 1, RawLog, warning ) << "Cannot read multiple raw files at once, will only read " << infiles.front();
 		data::FilePtr src( infiles.front() );
-		const unsigned short rrepn = app.parameters["read_repn"].as<util::Selection>();
+		const unsigned short rrepn = static_cast<unsigned short>(app.parameters["read_repn"].as<util::Selection>());
 		util::ivector4 dims = app.parameters["rawdims"];
 		data::ValueArray dat;
 
@@ -99,7 +99,7 @@ int main( int argc, char *argv[] )
 		const util::Selection wrepn = app.parameters["repn"];
 
 		for( const data::Image & img :  app.images ) {
-			const unsigned short sRepn = ( int )wrepn ? : img.getMajorTypeID(); // get repn eigther from the parameter, or from the image
+			auto sRepn = wrepn ? static_cast<unsigned short>(wrepn) : img.getMajorTypeID(); // get repn eigther from the parameter, or from the image
 			size_t repnsize = data::ValueArray::createByID(sRepn, 1 ).bytesPerElem(); //create a dummy ValueArray to determine the elementsize of the requested repn
 			const size_t imgsize = img.getVolume() * repnsize;
 			const std::string filename = *( iOut++ );

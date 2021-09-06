@@ -17,7 +17,7 @@ class ImageFormat_FListProxy: public FileFormat
 private:
 
 protected:
-	util::istring suffixes( io_modes /*modes*/ )const override {return "flist";}
+	std::list<util::istring> suffixes(io_modes /*modes*/ )const override {return {"flist"};}
 public:
 	std::string getName()const override {return "filelist proxy (gets filenames from files or stdin)";}
 

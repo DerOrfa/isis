@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE ( ident_image_test )
 		chunks[i].setValueAs<float>( "acquisitionTime", i );
 		chunks[i].setValue( "source", std::string("root/")+std::to_string(i) );
 		chunks[i].setValue( "sequenceStart",now);
-		chunks[i].setValue( "sequenceDescription","test");
+		chunks[i].setValue( "sequenceDescription",std::string("test"));
 	}
 
 	data::Image img( chunks );
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE ( proplist_image_splice_test )
 	img.spliceDownTo(data::sliceDim);
 
 	BOOST_CHECK_EQUAL( img.getChunk( 0 ).getRelevantDims(), 2 ); // now its sliced
-	BOOST_CHECK( !img.hasProperty( "some_list")); // its in the chunks now
+	BOOST_CHECK( !img.hasProperty( "some_list")); // it's in the chunks now
 
 	BOOST_CHECK( const_cast<const data::Image&>(img).queryProperty( "nothing"));  //should still be there
 	BOOST_CHECK(img.property("nothing").isEmpty()); // but still empty

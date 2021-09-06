@@ -7,9 +7,7 @@
 #include <regex>
 
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 namespace _internal
 {
@@ -326,60 +324,56 @@ void ImageFormat_NiftiSa::parseSliceOrdering( const std::shared_ptr< isis::image
 	}
 
 	//if the sequence is "normal"
-	current.setValueAs<uint32_t>( "acquisitionNumber", 0 );
 	const size_t dims = current.getRelevantDims();
 	assert( dims <= 4 ); // more than 4 dimensions are ... well, not expected
 
-	if( head->slice_code <= NIFTI_SLICE_SEQ_INC  || head->slice_code > NIFTI_SLICE_ALT_DEC ) {
-		if( head->slice_duration == 0 ) { // and there is no slice duration, there is no use in numbering
-			return;
-		}
-	}
-
 	if( dims < 3 ) { // if there is only one slice, there is no use in numbering
+		//<std::remove_reference_t<decltype(head->dim[0])>>
+		current.setValueAs( "acquisitionNumber", 0 );
 		return;
 	} else {// if there are timesteps we have to get a bit dirty
 		util::PropertyValue &acqProp=current.touchProperty( "acquisitionNumber" );
 		
 		switch( head->slice_code ) { //set sub-property "acquisitionNumber" based on the slice_code and the offset
 		default:
-			LOG( Runtime, error ) << "Unknown slice code " << util::MSubject( ( int )head->slice_code ) << " falling back to NIFTI_SLICE_SEQ_INC";
+			LOG( Runtime, error ) << "Unknown slice code " << util::MSubject( static_cast<int>(head->slice_code) ) << " falling back to NIFTI_SLICE_SEQ_INC";
 		case 0:
 		case NIFTI_SLICE_SEQ_INC: //system assumes this anyway when the chunk is spliced up -- no explicit values needed
+		acqProp=0;
 		break;
 		case NIFTI_SLICE_SEQ_DEC:{
 			for(short v=0;v<head->dim[4];v++)
 				for(unsigned short i = 0; i < head->dim[3]; i++ ){
 					assert(v*head->dim[3]+head->dim[3]>=i);
-					acqProp.push_back<uint32_t>(v*head->dim[3]+head->dim[3]-i);
+					acqProp.push_back(v*head->dim[3]+head->dim[3]-i);
 				}
 		}
 		break;
 		case NIFTI_SLICE_ALT_INC: { //interlaced increment
 			for(short v=0;v<head->dim[4];v++){
 				for( short i = 0; i < head->dim[3]; i+=2)
-					acqProp.push_back<uint32_t>(v*head->dim[3]+i);
+					acqProp.push_back(v*head->dim[3]+i);
 				for( short i = 1; i < head->dim[3]; i+=2)
-					acqProp.push_back<uint32_t>(v*head->dim[3]+i);
+					acqProp.push_back(v*head->dim[3]+i);
 			}
 		}
 		break;
 		case NIFTI_SLICE_ALT_DEC: {
 			for(short v=0;v<head->dim[4];v++){
-				for( short i = head->dim[3]-1; i>=0; i-=2)
-					acqProp.push_back<uint32_t>(v*head->dim[3]+i);
-				for( short i = head->dim[3]-2; i>=0; i-=2)
-					acqProp.push_back<uint32_t>(v*head->dim[3]+i);
+				for( auto i = head->dim[3]-1; i>=0; i-=2)
+					acqProp.push_back(v*head->dim[3]+i);
+				for( auto i = head->dim[3]-2; i>=0; i-=2)
+					acqProp.push_back(v*head->dim[3]+i);
 			}
 		}
 		break;
 		}
 
-		if( head->slice_duration ) {
+		if( head->slice_duration != 0) {
 			util::PropertyValue &acqTimeProp=current.touchProperty( "acquisitionTime");
-                        const util::timestamp start=current.getValueAsOr<util::timestamp>("sequenceStart",util::timestamp());
-			for(util::PropertyValue::const_iterator i=acqProp.begin();i!=acqProp.end();i++){
-				acqTimeProp.push_back(start+std::chrono::milliseconds(i->as<int>() * int(head->slice_duration * time_fac)));
+			const auto start=current.getValueAsOr<util::timestamp>("sequenceStart",util::timestamp());
+			for(util::Value &v:acqProp){
+				acqTimeProp.push_back(start+std::chrono::milliseconds(v.as<int>() * int(head->slice_duration * time_fac)));
 			}
 		}
 	}
@@ -459,7 +453,7 @@ void ImageFormat_NiftiSa::storeHeader( const util::PropertyMap &props, _internal
 
 	// store niftis original sform if its there
 	if( props.hasProperty( "nifti/sform_code" ) ) {
-		head->sform_code = props.getValueAs<util::Selection>( "nifti/sform_code" );
+		head->sform_code = static_cast<decltype(head->sform_code)>(props.getValueAs<util::Selection>( "nifti/sform_code" ));
 
 		if( props.hasProperty( "nifti/srow_x" ) && props.hasProperty( "nifti/srow_y" ) && props.hasProperty( "nifti/srow_z" ) ) {
 			_internal::copyArray2Mem(props.getValueAs<util::fvector4>( "nifti/srow_x" ), head->srow_x );
@@ -471,7 +465,7 @@ void ImageFormat_NiftiSa::storeHeader( const util::PropertyMap &props, _internal
 
 	// store niftis original qform if its there
 	if( props.hasProperty( "nifti/qform_code" ) ) {
-		head->qform_code = props.getValueAs<util::Selection>( "nifti/qform_code" );
+		head->qform_code = static_cast<decltype(head->sform_code)>(props.getValueAs<util::Selection>( "nifti/qform_code" ));
 
 		if( props.hasProperty( "nifti/quatern_b" ) && props.hasProperty( "nifti/quatern_c" ) && props.hasProperty( "nifti/quatern_d" ) &&
 			props.hasProperty( "nifti/qoffset" ) && props.hasProperty( "nifti/qfac" )
@@ -540,11 +534,12 @@ void ImageFormat_NiftiSa::parseHeader( const std::shared_ptr< isis::image_io::_i
 	props.setValueAs<uint16_t>( "sequenceNumber", 0 );
 
 	if( head->sform_code ) { // get srow if sform_code>0
-		util::Selection code=formCode;
-		if(code.set(head->sform_code))
-			props.setValueAs( "nifti/sform_code", code );
-		else
-			LOG(Runtime,warning) << "ignoring unknown sform_code " << head->sform_code << "(known are: " << formCode.getEntries() << ")";
+		util::Selection code(formCodes);
+		if(code.idExists(head->sform_code)){
+			code.set(head->sform_code);
+			props.setValueAs("nifti/sform_code", code);
+		}else
+			LOG(Runtime,warning) << "ignoring unknown sform_code " << head->sform_code << "(known are: " << formCodes << ")";
 		
 		props.touchProperty( "nifti/srow_x" ) = util::fvector4{head->srow_x[0], head->srow_x[1], head->srow_x[2], head->srow_x[3]};
 		props.touchProperty( "nifti/srow_y" ) = util::fvector4{head->srow_y[0], head->srow_y[1], head->srow_y[2], head->srow_y[3]};
@@ -552,11 +547,12 @@ void ImageFormat_NiftiSa::parseHeader( const std::shared_ptr< isis::image_io::_i
 	}
 
 	if( head->qform_code ) { // get the quaternion if qform_code>0
-		util::Selection code=formCode;
-		if(code.set(head->qform_code))
-			props.setValueAs( "nifti/qform_code", code );
-		else
-			LOG(Runtime,warning) << "ignoring unknown qform_code " << head->qform_code << "(known are: " << formCode.getEntries() << ")";
+		util::Selection code(formCodes);
+		if(code.idExists(head->qform_code)){
+			code.set(head->qform_code);
+			props.setValueAs("nifti/qform_code", code);
+		}else
+			LOG(Runtime,warning) << "ignoring unknown qform_code " << head->qform_code << "(known are: " << formCodes << ")";
 
 		props.setValueAs( "nifti/quatern_b", head->quatern_b );
 		props.setValueAs( "nifti/quatern_c", head->quatern_c );
@@ -1390,14 +1386,13 @@ const util::Matrix4x4<float> ImageFormat_NiftiSa::nifti2isis{
 };
 
 // define form codes
-// UNKNOWN=0      this is implizit as undef
-// SCANNER_ANAT=1 scanner-based anatomical coordinates
-// ALIGNED_ANAT=2 coordinates aligned to another file's, or to anatomical "truth".
-// TALAIRACH    3 coordinates aligned to Talairach-Tournoux Atlas; (0,0,0)=AC, etc
-// MNI_152      4 MNI 152 normalized coordinates
-const util::Selection ImageFormat_NiftiSa::formCode({"SCANNER_ANAT", "ALIGNED_ANAT", "TALAIRACH","MNI_152"} );
+const std::map<uint8_t, std::string> ImageFormat_NiftiSa::formCodes{
+	{1,"SCANNER_ANAT"}, //scanner-based anatomical coordinates
+	{2,"ALIGNED_ANAT"}, //coordinates aligned to another file's, or to anatomical "truth".
+	{3,"TALAIRACH"}, //coordinates aligned to Talairach-Tournoux Atlas; (0,0,0)=AC, etc
+	{4,"MNI_152"} //MNI 152 normalized coordinates
+};
 
-}
 }
 
 

@@ -11,6 +11,7 @@
 //
 
 #include "property.hpp"
+#include "stringop.hpp"
 
 namespace isis::util
 {
@@ -39,14 +40,21 @@ bool PropertyValue::operator!=( const Value& second ) const
 
 
 PropertyValue::PropertyValue ( ) : m_needed( false ) {}
-PropertyValue &PropertyValue::operator=(const PropertyValue& other){container=other.container;return *this;}
+PropertyValue &PropertyValue::operator=(const PropertyValue& other){
+	container=other.container;
+	return *this;
+}
+PropertyValue &PropertyValue::operator=(PropertyValue&& other){
+	container.swap(other.container);
+	return *this;
+}
 
 
 PropertyValue PropertyValue::copyByID( short unsigned int ID ) const
 {
 	PropertyValue ret;
-	for(const_iterator i=begin();i!=end();i++){
-		ret.push_back(i->copyByID(ID));
+	for(auto &v:*this){
+		ret.push_back(v.copyByID(ID));
 	}
 	return ret;
 }
@@ -58,8 +66,7 @@ std::string PropertyValue::toString( bool labeled )const
 	} else if(size()==1)
 		return front().toString(labeled);
 	else{
-		const PropertyValue buff=copyByID(typeID<std::string>());
-		std::string ret=listToString(buff.begin(),buff.end(),",","[","]");
+		std::string ret=listToString(begin(),end(),",","[","]");
 		if(labeled && !isEmpty())
 			ret+="("+getTypeName()+"["+std::to_string(size())+"])";
 		return ret;
@@ -71,9 +78,10 @@ const Value &PropertyValue::operator()() const{return front();}
 Value &PropertyValue::operator()(){return front();}
 
 void PropertyValue::push_back( const Value& ref ){insert(end(), ref);}
+void PropertyValue::push_back( Value&& ref ){insert(end(), ref);}
 
 PropertyValue::iterator PropertyValue::insert( iterator at, const Value& ref ){
-	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting inconsistent type " << MSubject(ref.toString(true)) << " in " << MSubject(*this);
+	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
 	return container.insert(at,ref );
 }
 
@@ -82,7 +90,7 @@ void PropertyValue::transfer(isis::util::PropertyValue::iterator at, PropertyVal
 	if(ref.isEmpty()){
 		LOG(Debug,error) << "Not transferring empty Property";
 	} else {
-		LOG_IF(!isEmpty() && getTypeID()!=ref.getTypeID(),Debug,error) << "Inserting inconsistent type " << MSubject(ref.toString(true)) << " in " << MSubject(*this);
+		LOG_IF(!isEmpty() && getTypeID()!=ref.getTypeID(),Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
 		container.splice(at,ref.container );
 	}
 }
@@ -276,13 +284,8 @@ PropertyValue& PropertyValue::operator -=( const Value &second ){ front().subtra
 PropertyValue& PropertyValue::operator *=( const Value &second ){front().multiply_me(second);return *this;}
 PropertyValue& PropertyValue::operator /=( const Value &second ){front().divide_me(second);return *this;}
 
-}
-/// @cond _internal
-namespace std{
-bool less< isis::util::PropertyValue >::operator()(const isis::util::PropertyValue& x, const isis::util::PropertyValue& y) const
-{
-	return x.lt(y);
-}
+bool PropertyValue::operator<(const isis::util::PropertyValue& y) const{return lt(y);}
+std::ostream &operator<<(std::ostream &out, const PropertyValue &s){return out<<s.toString(true);}
 
 }
 /// @endcond _internal

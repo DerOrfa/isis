@@ -17,7 +17,7 @@ if(ISIS_QT5)
 	set(ISIS_QT_VERSION_API "0.0.0")
 	string( REGEX MATCH "^[0-9]+" ISIS_QT_VERSION_SO ${ISIS_QT_VERSION_API})
 
-	find_package(Qt5Widgets)
+	find_package(Qt5 COMPONENTS Widgets)
 
 	set(CMAKE_AUTOMOC ON)
 	set(CMAKE_AUTOUIC ON)

@@ -43,7 +43,15 @@ public:
 	typedef _internal::ValueConverterMap::mapped_type::mapped_type Converter;
 
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
-	static constexpr auto NumOfTypes =  std::variant_size<ValueTypes>::value;
+	static constexpr auto NumOfTypes =  std::variant_size_v<ValueTypes>;
+
+	// default constructors
+	Value(Value &&v)=default;
+	Value(const Value &v)=default;
+
+	// default assignment
+	Value &operator=(const Value&)=default;
+	Value &operator=(Value&&)=default;
 
 	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
 	constexpr Value(T &&v):ValueTypes(v){}
@@ -51,28 +59,23 @@ public:
 	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
 	constexpr Value(const T &v):ValueTypes(v){}
 	
-	//some overrides
-	Value(const char text[]): Value(std::string(text)){}
-
 	//copy
 	Value(const ValueTypes &v);
 	Value(ValueTypes &&v);
-	template<typename T> Value& operator=(const T& v){ValueTypes::operator=(v);return *this;}
-	template<typename T> Value& operator=(T&& v){ValueTypes::operator=(v);return *this;}
 	Value()=default;
 
-	std::string typeName()const;
-	size_t typeID()const;
+	[[nodiscard]] std::string typeName()const;
+	[[nodiscard]] size_t typeID()const;
 
 	/// \return true if the stored type is T
-	template<typename T> bool is()const{
+	template<typename T> [[nodiscard]] bool is()const{
 		return std::holds_alternative<T>(*this);
 	}
 
-	const Converter &getConverterTo( unsigned short ID )const;
+	[[nodiscard]] const Converter &getConverterTo( unsigned short ID )const;
 
 	/// creates a copy of the stored value using a type referenced by its ID
-	Value copyByID(size_t ID ) const;
+	[[nodiscard]] Value copyByID(size_t ID ) const;
 
 	/// creates a default constructed value using a type referenced by its ID
 	static Value createByID(unsigned short ID );
@@ -81,14 +84,14 @@ public:
 	 * Check if the stored value would also fit into another type referenced by its ID
 	 * \returns true if the stored value would fit into the target type, false otherwise
 	 */
-	bool fitsInto(size_t ID ) const;
+	[[nodiscard]] bool fitsInto(size_t ID ) const;
 
 	/**
 	 * Convert the content of one Value to another.
 	 * This will use the automatic conversion system to transform the value one Value-Object into another.
 	 * The types of both objects can be unknown.
 	 * \param from the Value-object containing the value which should be converted
-	 * \param to the Value-object which will contain the converted value if conversion was successfull
+	 * \param to the Value-object which will contain the converted value if conversion was successful
 	 * \returns false if the conversion failed for any reason, true otherwise
 	 */
 	static bool convert(const Value &from, Value &to );
@@ -100,9 +103,9 @@ public:
 	* Value mephisto("666");
 	* int devil=mephisto->as<int>();
 	* \endcode
-	* \return this value converted to the requested type if conversion was successfull.
+	* \return this value converted to the requested type if conversion was successful.
 	*/
-	template<class T> T as()const {
+	template<class T> [[nodiscard]] T as()const {
 		if( is<T>() )
 			return std::get<T>(*this);
 
@@ -117,11 +120,11 @@ public:
 		}
 	}
 
-	bool isFloat()const;
-	bool isInteger()const;
-	bool isValid()const;
+	[[nodiscard]] bool isFloat()const;
+	[[nodiscard]] bool isInteger()const;
+	[[nodiscard]] bool isValid()const;
 
-	std::string toString(bool with_typename=false)const;
+	[[nodiscard]] std::string toString(bool with_typename=false)const;
 
 	template<typename charT, typename traits>
 	std::ostream &print(bool with_typename=true,std::basic_ostream<charT, traits> &out=std::cout)const{
@@ -135,39 +138,39 @@ public:
 	 * Check if the this value is greater to another value converted to this values type.
 	 * The function tries to convert ref to the type of this and compares the result.
 	 * If there is no conversion an error is send to the debug logging, and false is returned.
-	 * \retval value_of_this>converted_value_of_ref if the conversion was successfull
+	 * \retval value_of_this>converted_value_of_ref if the conversion was successful
 	 * \retval true if the conversion failed because the value of ref was to low for TYPE (negative overflow)
 	 * \retval false if the conversion failed because the value of ref was to high for TYPE (positive overflow)
 	 * \retval false if there is no know conversion from ref to TYPE
 	 */
-	bool gt( const Value &ref )const;
+	[[nodiscard]] bool gt( const Value &ref )const;
 
 	/**
 	 * Check if the this value is less than another value converted to this values type.
-	 * The funkcion tries to convert ref to the type of this and compare the result.
+	 * The function tries to convert ref to the type of this and compare the result.
 	 * If there is no conversion an error is send to the debug logging, and false is returned.
-	 * \retval value_of_this<converted_value_of_ref if the conversion was successfull
+	 * \retval value_of_this<converted_value_of_ref if the conversion was successful
 	 * \retval false if the conversion failed because the value of ref was to low for TYPE (negative overflow)
 	 * \retval true if the conversion failed because the value of ref was to high for TYPE (positive overflow)
 	 * \retval false if there is no know conversion from ref to TYPE
 	 */
-	bool lt( const Value &ref )const;
+	[[nodiscard]] bool lt( const Value &ref )const;
 
 	/**
 	 * Check if the this value is equal to another value converted to this values type.
-	 * The funktion tries to convert ref to the type of this and compare the result.
+	 * The function tries to convert ref to the type of this and compare the result.
 	 * If there is no conversion an error is send to the debug logging, and false is returned.
-	 * \retval value_of_this==converted_value_of_ref if the conversion was successfull
+	 * \retval value_of_this==converted_value_of_ref if the conversion was successful
 	 * \retval false if the conversion failed because the value of ref was to low for TYPE (negative overflow)
 	 * \retval false if the conversion failed because the value of ref was to high for TYPE (positive overflow)
 	 * \retval false if there is no known conversion from ref to TYPE
 	 */
-	bool eq( const Value &ref )const;
+	[[nodiscard]] bool eq( const Value &ref )const;
 
-	Value plus(const Value &ref )const;
-	Value minus(const Value &ref )const;
-	Value multiply(const Value &ref )const;
-	Value divide(const Value &ref )const;
+	[[nodiscard]] Value plus(const Value &ref )const;
+	[[nodiscard]] Value minus(const Value &ref )const;
+	[[nodiscard]] Value multiply(const Value &ref )const;
+	[[nodiscard]] Value divide(const Value &ref )const;
 
 	Value& add(const Value &ref );
 	Value& subtract(const Value &ref );
@@ -195,6 +198,10 @@ public:
 	 * \returns true if conversion was successful (and the value was changed), false otherwise
 	 */
 	bool apply(const Value &other);
+
+	//implement standard ostream
+	friend std::ostream& operator<<( std::ostream &out, const Value &s );
+
 };
 
 
@@ -203,7 +210,7 @@ API_EXCLUDE_BEGIN;
 namespace _internal{
 /**
  * Generic value operation class.
- * This generic class does nothing, and the ()-operator will allways fail with an error send to the debug-logging.
+ * This generic class does nothing, and the ()-operator will always fail with an error send to the debug-logging.
  * It has to be (partly) specialized for the regarding type.
  */
 template<typename OPERATOR,bool modifying,bool enable> struct type_op
@@ -214,7 +221,7 @@ template<typename OPERATOR,bool modifying,bool enable> struct type_op
 
 	result_type operator()( lhs &first, const Value &second )const {
 		LOG( Debug, error )
-		    << "operator " << typeid(OPERATOR).name() << " is not supportet for "
+		    << "operator " << typeid(OPERATOR).name() << " is not supported for "
 		    << first.typeName()  << " and " << second.typeName();
 		throw std::domain_error("operation not available");
 	}
@@ -233,7 +240,7 @@ template<typename T> struct type_less : type_comp_base<std::less<T>,    has_op<T
 };
 template<typename T> struct type_greater : type_comp_base<std::greater<T>,has_op<T>::gt>
 {
-	//getting an negative overflow when trying to convert second into T, obviously means first is greater
+	//getting a negative overflow when trying to convert second into T, obviously means first is greater
 	typename std::greater<T>::result_type negOverflow()const {return true;}
 };
 
@@ -254,16 +261,15 @@ template<typename T> struct type_div :   type_op<div_op<T>,true,  has_op<T>::div
 /**
  * Half-generic value operation class.
  * This generic class does math operations on Values by converting the second Value-object to the type of the first Value-object. Then:
- * - if the conversion was successfull (the second value can be represented in the type of the first) the "inRange"-operation is used
+ * - if the conversion was successful (the second value can be represented in the type of the first) the "inRange"-operation is used
  * - if the conversion failed with an positive or negative overflow (the second value is to high/low to fit into the type of the first) a info sent to the debug-logging and the posOverflow/negOverflow operation is used
  * - if there is no known conversion from second to first an error is sent to the debug-logging and std::domain_error is thrown.
- * \note The functions (posOverflow,negOverflow) here are only stubs and will allways throw std::domain_error.
+ * \note The functions (posOverflow,negOverflow) here are only stubs and will always throw std::domain_error.
  * \note inRange will return OPERATOR()(first,second)
  * These class can be further specialized for the regarding operation.
  */
 template<typename OPERATOR,bool modifying> struct type_op<OPERATOR,modifying,true>
 {
-	virtual ~type_op(){}
 	typedef typename std::conditional<modifying, util::Value, const util::Value>::type lhs; //<typename OPERATOR::first_argument_type>
 	typedef typename util::Value rhs; //<typename OPERATOR::second_argument_type>
 	typedef typename OPERATOR::result_type result_type;
@@ -300,15 +306,3 @@ template<typename OPERATOR,bool modifying> struct type_op<OPERATOR,modifying,tru
 API_EXCLUDE_END;
 
 }
-
-// streaming output
-/// @cond _internal
-namespace std
-{
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::Value &s )
-{
-	return s.print(true,out);
-}
-}
-/// @endcond _internal

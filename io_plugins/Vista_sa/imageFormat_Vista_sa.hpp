@@ -51,7 +51,7 @@ public:
 
 
 protected:
-	util::istring suffixes( io_modes /*mode = both */ )const override {return ".v";}
+	std::list<util::istring> suffixes(io_modes /*mode = both */ )const override {return {".v"};}
 };
 
 }

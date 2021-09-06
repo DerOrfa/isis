@@ -103,7 +103,7 @@ Message::Message( std::string object, std::string module, std::string file, int 
 	  m_level( level )
 {}
 
-Message::Message( Message &&src ) : std::ostringstream(std::forward<std::ostringstream>(src) ),
+Message::Message( Message &&src ) noexcept : std::ostringstream(std::forward<std::ostringstream>(src) ),
 	  commitTo( src.commitTo ),
 	  m_object( src.m_object ),
 	  m_module( src.m_module ),
@@ -125,7 +125,7 @@ Message::~Message()
 }
 
 
-std::string Message::merge(const std::string color_code)const
+std::string Message::merge(const std::string& color_code)const
 {
 	const std::string reset_code(color_code.empty()? "":"\033[0m");
 	const std::string s_prefix(color_code.empty()? "\"":"\x1B[1m");

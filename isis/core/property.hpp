@@ -36,22 +36,21 @@ public:
 	typedef decltype(container)::const_reference const_reference;
 	typedef decltype(container)::value_type value_type;
 	/// Create a property and store the given single value object.
-	PropertyValue(const Value &ref, bool _needed = false ): m_needed(_needed ) {container.emplace_back(ref);}
+	PropertyValue(const Value &ref, bool _needed = false ): m_needed(_needed ) {container.push_back(ref);}
 	/// Create a property and store the given single value object.
-	PropertyValue(Value &&ref, bool _needed = false ): m_needed(_needed ){container.emplace_back(ref);}
-	virtual ~PropertyValue() = default;
+	PropertyValue(Value &&ref, bool _needed = false ): m_needed(_needed ){container.push_back(ref);}
 
 	////////////////////////////////////////////////////////////////////////////
 	// List operations
 	////////////////////////////////////////////////////////////////////////////
 	void push_back(const Value& ref);
-	template<typename T> typename std::enable_if<knownType<T>() >::type push_back(const T& ref){insert(end(),ref);}//@why not just Value
+	void push_back(Value&& ref);
 
 	iterator insert(iterator at,const Value& ref);
 
-	template<typename T> typename std::enable_if<knownType<T>(), iterator >::type insert(iterator at,const T& ref){
+	template<typename T> typename std::enable_if_t<knownType<T>(), iterator > insert(iterator at,const T& ref){
 		LOG_IF(!isEmpty() && getTypeID()!=typeID<T>(),Debug,error) << "Inserting inconsistent type " << MSubject(Value(ref).toString(true)) << " in " << MSubject(*this);
-		return container.emplace(at, Value(ref));
+		return container.emplace(at, ref);
 	}
 
 	iterator erase( size_t at );
@@ -59,7 +58,7 @@ public:
 	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 	iterator erase( iterator first, iterator last );
 
-	void resize(size_t size, Value insert=Value()){
+	void resize(size_t size, const Value& insert={}){
 		const auto mysize=container.size();
 		if(size-mysize>1){
 			LOG(Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
@@ -67,7 +66,7 @@ public:
 		if(mysize<size){ // grow
 			container.insert(container.end(), size-mysize, insert);
 		} else if(mysize>size){ // shrink
-			auto erasestart=container.begin();std::advance(erasestart,size);
+			auto erasestart=std::next(container.begin(),size);
 			erase(erasestart,container.end());
 		}
 	}
@@ -75,22 +74,22 @@ public:
 
 // 	void reserve(size_t size);
 // 	void resize( size_t size, const Value& clone );
-	Value&        operator[](size_t n );
-	const Value&  operator[](size_t n ) const;
-	Value&        at(size_t n );
-	const Value&  at(size_t n ) const;
-	Value&        front();
-	const Value&  front()const;
+	[[nodiscard]] Value&        operator[](size_t n );
+	[[nodiscard]] const Value&  operator[](size_t n ) const;
+	[[nodiscard]] Value&        at(size_t n );
+	[[nodiscard]] const Value&  at(size_t n ) const;
+	[[nodiscard]] Value&        front();
+	[[nodiscard]] const Value&  front()const;
 
 	const Value &operator()()const;
 	Value &operator()();
 
 
-	iterator begin();
-	const_iterator begin()const;
+	[[nodiscard]] iterator begin();
+	[[nodiscard]] const_iterator begin()const;
 
-	iterator end();
-	const_iterator end()const;
+	[[nodiscard]] iterator end();
+	[[nodiscard]] const_iterator end()const;
 
 	/**
 	 * Splice up the property value.
@@ -100,10 +99,10 @@ public:
 	 * \param len the requested size of the "splinters"
 	 * \returns a vector of (mostly) equally sized PropertyValues.
 	 */
-	std::vector<PropertyValue> splice(const size_t len);
+	[[nodiscard]] std::vector<PropertyValue> splice(const size_t len);
 
 	/// Amount of values in this PropertyValue
-	size_t size()const;
+	[[nodiscard]] size_t size()const;
 
 	/// Copy a list of ValueReference into the PropertyValue.
 	template<typename ITER> void copy(ITER first,ITER last){
@@ -112,7 +111,7 @@ public:
 	}
 	/**
 	 * Transfer properties from one PropertyValue into another.
-	 * The transfered data will be inserted at idx.
+	 * The transferred data will be inserted at idx.
 	 * The properties in the target will not be removed. Thus the PropertyValue will grow.
 	 * The source will be empty afterwards.
 	 */
@@ -121,7 +120,7 @@ public:
 	 * Transfer properties from another PropertyValue to this.
 	 * The source will be empty afterwards.
 	 * \param src the PropertyValue to transfer data from
-	 * \param overwrite if transfered data shall replace existing data
+	 * \param overwrite if transferred data shall replace existing data
 	 */
 	void transfer(PropertyValue &src, bool overwrite=false);
 
@@ -137,6 +136,15 @@ public:
 	 * Creates an empty property value. So PropertyValue().isEmpty() will allways be true.
 	 */
 	PropertyValue();
+
+	/**
+	 * Copy operator.
+	 * Copies the content of another Property.
+	 * \param other the source to copy from
+	 * \note the needed state will be copied
+	 */
+	PropertyValue(const PropertyValue&)=default;
+	PropertyValue(PropertyValue&&)=default;
 	/**
 	 * Copy operator.
 	 * Copies the content of another Property.
@@ -144,11 +152,12 @@ public:
 	 * \note the needed state wont change, regardless of what it is in other
 	 */
 	PropertyValue &operator=(const PropertyValue &other);
+	PropertyValue &operator=(PropertyValue &&other);
 
 	/// accessor to mark as (not) needed
 	bool &needed();
 	/// returns true if PropertyValue is marked as needed, false otherwise
-	bool isNeeded ()const;
+	[[nodiscard]] bool isNeeded ()const;
 
 	/**
 	 * Equality to another PropertyValue.
@@ -202,13 +211,13 @@ public:
 	 * creates a copy of the stored values using a type referenced by its ID
 	 * \returns a new PropertyValue containing all values converted to the requested type
 	 */
-	PropertyValue copyByID( unsigned short ID ) const;
+	[[nodiscard]] PropertyValue copyByID( unsigned short ID ) const;
 
 	/// \returns the value(s) represented as text.
-	virtual std::string toString( bool labeled = false)const;
+	[[nodiscard]] virtual std::string toString( bool labeled = false)const;
 
 	/// \returns true if, and only if no value is stored
-	bool isEmpty()const;
+	[[nodiscard]] bool isEmpty()const;
 
 
 	////////////////////////////////////////////////////////////////////////////
@@ -230,7 +239,7 @@ public:
 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
-	template<class T> bool is()const {return container.front().is<T>();}
+	template<class T> [[nodiscard]] bool is()const {return container.front().is<T>();}
 
 	/**
 	 * \copybrief Value::getTypeName
@@ -238,7 +247,7 @@ public:
 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
-	std::string getTypeName()const;
+	[[nodiscard]] std::string getTypeName()const;
 
 	/**
 	 * \copybrief Value::getTypeID
@@ -246,7 +255,7 @@ public:
 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
-	unsigned short getTypeID()const;
+	[[nodiscard]] unsigned short getTypeID()const;
 
 	/**
 	 * Cast to a known type.
@@ -260,45 +269,45 @@ public:
 	 * \returns true if \link Value::fitsInto \endlink is true for all values
 	 * \note Operation is done on all values. For comparing single values access them via the []-operator.
 	 */
-	bool fitsInto( unsigned short ID ) const;
+	[[nodiscard]] bool fitsInto( unsigned short ID ) const;
 
 	/**
 	 * \returns true if \link Value::gt \endlink is true for all values
 	 * \note Operation is done on all values. For working on single values access them via the []-operator.
 	 * \note An exception is thrown if this has less values than the target (the opposite case is ignored).
 	 */
-	bool gt( const PropertyValue &ref )const;
+	[[nodiscard]] bool gt( const PropertyValue &ref )const;
 	/**
 	 * \returns true if \link Value::lt \endlink is true for all values
 	 * \copydetails PropertyValue::gt
 	 */
-	bool lt( const PropertyValue &ref )const;
+	[[nodiscard]] bool lt( const PropertyValue &ref )const;
 	/**
 	 * \returns true if \link Value::eq \endlink is true for all values
 	 * \copydetails PropertyValue::gt
 	 */
-	bool eq( const PropertyValue &ref )const;
+	[[nodiscard]] bool eq( const PropertyValue &ref )const;
 
 	/**
 	 * \returns a PropertyValue with the results of \link Value::plus \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
-	PropertyValue plus( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue plus( const PropertyValue &ref )const;
 	/**
 	 * \returns a PropertyValue with the results of \link Value::minus \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
-	PropertyValue minus( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue minus( const PropertyValue &ref )const;
 	/**
 	 * \returns a PropertyValue with the results of \link Value::multiply \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
-	PropertyValue multiply( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue multiply( const PropertyValue &ref )const;
 	/**
 	 * \returns a PropertyValue with the results of \link Value::divide \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
-	PropertyValue divide( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue divide( const PropertyValue &ref )const;
 
 	/**
 	 * \copydetails PropertyValue::gt
@@ -348,23 +357,11 @@ public:
 	PropertyValue operator-( const Value &second )const {PropertyValue lhs(*this); return lhs-=second;}
 	PropertyValue operator*( const Value &second )const {PropertyValue lhs(*this); return lhs*=second;}
 	PropertyValue operator/( const Value &second )const {PropertyValue lhs(*this); return lhs/=second;}
+
+	/// streaming output for PropertyValue
+	friend std::ostream& operator<<( std::ostream & out, const isis::util::PropertyValue &s );
+
+	bool operator<(const isis::util::PropertyValue& y)const;
 };
 
 }
-/// @cond _internal
-namespace std
-{
-    /// streaming output for PropertyValue
-    template<typename charT, typename traits>
-    basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::PropertyValue &s )
-	{
-		return out<<s.toString(true);
-	}
-	template<> struct less<isis::util::PropertyValue> : binary_function <isis::util::PropertyValue,isis::util::PropertyValue,bool> {
-		bool operator() (const isis::util::PropertyValue& x, const isis::util::PropertyValue& y) const;
-	};
-}
-/// @endcond _internal
-
-
-

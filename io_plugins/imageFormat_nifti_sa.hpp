@@ -159,11 +159,11 @@ public:
 class ImageFormat_NiftiSa: public FileFormat
 {
 	static const util::Matrix4x4<float> nifti2isis;
-	static const util::Selection formCode;
+	static const std::map<uint8_t, std::string> formCodes;
 
 	typedef bool( *demuxer_type )( const util::PropertyValue &value, std::list<data::Chunk> &chunks, util::PropertyMap::PropPath name );
 
-	/// get the tranformation matrix from image space to Nifti space using row-,column and sliceVec from the given PropertyMap
+	/// get the transformation matrix from image space to Nifti space using row-,column and sliceVec from the given PropertyMap
 	static util::Matrix4x4<double> getNiftiMatrix( const util::PropertyMap &props );
 	static void useSForm( util::PropertyMap &props );
 	static void useQForm( util::PropertyMap &props );
@@ -197,7 +197,7 @@ public:
 	std::list<util::istring> dialects()const override {return {"fsl","spm","withExtProtocols"};}
 
 protected:
-	util::istring suffixes( io_modes /*mode = both*/ )const override {return ".nii";};
+	std::list<util::istring> suffixes(io_modes /*mode = both*/ )const override {return {".nii"};};
 	void sanitise( data::Chunk &ch );
 	template <typename T> void transformIfNotSet( const util::PropertyMap::key_type &from, const util::PropertyMap::key_type &to, data::Chunk &object, LogLevel level ) {
 		if( !object.hasProperty( to ) ) {

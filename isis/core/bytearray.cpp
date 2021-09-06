@@ -27,7 +27,7 @@ typedef std::function<data::ValueArray(data::ByteArray &, size_t, size_t, bool )
 
 template<int ID=std::variant_size_v<ArrayTypes>-1>
 void make_generators(std::map<unsigned short, generator_fn>& map) { //The ID here is the index in ArrayTypes, NOT the isis-typeID
-	typedef typename std::variant_alternative_t<ID,ArrayTypes>::element_type element_type; //get the arrays element type
+	typedef typename std::variant_alternative_t<ID,ArrayTypes>::element_type element_type; //get the arrays' element type
 	constexpr size_t index=util::typeID<element_type>();//get the isis-typeID of the element type
 
 	map[index]=[]( data::ByteArray &bytes, size_t offset, size_t len, bool swap_endianess ){

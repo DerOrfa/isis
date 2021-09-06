@@ -6,7 +6,7 @@ int main( int argc, char **argv )
 {
 	data::IOApplication app( "isis unwrap");
 	
-	app.parameters["dim"]=util::Selection({"row", "column", "slice,time"},"time");
+	app.parameters["dim"]=util::Selection({"row", "column", "slice", "time"},"time");
 // 	app.parameters["pos"]=0;
 // 	app.parameters["pos"].needed()=false;
 
@@ -14,7 +14,7 @@ int main( int argc, char **argv )
 	
 	//set up all the dimensions to traverse trough (aka. all dims except the one we do the statistics accross)
 	std::vector<unsigned short> traverse_dims={0,1,2,3};
-	unsigned short wrap_dim=app.parameters["dim"].as<util::Selection>()-1;
+	auto wrap_dim=static_cast<unsigned short>(app.parameters["dim"].as<util::Selection>());
 	traverse_dims.erase(traverse_dims.begin()+wrap_dim);
 
 

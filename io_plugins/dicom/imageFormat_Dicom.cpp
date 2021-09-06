@@ -212,12 +212,12 @@ public:
 const char ImageFormat_Dicom::dicomTagTreeName[] = "DICOM";
 const char ImageFormat_Dicom::unknownTagName[] = "UnknownTag/";
 
-util::istring ImageFormat_Dicom::suffixes( io_modes modes )const
+std::list<util::istring> ImageFormat_Dicom::suffixes(io_modes modes )const
 {
 	if( modes == write_only )
-		return util::istring();
+		return {};
 	else
-		return ".ima .dcm";
+		return {".ima",".dcm"};
 }
 std::string ImageFormat_Dicom::getName()const {return "Dicom";}
 std::list<util::istring> ImageFormat_Dicom::dialects()const {return {"siemens","withExtProtocols","nocsa","keepmosaic","forcemosaic"};}

@@ -52,13 +52,15 @@ public:
 class ImageFormat_Compressed: public FileFormat
 {
 protected:
-	util::istring suffixes( io_modes modes = both )const override {
-		static util::istring write="gz bz2 Z xz";
+	std::list<util::istring> suffixes( io_modes modes = both )const override {
+		std::list<util::istring> formats{"gz","bz2","Z","xz"};
 #ifdef HAVE_LZMA
-		write+=" xz";
+		write.push_back("xz");
 #endif //HAVE_LZMA
-		if( modes == write_only )return write;
-		else return write+" tgz tbz taz";
+		if( modes != write_only )
+			formats.insert(formats.end(), {"tgz", "tbz", "taz"});
+
+		return formats;
 	}
 public:
 	std::unique_ptr<boost::iostreams::filtering_istream> makeIStream(std::list<util::istring> &formatstack){

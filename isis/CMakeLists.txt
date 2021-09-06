@@ -23,7 +23,7 @@ macro( build_lib name type source_glob header_glob header_infix deps private_dep
 		SOVERSION ${soversion} VERSION ${version} 
 		OUTPUT_NAME ${name} INSTALL_NAME_DIR ${CMAKE_INSTALL_FULL_LIBDIR}
 		PUBLIC_HEADER "${HDR_FILES}"
-		POSITION_INDEPENDENT_CODE "ON" INTERFACE_POSITION_INDEPENDENT_CODE "ON" #theoreticaly for isis_core and the plugins only (but as all others depend on isis_core it doesn't matter)
+		POSITION_INDEPENDENT_CODE "ON" INTERFACE_POSITION_INDEPENDENT_CODE "ON" #theoretically for isis_core and the plugins only (but as all others depend on isis_core it doesn't matter)
 	)
 
 	# install libraries

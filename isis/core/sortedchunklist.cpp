@@ -68,7 +68,7 @@ void SortedChunkList::getproplist::operator()(const util::PropertyMap& c)
 		util::PropertyValue dummy=*p;
 		const std::vector< util::PropertyValue > splinters=dummy.splice(1);
 		insert(splinters.begin(),splinters.end());
-	} else if(p && p->size()==1) // otherwise just use it
+	} else if(p && p->size()==1) // otherwise, just use it
 		insert(*p);
 }
 
@@ -78,18 +78,14 @@ void SortedChunkList::getproplist::operator()(const util::PropertyMap& c)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // constructor
-SortedChunkList::SortedChunkList( util::PropertyMap::key_type comma_separated_equal_props )
+SortedChunkList::SortedChunkList( const std::list<util::PropertyMap::PropPath> &p_list ) : equalProps(p_list)
 {
-	const std::list< isis::util::PropertyMap::key_type > p_list = util::stringToList<util::PropertyMap::key_type>( comma_separated_equal_props, ',' );
-	equalProps.insert( equalProps.end(), p_list.begin(), p_list.end() );
-	
 	//we need a list of protected props
 	//some are actually needed for the splicing and inserting...
 	protected_props.insert( p_list.begin(), p_list.end() );
 	//also those that are explicitly needed by the chunks
-	const auto &chunk_need= util::Singletons::get<util::PropertyMap::NeededsList<Chunk>, 0>();
-	protected_props.insert(chunk_need.begin(),chunk_need.end());
-	// source might be usefull as well
+	protected_props.insert(Chunk::neededProperties.begin(),Chunk::neededProperties.end());
+	// source might be useful as well
 	protected_props.insert("source");
 
 }
@@ -137,7 +133,7 @@ std::pair<std::shared_ptr<Chunk>, bool> SortedChunkList::primaryInsert( const Ch
 	LOG_IF( secondarySort.empty(), Debug, error ) << "There is no known secondary sorting left. Chunksort will fail.";
 	assert( ch.isValid() );
 	// compute the position of the chunk in the image space
-	// we dont have this position, but we have the position in scanner-space (indexOrigin)
+	// we don't have this position, but we have the position in scanner-space (indexOrigin)
 	const util::fvector3 origin = ch.getValueAs<util::fvector3>( indexOriginProb );
 	// and we have the transformation matrix
 	// [ rowVec ]
@@ -155,7 +151,7 @@ std::pair<std::shared_ptr<Chunk>, bool> SortedChunkList::primaryInsert( const Ch
 		})
 	);
 
-	// this is actually not the complete transform (it lacks the scaling for the voxel size), but its enough
+	// this is actually not the complete transform (it lacks the scaling for the voxel size), but it's enough
 	const util::fvector3 key{ util::dot( origin,rowVec ), util::dot( origin,columnVec ), util::dot( origin,sliceVec )};
 	const scalarPropCompare &secondaryComp = secondarySort.top();
 
@@ -217,7 +213,21 @@ bool SortedChunkList::insert( const Chunk &ch )
 		LOG(Debug,info) << "Removed " << not_spliced.back() << " before splicing";
 		
 		bool ok=true;
-		for(const data::Chunk &c:chs.autoSplice()){
+		std::list<data::Chunk> spliced={chs};
+		while(spliced.front().queryProperty(secondarySort.top().propertyName)->size()>1){
+			const data::Chunk &front=spliced.front();
+			if(front.queryProperty(secondarySort.top().propertyName)->size() % front.getRelevantDims()){//this is not good
+				LOG(Runtime,error) << "Aborting to automatic splicing of chunk as amount of elements in splicing property does not fit amount of splices";
+				LOG(Runtime,error) << "Reverting to one chunk only. This is probably not going to end well ...";
+				spliced={chs};
+				break;
+			}
+			for(auto org=spliced.begin();org!=spliced.end();){
+				spliced.splice(org,org->autoSplice());//put results of splicing of org *before* org
+				org=spliced.erase(org); // remove the old spliced up chunk and have org point to the next
+			}
+		}
+		for(const data::Chunk &c:spliced){
 			std::shared_ptr<Chunk> inserted=insert_impl(c);
 			if(inserted){
 				not_spliced.back().second.push_back(inserted); //list all chunks those extracted props belong into
@@ -245,7 +255,7 @@ std::shared_ptr<Chunk> SortedChunkList::insert_impl(const Chunk &ch){
 		}
 
 		for(const util::PropertyMap::PropPath & ref :  equalProps ) { // check all properties which where given to the constructor of the list
-			// if at least one of them has the property and they are not equal - do not insert
+			// if at least one of them has the property, and they are not equal - do not insert
 			if ( first.hasProperty( ref )  && !(first.property( ref ) == ch.property( ref ) )) { //"==" will be false if ch.property is empty or different
 				LOG( Debug, verbose_info )
 						<< "Ignoring chunk with different " << ref << ". Is " << util::MSubject( ch.property( ref ) )

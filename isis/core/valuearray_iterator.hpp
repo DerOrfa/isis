@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <ostream>
 #include "value.hpp"
 
 namespace isis::data::_internal{
@@ -30,8 +31,8 @@ public:
 	typedef void ( *Setter )( void *, const util::Value & );
 protected:
 	const Getter getter;
-	const uint8_t *const p;
-	ConstValueAdapter( const uint8_t *const _p, Getter _getValueFunc );
+	const std::byte *const p;
+	ConstValueAdapter( const std::byte *const _p, Getter _getValueFunc );
 public:
 	// to make some algorithms work
 	bool operator==( const util::Value &val )const;
@@ -49,6 +50,8 @@ public:
 	const std::unique_ptr<util::Value> operator->() const; //maybe more trouble than worth it
 	const std::string toString( bool label = false )const;
 	operator util::Value()const{return getter(p);}
+
+	friend std::ostream &operator<<(std::ostream &os, const ConstValueAdapter &adapter);
 };
 class WritingValueAdapter: public ConstValueAdapter
 {
@@ -56,15 +59,15 @@ class WritingValueAdapter: public ConstValueAdapter
 	size_t byteSize;
 	template<bool BB> friend class GenericValueIterator; //allow the iterators (and only them) to create the adapter
 protected:
-	WritingValueAdapter( uint8_t *const _p, Getter _getValueFunc, Setter _setValueFunc, size_t _size );
+	WritingValueAdapter( std::byte *const _p, Getter _getValueFunc, Setter _setValueFunc, size_t _size );
 public:
 	WritingValueAdapter operator=( const util::Value &val );
-	void swapwith( const WritingValueAdapter &b )const; // the WritingValueAdapter is const not what its dereferencing
+	void swapwith( const WritingValueAdapter &b )const; // the WritingValueAdapter is const not what it's dereferencing
 };
 
 template<bool IS_CONST> class GenericValueIterator
 {
-	typedef typename std::conditional<IS_CONST, const uint8_t *, uint8_t *>::type ptr_type;
+	typedef typename std::conditional<IS_CONST, const std::byte *, std::byte *>::type ptr_type;
 	ptr_type p, start; //we need the starting position for operator[]
 	size_t byteSize;
 	ConstValueAdapter::Getter getValueFunc;
@@ -148,8 +151,8 @@ public:
 	
 	friend TypedArrayIterator<typename std::add_const_t<TYPE> >;
 
-	TypedArrayIterator(): p( NULL ) {}
-	TypedArrayIterator( TYPE *_p ): p( _p ) {}
+	TypedArrayIterator(): p(nullptr) {}
+	explicit TypedArrayIterator( TYPE *_p ): p( _p ) {}
 	TypedArrayIterator( const TypedArrayIterator<typename std::remove_const<TYPE>::type > &src ): p( src.p ) {}
 
 	TypedArrayIterator<TYPE>& operator++() {++p; return *this;}
@@ -187,12 +190,6 @@ public:
 namespace std
 {
     void swap(const isis::data::_internal::WritingValueAdapter &a,const isis::data::_internal::WritingValueAdapter &b);
-	/// Streaming output for ConstValueAdapter (use it as a const Value)
-	template<typename charT, typename traits> basic_ostream<charT, traits>&
-	operator<<( basic_ostream<charT, traits> &out, const isis::data::_internal::ConstValueAdapter &v )
-	{
-		return out << isis::util::Value(v);
-	}
 }
 /// @endcond _internal
 

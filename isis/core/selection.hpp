@@ -20,7 +20,8 @@
 #include <map>
 #include "common.hpp"
 #include "istring.hpp"
-#include <assert.h>
+#include <cassert>
+#include <limits>
 
 namespace isis::util
 {
@@ -28,23 +29,28 @@ namespace isis::util
 /**
  * Here, a Selection is one of our types (see types.hpp) and
  * meant as an enumeration of "things" described by strings,
- * e.g. properties for easy acces of several properties from a PopertyMap.
+ * e.g. properties for easy access of several properties from a PopertyMap.
  * It's using isis::util::istring, therefore
  * the options are CASE INSENSITIVE.
  */
 class Selection
 {
-	typedef std::map<util::istring, unsigned short> MapType;
+	typedef std::map<util::istring, uint8_t, std::less<>> MapType;
 	MapType ent_map;
-	int m_set;
+	std::optional<MapType::mapped_type> m_set;
 	template<typename OPERATION> bool comp_op(const Selection &ref,const OPERATION &op)const{
 		LOG_IF(ent_map != ref.ent_map,Debug,error)
 			<< "Comparing different Selection sets "
 			<< std::make_pair(getEntries(),ref.getEntries())
 			<< ", result will be \"false\"";
 		LOG_IF(!(m_set && ref.m_set),Debug,error) << "Comparing unset Selection, result will be \"false\"";
-		return (m_set && ref.m_set) && ent_map == ref.ent_map && op(m_set, ref.m_set);
+		return
+			(m_set && ref.m_set) //"unset" Selections should always compare false (like NaN)
+			&& ent_map == ref.ent_map
+			&& op(m_set.value(), ref.m_set.value())
+		;
 	}
+	std::pair<bool,MapType::const_iterator> stringCompareCheck( std::basic_string_view<char,util::_internal::ichar_traits> ref )const;
 public:
 	/**
 	 * Default constructor.
@@ -57,11 +63,16 @@ public:
 	/**
 	 * Default constructor.
 	 * Creates a selection from a number-option map.
-	 * \param map a map which maps specific numbers (must not be 0) to options to be used
+	 * It initializes as undefined unless init_val is given.
+	 * \param init_val the the starting selection id
+	 * \param map a map which maps specific numbers to options to be used
 	 */
-	template<typename T> Selection( const std::map<T, std::string> &map );
-	/// Fallback contructor to enable creation of empty selections
-	Selection();
+	template<typename T, std::enable_if_t<std::is_convertible_v<T,MapType::mapped_type>, int> = 0>
+	explicit Selection( const std::map<T, std::string> &map, MapType::mapped_type init_val={} );
+	/// Fallback constructor to enable creation of undefined selections
+	Selection()=default;
+	Selection(const Selection &)=default;
+	Selection(Selection &&)=default;
 	/**
 	 * Set the selection to the given type.
 	 * If the given option does not exist, a runtime error will be send and the selection won't be set.
@@ -69,55 +80,82 @@ public:
 	 * \returns true if the option was set, false otherwise.
 	 */
 	bool set( const char *entry );
-	bool set( unsigned short entry );
 	/**
-	 * Implicit cast to int.
-	 * The numbers correspont to the order the options where given at the creation of the selection (first option -> 1, second option -> 2 ...)
+	 * Set the selection to the given type.
+	 * If the given option does not exist, a debug error will be send and the selection will be invalid.
+	 * \param entry the option id the selection should be set to.
+	 */
+	void set( unsigned int entry );
+	/**
+	 * Set the selection to the given type.
+	 * If the given option does not exist, a debug error will be send and the selection will be invalid.
+	 * \param entry the option id the selection should be set to.
+	 */
+	bool idExists( unsigned int entry );
+	/**
+	 * Explicit cast to integer.
+	 * The numbers correspond to the order the options where given at the creation of the selection (first option -> 0, second option -> 1 ...)
 	 * \returns number corresponding the currently set option or "0" if none is set
 	 */
-	operator int()const;
+	template<typename T, std::enable_if_t<std::is_convertible_v<MapType::mapped_type,T> && !std::is_same_v<T, bool>, int> = 0>
+	explicit operator T()const{
+		LOG_IF(m_set && (m_set > std::numeric_limits<T>::max() || m_set < std::numeric_limits<T>::min()),Debug,error)
+			<< "The selection ID " << m_set.value() << " exceeds the numeric limits of the requested integer type ";
+		LOG_IF(!m_set,Debug,error) << "Casting an undefined Selection to integer will throw an exception ";
+		return m_set.value();
+	}
 	/**
 	 * Implicit cast to string.
 	 * \returns the currently set option or "<<NOT_SET>>" if none is set
 	 */
-	operator std::string()const;
+	template<typename TRAITS=std::char_traits<char>> operator std::basic_string<char, TRAITS>()const
+	{
+		if(m_set){
+			for( MapType::const_reference ref :  ent_map ) {
+				if ( ref.second == m_set )
+					return std::basic_string<char, TRAITS>(ref.first.data(),ref.first.length());
+			}
+			assert(false); // m_set should either be in the map or 0
+			return "<<UNKNOWN>>";
+		} else
+			return "<<NOT_SET>>";
+	}
 	/**
-	 * Implicit cast to istring.
-	 * \returns the currently set option or "<<NOT_SET>>" if none is set
+	 * Explicit cast to bool.
+	 * \returns true if the selection is not undefined
 	 */
-	operator util::istring()const;
+	explicit operator bool()const;
 	/**
 	 * Common comparison.
 	 * \returns true if both selection have the same options and are currently set to the the option. False otherwise.
 	 */
 	bool operator==( const Selection &ref )const;
+	bool operator!=( const Selection &ref )const;
 	bool operator>( const Selection &ref )const;
 	bool operator<( const Selection &ref )const;
 	/**
 	 * String comparison.
 	 * \returns true if the currently set option is non-case-sensitive equal to the given string. False otherwise.
 	 */
-	bool operator==( const char ref[] )const;
-	/**
-	 * Number comparison.
-	 * \returns true if the number corresponding the currently set option is equal to the given number. False otherwise.
-	 */
-	bool operator==( const int ref )const;
-	bool operator>( const int ref )const;
-	bool operator<( const int ref )const;
+	bool operator==( std::basic_string_view<char,util::_internal::ichar_traits> ref )const;
+	bool operator!=( std::basic_string_view<char,util::_internal::ichar_traits> ref )const;
+
+	Selection &operator=(const Selection &)=default;
 
 	/// \returns a list of all options
-	std::list<util::istring> getEntries()const;
+	[[nodiscard]] std::list<util::istring> getEntries()const;
+
+	friend std::ostream& operator<<( std::ostream& out, const isis::util::Selection &s );
 };
 
-template<typename T> Selection::Selection( const std::map< T, std::string >& map ): m_set( 0 )
+template<typename T, std::enable_if_t<std::is_convertible_v<T,Selection::MapType::mapped_type>, int>>
+Selection::Selection( const std::map< T, std::string >& map, MapType::mapped_type init_val):m_set(init_val)
 {
-	for( typename std::map< T, std::string >::const_iterator i = map.begin(); i != map.end(); i++ ) {
+	for( const auto &m : map) {
 		const MapType::value_type pair(
-			util::istring( i->second.begin(), i->second.end() ),
-			i->first
+			util::istring( m.second.begin(), m.second.end() ),
+			m.first
 		);
-		assert( pair.second != 0 ); // 0 is reserved for <<NOT_SET>>
 
 		if( !ent_map.insert( pair ).second ) {
 			LOG( Debug, error ) << "Entry " << util::MSubject( pair ) << " could not be inserted";
@@ -126,14 +164,3 @@ template<typename T> Selection::Selection( const std::map< T, std::string >& map
 }
 
 }
-/// @cond _internal
-namespace std
-{
-/// Streaming output for selections.
-template<typename charT, typename traits>
-basic_ostream<charT, traits> &operator<<( basic_ostream<charT, traits> &out, const isis::util::Selection &s )
-{
-	return out << ( std::string )s;
-}
-}
-/// @endcond _internal

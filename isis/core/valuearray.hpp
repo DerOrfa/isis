@@ -1,5 +1,8 @@
 #pragma once
 
+#include <utility>
+#include <ostream>
+
 #include "types_array.hpp"
 #include "color.hpp"
 #include "value.hpp"
@@ -11,11 +14,12 @@ namespace isis::data{
 
 struct scaling_pair {
 	scaling_pair()=default;
-	bool isRelevant()const{return valid && !(scale==1 && offset==0);}
-	scaling_pair(util::Value _scale, util::Value _offset): scale(_scale), offset(_offset), valid(true){}
+	[[nodiscard]] bool isRelevant()const{return valid && !(scale==1 && offset==0);}
+	scaling_pair(util::Value _scale, util::Value _offset): scale(std::move(_scale)), offset(std::move(_offset)), valid(true){}
 	util::Value scale;
 	util::Value offset;
 	bool valid=false;
+	friend std::ostream &operator<<(std::ostream &os, const scaling_pair &pair);
 };
 
 class ValueArray;
@@ -31,7 +35,7 @@ public:
 	 * This increments the use_count of the master and thus keeps the
 	 * master from being deleted while parts of it are still in use.
 	 */
-	DelProxy( const ValueArray &master );
+	explicit DelProxy( const ValueArray &master );
 	/// decrement the use_count of the master when a specific part is not referenced anymore
 	void operator()( const void *at );
 };
@@ -44,7 +48,7 @@ public:
  * by just use "1" for the length.
  * The pointers are reference counted and will be deleted automatically by a customizable deleter.
  * The copy is cheap, thus the copy of a ValueArray will reference the same data.
- * The usual pointer dereferencing interface ("*", "->" and "[]") is supported.
+ * The usual pointer de-referencing interface ("*", "->" and "[]") is supported.
  */
 class ValueArray: protected ArrayTypes
 {
@@ -67,16 +71,16 @@ class ValueArray: protected ArrayTypes
 	static const _internal::ValueArrayConverterMap &converters();
 protected:
 	template<typename T> constexpr static void checkType(){
-		const auto id=util::_internal::variant_index<ArrayTypes,std::shared_ptr<std::remove_cv_t<T>>>();
+		constexpr auto id=util::_internal::variant_index<ArrayTypes,std::shared_ptr<std::remove_cv_t<T>>>();
 		static_assert(id!=std::variant_npos,"invalid array type");
 	}
 	/**
 	* Helper to sanitise scaling.
 	* \retval scaling if !(scaling.first.isEmpty() || scaling.second.isEmpty())
 	* \retval 1/0 if current type is equal to the requested type
-	* \retval ValueArrayBase::getScalingTo elswise
+	* \retval ValueArrayBase::getScalingTo otherwise
 	*/
-	scaling_pair getScaling( const scaling_pair &scaling, short unsigned int ID )const
+	[[nodiscard]] scaling_pair getScaling( const scaling_pair &scaling, short unsigned int ID )const
 	{
 		if( scaling.valid )
 			return scaling;//we already have a valid scaling, use that
@@ -133,31 +137,31 @@ public:
 		return ValueArray(( T * )calloc(length, sizeof( T ) ), length, deleter );
 	} //@todo maybe make it TypedArray
 	
-	template<typename _Visitor> decltype(auto) visit(_Visitor&& visitor)
+	template<typename VIS> decltype(auto) visit(VIS&& visitor)
 	{
-		return std::visit(std::forward<_Visitor>(visitor),static_cast<ArrayTypes&>(*this));
+		return std::visit(std::forward<VIS>(visitor),static_cast<ArrayTypes&>(*this));
 	}
-	template<typename _Visitor> decltype(auto) visit(_Visitor&& visitor)const
+	template<typename VIS> decltype(auto) visit(VIS&& visitor)const
 	{
-		return std::visit(std::forward<_Visitor>(visitor),static_cast<const ArrayTypes&>(*this));
+		return std::visit(std::forward<VIS>(visitor),static_cast<const ArrayTypes&>(*this));
 	}
 
 
 	/// \return true if the stored type is T
-	template<typename T> bool is()const{
+	template<typename T> [[nodiscard]] bool is()const{
 		checkType<T>();
 		return std::holds_alternative<std::shared_ptr<T>>(*this);
 	}
 
-	const Converter& getConverterTo( unsigned short ID )const;
+	[[nodiscard]] const Converter& getConverterTo( unsigned short ID )const;
 	static const Converter& getConverterFromTo( unsigned short fromID, unsigned short toID );
 
 	/// \returns the length (in elements) of the data pointed to
-	size_t getLength()const;
+	[[nodiscard]] size_t getLength()const;
 
-	std::string typeName()const;
+	[[nodiscard]] std::string typeName()const;
 
-	size_t getTypeID()const;
+	[[nodiscard]] size_t getTypeID()const;
 
 	/**
 	 * Splice up the ValueArray into equal sized blocks.
@@ -167,19 +171,19 @@ public:
 	 * \param size the maximum size of the spliced parts of the data (the last part can be smaller)
 	 * \returns a vector of references to ValueArray's which point to the parts of the spliced data
 	 */
-	virtual std::vector<ValueArray> splice(size_t size )const;
+	[[nodiscard]] virtual std::vector<ValueArray> splice(size_t size )const;
 
 	///get the scaling (and offset) which would be used in an conversion
-	virtual scaling_pair getScalingTo( unsigned short typeID )const;
-	virtual scaling_pair getScalingTo( unsigned short typeID, const std::pair<util::Value, util::Value> &minmax )const;
+	[[nodiscard]] virtual scaling_pair getScalingTo( unsigned short typeID )const;
+	[[nodiscard]] virtual scaling_pair getScalingTo( unsigned short typeID, const std::pair<util::Value, util::Value> &minmax )const;
 
 	/**
-	 * Create new data in memory containg a (converted) copy of this.
+	 * Create new data in memory containing a (converted) copy of this.
 	 * Allocates new memory of the requested type and copies the (converted) content of this into that memory.
 	 * \param ID the ID of the type the new ValueArray (referenced by the ValueArray returned) should have (if not given, type of the source is used)
 	 * \param scaling the scaling to be used if a conversion is necessary (computed automatically if not given)
 	 */
-	ValueArray copyByID(size_t ID, const scaling_pair &scaling ) const;
+	[[nodiscard]] ValueArray copyByID(size_t ID, const scaling_pair &scaling ) const;
 
 	/**
 	 * Copies elements from this into another ValueArray.
@@ -195,7 +199,7 @@ public:
 
 	/**
 	 * Copies elements from this into raw memory.
-	 * This is allways a deep copy, regardless of the types.
+	 * This is always a deep copy, regardless of the types.
 	 * If the this and the target are not of the same length:
 	 * - the shorter length will be used
 	 * - a warning about it will be sent to Debug
@@ -205,12 +209,12 @@ public:
 	 */
 	template<typename T> bool copyToMem( T *dst, size_t len, scaling_pair scaling = scaling_pair() )const {
 		ValueArray cont(dst, len, NonDeleter() );
-		return copyTo( cont, scaling );
+		return copyTo( cont, std::move(scaling) );
 	}
 
 	/**
 	 * Copies elements from raw memory into  this.
-	 * This is allways a deep copy, regardless of the types.
+	 * This is always a deep copy, regardless of the types.
 	 * If the this and the target are not of the same length:
 	 * - the shorter length will be used
 	 * - a warning about it will be sent to Debug
@@ -219,13 +223,15 @@ public:
 	 * \param scaling the scaling to be used if a conversion is necessary (computed automatically if not given)
 	 */
 	template<typename T> bool copyFromMem( const T *const src, size_t len, scaling_pair scaling = scaling_pair() ) {
-		ValueArray cont(const_cast<T *>( src ), len, NonDeleter() ); //its ok - we're not going to change it
-		return cont.copyTo( *this, scaling );
+		ValueArray cont(const_cast<T *>( src ), len, NonDeleter() ); //it's ok - we're not going to change it
+		return cont.copyTo( *this, std::move(scaling) );
 	}
 
 	/**
 	 * Create a ValueArray of given type and length.
 	 * This allocates memory as needed but does not initialize it.
+	 * \param ID type ID of the requested data (as returned by util::typeID<T>())
+	 * \param len amount of elements in the array
 	 * \returns a Reference to a ValueArray pointing to the allocated memory. Or an empty Reference if the creation failed.
 	 */
 	static ValueArray createByID(unsigned short ID, size_t len );
@@ -237,7 +243,7 @@ public:
 	 * If the conversion fails, an error will be send to CoreLog and the data of the newly created ValueArray will be undefined.
 	 * \returns a the newly created ValueArray
 	 */
-	template<typename T> ValueArray copyAs(scaling_pair scaling = scaling_pair() )const {
+	template<typename T> [[nodiscard]] ValueArray copyAs(const scaling_pair& scaling = scaling_pair() )const {
 		checkType<T>();
 		return copyByID( util::typeID<T>(), scaling );;
 	}
@@ -250,12 +256,12 @@ public:
 	 * - scaling.first (the scaling offset) is not 0
 	 *
 	 * Otherwise a cheap copy is done.
-	 * \param ID the ID of the requeseted type (use ValueArray::staticID())
+	 * \param ID the ID of the requested type (use ValueArray::staticID())
 	 * \param scaling the scaling to be used (determined automatically if not given)
-	 * \returns a reference of eigther a cheap copy or a newly created ValueArray
+	 * \returns a reference of either a cheap copy or a newly created ValueArray
 	 * \returns an empty reference if the conversion failed
 	 */
-	ValueArray  convertByID(unsigned short ID, scaling_pair scaling = scaling_pair() )const;
+	[[nodiscard]] ValueArray  convertByID(unsigned short ID, scaling_pair scaling = scaling_pair() )const;
 
 
 	/**
@@ -267,22 +273,22 @@ public:
 	 *
 	 * Otherwise a cheap copy is done.
 	 * \param scaling the scaling to be used (determined automatically if not given)
-	 * \returns eigther a cheap copy or a newly created ValueArray
+	 * \returns either a cheap copy or a newly created ValueArray
 	 */
-	template<typename T> ValueArray as(const scaling_pair &scaling = scaling_pair() )const {
+	template<typename T> [[nodiscard]] ValueArray as(const scaling_pair &scaling = scaling_pair() )const {
 		checkType<T>();
 		return convertByID( util::typeID<T>(), scaling );
 	}
 
 	/**
-	 * Create a new ValueArray, of the same type, but differnent size in memory.
+	 * Create a new ValueArray, of the same type, but different size in memory.
 	 * (The actual data are _not_ copied)
 	 * \param length length of the new memory block in elements of the given TYPE
 	 */
-	ValueArray cloneToNew(size_t length )const;
+	[[nodiscard]] ValueArray cloneToNew(size_t length )const;
 
 	/// \returns the byte-size of the type of the data this ValueArray points to.
-	size_t bytesPerElem()const;
+	[[nodiscard]] size_t bytesPerElem()const;
 
 	/**
 	 * Copy a range of elements to another ValueArray of the same type.
@@ -294,7 +300,7 @@ public:
 	void copyRange(size_t start, size_t end, ValueArray &dst, size_t dst_start )const;
 
 	/// \returns the number of references using the same memory as this.
-	size_t useCount()const;
+	[[nodiscard]] size_t useCount()const;
 
 	/**
 	 * Get minimum/maximum of a ValueArray.
@@ -312,26 +318,26 @@ public:
 	 * \endcode
 	 * \returns a pair of ValueReferences referring to the found minimum/maximum of the data
 	 */
-	std::pair<util::Value, util::Value> getMinMax()const;
+	[[nodiscard]] std::pair<util::Value, util::Value> getMinMax()const;
 
 	/**
 	 * Compare the data of two ValueArray.
 	 * Counts how many elements in this and the given ValueArray are different within the given range.
 	 * If the type of this is not equal to the type of the given ValueArray the whole length is assumed to be different.
 	 * If the given range does not fit into this or the given ValueArray an error is send to the runtime log and the function will probably crash.
-	 * \param start the first element in this, which schould be compared to the first element in the given TyprPtr
-	 * \param end the first element in this, which should _not_ be compared anymore to the given TyprPtr
-	 * \param dst the given ValueArray this should be compared to
-	 * \param dst_start the first element in the given TyprPtr, which schould be compared to the first element in this
+	 * \param start the first element in this, which should be compared to the first element in the given compare destination
+	 * \param end the first element in this, which should _not_ be compared anymore to the given compare ValueArray
+	 * \param dst the given destination ValueArray this should be compared to
+	 * \param dst_start the first element in the given destination ValueArray, which should be compared to the first element in this
 	 * \returns the amount of elements which actually differ in both ValueArray or the whole length of the range when the types are not equal.
 	 */
 	size_t compare(size_t start, size_t end, const ValueArray &dst, size_t dst_start )const;
 
-	bool isValid()const;
+	[[nodiscard]] bool isValid()const;
 
 	/// return a shared pointer to void with optional offset in bytes
 	virtual std::shared_ptr<void> getRawAddress( size_t offset = 0 );
-	virtual std::shared_ptr<const void> getRawAddress( size_t offset = 0 )const;
+	[[nodiscard]] virtual std::shared_ptr<const void> getRawAddress( size_t offset = 0 )const;
 
 	/**
 	* Dynamically cast the ValueArray up to its actual TypedArray\<T\>. Constant version.
@@ -356,16 +362,16 @@ public:
 	}
 
 	iterator begin();
-	const_iterator begin()const;
+	[[nodiscard]] const_iterator begin()const;
 	iterator end();
-	const_iterator end()const;
+	[[nodiscard]] const_iterator end()const;
 
 	template<typename T> const T* beginTyped()const{return castTo<T>().get();}
 	template<typename T> const T* endTyped()const{return castTo<T>().get()+m_length;}
 	template<typename T> T* beginTyped(){return castTo<T>().get();}
 	template<typename T> T* endTyped(){return castTo<T>().get()+m_length;}
 
-    const_iterator::difference_type getDistanceTo(const const_iterator &it)const{
+    [[nodiscard]] const_iterator::difference_type getDistanceTo(const const_iterator &it)const{
         //actually generic iterators know their starting point better than we do
         return it.getMyDistance();
     }
@@ -374,46 +380,22 @@ public:
 	template<typename T> const T& at(size_t pos)const{return *(beginTyped<T>()+pos);}
 
 	/// @copydoc util::Value::toString
-	std::string toString( bool labeled = false )const;
+	[[nodiscard]] std::string toString( bool labeled = false )const;
 
-	bool isFloat() const;
-	bool isInteger() const;
+	[[nodiscard]] bool isFloat() const;
+	[[nodiscard]] bool isInteger() const;
 
 	void endianSwap();
+
+	friend std::ostream &operator<<(std::ostream &os, const ValueArray &array);
 /// delete-functor which does nothing (in case someone else manages the data).
-struct NonDeleter {
-	template<typename T> void operator()( T *p )const {
-		//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
-		LOG( Debug, verbose_info ) << "Not freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") as automatic deletion was disabled for it";
+	struct NonDeleter {
+		template<typename T> void operator()( T *p )const {
+			//we have to cast the pointer to void* here, because in case of uint8_t it will try to print the "string"
+			LOG( Debug, verbose_info ) << "Not freeing pointer " << ( void * )p << " (" << util::typeName<T>() << ") as automatic deletion was disabled for it";
+		};
 	};
-};
 };
 
 }
-/// @cond _internal
-namespace std
-{
-// streaming for scaling_pair
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::data::scaling_pair &s )
-{
-	return out << std::make_pair(s.scale,s.offset);
-}
-// streaming for ValueArray
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::data::ValueArray &s )
-{
-	assert(s.isValid());
-	if ( s.isValid() ){
-		out << "#" << s.getLength();
-		if(s.getLength()) {//@todo use list2stream
-			auto i = s.begin();
-			out << isis::util::Value(*i).toString(false);
-			for (++i; i < s.end(); i++)
-				out << "|" << isis::util::Value(*i).toString(false);
-		}
-	}
-	return out;
-}
-}
-/// @endcond _internal
+

@@ -46,7 +46,7 @@ install(TARGETS
   isisraw RUNTIME DESTINATION bin COMPONENT "CLI_Tools")
 
 if(ISIS_QT5)
-	find_package(Qt5Widgets)
+	find_package(Qt5 COMPONENTS Widgets)
 	add_executable(isisview isisview.cpp)
 	target_link_libraries(isisview isis_qt5 )
 	set_target_properties(isisview PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)

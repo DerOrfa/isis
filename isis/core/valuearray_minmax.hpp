@@ -24,9 +24,9 @@ template<typename T, uint8_t STEPSIZE> std::pair<T, T> calcMinMax( const T *data
 		)
 			continue; // skip this one if its inf
 
-		if ( *i > result.second )result.second = *i; //*i is the new max if its bigger than the current (gets rid of nan as well)
+		if ( *i > result.second )result.second = *i; //*i is the new max if it's bigger than the current (gets rid of nan as well)
 
-		if ( *i < result.first )result.first = *i; //*i is the new min if its smaller than the current (gets rid of nan as well)
+		if ( *i < result.first )result.first = *i; //*i is the new min if it's smaller than the current (gets rid of nan as well)
 	}
 
 	LOG_IF(std::numeric_limits<T>::has_infinity && result.first>result.second,Runtime,warning) 

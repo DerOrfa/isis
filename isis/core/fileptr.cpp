@@ -81,7 +81,7 @@ bool FilePtr::map( _internal::FileHandle &&file, size_t len, bool write, const s
 	}
 	assert(file.good());
 
-#ifdef WIN32 //mmap is broken on windows - workaround stolen from http://crupp.de/2007/11/14/howto-port-unix-mmap-to-win32/
+#ifdef WIN32 //mmap is broken on Windows - workaround stolen from http://crupp.de/2007/11/14/howto-port-unix-mmap-to-win32/
 	mmaph = CreateFileMapping( file, 0, write ? PAGE_READWRITE : PAGE_WRITECOPY, 0, 0, NULL );
 
 	if( mmaph ) {
@@ -89,7 +89,7 @@ bool FilePtr::map( _internal::FileHandle &&file, size_t len, bool write, const s
 	}
 
 #else
-	ptr = mmap( 0, len, PROT_WRITE | PROT_READ, write ? MAP_SHARED : MAP_PRIVATE , file, 0 ); // yes we say PROT_WRITE here also if the file is opened ro - its for the mapping, not for the file
+	ptr = mmap( 0, len, PROT_WRITE | PROT_READ, write ? MAP_SHARED : MAP_PRIVATE , file, 0 ); // yes we say PROT_WRITE here also if the file is opened ro - It's for the mapping, not for the file
 #endif
 
 	if( ptr == nullptr || ptr == reinterpret_cast<void*>(-1) ) {
@@ -220,7 +220,7 @@ _internal::FileHandle::FileHandle(const std::filesystem::path &_filename, bool r
 #else
 	const int oflag = readonly ?
 					  O_RDONLY: //open file readonly
-					  O_CREAT | O_RDWR ; //create file if its not there
+					  O_CREAT | O_RDWR ; //create file if it's not there
 	handle =
 		open( filename.native().c_str(), oflag, 0666 );
 #endif

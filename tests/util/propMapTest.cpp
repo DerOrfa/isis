@@ -77,6 +77,13 @@ BOOST_AUTO_TEST_CASE( propMap_set_test )
 	map1.setValueAs<bool>( "bool", false );
 	BOOST_CHECK_EQUAL( map1.property( "bool" ), false );
 
+	map1.touchProperty("variant_float") = util::ValueTypes(.5);
+	BOOST_CHECK_EQUAL( map1.property( "variant_float" ), .5 );
+	map1.touchProperty("variant_int") = util::ValueTypes(5);
+	BOOST_CHECK_EQUAL( map1.property( "variant_int" ), 5 );
+	map1.touchProperty("variant_string") = util::ValueTypes(std::string("5"));
+	BOOST_CHECK_EQUAL( map1.property( "variant_string" ), std::string("5") );
+
 }
 
 BOOST_AUTO_TEST_CASE( propMap_remove_test )
@@ -175,7 +182,7 @@ BOOST_AUTO_TEST_CASE( propMap_rename_test )
 	BOOST_CHECK_EQUAL( map.property("Test11"), M_PI); // .. be here actually
 
 	util::enableLog<util::DefaultMsgPrint>(error); // block warning raised by next line
-	BOOST_CHECK( !map.rename("Test2","Test3") );//should not rename into existing stuff
+	BOOST_REQUIRE( !map.rename("Test2","Test3") );//should not rename into existing stuff
 	util::enableLog<util::DefaultMsgPrint>(notice); // back to normal
 	BOOST_CHECK_EQUAL( map.property("Test2"), ( int32_t )5); //should still be there
 	BOOST_CHECK_EQUAL( map.property("Test3"), util::fvector4( {1, 1, 1, 1} )); // as well as this
@@ -421,10 +428,12 @@ BOOST_AUTO_TEST_CASE( deduplicate_test )
 {
 	// should move all int32_t which are >1 to dst
 	std::list<std::shared_ptr<PropertyMap>> maps;
-	
-	for(int i=0;i<3;i++)
-		maps.emplace_back(new PropertyMap(getFilledMap()));
-	
+
+	PropertyMap reference=getFilledMap();
+
+	for(int i=0;i<5;i++)
+		maps.push_back(std::make_shared<PropertyMap>(reference));
+
 	int n=0;
 	for(auto &m:maps){
 		m->setValueAs("sub/Test1",++n);
@@ -433,10 +442,13 @@ BOOST_AUTO_TEST_CASE( deduplicate_test )
 	PropertyMap comm;
 	comm.deduplicate(maps);
 
-	BOOST_CHECK(!comm.hasProperty("sub/Test1"));
+	// all but "sub/Test1" is common
+	auto commonList=reference.getKeys();
+	commonList.erase("sub/Test1");
+	BOOST_CHECK_EQUAL(comm.getKeys(),commonList);
 
 	for(auto &m:maps){
-		BOOST_CHECK(m->hasProperty("sub/Test1"));
+		BOOST_CHECK_EQUAL(m->getKeys(),PropertyMap::PathSet{"sub/Test1"});
 	}
 }
 
