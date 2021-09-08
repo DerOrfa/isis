@@ -179,6 +179,8 @@ FilePtr::FilePtr(const std::filesystem::path &filename, size_t len, bool write, 
 			}
 		}
 		m_good = true;
+	} else {
+		LOG(Runtime,error) << "Not opening empty file";
 	}
 	// from here on the pointer will be set if mapping succeeded
 }

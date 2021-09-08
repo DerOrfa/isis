@@ -55,7 +55,7 @@ protected:
 	std::list<util::istring> suffixes( io_modes modes = both )const override {
 		std::list<util::istring> formats{"gz","bz2","Z","xz"};
 #ifdef HAVE_LZMA
-		write.push_back("xz");
+		formats.push_back("xz");
 #endif //HAVE_LZMA
 		if( modes != write_only )
 			formats.insert(formats.end(), {"tgz", "tbz", "taz"});

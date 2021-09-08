@@ -48,6 +48,10 @@ void FileFormat::write( const std::list< data::Image >& images, const std::strin
 
 std::list<data::Chunk> FileFormat::load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ){
 	//try open file
+	if(std::filesystem::file_size(filename)==0){
+		LOG(Runtime,warning) << "Ignoring empty file " << filename;
+		return {};
+	}
 	data::FilePtr ptr(filename);
 	if( !ptr.good() ) {
 		if( errno ) {
