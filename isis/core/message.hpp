@@ -72,8 +72,8 @@ class MessageHandlerBase
 {
 	static LogLevel m_stop_below;
 protected:
-	MessageHandlerBase( LogLevel level ): m_level( level ) {}
-	virtual ~MessageHandlerBase() {}
+	explicit MessageHandlerBase( LogLevel level ): m_level( level ) {}
+	virtual ~MessageHandlerBase() = default;
 public:
 	LogLevel m_level;
 	virtual void commit( const Message &msg ) = 0;

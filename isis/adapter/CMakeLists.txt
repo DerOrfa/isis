@@ -12,6 +12,7 @@
 # optional components
 ############################################################
 option(ISIS_QT5 "Enable adapter to the Qt5 library" OFF)
+option(ISIS_PYTHON "Enable adapter to the Qt5 library" OFF)
 
 if(ISIS_QT5)
 	set(ISIS_QT_VERSION_API "0.0.0")
@@ -50,4 +51,8 @@ if(ISIS_ITK)
 		"isis_core-TYPE;isis_math-TYPE" "ITKCommon;ITKTransform"
 		"0.0.0" "0.0.0"
 	)
+endif()
+
+if(ISIS_PYTHON)
+	add_subdirectory(python)
 endif()

@@ -18,11 +18,7 @@
 #include <climits>
 
 /// @cond _internal
-namespace isis
-{
-namespace util
-{
-namespace _internal
+namespace isis::util::_internal
 {
 
 template<class MODULE> class Log
@@ -47,8 +43,6 @@ public:
 	}
 };
 
-}
-}
 }
 /// @endcond
 
