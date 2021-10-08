@@ -117,7 +117,7 @@ Message::Message( Message &&src ) noexcept : std::ostringstream(std::forward<std
 Message::~Message()
 {
 	if ( shouldCommit() ) {
-		commitTo.lock()->commit( *this );
+		commitTo.lock()->guardedCommit(*this);
 		std::ostringstream::str( "" );
 		clear();
 		commitTo.lock()->requestStop( m_level );
@@ -168,6 +168,12 @@ std::string Message::str() const{
 }
 
 LogLevel MessageHandlerBase::m_stop_below = error;
+
+void MessageHandlerBase::guardedCommit(const Message &msg)
+{
+	std::scoped_lock lock(mutex);
+	commit(msg);
+}
 
 DefaultMsgPrint::DefaultMsgPrint(LogLevel level): MessageHandlerBase( level ), istty(isatty(fileno(stderr))) {}
 

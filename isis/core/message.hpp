@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <mutex>
 
 namespace isis
 {
@@ -71,11 +72,13 @@ class Message;
 class MessageHandlerBase
 {
 	static LogLevel m_stop_below;
+	std::mutex mutex;
 protected:
 	explicit MessageHandlerBase( LogLevel level ): m_level( level ) {}
 	virtual ~MessageHandlerBase() = default;
 public:
 	LogLevel m_level;
+	void guardedCommit(const Message &msg );
 	virtual void commit( const Message &msg ) = 0;
 	/**
 	 * Set loglevel below which the system should stop the process.
