@@ -121,6 +121,11 @@ public:
 		*( ( std::ostringstream * )this ) << "{s}";
 		return *this;
 	}
+	Message &operator << (const std::filesystem::path& val ) { // path's default ostream adds '"' - we don't want that
+		m_subjects.push_back( MSubject( val.native() ) );
+		*( ( std::ostringstream * )this ) << "{s}";
+		return *this;
+	}
 	Message &operator << (const NoSubject& subj ) { // explicitly not a subject
 		*( ( std::ostringstream * )this ) << subj;
 		return *this;
