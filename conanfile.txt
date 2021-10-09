@@ -4,7 +4,7 @@ qt/[~=5]
 jsoncpp/[~=1]
 jxrlib/cci.20170615
 fftw/[~=3]
-lzma/[~=5]@bincrafters/stable
+lzma_sdk/[~=9]
 openjpeg/[~=2]
 libpng/[>1.2]
 pybind11/[>2.6.0]
