@@ -4,7 +4,7 @@
 
 add_executable( fftTest fftTest.cpp )
 
-target_link_libraries( fftTest ${Boost_LIBRARIES} ${isis_core_lib} ${isis_math_lib})
+target_link_libraries( fftTest isis_math Boost::unit_test_framework)
 
 ############################################################
 # add ctest targets

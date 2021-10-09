@@ -1,33 +1,31 @@
 #include <isis/core/io_interface.h>
 #include <png.h>
 #include <zlib.h>
-#include <stdio.h>
+#include <cstdio>
 #include <fstream>
 #include <boost/endian/buffers.hpp>
 #include <boost/crc.hpp>
 #include <future>
+#include <memory>
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 
 class ImageFormat_png: public FileFormat
 {
 protected:
-	util::istring suffixes( io_modes /*modes = both */ )const override {return ".png";}
+	[[nodiscard]] std::list<util::istring> suffixes( io_modes /*modes = both */ )const override {return {".png"};}
 	struct Reader {
 		virtual data::Chunk operator()( png_structp png_ptr, png_infop info_ptr )const = 0;
-		virtual ~Reader() {}
 	};
 	template<typename TYPE> struct GenericReader: Reader {
-		data::Chunk operator()( png_structp png_ptr, png_infop info_ptr )const {
+		data::Chunk operator()( png_structp png_ptr, png_infop info_ptr )const final{
 			const png_uint_32 width = png_get_image_width ( png_ptr, info_ptr );
 			const png_uint_32 height = png_get_image_height ( png_ptr, info_ptr );
 			data::Chunk ret = data::MemChunk<TYPE >( width, height );
 
 			/* png needs a pointer to each row */
-			boost::scoped_array<png_bytep> row_pointers( new png_bytep[height] );
+			auto row_pointers = std::make_unique<png_bytep[]>(height);
 
 			for ( unsigned short r = 0; r < height; r++ )
 				row_pointers[r] = ( png_bytep )&ret.voxel<TYPE>( 0, r );
@@ -35,19 +33,20 @@ protected:
 			png_read_image( png_ptr, row_pointers.get() );
 			ret.flipAlong( data::rowDim ); //the png-"space" is mirrored to the isis space
 #if __BYTE_ORDER == __LITTLE_ENDIAN // png is always big endian, so we swap if we run on little endian
-			ret.asValueArrayBase().endianSwap();
+			ret.endianSwap();
 #endif
 			return ret;
 		}
 	};
 
-	template<typename T, typename DEST> bool extractNumberFromName( const boost::filesystem::path &name, DEST &property ) {
+	template<typename T, typename DEST> bool extractNumberFromName( const std::filesystem::path &name, DEST &property ) {
 		std::string filename=name.filename().native();
 		std::string::size_type end = filename.find_last_of( "0123456789" );
 
 		if( end != std::string::npos ) {
 			std::string::size_type start = filename.find_last_not_of( "0123456789", end );
-			property = boost::lexical_cast<T>( filename.substr( start + 1, end - start ) );
+			T buffer;util::stringTo(filename.substr( start + 1, end - start ),buffer);
+			property = buffer;
 			return true;
 		} else {
 			return false;
@@ -55,33 +54,33 @@ protected:
 	}
 	std::map<png_byte, std::map<png_byte, std::shared_ptr<Reader> > > readers;
 	static void pngWrite(png_structp pngPtr, png_bytep data, png_size_t length) {
-		std::ofstream* file = reinterpret_cast<std::ofstream*>(png_get_io_ptr(pngPtr));
+		auto* file = reinterpret_cast<std::ofstream*>(png_get_io_ptr(pngPtr));
 		file->write(reinterpret_cast<char*>(data), length);
 		if (file->bad()) {
 			png_error(pngPtr, "Write error");
 		}
 	}
 	static void pngFlush(png_structp pngPtr) {
-		std::ofstream* file = reinterpret_cast<std::ofstream*>(png_get_io_ptr(pngPtr));
+		auto* file = reinterpret_cast<std::ofstream*>(png_get_io_ptr(pngPtr));
 		file->flush();
 	}
 
 
 public:
 	ImageFormat_png() {
-		readers[PNG_COLOR_TYPE_GRAY][8].reset( new GenericReader<uint8_t> );
-		readers[PNG_COLOR_TYPE_GRAY][16].reset( new GenericReader<uint16_t> );
-		readers[PNG_COLOR_TYPE_RGB][8].reset( new GenericReader<util::color24> );
-		readers[PNG_COLOR_TYPE_RGB][16].reset( new GenericReader<util::color48> );
+		readers[PNG_COLOR_TYPE_GRAY][8] = std::make_shared<GenericReader<uint8_t>>( );
+		readers[PNG_COLOR_TYPE_GRAY][16] = std::make_shared<GenericReader<uint16_t>>( );
+		readers[PNG_COLOR_TYPE_RGB][8] = std::make_shared<GenericReader<util::color24>>( );
+		readers[PNG_COLOR_TYPE_RGB][16] = std::make_shared<GenericReader<util::color48>>( );
 		
 		//the generic reader by default strips alpha, so we can use the same reader for images with/without alpha channel
 		readers[PNG_COLOR_TYPE_RGB_ALPHA]=readers[PNG_COLOR_TYPE_RGB];
 		readers[PNG_COLOR_TYPE_GRAY_ALPHA]=readers[PNG_COLOR_TYPE_GRAY];
 	}
-	std::string getName()const override {
+	[[nodiscard]] std::string getName()const override {
 		return "PNG (Portable Network Graphics)";
 	}
-	std::list<util::istring> dialects() const override {return {"middle","stacked", "noflip", "parallel"};}
+	[[nodiscard]] std::list<util::istring> dialects() const override {return {"middle","stacked", "noflip", "parallel"};}
 	bool write_png( const std::string &filename, const data::Chunk &src, int color_type, int bit_depth ) {
 		assert( src.getRelevantDims() == 2 );
 		FILE *fp;
@@ -93,9 +92,9 @@ public:
 		/* open the file */
 		fp = fopen( filename.c_str(), "wb" );
 
-		if ( fp == NULL ) {
+		if ( fp == nullptr ) {
 			throwSystemError( errno, std::string( "Failed to open " ) + filename );
-			return 0;
+			return false;
 		}
 
 		/* Create and initialize the png_struct with the desired error handler
@@ -104,21 +103,21 @@ public:
 		* the library version is compatible with the one used at compile time,
 		* in case we are using dynamically linked libraries.  REQUIRED.
 		*/
-		png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL /*user_error_ptr*/, NULL /*user_error_fn*/, NULL /*user_warning_fn*/ );
+		png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, nullptr /*user_error_ptr*/, nullptr /*user_error_fn*/, nullptr /*user_warning_fn*/ );
 
-		if ( png_ptr == NULL ) {
+		if ( png_ptr == nullptr ) {
 			fclose( fp );
 			throwSystemError( errno, "png_create_write_struct failed" );
-			return 0;
+			return false;
 		}
 
 		/* Allocate/initialize the image information data.  REQUIRED */
 		info_ptr = png_create_info_struct( png_ptr );
 
-		if ( info_ptr == NULL ) {
+		if ( info_ptr == nullptr ) {
 			fclose( fp );
 			throwSystemError( errno, "png_create_info_struct failed" );
-			return 0;
+			return false;
 		}
 
 		/* Set error handling.  REQUIRED if you aren't supplying your own
@@ -146,8 +145,8 @@ public:
 		png_set_IHDR( png_ptr, info_ptr, ( png_uint_32 )size[0], ( png_uint_32 )size[1], bit_depth, color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT );
 
 		/* png needs a pointer to each row */
-		png_byte **row_pointers = new png_byte*[size[1]];
-		row_pointers[0] = ( png_byte * )src.getValueArrayBase().getRawAddress().get();
+		auto **row_pointers = new png_byte*[size[1]];
+		row_pointers[0] = ( png_byte * )src.getRawAddress().get();
 
 		for ( unsigned short r = 1; r < size[1]; r++ )
 			row_pointers[r] = row_pointers[0] + ( src.getBytesPerVoxel() * src.getLinearIndex( { 0, r, 0, 0 } ) );
@@ -158,7 +157,7 @@ public:
 		* image info living info in the structure.  You could "|" many
 		* PNG_TRANSFORM flags into the png_transforms integer here.
 		*/
-		png_write_png( png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL );
+		png_write_png( png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, nullptr );
 
 		/* clean up after the write, and free any memory allocated */
 		png_destroy_write_struct( &png_ptr, &info_ptr );
@@ -171,7 +170,7 @@ public:
 		return true;
 	}
 
-	data::Chunk read_png( const boost::filesystem::path &filename ) {
+	data::Chunk read_png( const std::filesystem::path &filename ) {
 		png_byte header[8]; // 8 is the maximum size that can be checked
 
 		/* open file and test for it being a png */
@@ -185,8 +184,6 @@ public:
 			throwSystemError( errno, std::string( "Could not open " ) + filename.native() );
 		}
 
-		;
-
 		if ( png_sig_cmp( header, 0, 8 ) ) {
 			throwGenericError( filename.native() + " is not recognized as a PNG file" );
 		}
@@ -195,7 +192,7 @@ public:
 		png_infop info_ptr;
 
 		/* initialize stuff */
-		png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
+		png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr );
 		assert( png_ptr );
 
 		info_ptr = png_create_info_struct( png_ptr );
@@ -214,7 +211,7 @@ public:
 		LOG_IF(color_type&PNG_COLOR_MASK_ALPHA,Runtime,notice) << "Ignoring alpha channel in the image";
 
 		if( !reader ) {
-			LOG( Runtime, error ) << "Sorry, the color type " << ( int )color_type << " with " << ( int )bit_depth << " bits is not supportet.";
+			LOG( Runtime, error ) << "Sorry, the color type " << ( int )color_type << " with " << ( int )bit_depth << " bits is not supported.";
 			throwGenericError( "Wrong color type" );
 		}
 
@@ -223,7 +220,7 @@ public:
 		fclose( fp );
 		return ret;
 	}
-	std::list<data::Chunk> load(const boost::filesystem::path &filename, std::list<util::istring> /*formatstack*/, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> /*feedback*/) override
+	std::list<data::Chunk> load(const std::filesystem::path &filename, std::list<util::istring> /*formatstack*/, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> /*feedback*/) override
 	{
 		data::Chunk ch = read_png( filename );
 
@@ -254,7 +251,7 @@ public:
 		ch.setValueAs( "rowVec",    util::fvector3{1, 0, 0} );
 		ch.setValueAs( "columnVec", util::fvector3{0, 1, 0} );
 		ch.setValueAs( "voxelSize", util::fvector3{1, 1, 1} );
-		return std::list< data::Chunk >(1, ch);
+		return {ch};
 	}
 
 	void write( const data::Image &image, const std::string &filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )override {
@@ -266,40 +263,42 @@ public:
 			throwGenericError( "Cannot write png when image is made of stripes" );
 		}
 
-		png_byte color_type, bit_depth; ;
+		png_byte color_type, bit_depth;
 		data::scaling_pair scale;
-		if(image.hasProperty("window/max") && image.hasProperty("window/min")){
+		
+		if(
+			isis_data_type!=util::typeID<util::color24>() && isis_data_type!=util::typeID<util::color48>() &&
+			image.hasProperty("window/max") && image.hasProperty("window/min")
+		){
 			auto minmax=image.getMinMax();
 			const util::PropertyValue min = image.property("window/min"),max = image.property("window/max");
-			scale=data::ValueArrayBase::getConverterFromTo(data::ValueArray<double>::staticID(),isis_data_type)->getScaling(min.front(),max.front());
+			scale=data::ValueArray::getConverterFromTo(util::typeID<double>(), isis_data_type)->getScaling(min.front(), max.front());
 			
-			static const util::Value<uint8_t> one( 1 );
-			static const util::Value<uint8_t> zero( 0 );
-			LOG_IF(!(scale.first->eq(one) && scale.second->eq(zero)), Runtime,notice) << "Rescaling values with " << scale << " to fit windowing";
+			LOG_IF(!(scale.scale.eq(1) && scale.offset.eq(1)), Runtime,notice) << "Rescaling values with " << scale << " to fit windowing";
 		}
 
 		switch( isis_data_type ) {
-		case data::ValueArray< int8_t>::staticID(): // if its signed, fall "back" to unsigned
-		case data::ValueArray<uint8_t>::staticID():
-			tImg.convertToType( data::ValueArray<uint8_t>::staticID(), scale ); // make sure whole image has same type   (u8bit)
+		case util::typeID< int8_t>(): // if It's signed, fall "back" to unsigned
+		case util::typeID<uint8_t>():
+			tImg.convertToType( util::typeID<uint8_t>(), scale ); // make sure whole image has same type   (u8bit)
 			color_type = PNG_COLOR_TYPE_GRAY;
 			bit_depth = 8;
 			break;
-		case data::ValueArray< int16_t>::staticID(): // if its signed, fall "back" to unsigned
-		case data::ValueArray<uint16_t>::staticID():
-			tImg.convertToType( data::ValueArray<uint16_t>::staticID(), scale ); // make sure whole image has same type (u16bit)
+		case util::typeID< int16_t>(): // if It's signed, fall "back" to unsigned
+		case util::typeID<uint16_t>():
+			tImg.convertToType( util::typeID<uint16_t>(), scale ); // make sure whole image has same type (u16bit)
 			color_type = PNG_COLOR_TYPE_GRAY;
 			bit_depth = 16;
 			break;
-		case data::ValueArray<util::color24>::staticID():
-		case data::ValueArray<util::color48>::staticID():
+		case util::typeID<util::color24>():
+		case util::typeID<util::color48>():
 			tImg.convertToType( isis_data_type ); // make sure whole image hase same type (color24 or color48)
 			color_type = PNG_COLOR_TYPE_RGB;
 			bit_depth = ( png_byte )tImg.getChunk( 0, 0 ).getBytesPerVoxel() * 8 / 3;
 			break;
 		default:
 			color_type = bit_depth = 0;
-			LOG( Runtime, error ) << "Sorry, writing images of type " << image.getMajorTypeName() << " is not supportet";
+			LOG( Runtime, error ) << "Sorry, writing images of type " << image.getMajorTypeName() << " is not supported";
 			throwGenericError( "unsupported data type" );
 		}
 
@@ -323,11 +322,11 @@ public:
 		}
 
 	}
-	void writeChunks(std::vector<data::Chunk > chunks,std::string filename, png_byte color_type, png_byte bit_depth, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback){
+	void writeChunks(std::vector<data::Chunk > chunks,const std::string& filename, png_byte color_type, png_byte bit_depth, const std::list<util::istring>& dialects, std::shared_ptr<util::ProgressFeedback> feedback){
 			if(feedback)
 				feedback->show(chunks.size(),std::string("Writing ")+std::to_string(chunks.size())+" slices as png files");
 			size_t number = 0;
-			unsigned short numLen = std::log10( chunks.size() ) + 1;
+			auto numLen = (unsigned short)std::log10( chunks.size() ) + 1;
 			const std::pair<std::string, std::string> fname = makeBasename( filename );
 			LOG_IF(chunks.size()>1, Runtime, info )
 					<< "Writing " << chunks.size() << " slices as png-images " << fname.first << "_"
@@ -356,28 +355,28 @@ public:
 				} else {
 					if(!checkDialect(dialects,"noflip")){
 						//buff has to be swapped along the png-x-axis
-						buff = buff.copyByID(); //make a deep copy to not interfere with the source
+						buff = buff.copyByID(buff.getTypeID(),data::scaling_pair(1,0)); //make a deep copy to not interfere with the source
 						buff.flipAlong( data::rowDim ); //the png-"space" is mirrored to the isis space @todo check if we can use exif
 					} 
 					
 					if( !write_png( name, buff, color_type, bit_depth ) ) {
-						throwGenericError( std::string( "Failed to write " ) + name );;
+						throwGenericError( std::string( "Failed to write " ) + name );
 					}
 				}
 			}
 	}
 
-	static png_byte* filterRows(std::vector<data::ValueArrayBase::Reference>::const_iterator row_it, size_t rows) {
-		const size_t bytesPerRow = ((*row_it)->bytesPerElem() * (*row_it)->getLength() + 1);
+	static png_byte* filterRows(std::vector<data::ValueArray>::const_iterator row_it, size_t rows) {
+		const size_t bytesPerRow = ((*row_it).bytesPerElem() * (*row_it).getLength() + 1);
 
-		png_byte* filteredRows = reinterpret_cast<png_byte*>(malloc(rows * bytesPerRow));
+		auto* filteredRows = reinterpret_cast<png_byte*>(malloc(rows * bytesPerRow));
 		
 		for(size_t row=0;row<rows;row++) {
 			png_byte *dst=filteredRows+(row*bytesPerRow);
-			data::ValueArrayBase::Reference current_row_ref=*(row_it++);
+			data::ValueArray current_row_ref=*(row_it++);
 			//Add filter byte 0 to disable actual row filtering
 			dst[0]=0;
-			memcpy(dst+1,current_row_ref->getRawAddress().get(),bytesPerRow-1);
+			memcpy(dst+1,current_row_ref.getRawAddress().get(),bytesPerRow-1);
 		}
 		return filteredRows;
 	}
@@ -421,7 +420,7 @@ public:
 		}
 	};
 	struct IDAT:png_chunk_t{
-		IDAT(const data::ValueArray<uint8_t> &dat){
+		explicit IDAT(const data::TypedArray<uint8_t> &dat){
 			name="IDAT";
 			png_chunk_t::data=&dat[0];
 			png_chunk_t::length=dat.getLength();
@@ -447,12 +446,12 @@ public:
 		}
 	};
 	
-	static std::pair<data::ByteArray,uLong> compress_row_set(std::vector<data::ValueArrayBase::Reference>::const_iterator row_it, size_t rows, bool finish){
+	static std::pair<data::ByteArray,uLong> compress_row_set(std::vector<data::ValueArray>::const_iterator row_it, size_t rows, bool finish){
 		//add filter-byte (0) to all scanlines and re-concatenate them
 		png_byte *filteredRows = filterRows(row_it,rows);
 		
 		//zlib compression
-		const size_t bytesPerRow = ((*row_it)->bytesPerElem() * (*row_it)->getLength() + 1);
+		const size_t bytesPerRow = ((*row_it).bytesPerElem() * (*row_it).getLength() + 1);
 		const size_t deflateOutputSize=bytesPerRow * rows;
 		char *deflateOutput;
 
@@ -464,7 +463,7 @@ public:
 		if (deflateInit(&zStream, 9) != Z_OK) {
 			throwGenericError("Not enough memory for compression");
 		}
-		uint8_t *output_buffer=(uint8_t*)malloc(deflateOutputSize);
+		auto *output_buffer=static_cast<uint8_t*>(malloc(deflateOutputSize));
 		zStream.avail_in = bytesPerRow * rows;
 		zStream.next_in = filteredRows;
 		zStream.avail_out = deflateOutputSize;
@@ -474,8 +473,12 @@ public:
 		deflate(&zStream, finish ? Z_FINISH : Z_FULL_FLUSH);
 		assert(zStream.avail_in==0);
 		assert(zStream.total_in==bytesPerRow * rows);
-		
-		auto ret=std::make_pair(data::ByteArray(output_buffer,deflateOutputSize-zStream.avail_out),zStream.adler);
+
+		auto wrap=data::ByteArray( //create a wrapper around the output_buffer
+			std::shared_ptr<uint8_t>(output_buffer), //it's ok we tell him the shorter length, the OS will knw when we delete it
+			deflateOutputSize-zStream.avail_out
+		);
+		auto ret=std::make_pair(wrap,zStream.adler);
 		deflateEnd(&zStream);
 		free(filteredRows);
 		
@@ -489,17 +492,18 @@ public:
 		outputFile.write((std::ofstream::char_type*)signature,sizeof(signature));
 
 		IHDR ihdr_chunk(// use smart conversion to check for bounds
-			util::Value<uint64_t>(size[0]).as<int32_t>(),
-			util::Value<uint64_t>(size[1]).as<int32_t>(),
-			bit_depth,color_type);
+			util::Value((uint64_t)size[0]).as<int32_t>(),
+			util::Value((uint64_t)size[1]).as<int32_t>(),
+			bit_depth,color_type
+		);
 		ihdr_chunk.write(outputFile);
 		
 		auto vsize=src.getValueAs<util::fvector3>("voxelSize"); //this is the size of each voxel in mm
-		pHYs(1000/vsize[0],1000/vsize[1]).write(outputFile); //how many voxels fit into 1 meter (1000mm)
+		pHYs(1000/vsize[0],1000/vsize[1]).write(outputFile); //how many voxels fit into 1 meter (1000 mm)
 		
-		auto rows=src.getValueArrayBase().splice(size[0]);
+		auto rows= static_cast<const data::ValueArray&>(src).splice(size[0]);
 		
-		// compute amount of rows that fir into 100MB
+		// compute amount of rows that fir into 100 MB
 		const size_t bytes_per_row=size[0]*src.getBytesPerVoxel();
 		const size_t rowset_size=(100*1024*1024)/bytes_per_row;
 		uLong adler32Combined=0;
@@ -534,12 +538,11 @@ public:
 			LOG(Runtime,info) 
 				<< "Scalines " << r << " to " << r+actual_rows-1 
 				<< " written, compression ratio was " << std::to_string(100-(dat.first.getLength()*100 / (bytes_per_row*actual_rows)))+"%"; 
-			if(feedback)feedback->progress("",rowset_size);
+			if(feedback)feedback->progress(rowset_size);
 		}
 		IEND().write(outputFile);
 	}
 };
-}
 }
 isis::image_io::FileFormat *factory()
 {

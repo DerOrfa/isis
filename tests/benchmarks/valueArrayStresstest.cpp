@@ -1,17 +1,18 @@
 #include <isis/core/valuearray.hpp>
 #include <boost/timer.hpp>
+#include <isis/core/valuearray_typed.hpp>
 
 using namespace isis;
 
 template<typename T> void testMinMax( size_t size )
 {
 	boost::timer timer;
-	data::ValueArray<T> array( ( T * )malloc( size ), size / sizeof( T ) );
+	data::TypedArray<T> array( size );
 
 	timer.restart();
 	array.getMinMax();
 	std::cout
-			<< "found min/max of " << size / 1024 / 1024 << "MB of " << data::ValueArray<T>::staticName()
+			<< "found min/max of " << size / 1024 / 1024 << "MB of " << util::typeName<T>()
 			<< " in " << timer.elapsed() << " seconds " << std::endl;
 
 }

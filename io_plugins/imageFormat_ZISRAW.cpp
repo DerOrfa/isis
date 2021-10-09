@@ -5,29 +5,28 @@
 #include "imageFormat_ZISRAW_jxr.h"
 #include <fstream>
 
-namespace isis{
-namespace image_io{
+namespace isis::image_io{
 
 namespace _internal{
 
 DirectoryEntryDV getDVEntry(data::ByteArray &data, size_t offset){
-	const std::string type(&data[offset],&data[offset+2]);
+	const std::string_view type(reinterpret_cast<char*>(&data[offset]),2);
 	assert(type=="DV");
 	DirectoryEntryDV ret;
-	getScalar(data,ret.PixelType,offset+2);
-	getScalar(data,ret.FilePosition,offset+6);
-	getScalar(data,ret.Compression,offset+18);
-	getScalar(data,ret.PyramidType,offset+22);
-	getScalar(data,ret.DimensionCount,offset+28);
+	_internal::getScalar(data,ret.PixelType,offset+2);
+	_internal::getScalar(data,ret.FilePosition,offset+6);//4 bytes after this are reserved for FilePart
+	_internal::getScalar(data,ret.Compression,offset+18);
+	_internal::getScalar(data,ret.PyramidType,offset+22);
+	_internal::getScalar(data,ret.DimensionCount,offset+28);
 	ret.dims.resize(ret.DimensionCount);
 	size_t d_offset=offset+32;
 	for(DimensionEntry &dim:ret.dims){
 		dim.Dimension= std::string((char*)&data[d_offset]);
 		assert(dim.Dimension.size()<=4);
-		getScalar(data,dim.start,d_offset+4);
-		getScalar(data,dim.size,d_offset+8);
-		getScalar(data,dim.StartCoordinate,d_offset+12);
-		getScalar(data,dim.StoredSize,d_offset+16);
+		_internal::getScalar(data,dim.start,d_offset+4);
+		_internal::getScalar(data,dim.size,d_offset+8);
+		_internal::getScalar(data,dim.StartCoordinate,d_offset+12);
+		_internal::getScalar(data,dim.StoredSize,d_offset+16);
 		d_offset+=20;
 	}
 	return ret;
@@ -49,30 +48,28 @@ boost::property_tree::ptree getXML(data::ByteArray &data, size_t offset, size_t 
 	return ret;
 }
 
-data::ValueArrayReference reinterpretData(const data::ByteArray &_data, int32_t PixelType){
-	data::ValueArrayReference ret;
-	data::ByteArray &data=const_cast<data::ByteArray &>(_data);
+data::ValueArray reinterpretData(const data::ByteArray &data, int32_t PixelType){
 	switch(PixelType){
 	case 0://Gray8 - no reinterpretation needed
-		ret=data;break;
+		return data;
 	case 1: //Gray16
-        ret=data.at<uint16_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<uint16_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);
 	case 12: //Gray32
-        ret=data.at<uint32_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<uint32_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);
 	case 2://Gray32Float
-        ret=data.at<float>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<float>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);
 	case 3://Bgr24
-		ret=color_reshuffle(data);break;
+		return color_reshuffle(data);
 	case 4://Bgr48
-        ret=color_reshuffle(data.at<uint16_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__));break;
+		return color_reshuffle(data.at<uint16_t>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__));
 	case 10: // Gray64ComplexFloat
-        ret=data.at<std::complex<float>>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<std::complex<float>>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);
 	case 11: // Bgr192ComplexFloat
-        ret=data.at<std::complex<double>>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);break;
+		return data.at<std::complex<double>>(0,0,__BYTE_ORDER__==__ORDER_BIG_ENDIAN__);
 	default:
 		LOG(Runtime,error) << "Pixel Type " << PixelType << " not implemented";break;
 	}
-	return ret;
+	return {};
 }
 std::map<char,DimensionEntry> DirectoryEntryDV::getDimsMap()const{
 	std::map<char,DimensionEntry> ret;
@@ -93,7 +90,7 @@ ImageFormat_ZISRAW::Segment::Segment(data::ByteArray &source, const size_t offse
 	used_size=buff[1];
 	data=source.at<uint8_t>(offset+16+8+8,used_size);
 }
-size_t ImageFormat_ZISRAW::Segment::getSegmentSize(){
+size_t ImageFormat_ZISRAW::Segment::getSegmentSize()const{
 	return allocated_size+16+8+8;
 }
 
@@ -198,7 +195,7 @@ std::function<data::Chunk()> ImageFormat_ZISRAW::SubBlock::getChunkGenerator()co
 			auto pixel_type=DirectoryEntry.PixelType;
 			// linear representation of the pixel data reinterpreted as the correct PixelType
 			decoder = [size,pixel_type](isis::data::ByteArray image_data){
-				data::ValueArrayReference ref=_internal::reinterpretData(image_data, pixel_type);
+				auto ref=_internal::reinterpretData(image_data, pixel_type);
 				return data::Chunk(ref,size[0],size[1],size[2],size[3],true);
 			};
 		}break;
@@ -240,7 +237,7 @@ ImageFormat_ZISRAW::Directory::Directory(data::ByteArray &source, const size_t o
 	size_t e_offset=128;
 	for(_internal::DirectoryEntryDV &dv:entries){
 		dv=_internal::getDVEntry(data,e_offset);
-		e_offset+=std::max(dv.size(),(size_t)128);
+		e_offset+=dv.size();
 	}
 	LOG(Runtime,info) << "Found dictionary with " << entries.size() << " entries";
 }
@@ -255,25 +252,29 @@ data::Chunk ImageFormat_ZISRAW::transferFromMosaic(std::list<SubBlock> segments,
 	int32_t xoffset=-boundaries["X"].min, yoffset=-boundaries["Y"].min;
 	
 	std::list<std::thread> jobs;
-	for(auto &s:segments){
-		auto dims=s.getDimsInfo();
-		const auto &X=dims['X'],&Y=dims['Y'];;
-		const int xscale = X.StoredSize?X.size/X.StoredSize:1;
-		const int yscale = Y.StoredSize?Y.size/Y.StoredSize:1;
-		assert(X.start/xscale+xoffset>=0);
-		assert(Y.start/yscale+yoffset>=0);
+	for(SubBlock &s:segments){
+		auto dims = s.getDimsInfo();
+		const auto &X = dims['X'], &Y = dims['Y'];;
+		const int xscale = X.StoredSize ? X.size / X.StoredSize : 1;
+		const int yscale = Y.StoredSize ? Y.size / Y.StoredSize : 1;
+		assert(X.start / xscale + xoffset >= 0);
+		assert(Y.start / yscale + yoffset >= 0);
 
-		const std::array<size_t,4> pos={
-			size_t(X.start/xscale+xoffset),
-			size_t(Y.start/yscale+yoffset),
-			0,0
+		const std::array<size_t, 4> pos = {
+			size_t(X.start / xscale + xoffset),
+			size_t(Y.start / yscale + yoffset),
+			0, 0
 		};
 
 		auto op = [&s,pos,&feedback,&dst](){
 			data::Chunk c= s.getChunkGenerator()();
 			dst.copyFromTile(c,pos,false);
-			if(feedback)feedback->progress("",s.getSegmentSize());
+			if(feedback)feedback->progress(s.getSegmentSize());
 		};
+		while(jobs.size()>std::thread::hardware_concurrency()){ // wait if we get to much jobs
+			jobs.front().join();
+			jobs.pop_front();
+		}
 		jobs.emplace_back(op);
 	}
 	for(auto &j:jobs)
@@ -314,9 +315,6 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 		float pyramid_factor;
 		std::string getName()const{
 			return xml_data.empty() ? std::string("_unknown_") : xml_data.get<std::string>("<xmlattr>.Name");
-		}
-		std::array<int32_t,2> getSize(){
-			std::array<int32_t,2> ret{};
 		}
 	};
 	std::vector<Pyramid> pyramids;
@@ -418,12 +416,12 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 					const float pixel_size=image_info.pixel_size*std::pow(pyramid.pyramid_factor,i);
 					ret.back().setValueAs<util::fvector3>("voxelSize",{pixel_size,pixel_size,1});
 					ret.back().setValueAs("pixelSize_micron",pixel_size*1000);
-					ret.back().setValueAs("pyramidLevel",i);
-					ret.back().setValueAs("sequenceNumber",i);
+					ret.back().setValueAs("pyramidLevel",(uint64_t)i);
+					ret.back().setValueAs("sequenceNumber",(uint64_t)i);
 					
 					const auto center=pyramid.xml_data.get_optional<std::string>("CenterPosition");
 					if(center){
-						const auto fCenter=util::Value<std::string>(*center).as<util::fvector3>();
+						const auto fCenter=util::Value(*center).as<util::fvector3>();
 						const util::fvector3 origin{
 							fCenter[0]-size[0]/2,
 							fCenter[1]-size[1]/2,
@@ -445,27 +443,27 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 
 	return std::list< data::Chunk >();
 }
-}}
+}
 
 const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelTypeMap={
-	 {0,isis::data::ValueArray<uint8_t>::staticID()} //Gray8
-	,{1,isis::data::ValueArray<uint16_t>::staticID()} //Gray16
-	,{2,isis::data::ValueArray<float>::staticID()} //Gray32Float
-	,{3,isis::data::ValueArray<util::color24>::staticID()} //Bgr24
-	,{4,isis::data::ValueArray<util::color48>::staticID()} //Bgr48
-	,{10,isis::data::ValueArray<std::complex<float>>::staticID()} //Gray64ComplexFloat
-	,{11,isis::data::ValueArray<std::complex<double>>::staticID()} //Bgr192ComplexFloat
-	,{12,isis::data::ValueArray<int32_t>::staticID()} //Gray32
+	 {0,isis::util::typeID<uint8_t>()} //Gray8
+	,{1,isis::util::typeID<uint16_t>()} //Gray16
+	,{2,isis::util::typeID<float>()} //Gray32Float
+	,{3,isis::util::typeID<util::color24>()} //Bgr24
+	,{4,isis::util::typeID<util::color48>()} //Bgr48
+	,{10,isis::util::typeID<std::complex<float>>()} //Gray64ComplexFloat
+	,{11,isis::util::typeID<std::complex<double>>()} //Bgr192ComplexFloat
+	,{12,isis::util::typeID<int32_t>()} //Gray32
 };
 const std::map<std::string,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelTypeMapStr={
-	 {"Gray8",isis::data::ValueArray<uint8_t>::staticID()} //Gray8
-	,{"Gray16",isis::data::ValueArray<uint16_t>::staticID()} //Gray16
-	,{"Gray32Float",isis::data::ValueArray<float>::staticID()} //Gray32Float
-	,{"Bgr24",isis::data::ValueArray<util::color24>::staticID()} //Bgr24
-	,{"Bgr48",isis::data::ValueArray<util::color48>::staticID()} //Bgr48
-	,{"Gray64ComplexFloat",isis::data::ValueArray<std::complex<float>>::staticID()} //Gray64ComplexFloat
-	,{"Bgr192ComplexFloat",isis::data::ValueArray<std::complex<double>>::staticID()} //Bgr192ComplexFloat
-	,{"Gray32",isis::data::ValueArray<int32_t>::staticID()} //Gray32
+	 {"Gray8",isis::util::typeID<uint8_t>()} //Gray8
+	,{"Gray16",isis::util::typeID<uint16_t>()} //Gray16
+	,{"Gray32Float",isis::util::typeID<float>()} //Gray32Float
+	,{"Bgr24",isis::util::typeID<util::color24>()} //Bgr24
+	,{"Bgr48",isis::util::typeID<util::color48>()} //Bgr48
+	,{"Gray64ComplexFloat",isis::util::typeID<std::complex<float>>()} //Gray64ComplexFloat
+	,{"Bgr192ComplexFloat",isis::util::typeID<std::complex<double>>()} //Bgr192ComplexFloat
+	,{"Gray32",isis::util::typeID<int32_t>()} //Gray32
 };
 const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelSizeMap={
 	 {0,sizeof(uint8_t)} //Gray8
@@ -480,11 +478,11 @@ const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelSizeM
 
 isis::image_io::FileFormat *factory()
 {
-	isis_types.color.c24bit=isis::data::ValueArray<isis::util::color24>::staticID();
-	isis_types.color.c48bit=isis::data::ValueArray<isis::util::color48>::staticID();
-	isis_types.scalar.u8bit=isis::data::ValueArray<uint8_t>::staticID();
-	isis_types.scalar.u16bit=isis::data::ValueArray<uint16_t>::staticID();
-	isis_types.scalar.u32bit=isis::data::ValueArray<uint32_t>::staticID();
-	isis_types.scalar.float32bit=isis::data::ValueArray<float>::staticID();
+	isis_types.color.c24bit=isis::util::typeID<isis::util::color24>();
+	isis_types.color.c48bit=isis::util::typeID<isis::util::color48>();
+	isis_types.scalar.u8bit=isis::util::typeID<uint8_t>();
+	isis_types.scalar.u16bit=isis::util::typeID<uint16_t>();
+	isis_types.scalar.u32bit=isis::util::typeID<uint32_t>();
+	isis_types.scalar.float32bit=isis::util::typeID<float>();
 	return new isis::image_io::ImageFormat_ZISRAW();
 }

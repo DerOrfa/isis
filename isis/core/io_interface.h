@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef IO_INTERFACE_H
-#define IO_INTERFACE_H
+#pragma once
 
 #ifdef __cplusplus
 #include <string>
@@ -39,7 +38,7 @@ namespace image_io
 	 * \copydoc hasOrTell( const util::PropertyMap::key_type &name, const util::PropertyMap &object, LogLevel level )
 	 * \returns the property if it exists, boost::none otherwise
 	 */
-	boost::optional<util::PropertyValue> extractOrTell( const util::PropertyMap::key_type &name, util::PropertyMap &object, LogLevel level );
+	std::optional<util::PropertyValue> extractOrTell( const util::PropertyMap::key_type &name, util::PropertyMap &object, LogLevel level );
 
 	/**
 	 * Check if one of the given properties exists in the given PropMap.
@@ -52,7 +51,7 @@ namespace image_io
 	 * \copydoc hasOrTell( const std::initializer_list<util::PropertyMap::key_type> names, const util::PropertyMap &object, LogLevel level )
 	 * \returns the first found property, boost::none otherwise
 	 */
-	boost::optional<util::PropertyValue> extractOrTell( const std::initializer_list<util::PropertyMap::key_type> names, util::PropertyMap &object, LogLevel level );
+	std::optional<util::PropertyValue> extractOrTell( const std::initializer_list<util::PropertyMap::key_type> names, util::PropertyMap &object, LogLevel level );
 	
 	/**
 	 * Transform a given property into another and remove the original in the given PropMap.
@@ -76,17 +75,17 @@ public:
 	enum io_modes {read_only = 1, write_only = 2, both = 3};
 protected:
 	/// \return the file-suffixes the plugin supports
-	virtual util::istring suffixes( io_modes modes = both )const = 0;
+	virtual std::list<util::istring> suffixes(io_modes modes = both)const = 0;
 	static constexpr float invalid_float=-std::numeric_limits<float>::infinity();
 public:
-	static void throwGenericError( std::string desc );
-	static void throwSystemError( int err, std::string desc = "" );
-	boost::filesystem::path plugin_file;
+	static void throwGenericError( const std::string& desc );
+	static void throwSystemError( int err, const std::string& desc = "" );
+	std::filesystem::path plugin_file;
 
 	/// splits the suffix (and the ".") from the filename (or path) and returns a pair made of both parts
 	virtual std::pair<std::string, std::string> makeBasename( const std::string &filename )const;
 
-	static std::string makeFilename( const util::PropertyMap &img, std::string namePattern );
+	static std::string makeFilename( const util::PropertyMap &img, const std::string& namePattern );
 	std::list<std::string> makeUniqueFilenames( const std::list<data::Image> &images, const std::string &namePattern )const;
 
 
@@ -107,7 +106,7 @@ public:
 	/// \return a list of the dialects the plugin supports
 	virtual std::list<util::istring> dialects()const {return {};};
 	
-	static bool checkDialect(const std::list<util::istring> &dialects,util::istring searched);
+	static bool checkDialect(const std::list<util::istring> &dialects,const util::istring& searched);
 
 	/**
 	 * Load data from file into the given chunk list.
@@ -119,7 +118,7 @@ public:
 	 * \returns the amount of loaded chunks.
 	 */
 	virtual std::list<data::Chunk> 
-	load( const boost::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ); //@todo should be locked
+	load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ); //@todo should be locked
 
 	/**
 	 * Load data from stream into the given chunk list.
@@ -197,4 +196,4 @@ extern "C" {
 }
 #endif
 
-#endif //IO_INTERFACE_H
+

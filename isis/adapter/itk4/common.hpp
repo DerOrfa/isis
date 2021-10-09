@@ -1,13 +1,12 @@
-#ifndef ITK_COMMON_HPP
-#define ITK_COMMON_HPP
+#pragma once
 
 #include "../../core/log.hpp"
 #include "../../core/image.hpp"
 
 
 namespace isis{
-	struct ITKLog {static const char *name() {return "ITK";}; enum {use = _ENABLE_LOG};};
-	struct ITKDebug {static const char *name() {return "ITKDebug";}; enum {use = _ENABLE_DEBUG};};
+	struct ITKLog   {static constexpr char name[]="ITK";      static constexpr bool use = _ENABLE_LOG;};
+	struct ITKDebug {static constexpr char name[]="ITKDebug"; static constexpr bool use = _ENABLE_DEBUG;};
 
 namespace itk4{
 
@@ -26,4 +25,4 @@ namespace itk4{
 }
 }
 
-#endif //ITK_COMMON_HPP
+

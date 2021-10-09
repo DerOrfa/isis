@@ -17,8 +17,7 @@
 
 */
 
-#ifndef GENERIC_TYPE_HPP
-#define GENERIC_TYPE_HPP
+#pragma once
 
 #include <stdexcept>
 #include <cstdlib>
@@ -56,7 +55,7 @@ protected:
 
 public:
 	/// \returns the value represented as text.
-	virtual std::string toString( bool labeled = false, std::string formatting="" )const = 0;
+	virtual std::string toString( bool labeled = false )const = 0;
 
 	/// \returns the name of its actual type
 	virtual std::string getTypeName()const = 0;
@@ -145,4 +144,4 @@ public:
 }
 }
 }
-#endif // GENERIC_TYPE_HPP
+

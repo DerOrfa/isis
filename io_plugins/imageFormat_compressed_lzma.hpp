@@ -10,12 +10,7 @@
 // Note: custom allocators are not supported on VC6, since that compiler
 // had trouble finding the function lzma_base::do_init.
 
-#ifndef BOOST_IOSTREAMS_LZMA_HPP_INCLUDED
-#define BOOST_IOSTREAMS_LZMA_HPP_INCLUDED
-
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
-# pragma once
-#endif
+#pragma once
 
 #include <lzma.h>
 
@@ -343,4 +338,4 @@ template<typename Alloc> basic_lzma_decompressor<Alloc>::basic_lzma_decompressor
 # pragma warning(pop)
 #endif
 
-#endif // #ifndef BOOST_IOSTREAMS_ZLIB_HPP_INCLUDED
+

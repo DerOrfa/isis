@@ -17,13 +17,12 @@
 */
 
 #include "progparameter.hpp"
+#include "stringop.hpp"
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
-ProgParameter::ProgParameter(): m_hidden( false ), m_parsed( false )
+ProgParameter::ProgParameter()
 {
 	needed() = true;
 }
@@ -39,16 +38,17 @@ bool &ProgParameter::hidden()
 
 bool ProgParameter::parse( const std::string &prop )
 {
-	ValueBase &me = this->front();
+	Value &me = this->front();
 	bool ret = false;
 
 	if ( prop.empty() ) {
 		if ( me.is<bool>() ) {
-			me.castTo<bool>() = true;
+			std::get<bool>(me) = true;
 			ret = true;
 		}
 	} else {
-		ret = ValueBase::convert( Value<std::string>(prop), me );
+		static_assert(knownType<std::string>(),"not known");
+		ret = Value::convert(prop, me );
 	}
 
 	LOG_IF( ret, Debug, info ) << "Parsed " << MSubject( prop ) << " as " << me.toString( true );
@@ -62,10 +62,10 @@ bool ProgParameter::parse( const std::string &prop )
 }
 bool ProgParameter::parse_list( const slist& theList )
 {
-	ValueBase &me = this->front();
+	Value &me = this->front();
 	bool ret = false;
 
-	ret = ValueBase::convert( Value<slist>(theList), me );
+	ret = Value::convert(theList, me );
 	if(theList.empty()){
 		LOG_IF( ret, Debug, info )
 		<< "Parsed empty parameter list as " << me.toString( true );
@@ -120,7 +120,7 @@ bool ParameterMap::parse( int argc, char **argv )
 			std::list<std::string> matchingStrings;
 			for( ParameterMap::const_reference parameterRef :  *this ) {
 				if( parameterRef.first.find( pName ) == 0 ) {
-					if( parameterRef.first.length() == pName.length() ) { //if its an exact match
+					if( parameterRef.first.length() == pName.length() ) { //if it's an exact match
 						matchingStrings = std::list<std::string>( 1, pName ); //use that
 						break;// and stop searching for partial matches
 					} else
@@ -148,14 +148,14 @@ bool ParameterMap::parse( int argc, char **argv )
 			
 			// check if parameter can be empty (bool only)
 			if(match.is<bool>()){ //no parameters expected
-				match.parse(""); // ok thats it nothing else to do here
+				match.parse(""); // ok that's it nothing else to do here
 			} else { //go through all parameters 
 				i++;//skip the first one, that should be here (enables us to have parameters like "-20")
 				while( i < argc && !(argv[i][0] == '-' && argv[i][1] != 0) ) {  
 					i++;//collect the remaining parameters, while there are some ..
 				}
 
-				parsed = match.is<util::slist>() ? //dont do tokenizing if the target is an slist (is already done by the shell)
+				parsed = match.is<util::slist>() ? //don't do tokenizing if the target is a slist (is already done by the shell)
 					match.parse_list( util::slist( argv + start, argv + i ) ) :
 					match.parse( listToString( argv + start, argv + i, ",", "", "" ) );
 				LOG_IF(!parsed, Runtime, error )
@@ -172,37 +172,41 @@ bool ParameterMap::parse( int argc, char **argv )
 bool ParameterMap::isComplete()const
 {
 	LOG_IF( ! parsed, Debug, error ) << "You did not run parse() yet. This is very likely an error";
-	return std::find_if( begin(), end(), neededP() ) == end();
+	return std::find_if( begin(), end(), []( const_reference ref ){return ref.second.isNeeded();} ) == end();
 }
 
-const ProgParameter ParameterMap::operator[] ( const std::string key ) const
+ProgParameter ParameterMap::operator[] ( const std::string key ) const
 {
-	std::map<std::string, ProgParameter>::const_iterator at = find( key );
+	auto at = find( key );
 
 	if( at != end() )
 		return at->second;
 	else {
 		LOG( Debug, error ) << "The requested parameter " << util::MSubject( key ) << " does not exist";
-		return ProgParameter();
+		return {};
 	}
 }
 ProgParameter &ParameterMap::operator[] ( const std::string key ) {return std::map<std::string, ProgParameter>::operator[]( key );}
 
-#ifdef BOOST_NO_EXPLICIT_CONVERSION_OPERATORS
-ProgParameter::operator std::unique_ptr<ValueBase>::unspecified_bool_type()const
-{
-	std::unique_ptr<ValueBase> dummy;
-
-	if( ( *this ).castTo<bool>() )dummy.reset( new Value<int16_t> );
-
-	return  dummy;
-}
-#else
 ProgParameter::operator bool()const
 {
-	return ( ( *this ).castTo<bool>() );
+	return as<bool>();
 }
-#endif
+std::ostream &operator<<(std::ostream &os, const ProgParameter &parameter)
+{
+	const std::string &desc = parameter.description();
 
+	if ( ! desc.empty() ) {
+		os << desc << ", ";
+	}
+
+	LOG_IF( parameter.isEmpty(), isis::CoreDebug, isis::error ) << "Program parameters must not be empty. Please set it to any value.";
+	assert( !parameter.isEmpty() );
+	os << "default=\"" << parameter.toString( false ) << "\", type=" << parameter.getTypeName();
+
+	if ( parameter.isNeeded() )
+		os << " (needed)";
+
+	return os;
 }
 }

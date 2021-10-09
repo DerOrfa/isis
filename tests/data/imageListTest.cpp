@@ -18,6 +18,15 @@ namespace test
 /* create an image list from chunks*/
 BOOST_AUTO_TEST_CASE ( imageList_chunk_test )
 {
+// 	ENABLE_LOG(CoreLog,util::DefaultMsgPrint,verbose_info);
+// 	ENABLE_LOG(CoreDebug,util::DefaultMsgPrint,verbose_info);
+// 
+// 	ENABLE_LOG(ImageIoLog,util::DefaultMsgPrint,verbose_info);
+// 	ENABLE_LOG(ImageIoDebug,util::DefaultMsgPrint,verbose_info);
+// 
+// 	ENABLE_LOG(DataLog,util::DefaultMsgPrint,verbose_info);
+// 	ENABLE_LOG(DataDebug,util::DefaultMsgPrint,verbose_info);
+// 
 	const size_t images = 5;
 	const size_t timesteps = 10;
 	std::list<data::Chunk> chunks;
@@ -34,6 +43,11 @@ BOOST_AUTO_TEST_CASE ( imageList_chunk_test )
 			ch.voxel<float>( 0, 0, 0 ) = c + i;
 			chunks.push_back( ch );
 		}
+	}
+	
+	uint32_t i=0;
+	for(const data::Chunk &ref:chunks){
+		BOOST_CHECK_EQUAL( ref.property("acquisitionNumber"), (i++)/5 );
 	}
 
 	std::list<data::Image> list = data::IOFactory::chunkListToImageList( chunks );

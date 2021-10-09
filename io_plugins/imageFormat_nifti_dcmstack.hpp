@@ -17,12 +17,11 @@
 */
 
 
-#ifndef IMAGEFORMAT_NIFTI_PARSER_HPP
-#define IMAGEFORMAT_NIFTI_PARSER_HPP
+#pragma once
 
 
-#include <isis/core/valuearray.hpp>
 #include <isis/core/chunk.hpp>
+#include <isis/core/bytearray.hpp>
 
 namespace isis
 {
@@ -37,7 +36,7 @@ public:
 	DCMStack() {}
 	DCMStack( const util::PropertyMap &src );
 	void writeJson( std::ostream &out );
-	std::ptrdiff_t readJson( data::ValueArray<uint8_t > stream, char extra_token = 0 );
+	ptrdiff_t readJson( data::ByteArray stream, char extra_token = 0 );
 	void translateToISIS( data::Chunk& orig );
 private:
 	static void writeSubtree( const PropertyMap& src, std::ostream &out );
@@ -48,4 +47,4 @@ private:
 }
 }
 
-#endif // IMAGEFORMAT_NIFTI_PARSER_HPP
+

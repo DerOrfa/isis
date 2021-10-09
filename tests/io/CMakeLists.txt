@@ -12,15 +12,10 @@
 # configure targets
 ############################################################
 
-add_executable(imageIOLoadDicom imageIOLoadDicom.cpp)
-add_executable(imageIONullTest imageIONullTest.cpp)
-add_executable(imageIONiiTest imageIONiiTest.cpp)
-add_executable(imageIOTest imageIOTest.cpp)
-add_executable(imageIOVistaTest imageIOVistaTest.cpp)
+makeTest(imageIONullTest.cpp)
+makeTest(imageIONiiTest.cpp)
+makeTest(imageIOTest.cpp)
 
-target_link_libraries(imageIOLoadDicom ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries(imageIONullTest  ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries(imageIONiiTest   ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries(imageIOVistaTest ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries(imageIOTest      ${Boost_LIBRARIES} ${isis_core_lib})
-target_link_libraries(imageIOVistaTest ${Boost_LIBRARIES} ${isis_core_lib})
+add_executable( imageIOVistaTest imageIOVistaTest.cpp )
+target_link_libraries( imageIOVistaTest isis_math Boost::unit_test_framework )
+add_test(NAME imageIOVistaTest COMMAND imageIOVistaTest)

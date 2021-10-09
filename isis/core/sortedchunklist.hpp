@@ -16,22 +16,15 @@
 
 */
 
-#ifndef SORTEDCHUNKLIST_HPP
-#define SORTEDCHUNKLIST_HPP
+#pragma once
 
 #include "chunk.hpp"
 #include "vector.hpp"
 #include <stack>
 #include <memory>
 
-using boost::optional;
-
 /// @cond _internal
-namespace isis
-{
-namespace data
-{
-namespace _internal
+namespace isis::data::_internal
 {
 
 /*
@@ -88,7 +81,7 @@ public:
 	/**
 	 * Creates a sorted list and sets primary sorting as well as properties which should be equal across all chunks.
 	 */
-	SortedChunkList( util::PropertyMap::key_type comma_separated_equal_props );
+	SortedChunkList( const std::list<util::PropertyMap::PropPath> &list_of_equal_props );
 	std::list< std::pair< util::PropertyMap, std::list<std::shared_ptr<Chunk>> > > not_spliced;
 
 	/**
@@ -100,7 +93,7 @@ public:
 	// utils
 
 	///runs op on all entries of the list (the order is not defined) and replaces the entries by the return value
-	void transform( chunkPtrOperator &op );
+	void transform( chunkPtrOperator &op );//make it a functional
 	
 	///runs op on all entries of the list (the order is not defined)
 	template<typename T> void forall( T &func)const
@@ -137,7 +130,7 @@ public:
 	 * Make image rectangular by dropping secondary sorted entries from all primary entries until their amount is equal.
 	 * \returns amount of dropped entries
 	 **/
-	size_t makeRectangular(optional< util::slist& > rejected=optional< util::slist& >());
+	size_t makeRectangular(util::slist* rejected=nullptr);
 
 	/// \returns the amount secondary sorted entries
 	size_t getHorizontalSize();
@@ -160,8 +153,6 @@ public:
 
 
 }
-}
-}
 /// @endcond _internal
 
-#endif // SORTEDCHUNKLIST_HPP
+

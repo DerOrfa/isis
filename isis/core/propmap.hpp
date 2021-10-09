@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef ISISPROPMAP_HPP
-#define ISISPROPMAP_HPP
+#pragma once
 
 #include <map>
 #include <string>
@@ -22,18 +21,11 @@
 #include "istring.hpp"
 #include <set>
 #include <algorithm>
-#include <boost/variant/variant.hpp>
-#include <boost/variant/get.hpp>
-#include <boost/variant/apply_visitor.hpp>
-#include <boost/optional.hpp>
-#include <boost/optional/optional_io.hpp>
+#include <optional>
 #include <boost/property_tree/ptree_fwd.hpp>
+#include <ostream>
 
-using boost::optional;
-
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 /// @cond _internal
 namespace _internal
@@ -49,7 +41,7 @@ template<typename T> T &un_shared_ptr(T &p){return p;}
 template<typename T> T &un_shared_ptr(std::shared_ptr<T> &p){return *p;}
 
 }
-/// @endcond 
+/// @endcond
 /**
  * This class forms a mapping tree to store all kinds of properties (path : value), where value is a util::PropertyValue-container holding the value(s) of the property (this may be empty/unset)
  *
@@ -72,7 +64,8 @@ public:
 	friend struct _internal::TreeInvalidCheck;
 	friend struct _internal::Extractor;
 /// @endcond
-	typedef std::map<util::istring, boost::variant<PropertyValue, PropertyMap> > container_type;
+	class Node;
+	typedef std::map<util::istring, Node > container_type;
 	/// type of the keys forming a path
 	typedef container_type::key_type key_type;
 	typedef container_type::mapped_type mapped_type;
@@ -80,16 +73,17 @@ public:
 	/// "Path" type used to locate entries in the tree
 	struct PropPath: public std::list<key_type> {
 		static const char pathSeperator = '/';
-		PropPath();
+		PropPath() = default;
 		PropPath( const char *key );
 		PropPath( const key_type &key );
-		PropPath( const std::list<key_type> &path );
-		PropPath operator/( const PropPath &s )const;
+		explicit PropPath( const std::list<key_type> &path );
+		[[nodiscard]] PropPath operator/( const PropPath &s )const;
 		PropPath &operator/=( const PropPath &s );
-		bool operator==( const key_type &s )const {return *this == PropPath( s );}
-		bool operator!=( const key_type &s )const {return *this != PropPath( s );}
-		size_t length()const;
-		std::string toString()const;
+		[[nodiscard]] bool operator==( const key_type &s )const {return *this == PropPath( s );}
+		[[nodiscard]] bool operator!=( const key_type &s )const {return *this != PropPath( s );}
+		[[nodiscard]] size_t length()const;
+		[[nodiscard]] std::string toString()const;
+		friend std::ostream &operator<<(std::ostream &os, const PropPath &path);
 	};
 
 	///a list to store keys only (without the corresponding values)
@@ -99,124 +93,49 @@ public:
 	///a flat map, matching complete paths as keys to the corresponding values
 	typedef std::map<PropPath, PropertyValue> FlatMap;
 
-	template<typename T> class NeededsList: public std::list<PropPath>
-	{
-	public:
-		NeededsList() {
-			const std::list< PropertyMap::key_type > buff = util::stringToList<PropertyMap::key_type>( T::neededProperties ); //@todo really bad voodoo
-			assign( buff.begin(), buff.end() );
-		}
-		void applyTo( PropertyMap &props ) {
-			for( const PropPath & ref: *this ) {
-				props.addNeeded( ref );
-			}
-		}
-	};
-
 protected:
+	static Node &nullnode();
 	typedef PropPath::const_iterator propPathIterator;
 	container_type container;
 
-/// @cond _internal
+	/// @cond _internal
 	/////////////////////////////////////////////////////////////////////////////////////////
-	// internal predicats
+	// internal predicates
 	/////////////////////////////////////////////////////////////////////////////////////////
+	typedef std::function<bool(const PropertyValue &val)> leaf_predicate;
+	typedef std::function<bool(const PropPath &path, const PropertyValue &val)> key_predicate;
 	/// allways true
-	struct TrueP { bool operator()( const PropertyValue &ref )const;};
+	static const leaf_predicate trueP;
 	/// true when the Property is needed and empty
-	struct InvalidP { bool operator()( const PropertyValue &ref )const;};
-	struct EmptyP { bool operator()( const PropertyValue &ref )const;};
-	
+	static const leaf_predicate invalidP;
+	static const leaf_predicate emptyP;
+
 	void readPtree(const boost::property_tree::ptree &tree, bool skip_empty=true);
-	
+
 	API_EXCLUDE_BEGIN;
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// internal functors
 	/////////////////////////////////////////////////////////////////////////////////////////
-	template<class Predicate> struct WalkTree: public boost::static_visitor<void> {
-		PathSet &m_out;
-		const PropPath &name;
-		WalkTree( PathSet &out, const PropPath &prefix ): m_out( out ), name( prefix ) {}
-		void operator()( container_type::const_reference ref ) const {boost::apply_visitor( WalkTree( m_out, name / ref.first ), ref.second );} //recursion
-		void operator()( const PropertyValue &val )const {
-			if ( Predicate()( val ) )
-				m_out.insert( m_out.end(), name );
-		}
-		void operator()( const PropertyMap &sub )const { //call my own recursion for each element
-			std::for_each( sub.container.begin(), sub.container.end(), *this );
-		}
-	};
-	template<typename ITER> struct Splicer: public boost::static_visitor<void> {
-		const ITER &first, &last;
-		const PropPath &name;
-		const bool lists_only;
-		const size_t blocks;
-		Splicer( const ITER &_first, const ITER &_last, const PropPath &_name, bool _lists_only ): 
-			first( _first ), last( _last ), name( _name ),lists_only(_lists_only), blocks(std::distance( first, last )) 
-		{
-			assert( blocks );
-		}
-		void operator()( container_type::value_type &pair )const {
-			boost::apply_visitor( Splicer<ITER>( first, last, name / pair.first, lists_only ), pair.second );
-		}
-		void operator()( PropertyValue &val )const {
-			if(val.isEmpty())return; // abort if there is nothing to splice
-			else if(lists_only && val.size() <= 1)return;  //abort if we dont want do move scalars
-			
-			if( val.size() % blocks ) { // just copy all which cannot be properly spliced to the destination
-				LOG_IF( val.size() > 1, Runtime, warning ) << "Not splicing non scalar property " << MSubject( name ) << " because its length "
-				<< MSubject( val.size() ) << " doesn't fit the amount of targets(" << MSubject( blocks ) << ")"; //tell the user if its no scalar
-			
-				PropertyValue &first_prop = _internal::un_shared_ptr(*first).touchProperty( name );
-				first_prop.transfer(val);
-				ITER i = first;
-				for( ++i; i != last; ++i )
-					_internal::un_shared_ptr(*i).touchProperty( name ) = first_prop;
+	struct WalkTree;
+	template<typename ITER> struct Splicer;
+	struct IsEmpty;
 
-			} else {
-				LOG_IF( val.size() > 1, Debug, info ) << "Splicing non scalar property " << MSubject( name ) << " into " << blocks << " chunks";
-				ITER i = first;
-				for( PropertyValue & splint :  val.splice( val.size() / blocks ) ) {
-					assert( i != last );
-					_internal::un_shared_ptr(*i).touchProperty( name ).swap(splint);
-					i++;
-				}
-			}
-			assert(val.isEmpty());
-		}
-		void operator()( PropertyMap &sub )const { //call my own recursion for each element
-			std::for_each( sub.container.begin(), sub.container.end(), *this );
-		}
-	};
-	struct IsEmpty : boost::static_visitor<bool>
-	{
-		template <typename T> bool operator()( T & operand ) const{
-			return operand.isEmpty();
-		}
-	};
-	template<typename T> PathSet getLocal()const{
-		PathSet ret;
-		for(const container_type::value_type &v:container){
-			if(v.second.type()==typeid(T))
-				ret.insert(v.first);
-		}
-		return ret;
-	}
 API_EXCLUDE_END;
 /// @endcond _internal
 
-	/////////////////////////////////////////////////////////////////////////////////////////
-	// internal tool-backends
-	/////////////////////////////////////////////////////////////////////////////////////////
-	/// internal recursion-function for join
-	void joinTree( PropertyMap& other, bool overwrite, bool delsource, const PropPath& prefix, PathSet& rejects );
+    /////////////////////////////////////////////////////////////////////////////////////////
+    // internal tool-backends
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /// internal recursion-function for join
+    void joinTree( PropertyMap& other, bool overwrite, bool delsource, const PropPath& prefix, PathSet& rejects );
 	/// internal recursion-function for diff
 	void diffTree( const container_type &other, DiffMap &ret, const PropPath &prefix ) const;
 
 	/// internal recursion-function for remove
 	static bool recursiveRemove( container_type &root, const propPathIterator pathIt, const propPathIterator pathEnd );
 
-	template <typename MAPPED,typename CONTAINER> static optional<MAPPED &> findEntryImpl( CONTAINER &root, const propPathIterator at, const propPathIterator pathEnd )
+	template <bool CONST> static std::conditional_t<CONST,const mapped_type,mapped_type>& 
+	findEntryImpl( std::conditional_t<CONST,const container_type,container_type> &root, const propPathIterator at, const propPathIterator pathEnd )
 	{
 		propPathIterator next = at;
 		next++;
@@ -224,49 +143,49 @@ API_EXCLUDE_END;
 
 		if ( next != pathEnd ) {//we are not at the end of the path (aka the leaf)
 			if ( found != root.end() ) {//and we found the entry
-				return findEntryImpl<MAPPED,CONTAINER>( boost::get<PropertyMap>( found->second ).container, next, pathEnd ); //continue there
+				return findEntryImpl<CONST>( found->second.branch().container, next, pathEnd ); //continue there
 			}
-		} else if ( found != root.end() ) {// if its the leaf and we found the entry
+		} else if ( found != root.end() ) {// if it's the leaf and we found the entry
 			return found->second; // return that entry
 		}
 
-		return optional<MAPPED &>();
+		return nullnode();
 	}
-
-protected:
+	
 /// @cond _internal
-	template<typename T> optional<T &> queryValueAsImpl( const PropPath &path, const optional<size_t> &at ) {
-		const optional< PropertyValue & > found = queryProperty( path );
+	template<typename T> T* queryValueAsImpl( const PropPath &path, const std::optional<size_t> &at ) {
+		const auto &found = queryProperty( path );
 
-		if( found && found->size()>at.get_value_or(0) ) {// apparently it has a value so lets try use that
+		if( found && found->size()>at.value_or(0) ) {// apparently it has a value so let's try to use that
 			if( !found->is<T>() ) {
 				if( !found->transform<T>() ) {// convert to requested type
 					LOG( Runtime, warning ) << "Conversion of Property " << path << " from " << util::MSubject( found->getTypeName() ) << " to "
-											<< util::MSubject( util::Value<T>::staticName() ) << " failed";
-					return optional<T &>();
+					                        << util::MSubject( util::typeName<T>() ) << " failed";
+					return nullptr;
 				}
 			}
 			assert( found->is<T>() );
-			return at ?
-				found->at(*at).castTo<T>():
-				found->castTo<T>(); // use single value ops, if at was not given
-		}
-		return optional<T &>();
+			return &std::get<T>(at ?
+			    found->at(*at):
+			    found->front()
+			); // use single value ops, if at was not given
+		} else 
+			return nullptr;
 	}
-	template<typename T> T getValueAsImpl( const PropPath &path, const optional<size_t> &at )const {
-		const optional< const PropertyValue & > ref = queryProperty( path );
+	template<typename T> T getValueAsImpl( const PropPath &path, const std::optional<size_t> &at )const {
+		const auto ref = queryProperty( path );
 
 		if( !ref ){
-			LOG( Runtime, warning ) << "Property " << MSubject( path ) << " doesn't exist returning " << MSubject( Value<T>() );
+			LOG( Runtime, warning ) << "Property " << MSubject( path ) << " doesn't exist returning " << MSubject(Value(T()) );
 			return T();
-		} else if (ref->size()<=at.get_value_or(0)){
-			LOG_IF(at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " does exist, but index " << MSubject( at ) << " is out of bounds. returning " << MSubject( Value<T>() );
-			LOG_IF(!at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " is empty. returning " << MSubject( Value<T>() );
+		} else if (ref->size()<=at.value_or(0)){
+			LOG_IF(at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " does exist, but index " << *at << " is out of bounds. returning " << MSubject(Value(T()) );
+			LOG_IF(!at, Runtime, warning ) << "Property " << MSubject( std::make_pair( path, ref ) ) << " is empty. returning " << MSubject(Value(T()) );
 			return T();
 		} else
 			return at ?
-				ref->at( *at ).as<T>():
-				ref->as<T>();// use single value ops, if at was not given
+			    ref->at( *at ).as<T>():
+			    ref->as<T>();// use single value ops, if at was not given
 	}
 
 /// @endcond _internal
@@ -289,67 +208,23 @@ protected:
 	 * If the "path" or the property does not exist NULL is returned.
 	 * \note this is the const version of \link fetchEntry( const PropPath &path ) \endlink, so it won't modify the map.
 	 */
-	optional<const PropertyMap::mapped_type &> findEntry( const PropPath &path )const;
-	optional<PropertyMap::mapped_type &> findEntry( const PropPath &path  );
+	const PropertyMap::mapped_type& findEntry( const PropPath &path )const;
+	PropertyMap::mapped_type& findEntry( const PropPath &path  );
 
-	template<typename T> optional<const T &> tryFindEntry( const PropPath &path )const {
-		if(!path.empty()){
-			try {
-				const optional<const PropertyMap::mapped_type &> ref = findEntry( path );
-
-				if( ref )
-					return boost::get<T>( *ref );
-			} catch ( const boost::bad_get &e ) {
-				LOG( Runtime, error ) << "Got errror " << e.what() << " when accessing " << MSubject( path );
-			}
-		} else {
-			LOG( Runtime, error ) << "Got empty path, will return nothing";
-		}
-		return  optional<const T &>();
-	}
-	template<typename T> optional<T &> tryFindEntry( const PropPath &path ){
-		try {
-			optional<PropertyMap::mapped_type &> ref = findEntry( path );
-
-			if( ref )
-				return boost::get<T>( *ref );
-		} catch ( const boost::bad_get &e ) {
-			LOG( Runtime, error ) << "Got errror " << e.what() << " when accessing " << MSubject( path );
-		}
-		return  optional<T &>();
-	}
-	template<typename T> optional<T &> tryFetchEntry( const PropPath &path ) {
-		try {
-			mapped_type &n = fetchEntry( path );
-			if(n.type()!=typeid(T)){
-				if(boost::apply_visitor(IsEmpty(),n)) //if target is empty but of wrong type 
-					boost::get<T>( n = T() ); // reset it to empty with right type
-				else {
-					LOG( Runtime, error ) << "Trying to fetch existing entry " << MSubject( path ) << " as wrong type";
-					LOG( Runtime, error ) << "Content was " << n;
-				}
-			}
-			return boost::get<T>( n );
-		} catch( const boost::bad_get &e ) {
-			LOG( Runtime, error ) << "Got errror " << e.what() << " when accessing " << MSubject( path );
-		}
-
-		return  optional<T &>();
-	}
-
+	template<typename T> const T* tryFindEntry( const PropPath &path )const;
+	template<typename T> T* tryFindEntry( const PropPath &path );
+	template<typename T> T* tryFetchEntry( const PropPath &path );
 
 	/// create a list of keys for every entry for which the given scalar predicate is true.
-	template<class Predicate> PathSet genKeyList()const {
-		PathSet k;
-		std::for_each( container.begin(), container.end(), WalkTree<Predicate>( k, PropPath() ) );
-		return k;
-	}
+	PathSet genKeyList(const leaf_predicate &predicate)const;
+	PathSet genKeyList(const key_predicate &predicate)const;
+
 	/**
 	 * Adds a property with status needed.
 	 * \param path identifies the property to be added or if already existsing to be flagged as needed
 	 */
 	void addNeeded( const PropPath &path );
-	
+
 	/**
 	 * Remove properties from another tree that are in both, but not equal
 	 * For every entry of the tree this checks if it is also in the given other tree and removes it there if its not equal.
@@ -365,24 +240,30 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// constructors
 	/////////////////////////////////////////////////////////////////////////////////////////
-	PropertyMap();
-	PropertyMap( const container_type &cont );
+	PropertyMap() = default;
+	explicit PropertyMap( container_type cont );
 
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Common rw-accessors
 	/////////////////////////////////////////////////////////////////////////////////////////
+
 	/**
 	 * Access the property referenced by the path.
-	 * If the property does not exist false is returned.
+	 * If the property does not exist nullptr is returned.
 	 * As well as for accessing errors like the given path is a branch instead of a property.
 	 * \param path the path to the property
-	 * \returns boost::optional referencing the property or false
+	 * \returns pointer the property or nullptr
 	 */
-	optional< const PropertyValue & > queryProperty( const PropPath &path )const;
+	const PropertyValue* queryProperty( const PropPath &path )const;
 
 	/// @copydoc queryProperty( const PropPath &path )const
-	optional< PropertyValue & > queryProperty( const PropPath &path );
-	
+	PropertyValue* queryProperty( const PropPath &path );
+
+	/* Get PropertyMaps or PropertyValues at the local level
+	 * \returns a PathSet to all PropertyMaps or PropertyValues on this branch
+	 */
+	template<typename T> PathSet getLocal()const;
+
 	/**
 	 * Get the property at the path, or an empty one if there is none.
 	 * \param path the path to the property
@@ -400,15 +281,15 @@ public:
 
 	/**
 	 * Access the property branch referenced by the path.
-	 * If the branch does not exist false is returned.
+	 * If the branch does not exist nullptr is returned.
 	 * As well as for accessing errors like the given path is a property instead of a branch.
 	 * \param path the path to the branch
-	 * \returns boost::optional referencing the branch or false
+	 * \returns pointer to the branch or nullptr
 	 */
-	optional< const PropertyMap & > queryBranch( const PropPath &path )const;
+	const PropertyMap* queryBranch( const PropPath &path )const;
 
 	/// @copydoc queryBranch( const PropPath &path )const
-	optional< PropertyMap & > queryBranch( const PropPath &path );
+	PropertyMap* queryBranch( const PropPath &path );
 
 	/**
 	 * Access the branch referenced by the path, create it if its not there.
@@ -483,7 +364,9 @@ public:
 
 	bool insert(const std::pair<PropPath,PropertyValue> &p);
 	bool insert(const std::pair<std::string,PropertyValue> &p);
-	
+	bool insert(std::pair<PropPath,PropertyValue> &&p);
+	bool insert(std::pair<std::string,PropertyValue> &&p);
+
 	/**
 	 * extract Property or branch from this PropertyMap and move it into dst.
 	 * Any existing Property or branch in dst will be overwritten
@@ -515,24 +398,13 @@ public:
 	 * \returns a flat list of the paths to all properties in the PropertyMap
 	 */
 	PathSet getKeys()const;
-	
-	/**
-	 * Get a list of the paths of all properties directly on this branch.
-	 * \returns a flat list of the paths to all properties in the PropertyMap
-	 */
-	PathSet getLocalProps()const;
-	/**
-	 * Get a list of the paths of all sub-branches directly on this branch.
-	 * \returns a flat list of the paths to all properties in the PropertyMap
-	 */
-	PathSet getLocalBranches()const;
-	
+
 	/**
 	 * Get a list of missing properties.
 	 * \returns a list of the paths for all properties which are marked as needed and but are empty.
 	 */
 	PathSet getMissing()const;
-	
+
 	/**
 	 * Get a difference map of this tree and another.
 	 * Out of the names of differing properties a mapping from paths to std::pair\<PropertyValue,PropertyValue\> is created with following rules:
@@ -596,8 +468,8 @@ public:
 	 * \returns true if the transformation was done, false if it failed
 	 */
 	template<typename DST> bool transform( const PropPath &from, const PropPath &to) {
-		checkType<DST>();
-		return transform( from, to, Value<DST>::staticID());
+		static_assert(knownType<DST>(),"type must be known");
+		return transform( from, to, typeID<DST>());
 	}
 
 	/**
@@ -611,11 +483,11 @@ public:
 	 * \note all empty properties will be removed afterwards (including needed properties)
 	 */
 	template<typename ITER> void splice( ITER first, ITER last, bool lists_only ){
-		const PathSet empty_before=genKeyList<EmptyP>();
+		const PathSet empty_before=genKeyList(emptyP);
 		std::for_each( container.begin(), container.end(), Splicer<ITER>( first, last, PropPath(), lists_only) );
-		//some cleanup 
-		//delete all thats empty now, but wasn't back then (we shouldn't delete what where empty before) / spliters are moved so source will become empty
-		const PathSet empty_after=genKeyList<EmptyP>();
+		//some cleanup
+		//delete all that's empty now, but wasn't back then (we shouldn't delete what where empty before) / spliters are moved so source will become empty
+		const PathSet empty_after=genKeyList(emptyP);
 		std::list<PropPath> deletes;
 		std::set_difference(empty_after.begin(),empty_after.end(),empty_before.begin(),empty_before.end(),std::back_inserter(deletes));
 		LOG_IF(!deletes.empty(),Debug,info) << "Properties " << MSubject(deletes) << " became empty while splicing, deleting them";
@@ -626,44 +498,18 @@ public:
 	//////////////////////////////////////////////////////////////////////////////////////
 	// comparison
 	//////////////////////////////////////////////////////////////////////////////////////
-	bool operator==( const PropertyMap &other )const {return container == other.container;}
-	bool operator!=( const PropertyMap &other )const {return container != other.container;}
-	
+	bool operator==( const PropertyMap &other )const;
+	bool operator!=( const PropertyMap &other )const;
+
 	// move everything which is equal accros maps into this
 	void deduplicate(std::list<std::shared_ptr<PropertyMap>> maps);
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	// Additional get/set - Functions
 	//////////////////////////////////////////////////////////////////////////////////////
-	
-	PropertyValue &setValue(const PropPath &path, const ValueBase &val, size_t at);
-	PropertyValue &setValue(const PropPath &path, const ValueBase &val);
-	
-	/**
-	 * Set the given property to a given value/type.
-	 * The needed flag (if set) will be kept.
-	 * The property will be set to the one given value if
-	 * - the property is empty or
-	 * - the property is already set to one value of the same type (value will be overwritten)
-	 * - the property is already set to another value and the new value can be converted to that type (value will be overwritten but type will be kept)
-	 * The property will not be set and an error will be send to Runtime if
-	 * - the property is already set to one value of another type an and no conversion is available
-	 * - the property stores more that one value (use setValueAs( const PropPath &path, size_t at, const T &val ) instead)
-	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
-	 * \code
-	 * setValueAs("MyPropertyName", isis::util::fvector4(1,0,1,0))
-	 * \endcode
-	 * \param path the path to the property
-	 * \param val the value to set of type T
-	 * \returns a reference to the PropertyValue (this can be used later, e.g. if a vector is filled step by step
-	 * the reference can be used to not ask for the Property each time)
-	 */
-	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val ) {
-		util::checkType<T>();
-		return setValue(path,Value<T>( val ));
-	}
-	PropertyValue &setValueAs( const PropPath &path, const char *val );
-	
+
+	PropertyValue &setValue(const PropPath &path, const Value &val, const std::optional<size_t> &at=std::optional<size_t>());
+
 	/**
 	 * Set the given property to a given value/type at a specified index.
 	 * The needed flag (if set) will be kept.
@@ -683,11 +529,11 @@ public:
 	 * \returns a reference to the PropertyValue (this can be used later, e.g. if a vector is filled step by step
 	 * the reference can be used to not ask for the Property each time)
 	 */
-	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, size_t at ) {
-		util::checkType<T>();
-		return setValue(path,Value<T>( val ), at);
-	}
-	PropertyValue &setValueAs( const PropPath &path, const char *val, size_t at );
+	//@todo can't we get rid of this'
+	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, const std::optional<size_t> &at=std::optional<size_t>() ) {
+		static_assert(knownType<T>(),"invalid type");
+		return setValue(path, Value(val ), at);
+	}//@todo maybe remove the templated version
 
 	/**
 	 * Request a property value via the given key in the given type.
@@ -698,40 +544,25 @@ public:
 	 * getValueAs<fvector4>( "MyPropertyName" );
 	 * \endcode
 	 * \param path the path to the property
-	 * \param at index of the value to return 
+	 * \param at index of the value to return
 	 * \returns the property with given type, if not set yet T() is returned.
 	 */
-	template<typename T> T getValueAs( const PropPath &path, size_t at )const {
-		return getValueAsImpl<T>(path,optional<size_t>(at));// uses single value ops, if at was not given
-	}
-	/**
-	 * Request a property value via the given key in the given type.
-	 * If the requested type is not equal to type the property is stored with, an automatic conversion is done.
-	 * If that conversion failes an error is sent to Runtime.
-	 * If there is no value yet T() is returned and a warning is sent to Runtime
-	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
-	 * \code
-	 * getValueAs<fvector4>( "MyPropertyName" );
-	 * \endcode
-	 * \param path the path to the property
-	 * \returns the property with given type, if not set yet T() is returned.
-	 */
-	template<typename T> T getValueAs( const PropPath &path)const {
-		return getValueAsImpl<T>(path,optional<size_t>());
+	template<typename T> T getValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() )const {
+		return getValueAsImpl<T>(path,at);// uses single value ops, if at was not given
 	}
 
 	/**
 	 * Get a valid reference to the stored value in a given type at a given index.
 	 * This tries to access a property's stored value as reference.
 	 * If the stored type is not T, a transformation is done in place.
-	 * If that fails, false is returned.
-	 * If the property does not exist (or does not store enough values) false will be returned as well
+	 * If that fails, nullptr is returned.
+	 * If the property does not exist (or does not store enough values) nullptr will be returned as well
 	 * \param path the path to the property
 	 * \param at the index of the value to reference
-	 * \returns optional<T&> referencing the requested value or false
+	 * \returns pointer to the requested value or nullptr
 	 */
-	template<typename T> optional<T &> queryValueAs( const PropPath &path, size_t at ) {
-		return queryValueAsImpl<T>(path, optional<size_t>(at) );
+	template<typename T> T* queryValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() ) {
+		return queryValueAsImpl<T>(path, at );
 	}
 	/**
 	 * Get a valid reference to the stored value in a given type at a given index.
@@ -743,40 +574,12 @@ public:
 	 * \param at the index of the value to reference
 	 * \returns T& referencing the requested value
 	 */
-	template<typename T> T& refValueAs( const PropPath &path, size_t at ) {
-		const optional<T &> query=queryValueAs<T>(path,at);
+	template<typename T> T& refValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() ) {
+		const auto query=queryValueAs<T>(path,at);
 		LOG_IF(!query,Runtime,error) << "Referencing unavailable value " << MSubject( path ) << " this will probably crash";
-		return query.get();
+		return *query;
 	}
-	/**
-	 * Get a valid reference to the stored single value in a given type.
-	 * This tries to access a property's stored value as reference.
-	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
-	 * If the stored type is not T, a transformation is done in place.
-	 * If that fails, false is returned.
-	 * If the property does not exist (or is empty) false will be returned as well
-	 * \param path the path to the property
-	 * \returns optional<T&> referencing the requested value or false
-	 */
-	template<typename T> optional<T &> queryValueAs( const PropPath &path) {
-		return queryValueAsImpl<T>(path, optional<size_t>() );
-	}
-	/**
-	 * Get a valid reference to the stored single value in a given type.
-	 * This tries to access a property's stored value as reference.
-	 * \note This is a single value operation. So warning is send to Debug, if accessing a multivalue property.
-	 * If the stored type is not T, a transformation is done in place.
-	 * If that fails, an error will be sent to runtime and the following behaviour is UNDEFINED.
-	 * If the property does not exist (or is empty) an error will be sent to runtime and the following behaviour is UNDEFINED.
-	 * \param path the path to the property
-	 * \returns T& referencing the requested value
-	 */
-	template<typename T> T& refValueAs( const PropPath &path) {
-		const optional<T &> query=queryValueAs<T>(path);
-		LOG_IF(!query,Runtime,error) << "Referencing unavailable value " << MSubject( path ) << " this will probably crash";
-		return query.get();
-	}
-	
+
 	/**
 	 * Get a valid reference to the stored value in a given type.
 	 * This tries to access a property's first stored value as reference.
@@ -785,24 +588,24 @@ public:
 	 * If the property does not exist (or is empty) it is created with def as first value.
 	 * \param path the path to the property
 	 * \param def the default value to be used when creating the property
-	 * \returns optional<T&> referencing the requested value or false
+	 * \returns pointer to the requested value or nullptr
 	 */
 	template<typename T> T& refValueAsOr( const PropPath &path, const T &def )  {
-		const optional< PropertyValue & > fetched = tryFetchEntry<PropertyValue>( path );
+		const auto fetched = tryFetchEntry<PropertyValue>( path );
 		if(!fetched)
 			throw std::invalid_argument(path.toString()+" is not available");
 
 		if( fetched->isEmpty() ) { // we just created one, so set its value to def
 			*fetched = def;
-		} else if( !fetched->is<T>() ) { // apparently it already has a value so lets try use that
+		} else if( !fetched->is<T>() ) { // apparently it already has a value so let's try to use that
 			if( !transform<T>( path, path ) ) {
-				throw std::logic_error(fetched->toString(true)+" cannot be transformed to "+util::Value<T>::staticName() );
+				throw std::logic_error(fetched->toString(true)+" cannot be transformed to "+util::typeName<T>() );
 			}
 		}
 
 		assert( fetched->is<T>() );
 		assert( !fetched->isEmpty() );
-		return fetched->castTo<T>();
+		return fetched->castAs<T>();
 	}
 
 
@@ -819,7 +622,7 @@ public:
 	 * \returns the property with given type, if not set yet def is returned.
 	 */
 	template<typename T> T getValueAsOr( const PropPath &path, const T &def )const {
-		optional< const PropertyValue & > ref = tryFindEntry<PropertyValue>( path );
+		auto ref = tryFindEntry<PropertyValue>( path );
 
 		if( ref && !ref->isEmpty() )
 			return ref->as<T>();
@@ -828,7 +631,7 @@ public:
 		}
 	}
 	template<typename T> T getValueAsOr( const PropPath &path, size_t at, const T &def )const {
-		const optional< const PropertyValue & > ref = tryFindEntry<PropertyValue>( path );
+		const auto &ref = tryFindEntry<PropertyValue>( path );
 
 		if( ref && ref->size() > at )
 			return ref->at( at ).as<T>();
@@ -883,28 +686,145 @@ public:
 	 * \param label print the type of the property (see Value::toString())
 	 */
 	std::ostream &print( std::ostream &out, bool label = false )const;
+	friend std::ostream &operator<<(std::ostream &os, const PropertyMap &map);
 };
 
+class PropertyMap::Node : protected std::variant<std::monostate, PropertyValue, PropertyMap>
+{
+	friend PropertyMap;
+	[[nodiscard]] PropertyMap& branch();
+	[[nodiscard]] const PropertyMap& branch()const;
+	template<typename T> [[nodiscard]] bool is()const{return std::holds_alternative<T>(*this);}
+public:
+	Node()=default;
+	[[nodiscard]] bool operator==(const Node& other)const;
+	[[nodiscard]] bool operator!=(const Node& other)const;
+	explicit operator bool() const;
+	Node(const PropertyValue &val);
+	Node(const PropertyMap &map);
+	[[nodiscard]] std::variant<std::monostate, PropertyValue, PropertyMap>& variant();
+	[[nodiscard]] const std::variant<std::monostate, PropertyValue, PropertyMap>& variant()const;
+	[[nodiscard]] bool isBranch()const;
+	[[nodiscard]] bool isProperty()const;
+	bool isEmpty()const;
+	[[nodiscard]] PropertyValue& operator->();
+	[[nodiscard]] PropertyValue& operator*();
+	[[nodiscard]] const PropertyValue& operator->()const;
+	[[nodiscard]] const PropertyValue& operator*()const;
+	friend std::ostream &operator<<(std::ostream &os, const Node &node);
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// internal functors
+/////////////////////////////////////////////////////////////////////////////////////////
+/// @cond _internal
+struct PropertyMap::WalkTree {
+	PathSet &m_out;
+	PropPath name={};
+	const key_predicate &m_key_predicate;
+	WalkTree( PathSet &out, const key_predicate &predicate);
+	void operator()( const std::pair<PropertyMap::key_type, PropertyMap::Node> &ref );
+};
+template<typename ITER> struct PropertyMap::Splicer {
+	const ITER &first, &last;
+	const PropPath &name;
+	const bool lists_only;
+	const size_t blocks;
+	Splicer( const ITER &_first, const ITER &_last, const PropPath &_name, bool _lists_only ):
+	    first( _first ), last( _last ), name( _name ),lists_only(_lists_only), blocks(std::distance( first, last ))
+	{
+		assert( blocks );
+	}
+	void operator()( container_type::value_type &pair )const {
+		const auto &key=pair.first;
+		Node &node= pair.second;
+		std::visit( Splicer<ITER>( first, last, name / key, lists_only ), node.variant() );
+	}
+	void operator()( const std::monostate &val )const {}
+	void operator()( PropertyValue &val )const {
+		if(val.isEmpty())return; // abort if there is nothing to spliceAt
+		else if(lists_only && val.size() <= 1)return;  //abort if we don't want to move scalars
+
+		if( val.size() % blocks ) { // just copy all which cannot be properly spliced to the destination
+			if(val.size() > 1){
+				LOG_IF( val.size() > 1, Runtime, warning ) << "Not splicing non scalar property " << MSubject( name ) << " because its length "
+				<< MSubject( val.size() ) << " doesn't fit the amount of targets(" << MSubject( blocks ) << ")"; //tell the user if its no scalar
+			}
+			PropertyValue &first_prop = _internal::un_shared_ptr(*first).touchProperty( name );
+			first_prop.transfer(val);
+			ITER i = first;
+			for( ++i; i != last; ++i )
+				_internal::un_shared_ptr(*i).touchProperty( name ) = first_prop;
+
+		} else {
+			LOG_IF( val.size() > 1, Debug, info ) << "Splicing non scalar property " << MSubject( name ) << " into " << blocks << " chunks";
+			ITER i = first;
+			for( PropertyValue & splint :  val.splice( val.size() / blocks ) ) {
+				assert( i != last );
+				_internal::un_shared_ptr(*i).touchProperty( name ).swap(splint);
+				i++;
+			}
+		}
+		assert(val.isEmpty());
+	}
+	void operator()( PropertyMap &sub )const { //call my own recursion for each element
+		std::for_each( sub.container.begin(), sub.container.end(), *this );
+	}
+};
+/// @endcond _internal
+
+template<typename T> PropertyMap::PathSet PropertyMap::getLocal()const{
+	PathSet ret;
+	for(const container_type::value_type &v:container){
+		if(v.second.is<T>())
+			ret.insert(v.first);
+	}
+	return ret;
 }
+template<typename T> const T* PropertyMap::tryFindEntry( const PropPath &path )const {
+	if(!path.empty()){
+		try {
+			const auto& ref = findEntry( path );
+
+			if( ref )
+				return &std::get<T>( ref );
+		} catch ( const std::bad_variant_access &e ) {
+			LOG( Runtime, error ) << "Got error " << e.what() << " when accessing " << MSubject( path );
+		}
+	} else {
+		LOG( Runtime, error ) << "Got empty path, will return nothing";
+	}
+	return  nullptr;
+}
+template<typename T> T* PropertyMap::tryFindEntry( const PropPath &path ){
+	try {
+		Node &ref = findEntry( path );
+
+		if( ref )
+			return &std::get<T>( ref );
+	} catch ( const std::bad_variant_access &e ) {
+		LOG( Runtime, error ) << "Got error " << e.what() << " when accessing " << MSubject( path );
+	}
+	return nullptr;
+}
+template<typename T> T* PropertyMap::tryFetchEntry( const PropPath &path ) {
+	try {
+		mapped_type &n = fetchEntry( path );
+		if(!n.is<T>()){
+			if(n.isEmpty()) //if target is empty but of wrong type
+				n = T(); // reset it to empty with right type
+			else {
+				LOG( Runtime, error ) << "Trying to fetch existing entry " << MSubject( path ) << " as wrong type";
+				LOG( Runtime, error ) << "Content was " << n;
+			}
+		}
+		return &std::get<T>( n );
+	} catch( const std::bad_variant_access &e ) {
+		LOG( Runtime, error ) << "Got error " << e.what() << " when accessing " << MSubject( path );
+	}
+
+	return nullptr;
 }
 
-namespace std
-{
-/// Streaming output for PropertyMap::PropPath
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::PropertyMap::PropPath &s )
-{
-	isis::util::listToOStream( s.begin(), s.end(), out, std::string( 1, s.pathSeperator ).c_str(), "", "" );
-	return out;
-}
-/// Streaming output for PropertyMap
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::PropertyMap &s )
-{
-	const isis::util::PropertyMap::FlatMap buff = s.getFlatMap();
-	isis::util::listToOStream( buff.begin(), buff.end(), out );
-	return out;
-}
-}
 
-#endif
+}

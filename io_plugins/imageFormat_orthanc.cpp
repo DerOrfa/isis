@@ -18,9 +18,6 @@
  * 
  */
 
-#ifndef DATABASE_H
-#define DATABASE_H
-
 #include <string>
 #include <json/value.h>
 #include <json/reader.h>
@@ -37,9 +34,7 @@
 #include <isis/core/io_factory.hpp>
 #include <isis/core/bytearray.hpp>
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 namespace _internal
 {
@@ -93,7 +88,7 @@ public:
 
 class AceSession: public ACE::HTTP::Session {
 public:
-	boost::variant<Json::Value,std::list<data::Chunk>> get(const ACE_CString &url) {
+	std::variant<Json::Value,std::list<data::Chunk>> get(const ACE_CString &url) {
 		ACE::HTTP::Request req(ACE::HTTP::Request::HTTP_GET,url);
 		
 		LOG(Debug,info) << "Requesting " << url;
@@ -104,15 +99,16 @@ public:
 		auto &s=receive_response(resp);
 		
 		auto stat=resp.get_status();
-		boost::variant<Json::Value,std::list<data::Chunk>> result;
+		std::variant<Json::Value,std::list<data::Chunk>> result;
 
 		if(stat.is_valid()) {
 			ACE_CString type;
 			resp.get("Content-Type",type);
+			type=type.substr(0,type.find(';'));
 			if(type=="application/json"){
 				result=Json::Value();
-				s >> boost::get<Json::Value>(result);
-				LOG_IF(boost::get<Json::Value>(result).isNull(),Runtime,error)<<"Failed to parse application/json answer to " << url;
+				s >> std::get<Json::Value>(result);
+				LOG_IF(std::get<Json::Value>(result).isNull(),Runtime,error)<<"Failed to parse application/json answer to " << url;
 			} else if(type=="application/dicom"){
 				try{ //catch any error on single instances and simply report it as warning
 					auto len=resp.get_content_length();
@@ -157,7 +153,7 @@ public:
 
 };
 
-class visitor : public boost::static_visitor<std::list<data::Chunk>>
+class visitor
 {
 	AceSession &m_session;
 	std::shared_ptr<util::ProgressFeedback> m_feedback;
@@ -188,9 +184,8 @@ public:
 				return std::list<data::Chunk>();
 			}
 			auto got=m_session.get(request.c_str());
-			return boost::apply_visitor(*this,got);
+			return std::visit(*this,got);
 		}
-        return std::list<data::Chunk>();
     }
     
     std::list<data::Chunk> operator()(std::list<data::Chunk> &ch) const
@@ -207,7 +202,7 @@ class ImageFormat_orthanc: public FileFormat
 	_internal::AceSession session;
 public:
 	std::list< data::Chunk > load(
-	  const boost::filesystem::path &filename,
+	  const std::filesystem::path &filename,
 	  std::list<util::istring> /*formatstack*/,
 	  std::list<util::istring> dialects,
 	  std::shared_ptr<util::ProgressFeedback> feedback
@@ -224,7 +219,7 @@ public:
 		
 		auto result=session.get(url.get_request_uri().c_str());
 		
-		return boost::apply_visitor(_internal::visitor(session,feedback), result);
+		return std::visit(_internal::visitor(session,feedback), result);
 	}
 	std::string getName() const override{return "orthanc database access";};
 	void write(const data::Image & image, const std::string & filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback) override{
@@ -232,10 +227,9 @@ public:
 	}
 	ImageFormat_orthanc(){}
 protected:
-	util::istring suffixes(isis::image_io::FileFormat::io_modes modes) const override{return ".orthanc";}
+	std::list<util::istring> suffixes(isis::image_io::FileFormat::io_modes modes) const override{return {".orthanc"};}
 };
 
-}
 }
 
 isis::image_io::FileFormat *factory()
@@ -245,4 +239,4 @@ isis::image_io::FileFormat *factory()
 }
 
 
-#endif // DATABASE_H
+

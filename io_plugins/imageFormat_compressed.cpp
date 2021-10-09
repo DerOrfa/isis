@@ -2,19 +2,14 @@
 #include <isis/core/io_interface.h>
 #include <isis/core/io_factory.hpp>
 #include <isis/core/tmpfile.hpp>
-#include <isis/core/io_factory.hpp>
 
-#define BOOST_FILESYSTEM_VERSION 3
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/convenience.hpp>
-
+#include <filesystem>
+#include <fstream>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/copy.hpp>
-#include <boost/lexical_cast.hpp>
 
-#include <boost/filesystem/fstream.hpp>
 #include <isis/core/fileptr.hpp>
 #include <boost/iostreams/categories.hpp>  // tags
 
@@ -22,9 +17,7 @@
 #include "imageFormat_compressed_lzma.hpp"
 #endif //HAVE_LZMA
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 namespace _internal
 {
@@ -41,7 +34,7 @@ public:
 	struct category : boost::iostreams::dual_use_filter_tag, boost::iostreams::multichar_tag { };
 
 	void progress( std::streamsize n ) {
-		m_feedback.progress( "", n );
+		m_feedback.progress(n);
 	}
 	template<typename Source>
 	std::streamsize read( Source &src, char *s, std::streamsize n ) {
@@ -59,13 +52,15 @@ public:
 class ImageFormat_Compressed: public FileFormat
 {
 protected:
-	util::istring suffixes( io_modes modes = both )const override {
-		static util::istring write="gz bz2 Z xz";
+	std::list<util::istring> suffixes( io_modes modes = both )const override {
+		std::list<util::istring> formats{"gz","bz2","Z","xz"};
 #ifdef HAVE_LZMA
-		write+=" xz";
+		formats.push_back("xz");
 #endif //HAVE_LZMA
-		if( modes == write_only )return write;
-		else return write+" tgz tbz taz";
+		if( modes != write_only )
+			formats.insert(formats.end(), {"tgz", "tbz", "taz"});
+
+		return formats;
 	}
 public:
 	std::unique_ptr<boost::iostreams::filtering_istream> makeIStream(std::list<util::istring> &formatstack){
@@ -75,7 +70,7 @@ public:
 		util::istring format = formatstack.back();
 		formatstack.back()="tar"; // push in "tar" in case its one of the following
 
-		if( format == "tgz" )in->push( boost::iostreams::gzip_decompressor() ); // if its tgz,tbz or taz it IS tar
+		if( format == "tgz" )in->push( boost::iostreams::gzip_decompressor() ); // if It's tgz,tbz or taz it IS tar
 		else if( format == "tbz" )in->push( boost::iostreams::bzip2_decompressor() );
 		else if( format == "taz" )in->push( boost::iostreams::zlib_decompressor() );
 		else {
@@ -86,7 +81,7 @@ public:
 #ifdef HAVE_LZMA
 			else if( format == "xz" )in->push( boost::iostreams::lzma_decompressor() );
 #endif
-			else { // ok, no idea what going on, cry for mamy
+			else { // ok, no idea what going on, cry for mammy
 				throwGenericError( "Cannot determine the compression format" );
 			}
 		}
@@ -103,16 +98,16 @@ public:
 
 		return data::IOFactory::loadChunks( in->rdbuf(), formatstack, dialects );
 	}
-	std::list<data::Chunk> load( const boost::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override{
+	std::list<data::Chunk> load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override{
 		//try open file
-		std::ifstream file(filename.c_str());
+		std::ifstream file(filename);
 		file.exceptions(std::ios_base::badbit);
 
-		// set up progress bar if its enabled but don't fiddle with it if its set up already
+		// set up progress bar if its enabled but don't fiddle with it if it's set up already
 		bool set_up=false;
 		if( feedback && feedback->getMax() == 0 ) {
 			set_up=true;
-			feedback->show( boost::filesystem::file_size( filename ), std::string( "decompressing " ) + filename.native() );
+			feedback->show( std::filesystem::file_size( filename ), std::string( "decompressing " ) + filename.native() );
 		}
 		auto in=makeIStream(formatstack);
 
@@ -144,15 +139,15 @@ public:
 		if( !data::IOFactory::write( image, tmpFile.native(), formatstack, dialects ) ) {throwGenericError( tmpFile.native() + " failed to write" );}
 
 		// set up the compression stream
-		boost::filesystem::ifstream input( tmpFile, std::ios_base::binary );
-		std::ofstream output( filename.c_str(), std::ios_base::binary );
+		std::ifstream input( tmpFile, std::ios_base::binary );
+		std::ofstream output( filename, std::ios_base::binary );
 		input.exceptions( std::ios::badbit );
 		output.exceptions( std::ios::badbit );
 
 		boost::iostreams::filtering_ostream out;
 
 		if( progress ) {
-			progress->show( boost::filesystem::file_size( tmpFile ), std::string( "compressing " ) + filename );
+			progress->show( std::filesystem::file_size( tmpFile ), std::string( "compressing " ) + filename );
 			out.push( _internal::progress_filter( *progress ) );
 		}
 
@@ -169,7 +164,6 @@ public:
 		boost::iostreams::copy( input, out );
 	}
 };
-}
 }
 isis::image_io::FileFormat *factory()
 {

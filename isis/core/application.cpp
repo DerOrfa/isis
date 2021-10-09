@@ -21,17 +21,18 @@
  *****************************************************************/
 
 #include <clocale>
+#include <memory>
 #include "application.hpp"
 #include "fileptr.hpp"
+#include "console_progress_bar.hpp"
+
 #define STR(s) _xstr_(s)
 #define _xstr_(s) std::string(#s)
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
-Application::Application( const char name[], const char cfg[]): m_name( name )
+Application::Application( std::string_view name, std::string_view cfg): m_name( name )
 {
 	addLogging<CoreLog>("Core");
 	addLogging<CoreDebug>("Core");
@@ -49,39 +50,47 @@ Application::Application( const char name[], const char cfg[]): m_name( name )
 	parameters["locale"] = std::string("C");
 	parameters["locale"].setDescription( "locale to use for parsing/printing (use empty string to enforce use of system locale)");
 	parameters["locale"].needed() = false;
-	
-	if(strlen(cfg)){
+
+	if(cfg.length()){
 		parameters["cfg"]=std::string(cfg);
 		parameters["cfg"].setDescription("File to read configuration from");
 		parameters["cfg"].needed()=false;
 	}
-	
+
 	parameters["np"] = false;
 	parameters["np"].needed() = false;
 	parameters["np"].setDescription( "suppress progress bar" );
 	parameters["np"].hidden() = true;
 }
-Application::~Application() {}
 
-void Application::addLoggingParameter( std::string name )
+void Application::addLoggingParameter( const std::string& name )
 {
-	static const Selection dbg_levels( "error,warning,notice,info,verbose_info", "notice" );
+	static const Selection dbg_levels(
+		std::map<LogLevel,std::string>{
+			{error,"error"},
+			{warning,"warning"},
+			{notice,"notice"},
+			{info,"info"},
+			{verbose_info,"verbose_info"}
+		},
+		notice
+	);
 
-	if( parameters.find( std::string( "d" ) + name ) == parameters.end() ) { //only add the parameter if it does not exist yet
-		parameters[std::string( "d" ) + name] = dbg_levels;
+	if( parameters.find( "d"s + name ) == parameters.end() ) { //only add the parameter if it does not exist yet
+		parameters["d"s + name] = dbg_levels;
 
 		if( name.empty() )
-			parameters[std::string( "d" ) + name].setDescription( "Log level for \"" + m_name + "\" itself" );
+			parameters["d"s + name].setDescription( "Log level for \"" + m_name + "\" itself" );
 		else
-			parameters[std::string( "d" ) + name].setDescription( "Log level for the \"" + name + "\" module(s)" );
+			parameters["d"s + name].setDescription( "Log level for the \"" + name + "\" module(s)" );
 
-		parameters[std::string( "d" ) + name].hidden() = true;
-		parameters[std::string( "d" ) + name].needed() = false;
+		parameters["d"s + name].hidden() = true;
+		parameters["d"s + name].needed() = false;
 	}
 }
-void Application::removeLogging( std::string name )
+void Application::removeLogging( const std::string& name )
 {
-	parameters.erase( std::string( "d" ) + name );
+	parameters.erase( "d"s + name );
 	logs.erase( name );
 }
 
@@ -89,16 +98,16 @@ bool Application::addConfigFile(const std::string& filename)
 {
 	data::FilePtr f(filename);
 	if(f.good()){
-		const data::ValueArray< uint8_t > buffer=f.at<uint8_t>(0);
-		if(configuration.readJson(&buffer[0],&buffer[buffer.getLength()],'/')==0){
-			boost::optional< PropertyMap& > param=configuration.queryBranch("parameters");
+		const data::ValueArray buffer=f.at<uint8_t>(0);
+		if(configuration.readJson(buffer.beginTyped<uint8_t>(),buffer.endTyped<uint8_t>(),'/')==0){
+			auto param=configuration.queryBranch("parameters");
 			// if there is a "parameters" section in the file, use that as default parameters for the app
 			if(param){
-				for(PropertyMap::PropPath p:param->getLocalProps()){
+				for(PropertyMap::PropPath p:param->getLocal<PropertyValue>()){
 					assert(p.size()==1);
 					ProgParameter &dst=parameters[p.front().c_str()];
 					PropertyValue &src=param->touchProperty(p);
-					if(!dst.isParsed()){ // don't touch it, if its not just the default
+					if(!dst.isParsed()){ // don't touch it, if It's not just the default
 						LOG(Runtime,verbose_info) << "Setting parameter " << std::make_pair(p,src) << " from configuration";
 						if(dst.isEmpty())
 							dst.swap(src);
@@ -107,7 +116,7 @@ bool Application::addConfigFile(const std::string& filename)
 							continue;
 						}
 					}
-					dst.needed()=false; //param has got its deafult from the configuration, so its not needed anymore
+					dst.needed()=false; //param has got its default from the configuration, so its not needed anymore
 					param->remove(p);
 				}
 			}
@@ -115,15 +124,15 @@ bool Application::addConfigFile(const std::string& filename)
 		} else {
 			LOG(Runtime,warning) << "Failed to parse configuration file " << util::MSubject(filename);
 		}
-	} 
+	}
 	return false;
 }
 const PropertyMap& Application::config() const{return configuration;}
 
 
-void Application::addExample ( std::string params, std::string desc )
+void Application::addExample ( const std::string& params, const std::string& desc )
 {
-	m_examples.push_back( std::make_pair( params, desc ) );
+	m_examples.emplace_back( params, desc );
 }
 
 bool Application::init( int argc, char **argv, bool exitOnError )
@@ -140,8 +149,8 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 		LOG( Runtime, error ) << "Failed to parse the command line";
 		err = true;
 	}
-	std::map< std::string, ProgParameter >::iterator cfg=parameters.find("cfg");
-	if(cfg!=parameters.end()){ 
+	auto cfg=parameters.find("cfg");
+	if(cfg!=parameters.end()){
 		if(!addConfigFile(cfg->second.as<std::string>()) && exitOnError){
 			std::cerr << "Exiting..." << std::endl;
 			exit( 1 );
@@ -149,12 +158,12 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 	}
 
 	resetLogging();
-	
+
 	if ( ! parameters.isComplete() ) {
 		std::cerr << "Missing parameters: ";
 
-		for ( ParameterMap::iterator iP = parameters.begin(); iP != parameters.end(); iP++ ) {
-			if ( iP->second.isNeeded() ) {std::cerr << "-" << iP->first << "  ";}
+		for ( const auto &P: parameters ) {
+			if ( P.second.isNeeded() ) {std::cerr << "-" << P.first << "  ";}
 		}
 
 		std::cerr << std::endl;
@@ -169,9 +178,9 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 			exit( 1 );
 		}
 	}
-	
+
 	if(!parameters["np"])
-		feedback().reset(new util::ConsoleFeedback);
+		feedback() = std::make_shared<util::ConsoleProgressBar>();
 
 
 	const std::string loc=parameters["locale"];
@@ -180,16 +189,18 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 
 	return ! err;
 }
-void Application::resetLogging()
+std::list<std::shared_ptr<MessageHandlerBase>> Application::resetLogging()
 {
+	std::list<std::shared_ptr<MessageHandlerBase>> ret;
 	for( auto &ref: logs ) {
-		const std::string dname = std::string( "d" ) + ref.first;
+		const std::string dname = "d"s + ref.first;
 		assert( !parameters[dname].isEmpty() ); // this must have been set by addLoggingParameter (called via addLogging)
-		const LogLevel level = ( LogLevel )( uint16_t )parameters[dname].as<Selection>();
+		auto level = ( LogLevel )static_cast<uint8_t>(parameters[dname].as<Selection>());
 		for( setLogFunction setter: ref.second ) {
-			( this->*setter )( level );
+			ret.push_back(std::move((this->*setter )( level )));
 		}
 	}
+	return std::move(ret);
 }
 
 void Application::printHelp( bool withHidden )const
@@ -198,32 +209,32 @@ void Application::printHelp( bool withHidden )const
 	std::cerr << this->m_name << " (using isis " << getCoreVersion() << ")" << std::endl;
 	std::cerr << "Usage: " << this->m_filename << " <options>" << std::endl << "Where <options> includes:" << std::endl;;
 
-	for ( ParameterMap::const_iterator iP = parameters.begin(); iP != parameters.end(); iP++ ) {
+	for (const auto & parameter : parameters) {
 		std::string pref;
 
-		if ( iP->second.isNeeded() ) {
+		if ( parameter.second.isNeeded() ) {
 			pref = ". Required.";
-		} else if( iP->second.isHidden() ) {
+		} else if( parameter.second.isHidden() ) {
 			if( !withHidden )
 				continue; // if its hidden, not needed, and wie want the short version skip this parameter
 		}
 
-		if ( ! iP->second.isNeeded() ) {
-			pref = ". Default: \"" + iP->second.toString() + "\".";
+		if ( ! parameter.second.isNeeded() ) {
+			pref = ". Default: \"" + parameter.second.toString() + "\".";
 		}
 
 		std::cerr
-				<< "\t-" << iP->first << " <" << iP->second.getTypeName() << ">" << std::endl
-				<< "\t\t" << iP->second.description() << pref << std::endl;
+		        << "\t-" << parameter.first << " <" << parameter.second.getTypeName() << ">" << std::endl
+		        << "\t\t" << parameter.second.description() << pref << std::endl;
 
-		if ( iP->second.is<Selection>() ) {
-			const Selection &ref = iP->second.castTo<Selection>();
+		if ( parameter.second.is<Selection>() ) {
+			const Selection &ref = parameter.second.as<Selection>();
 			const std::list< istring > entries = ref.getEntries();
-			std::list< istring >::const_iterator i = entries.begin();
+			auto i = entries.begin();
 			std::cerr << "\t\tOptions are: \"" << *i << "\"";
 
 			for( i++ ; i != entries.end(); i++ ) {
-				std::list< istring >::const_iterator dummy = i;
+				auto dummy = i;
 				std::cout << ( ( ++dummy ) != entries.end() ? ", " : " or " ) << "\"" << *i << "\"";
 			}
 
@@ -240,11 +251,11 @@ void Application::printHelp( bool withHidden )const
 	}
 }
 
-std::shared_ptr< MessageHandlerBase > Application::getLogHandler( std::string /*module*/, isis::LogLevel level )const
+std::shared_ptr<MessageHandlerBase> Application::makeLogHandler(isis::LogLevel level) const
 {
 	return std::shared_ptr< MessageHandlerBase >( level ? new util::DefaultMsgPrint( level ) : 0 );
 }
-const std::string Application::getCoreVersion( void )
+std::string Application::getCoreVersion( void )
 {
 #ifdef ISIS_RCS_REVISION
 	return STR( _ISIS_VERSION_MAJOR ) + "." + STR( _ISIS_VERSION_MINOR ) + "." + STR( _ISIS_VERSION_PATCH ) + " [" + STR( ISIS_RCS_REVISION ) + " " + __DATE__ + "]";
@@ -258,7 +269,7 @@ std::shared_ptr<util::ProgressFeedback>& Application::feedback(){
 	return fbk;
 }
 }
-}
+
 #undef STR
 #undef _xstr_
 

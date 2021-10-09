@@ -2,9 +2,7 @@
 #include <iostream>
 
 
-namespace isis
-{
-namespace test
+namespace isis::test
 {
 
 template<int NUMBER> class SingleTest
@@ -17,7 +15,6 @@ public:
 		std::cout << "Deleting SingleTest<" << NUMBER << ">" << std::endl;
 	}
 };
-}
 }
 using namespace isis::util;
 using namespace isis::test;

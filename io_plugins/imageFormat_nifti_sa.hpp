@@ -17,8 +17,7 @@
 */
 
 
-#ifndef IMAGEFORMAT_NIFTI_SA_HPP
-#define IMAGEFORMAT_NIFTI_SA_HPP
+#pragma once
 
 #define NIFTI_TYPE_BINARY          1
 #define NIFTI_TYPE_UINT8           2
@@ -132,16 +131,16 @@ struct nifti_1_header {
 
 } ;                   /**** 348 bytes total ****/
 
-class WriteOp: public data::ChunkOp, protected data::NDimensional<4>
+class WriteOp: protected data::NDimensional<4>
 {
 protected:
 	std::set<data::dimensions> flip_list;
 	data::FilePtr m_out;
 	size_t m_voxelstart, m_bpv;
 	WriteOp( const isis::data::Image &image, size_t bitsPerVoxel );
-	virtual bool doCopy( data::Chunk &ch, util::vector4<size_t> posInImage ) = 0;
+	virtual bool doCopy( const data::Chunk &ch, util::vector4<size_t> posInImage ) = 0;
 	void applyFlipToCoords ( util::vector4< size_t > &coords, data::dimensions blockdims );
-	void applyFlipToData ( data::ValueArrayReference &dat, util::vector4< size_t > chunkSize );
+	void applyFlipToData (data::ValueArray &dat, util::vector4<size_t > chunkSize );
 	void applyFlipToData ( data::Chunk &dat );
 public:
 	virtual ~WriteOp() {}
@@ -149,7 +148,7 @@ public:
 	virtual unsigned short getTypeId() = 0;
 	virtual size_t getDataSize();
 
-	bool operator()( data::Chunk &ch, util::vector4<size_t> posInImage );
+	void operator()(const data::Chunk &ch, util::vector4<size_t> posInImage );
 	bool setOutput( const std::string &filename, size_t voxelstart = 352 );
 	void addFlip( data::dimensions dim );
 };
@@ -160,11 +159,11 @@ public:
 class ImageFormat_NiftiSa: public FileFormat
 {
 	static const util::Matrix4x4<float> nifti2isis;
-	static const util::Selection formCode;
+	static const std::map<uint8_t, std::string> formCodes;
 
 	typedef bool( *demuxer_type )( const util::PropertyValue &value, std::list<data::Chunk> &chunks, util::PropertyMap::PropPath name );
 
-	/// get the tranformation matrix from image space to Nifti space using row-,column and sliceVec from the given PropertyMap
+	/// get the transformation matrix from image space to Nifti space using row-,column and sliceVec from the given PropertyMap
 	static util::Matrix4x4<double> getNiftiMatrix( const util::PropertyMap &props );
 	static void useSForm( util::PropertyMap &props );
 	static void useQForm( util::PropertyMap &props );
@@ -174,8 +173,8 @@ class ImageFormat_NiftiSa: public FileFormat
 	std::map<unsigned short, short> isis_type2nifti_type;
 	std::map<unsigned short, demuxer_type> prop_demuxer;
 	template<typename T, typename NEW_T> static unsigned short typeFallBack() {
-		LOG( Runtime, info ) << data::ValueArray<T>::staticName() <<  " is not supported by the dialects fsl and spm falling back to " << data::ValueArray<NEW_T>::staticName();
-		return data::ValueArray<NEW_T>::staticID();
+		LOG( Runtime, info ) << util::typeName<T>() <<  " is not supported by the dialects fsl and spm falling back to " << util::typeName<NEW_T>();
+		return util::typeID<NEW_T>();
 	}
 	static void guessSliceOrdering( const data::Image img, char &slice_code, float &slice_duration );
 	   void parseSliceOrdering( const std::shared_ptr< isis::image_io::_internal::nifti_1_header >& head, isis::data::Chunk& current );
@@ -186,7 +185,7 @@ class ImageFormat_NiftiSa: public FileFormat
 	static float determinant( const util::Matrix3x3<float> &m );
 	void parseHeader( const std::shared_ptr< isis::image_io::_internal::nifti_1_header >& head, isis::data::Chunk &props, data::scaling_pair &scl );
 	std::unique_ptr<_internal::WriteOp> getWriteOp( const data::Image &src, std::list<util::istring> dialects );
-	data::ValueArray<bool> bitRead( isis::data::ValueArray< uint8_t > src, size_t length );
+	data::TypedArray<bool> bitRead( isis::data::TypedArray< uint8_t > src, size_t length );
 	bool checkSwapEndian ( std::shared_ptr<_internal::nifti_1_header > header );
 	void flipGeometry( data::Image &image, data::dimensions flipdim );
 
@@ -198,7 +197,7 @@ public:
 	std::list<util::istring> dialects()const override {return {"fsl","spm","withExtProtocols"};}
 
 protected:
-	util::istring suffixes( io_modes /*mode = both*/ )const override {return ".nii";};
+	std::list<util::istring> suffixes(io_modes /*mode = both*/ )const override {return {".nii"};};
 	void sanitise( data::Chunk &ch );
 	template <typename T> void transformIfNotSet( const util::PropertyMap::key_type &from, const util::PropertyMap::key_type &to, data::Chunk &object, LogLevel level ) {
 		if( !object.hasProperty( to ) ) {
@@ -211,4 +210,4 @@ protected:
 
 }
 }
-#endif // IMAGEFORMAT_NIFTI_SA_HPP
+

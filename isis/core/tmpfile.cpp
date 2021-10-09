@@ -21,37 +21,32 @@
 #pragma warning(disable:4996)
 #endif
 
-#include <stdio.h>
+#include <cstdio>
 #include <fstream>
-#define BOOST_FILESYSTEM_VERSION 3 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 #include "tmpfile.hpp"
 #include "message.hpp"
 #include "common.hpp"
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
-using namespace boost::filesystem;
+using namespace std::filesystem;
   
 TmpFile::TmpFile( std::string prefix, std::string sufix ): 
-  path(temp_directory_path() / unique_path(prefix+"%%%%-%%%%-%%%%-%%%%"+sufix))
+  path(temp_directory_path() / path(prefix+std::tmpnam(nullptr)+sufix))
 {
 	LOG( Debug, info ) << "Creating temporary file " << native();
-	ofstream( *this ).exceptions( std::ios::failbit | std::ios::badbit );
+	std::ofstream( *this ).exceptions( std::ios::failbit | std::ios::badbit );
 }
 
 TmpFile::~TmpFile()
 {
-	if ( boost::filesystem::exists( *this ) ) {
-		boost::filesystem::remove( *this );
+	if ( std::filesystem::exists( *this ) ) {
+		std::filesystem::remove( *this );
 		LOG( Debug, verbose_info ) << "Removing temporary " << native();
 	} else {
 		LOG( Debug, warning ) << "Temporary file " << native() << " does not exist, won't delete it";
 	}
-}
 }
 }

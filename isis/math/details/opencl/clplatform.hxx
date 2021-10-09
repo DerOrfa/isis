@@ -1,5 +1,4 @@
-#ifndef OPENCL_HPP
-#define OPENCL_HPP
+#pragma once
 
 #if defined(__APPLE__) || defined(__MACOSX)
 	#include <OpenCL/cl.h>
@@ -57,4 +56,4 @@ template<typename T> T getPlatformInfo(cl_platform_id platform,cl_platform_info 
 }
 }
 
-#endif // OPENCL_HPP
+

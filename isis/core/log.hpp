@@ -10,20 +10,15 @@
 //
 //
 
-#ifndef LOG_H
-#define LOG_H
+#pragma once
 
 #include <string>
 #include "message.hpp"
 #include "singletons.hpp"
-#include <limits.h>
+#include <climits>
 
 /// @cond _internal
-namespace isis
-{
-namespace util
-{
-namespace _internal
+namespace isis::util::_internal
 {
 
 template<class MODULE> class Log
@@ -44,12 +39,10 @@ public:
 	}
 	static Message send( const char file[], const char object[], int line, LogLevel level ) {
 		std::shared_ptr<util::MessageHandlerBase> &handle = Log<MODULE>::getHandle();
-		return Message( object, MODULE::name(), file, line, level, handle );
+		return Message( object, MODULE::name, file, line, level, handle );
 	}
 };
 
-}
-}
 }
 /// @endcond
 
@@ -62,4 +55,4 @@ public:
 #define LOG_IF(PRED,MODULE,LEVEL)\
 	if(!(MODULE::use && (PRED)));else isis::util::_internal::Log<MODULE>::send(__FILE__,__FUNCTION__,__LINE__,LEVEL)
 
-#endif
+

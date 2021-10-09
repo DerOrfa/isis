@@ -17,8 +17,7 @@
 
 */
 
-#ifndef CONVERTER_HPP
-#define CONVERTER_HPP
+#pragma once
 
 #include <memory>
 #include <boost/numeric/conversion/converter.hpp>
@@ -27,26 +26,24 @@
 
 /// @cond _internal
 
-namespace isis
+namespace isis::util
 {
-namespace util
-{
-class ValueBase;
+class Value;
 namespace _internal
 {
 class ValueConverterBase
 {
 public:
-	virtual boost::numeric::range_check_result convert( const ValueBase &src, ValueBase &dst )const = 0;
-	virtual void create( std::unique_ptr<ValueBase>& dst )const = 0;
-	virtual boost::numeric::range_check_result generate( const ValueBase &src, std::unique_ptr<ValueBase>& dst )const = 0;
+	virtual boost::numeric::range_check_result convert(const Value &src, Value &dst )const = 0;
+	virtual Value create()const = 0;
+	virtual boost::numeric::range_check_result generate(const Value &src, Value & dst )const = 0;
 	static std::shared_ptr<const ValueConverterBase> get() {return std::shared_ptr<const ValueConverterBase>();}
 public:
-	virtual ~ValueConverterBase() {}
+	virtual ~ValueConverterBase() = default;
 };
 
 API_EXCLUDE_BEGIN;
-class ValueConverterMap : public std::map< int , std::map<int, std::shared_ptr<const ValueConverterBase> > >
+class ValueConverterMap : public std::map< size_t, std::map<size_t, std::shared_ptr<const ValueConverterBase> > >
 {
 public:
 	ValueConverterMap();
@@ -55,6 +52,4 @@ public:
 }
 API_EXCLUDE_END;
 }
-}
 /// @endcond _internal
-#endif // CONVERTER_HPP

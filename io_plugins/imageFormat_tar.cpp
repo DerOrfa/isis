@@ -1,27 +1,14 @@
 
 #include <isis/core/io_interface.h>
 #include <isis/core/io_factory.hpp>
-#include <isis/core/tmpfile.hpp>
-#include <isis/core/io_factory.hpp>
 
-#define BOOST_FILESYSTEM_VERSION 3
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/convenience.hpp>
+#include <filesystem>
 
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filter/bzip2.hpp>
-#include <boost/iostreams/copy.hpp>
-#include <boost/lexical_cast.hpp>
+#include <boost/iostreams/read.hpp>
 
-#include <boost/filesystem/fstream.hpp>
 #include <isis/core/fileptr.hpp>
-#include <boost/iostreams/categories.hpp>  // tags
 
-
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 
 class ImageFormat_Tar: public FileFormat{
@@ -57,7 +44,7 @@ class ImageFormat_Tar: public FileFormat{
 
 				size |= reinterpret_cast<uint8_t *>( tar_header.size )[11];
 			} else if( tar_header.size[10] != 0 ) { //normal octal
-				//get the size
+				//get the size @todo use strtoll
 				std::stringstream buff( tar_header.size );
 				size = 0, next_header_in = 0;
 
@@ -80,7 +67,7 @@ class ImageFormat_Tar: public FileFormat{
 		return red;
 	}
 protected:
-	util::istring suffixes( io_modes modes )const override {return "tar";}
+	std::list<util::istring> suffixes( io_modes modes )const override {return {"tar"};}
 public:
 	std::string getName()const override {return "tar reading proxy";};
 	void write( const data::Image &image, const std::string &filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )override {
@@ -94,22 +81,22 @@ public:
 
 		while( in.good() && read_header( in, size, next_header_in ) ) { //read the header block
 
-			boost::filesystem::path org_file;
+			std::filesystem::path org_file;
 
 			if( tar_header.typeflag == 'L' ) { // the filename of the next file is to long - so its stored in the next block (following this header)
 				char namebuff[size];
 				next_header_in -= tar_readstream( in, namebuff, size, "overlong filename for next entry" );
 				in.ignore( next_header_in ); // skip the remaining input until the next header
-				org_file = boost::filesystem::path( std::string( namebuff ) );
+				org_file = std::filesystem::path( std::string( namebuff ) );
 				LOG( Debug, verbose_info ) << "Got overlong name " << util::MSubject( org_file ) << " for next file.";
 
 				read_header( in, size, next_header_in ); //continue with the next header
 			} else {
 				//get the original filename (use substr, because these fields are not \0-terminated)
-				org_file = boost::filesystem::path( std::string( tar_header.prefix ).substr( 0, 155 ) + std::string( tar_header.name ).substr( 0, 100 ) );
+				org_file = std::filesystem::path( std::string( tar_header.prefix ).substr( 0, 155 ) + std::string( tar_header.name ).substr( 0, 100 ) );
 			}
 
-			if( size == 0 ) //if there is no content skip this entry (there are allways two "empty" blocks at the end of a tar)
+			if( size == 0 ) //if there is no content skip this entry (there are always two "empty" blocks at the end of a tar)
 				continue;
 
 			if( tar_header.typeflag == '\0' || tar_header.typeflag == '0' ) { //only do regulars files
@@ -124,9 +111,9 @@ public:
 
 				if( formats.empty() ) {
 					LOG( Runtime, notice ) << "Skipping " << org_file << " inside the tar file because no plugin was found to read it"; // skip if we found none
-					LOG( Runtime, notice ) << "You might want to define it with the \"-rf\" option (e.g. \"-rf dcm tar gz\" for dcm files inside a tar.gz)";
+					LOG( Runtime, notice ) << R"(You might want to define it with the "-rf" option (e.g. "-rf dcm tar gz" for dcm files inside a tar.gz))";
 				} else {
-					data::ValueArray<uint8_t> buffer(size);
+					data::ByteArray buffer(size);
 					size_t red = boost::iostreams::read( in, std::static_pointer_cast<char>(buffer.getRawAddress()).get(), size ); // read data from the stream into the memory
 					next_header_in -= red;
 
@@ -156,7 +143,6 @@ public:
 	}
 };
 
-}
 }
 isis::image_io::FileFormat *factory()
 {

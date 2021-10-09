@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef FFT_H
-#define FFT_H
+#pragma once
 
 #include "../../core/chunk.hpp"
 
@@ -26,10 +25,10 @@ namespace isis{
 namespace math{
 namespace gsl{
 
-void fft(data::TypedChunk< std::complex< double > > &data, bool inverse, double scale=0);
+bool fft(data::TypedChunk< std::complex<double > > &data, bool inverse, double scale=0);
 
 }
 }
 }
 
-#endif // FFT_H
+

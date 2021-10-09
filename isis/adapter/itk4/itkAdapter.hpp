@@ -21,8 +21,7 @@
  *****************************************************************/
 
 
-#ifndef ITKADAPTER_HPP_
-#define ITKADAPTER_HPP_
+#pragma once
 
 #include "../../core/image.hpp"
 #include "../../core/log.hpp"
@@ -107,4 +106,4 @@ private:
 
 #include "itkAdapter_impl.hpp"
 
-#endif
+

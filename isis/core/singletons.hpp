@@ -1,84 +1,60 @@
-#ifndef SINGLETONS_HPP_INCLUDED
-#define SINGLETONS_HPP_INCLUDED
+#pragma once
 
 #include <map>
-#include <boost/noncopyable.hpp>
-#include <string>
-#include <iostream>
 #include <typeinfo>
-#include <limits.h>
+#include <climits>
+#include <cassert>
+#include <typeindex>
+#include <memory>
+#include <functional>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 /**
  * Static class to handle singletons of a given type and priority.
  *
  * The special issues for these Singletons are: \n
- * 1) it's a template class - can be used for every type \n
- * 2) they have a priority used for destroying the Singletons AFTER the application ends:
- * - singletons are deleted in ascending order of int values (0 first, INT_MAX last)
- * - singletons of the same priority are deleted in the opposite order they where created (LIFO)
- * By this, one can count for dependencies of destroying objects, e.g. general objects as the log module
- * to be deleted latest.
+ * 1) It is using a static template function that can by used for any object class \n
+ * 2) Singletons are deleted in ascending order of int values (0 first, INT_MAX last)
  *
  * \code
- * Singletons::get < MyClass, INT_MAX - 1 >
+ * Singletons::get < MyClass, INT_MAX - 1 >()
  * \endcode
  * This generates a Singleton of MyClass with highest priority.
  * \note This is (currently) not thread save.
  */
 class Singletons
 {
-	template <typename C> class Singleton
-	{
-		static void destruct() {
-			if( _instance )delete _instance;
+	// unique_ptr<void> with a dedicated delete functions, so we can hide the actual type from unique_ptr
+	// in order to keep the pointer (and in extend the registry) type free
+	using single_ptr = std::unique_ptr<void,std::function<void(void const*)>>;
+	// and an attached priority
+	using singleton = std::pair<int,single_ptr>;
+	using registry = std::map<std::type_index,singleton>;
 
-			_instance = 0;
-		}
-		static C *_instance;
-		Singleton () { }
-	public:
-		friend class Singletons;
-	};
-
-	typedef void( *destructer )();
-	typedef std::multimap<int, destructer> prioMap;
-
-	prioMap map;
-	Singletons();
-	virtual ~Singletons();
-	static Singletons &getMaster();
+	Singletons()=default;
+	~Singletons();
+	static registry &getRegistry();
 public:
 	/**
 	 * The first call creates a singleton of type T with the priority PRIO (ascending order),
-	 * all repetetive calls return this object.
+	 * all repetitive calls return this object.
+	 * PRIO is ignored on repeated calls
 	 * \return a reference to the same object of type T.
 	 */
-	template<typename T, int PRIO = INT_MAX-1 > static T &get() {
-		if ( !Singleton<T>::_instance ) {
-			Singleton<T>::_instance = new T();
-			prioMap &map = getMaster().map;
-			map.insert( map.find( PRIO ), std::make_pair( PRIO, Singleton<T>::destruct ) );
+	template<class T, int PRIO = INT_MAX-1, typename... ARGS> static T &get(ARGS&&... args) {
+		singleton &sngl= getRegistry()[typeid(T)];
+		if ( !sngl.second ) {
+			// create singleton in unique_ptr where only the deleter knows the type
+			sngl = {PRIO,single_ptr (
+				new T(&args...),
+				[](void const *p){delete(static_cast<T const*>(p));}
+			)};
 		}
-
-		return *Singleton<T>::_instance;
-	}
-	template<typename T, int PRIO = INT_MAX-1, typename P1> static T &get(P1 p1) {
-		if ( !Singleton<T>::_instance ) {
-			Singleton<T>::_instance = new T(p1);
-			prioMap &map = getMaster().map;
-			map.insert( map.find( PRIO ), std::make_pair( PRIO, Singleton<T>::destruct ) );
-		}
-
-		return *Singleton<T>::_instance;
+		assert(sngl.second);
+		return *(static_cast<T*>(sngl.second.get()));
 	}
 };
-template <typename C> C *Singletons::Singleton<C>::_instance = 0;
 
 }
-}
-#endif //SINGLETONS_HPP_INCLUDED

@@ -1,12 +1,11 @@
-#ifndef QT5_COMMON_HPP
-#define QT5_COMMON_HPP
+#pragma once
 
-#include <QImage>
+#include <QStringList>
 #include "../../core/image.hpp"
 
 namespace isis{
-	struct Qt5Log {static const char *name() {return "Qt5";}; enum {use = _ENABLE_LOG};};
-	struct Qt5Debug {static const char *name() {return "Qt5Debug";}; enum {use = _ENABLE_DEBUG};};
+	struct Qt5Log   {static constexpr char name[]="Qt5";      static constexpr bool use = _ENABLE_LOG;};
+	struct Qt5Debug {static constexpr char name[]="Qt5Debug"; static constexpr bool use = _ENABLE_DEBUG;};
 
 namespace qt5{
 
@@ -19,18 +18,37 @@ namespace qt5{
 		ENABLE_LOG( Qt5Debug, HANDLE, level );
 	}
 
-	void fillQImage(QImage &dst, const data::ValueArrayBase &slice,size_t line_length, data::scaling_pair scaling = data::scaling_pair() );
-	void fillQImage(QImage &dst, const data::ValueArrayBase &slice,size_t line_length, const std::function<void (uchar *, const data::ValueArrayBase &)> &transfer_function );
-
-	void fillQImage(QImage &dst, const std::vector<data::ValueArrayBase::Reference> &lines, data::scaling_pair scaling = data::scaling_pair() );
-	void fillQImage(QImage &dst, const std::vector<data::ValueArrayBase::Reference> &lines, const std::function<void (uchar *, const data::ValueArrayBase &)> &transfer_function );
-
-	QImage makeQImage(const data::ValueArrayBase &slice, size_t line_length, data::scaling_pair scaling = data::scaling_pair() );
-	QImage makeQImage(const data::ValueArrayBase &slice, size_t line_length, const std::function<void (uchar *, const data::ValueArrayBase &)> &transfer_function);
-
-	QImage makeQImage(const std::vector<data::ValueArrayBase::Reference> &lines, data::scaling_pair scaling = data::scaling_pair() );
-	QImage makeQImage(const std::vector<data::ValueArrayBase::Reference> &lines, const std::function<void (uchar *, const data::ValueArrayBase &)> &transfer_function);
+	template<typename T>
+	QStringList slist_to_QStringList(const std::list<T> &list)
+	{
+		QStringList ret;
+		std::transform(
+			list.begin(),list.end(),
+			std::back_inserter(ret),
+			[](const T &f){return f.c_str();}
+		);
+		return ret;
+	}
+	template<typename T>
+	std::list<T> QStringList_to_slist(const QStringList &list)
+	{
+		std::list<T> ret;
+		std::transform(
+			list.begin(),list.end(),
+			std::back_inserter(ret),
+			[](const QString &f){return f.toStdString().c_str();}
+		);
+		return ret;
+	}
 }
 }
 
-#endif //QT5_COMMON_HPP
+namespace std{
+
+template<typename CharT, typename Traits  > basic_ostream<CharT,Traits> &operator <<(basic_ostream<CharT,Traits> &stream,const QString &str)
+{
+	stream << str.toStdString(); //or: stream << str.toStdString(); //??
+	return stream;
+}
+
+}

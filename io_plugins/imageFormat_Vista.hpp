@@ -21,8 +21,7 @@
  *
  *****************************************************************/
 
-#ifndef IMAGEFORMAT_VISTA_H_
-#define IMAGEFORMAT_VISTA_H_
+#pragma once
 
 // global includes
 #include <viaio/VImage.h>
@@ -225,7 +224,7 @@ private:
 
 				if ( strcmp ( name, "sex" ) == 0 ) {
 					VGetAttrValue( &posn, NULL, VStringRepn, &val );
-					util::Selection genderSelection( "female,male,other" );
+					util::Selection genderSelection( {"female","male","other"} );
 
 					if ( std::string( ( VString ) val ) == "female" ) {
 						genderSelection.set( "female" );
@@ -424,9 +423,9 @@ private:
 					boost::cmatch timeResults;
 
 					if ( boost::regex_match( time.c_str(), timeResults, timeRegex ) ) {
-						hours = boost::lexical_cast<size_t>( timeResults[timeRef.first] );
-						minutes = boost::lexical_cast<size_t>( timeResults[timeRef.second] );
-						seconds = boost::lexical_cast<size_t>( timeResults[timeRef.third] );
+						util::stringTo( timeResults[timeRef.first], hours);
+						util::stringTo( timeResults[timeRef.second], minutes );
+						util::stringTo( timeResults[timeRef.third], seconds );
 						isisTimeDuration = boost::posix_time::time_duration( hours, minutes, seconds );
 					}
 				}
@@ -508,4 +507,4 @@ private:
 }
 }//namespace image_io isis
 
-#endif /* IMAGEFORMAT_VISTA_H_ */
+

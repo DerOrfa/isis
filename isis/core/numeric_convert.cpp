@@ -17,7 +17,6 @@
 
 */
 
-#include "numeric_convert.hpp"
 
 #ifdef ISIS_USE_LIBOIL
 extern "C" {

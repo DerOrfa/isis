@@ -156,7 +156,7 @@ cl_context OpenCLPlatform::createContext(cl_platform_id platform, cl_device_type
 
 OpenCLPlatform::OpenCLPlatform(){
 	/* Setup OpenCL environment. */
-	std::pair<cl_platform_id,int> biggest;
+	std::pair<cl_platform_id,int> biggest{};
 	for(cl_platform_id p:getPlatformIDs()){
 		std::size_t dev_cnt=getDeviceIDs(p).size();
 		if(biggest.second<dev_cnt)

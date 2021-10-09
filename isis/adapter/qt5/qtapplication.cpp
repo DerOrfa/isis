@@ -18,63 +18,11 @@
 */
 
 #include "qtapplication.hpp"
+#include "common.hpp"
+#include <memory>
 
-isis::qt5::QtApplication::QtApplication( const char name[] ): Application( name )
-{}
+isis::qt5::QtApplication::QtApplication( const char name[] ): _internal::QtApplicationBase<util::Application>( name ){}
 
-QApplication &isis::qt5::QtApplication::getQApplication()
-{
-	LOG_IF( not m_qapp, util::Debug, error ) << "The QGuiApplication was not yet created, you should run init() before using getccm	.";
-	return *m_qapp;
-}
-bool isis::qt5::QtApplication::init( int &argc, char **argv, bool exitOnError )
-{
-	if ( m_qapp ) {
-		LOG( util::Debug, error ) << "The QApplication allready exists. This should not happen. I'll not touch it";
-	} else {
-		m_qapp.reset( new QApplication( argc, argv ) );
-	}
+isis::qt5::IOQtApplication::IOQtApplication( const char name[], bool have_input, bool have_output )
+:_internal::QtApplicationBase<data::IOApplication>( name, have_input, have_output ){}
 
-	return util::Application::init( argc, argv, exitOnError );
-}
-
-
-isis::qt5::IOQtApplication::IOQtApplication( const char name[], bool have_input, bool have_output ):
-	IOApplication( name, have_input, have_output )
-{}
-
-QApplication &isis::qt5::IOQtApplication::getQApplication()
-{
-	LOG_IF( not m_qapp, util::Debug, error ) << "The QApplication was not yet created, you should run init() before using getQApplication.";
-	return *m_qapp;
-}
-
-bool isis::qt5::IOQtApplication::init( int &argc, char **argv, bool exitOnError )
-{
-	if( m_qapp ) {
-		LOG( util::Debug, error ) << "The QApplication allready exists. This should not happen. I'll not touch it";
-	} else {
-		m_qapp.reset( new QApplication( argc, argv ) );
-	}
-
-	return isis::data::IOApplication::init( argc, argv, exitOnError );
-}
-
-
-std::shared_ptr< isis::util::MessageHandlerBase > isis::qt5::IOQtApplication::getLogHandler( std::string /*module*/, isis::LogLevel level )const
-{
-	return std::shared_ptr< isis::util::MessageHandlerBase >( level ? new isis::qt5::QDefaultMessageHandler( level ) : 0 );
-}
-
-int isis::qt5::IOQtApplication::exec(){
-	return getQApplication().exec();
-}
-
-std::shared_ptr< isis::util::MessageHandlerBase > isis::qt5::QtApplication::getLogHandler( std::string /*module*/, isis::LogLevel level )const
-{
-	return std::shared_ptr< isis::util::MessageHandlerBase >( level ? new isis::qt5::QDefaultMessageHandler( level ) : 0 );
-}
-
-int isis::qt5::QtApplication::exec(){
-	return getQApplication().exec();
-}

@@ -16,8 +16,6 @@
 
 #include "chunk.hpp"
 
-using boost::optional;
-
 namespace isis
 {
 namespace data
@@ -27,7 +25,9 @@ namespace data
 
 Chunk::Chunk(bool fakeValid )
 {
-	util::Singletons::get<NeededsList<Chunk>, 0>().applyTo( *this );
+	for(const auto &needed: neededProperties)
+		addNeeded(needed);
+
 	if( fakeValid ) {
 		setValueAs( "indexOrigin", util::fvector3() );
 		setValueAs( "acquisitionNumber", 0 );
@@ -38,14 +38,18 @@ Chunk::Chunk(bool fakeValid )
 	}
 }
 
-Chunk::Chunk( const ValueArrayReference &src, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps,bool fakeValid): Chunk(fakeValid)
+Chunk::Chunk(const ValueArray &src, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps, bool fakeValid): Chunk(fakeValid)
 {
-	LOG_IF(!src->isValid(),Runtime,error) << "Creating a chunk from an invalid ValueArray, thats not going to end well ...";
-	ValueArrayReference::operator=(src);
-	init( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} );
-	LOG_IF( NDimensional<4>::getVolume() == 0, Debug, warning )
-			<< "Size " << nrOfTimesteps << "|" << nrOfSlices << "|" << nrOfRows << "|" << nrOfColumns << " is invalid";
-	assert( ( *this )->getLength() == getVolume() );
+	const util::vector4<size_t> init_size={nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps};
+	init( init_size );
+	if(!(src.isValid() || ValueArray::getLength())){//creation of a zero-sized chunk from a zero sized Array was probably intentional
+		LOG(Debug,info) << "Creating a zero sized Chunk. Make sure you change that before using it";
+	} else {
+		LOG_IF(!src.isValid(),Runtime,error) << "Creating a chunk from an invalid ValueArray, that's not going to end well ...";
+		LOG_IF( NDimensional<4>::getVolume() == 0, Debug, warning ) << "Size " << init_size << " is invalid";
+	}
+	ValueArray::operator=(src);
+	assert(ValueArray::getLength() == getVolume() );
 }
 
 Chunk Chunk::cloneToNew( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )const
@@ -53,31 +57,30 @@ Chunk Chunk::cloneToNew( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices,
 	return createByID( getTypeID(), nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps );
 }
 
-Chunk Chunk::createByID ( unsigned short ID, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps, bool fakeValid )
+Chunk Chunk::createByID ( size_t ID, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps, bool fakeValid )
 {
 	const util::vector4<size_t> newSize( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} );
-	assert( util::product(newSize) );
-	const ValueArrayReference created( ValueArrayBase::createByID( ID, util::product(newSize) ) );
+	assert( util::product(newSize) != 0);
+	const ValueArray created(ValueArray::createByID(ID, util::product(newSize) ) );
 	return  Chunk( created, nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid );
 }
 
-bool Chunk::convertToType( short unsigned int ID, scaling_pair scaling )
+bool Chunk::convertToType( size_t ID, const scaling_pair &scaling )
 {
 	//get a converted ValueArray (will be a cheap copy if no conv was needed)
-	ValueArrayReference newPtr = asValueArrayBase().convertByID( ID, scaling );
+	ValueArray newPtr = ValueArray::convertByID(ID, scaling );
 
-	if( newPtr.isEmpty() ) // if the reference is empty the conversion failed
+	if( newPtr.isValid() ){ // if the conversion is ok
+		ValueArray::operator=(newPtr);
+		return true;
+	} else
 		return false;
-	else
-		static_cast<ValueArrayReference &>( *this ) = newPtr; // otherwise replace my own ValueArray with the new one
-
-	return true;
 }
 
-Chunk Chunk::copyByID( short unsigned int ID, scaling_pair scaling ) const
+Chunk Chunk::copyByID( size_t ID, const scaling_pair &scaling ) const
 {
 	Chunk ret = *this; //make copy of the chunk
-	static_cast<ValueArrayReference &>( ret ) = getValueArrayBase().copyByID( ID, scaling ); // replace its data by the copy
+	static_cast<ValueArray&>( ret ) = ValueArray::copyByID(ID, scaling ); // replace its data by the copy
 	return ret;
 }
 
@@ -85,50 +88,42 @@ void Chunk::copyFromTile(const Chunk &src, std::array<size_t,4> pos, bool allow_
 	auto tilesize=src.getSizeAsVector(), size=getSizeAsVector();
 	size_t scanline_width=std::min(tilesize[rowDim],size[rowDim]-pos[0]);
 
-	LOG_IF(scanline_width<tilesize[rowDim] && !allow_capping, Runtime, warning) 
-		<< "Capping tile of size " << src.getSizeAsString() << " as putting it at " << pos << " in image of size " << getSizeAsString();
+	LOG_IF(scanline_width<tilesize[rowDim] && !allow_capping, Runtime, warning)
+	    << "Capping tile of size " << src.getSizeAsString() << " as putting it at " << pos << " in image of size " << getSizeAsString();
 
 
 	for(size_t l=0;l<std::min(tilesize[1],size[1]-pos[1]);l++){
 		size_t dst_scanline_idx= getLinearIndex({pos[0],pos[1]+l,0,0});
 		size_t src_scanline_idx= src.getLinearIndex({0,l,0,0});
-		src.getValueArrayBase().copyRange(src_scanline_idx,src_scanline_idx+scanline_width-1,asValueArrayBase(),dst_scanline_idx);
+		static_cast<const ValueArray&>( src ).copyRange(src_scanline_idx, src_scanline_idx+scanline_width-1, *this, dst_scanline_idx);
 	}
 }
 void Chunk::copyTileTo(Chunk &dst, std::array<size_t,4> pos, bool allow_capping){
 	auto tilesize=dst.getSizeAsVector(), size=getSizeAsVector();
 	size_t scanline_width=std::min(tilesize[rowDim],size[rowDim]-pos[0]);
 
-	LOG_IF(tilesize[rowDim]<scanline_width && !allow_capping, Runtime, warning) 
-		<< "Capping tile of size " << dst.getSizeAsString() << " as putting it at " << pos << " in image of size " << getSizeAsString();
+	LOG_IF(tilesize[rowDim]<scanline_width && !allow_capping, Runtime, warning)
+	    << "Capping tile of size " << dst.getSizeAsString() << " as putting it at " << pos << " in image of size " << getSizeAsString();
 
 
 	for(size_t l=0;l<std::min(tilesize[1],size[1]-pos[1]);l++){
 		size_t dst_scanline_idx= dst.getLinearIndex({0,l,0,0});
 		size_t src_scanline_idx= getLinearIndex({pos[0],pos[1]+l,0,0});
-		getValueArrayBase().copyRange(src_scanline_idx,src_scanline_idx+scanline_width-1,dst.asValueArrayBase(),dst_scanline_idx);
+		ValueArray::copyRange(src_scanline_idx, src_scanline_idx+scanline_width-1, dst, dst_scanline_idx);
 	}
 }
 
 size_t Chunk::getBytesPerVoxel()const
 {
-	return getValueArrayBase().bytesPerElem();
-}
-std::string Chunk::getTypeName()const
-{
-	return getValueArrayBase().getTypeName();
-}
-unsigned short Chunk::getTypeID()const
-{
-	return getValueArrayBase().getTypeID();
+	return bytesPerElem();
 }
 
 std::string Chunk::getShapeString(bool upper) const
 {
 	switch(getRelevantDims()){
-		case 2:return upper ? "Slice":"slice";
-		case 3:return upper ? "Volume":"volume";
-		case 4:return upper ? "Volset":"volset";
+	    case 2:return upper ? "Slice":"slice";
+	    case 3:return upper ? "Volume":"volume";
+	    case 4:return upper ? "Volset":"volset";
 	}
 	return upper ? "Chunk":"chunk";
 }
@@ -136,172 +131,180 @@ std::string Chunk::getShapeString(bool upper) const
 void Chunk::copySlice( size_t thirdDimS, size_t fourthDimS, Chunk &dst, size_t thirdDimD, size_t fourthDimD ) const
 {
 	copyRange(
-		{0, 0, thirdDimS, fourthDimS},
-		{getSizeAsVector()[0] - 1, getSizeAsVector()[1] - 1, thirdDimS, fourthDimS},
-		dst,
-		{0, 0, thirdDimD, fourthDimD}
+	    {0, 0, thirdDimS, fourthDimS},
+	    {getSizeAsVector()[0] - 1, getSizeAsVector()[1] - 1, thirdDimS, fourthDimS},
+	    dst,
+	    {0, 0, thirdDimD, fourthDimD}
 	);
 }
 
 void Chunk::copyRange( const std::array<size_t,4> &source_start, const std::array<size_t,4> &source_end, Chunk &dst, const std::array<size_t,4> &destination ) const
 {
 	LOG_IF( ! isInRange( source_start ), Debug, error )
-			<< "Copy start " << util::vector4<size_t>( source_start )
-			<< " is out of range (" << getSizeAsString() << ") at the source chunk";
+	        << "Copy start " << util::vector4<size_t>( source_start )
+	        << " is out of range (" << getSizeAsString() << ") at the source chunk";
 	LOG_IF( ! isInRange( source_end ), Debug, error )
-			<< "Copy end " << util::vector4<size_t>( source_end )
-			<< " is out of range (" << getSizeAsString() << ") at the source chunk";
+	        << "Copy end " << util::vector4<size_t>( source_end )
+	        << " is out of range (" << getSizeAsString() << ") at the source chunk";
 	LOG_IF( ! dst.isInRange( destination ), Debug, error )
-			<< "Index " << util::vector4<size_t>( destination )
-			<< " is out of range (" << getSizeAsString() << ") at the destination chunk";
+	        << "Index " << util::vector4<size_t>( destination )
+	        << " is out of range (" << getSizeAsString() << ") at the destination chunk";
 	const size_t sstart = getLinearIndex( source_start );
 	const size_t send = getLinearIndex( source_end );
 	const size_t dstart = dst.getLinearIndex( destination );
-	getValueArrayBase().copyRange( sstart, send, *dst, dstart );
+	ValueArray::copyRange(sstart, send, dst, dstart );
 }
 
 size_t Chunk::compareRange( const std::array<size_t,4> &source_start, const std::array<size_t,4> &source_end, Chunk &dst, const std::array<size_t,4> &destination ) const
 {
 	LOG_IF( ! isInRange( source_start ), Debug, error )
-			<< "memcmp start " << util::vector4<size_t>( source_start )
-			<< " is out of range (" << getSizeAsString() << ") at the first chunk";
+	        << "memcmp start " << util::vector4<size_t>( source_start )
+	        << " is out of range (" << getSizeAsString() << ") at the first chunk";
 	LOG_IF( ! isInRange( source_end ), Debug, error )
-			<< "memcmp end " << util::vector4<size_t>( source_end )
-			<< " is out of range (" << getSizeAsString() << ") at the first chunk";
+	        << "memcmp end " << util::vector4<size_t>( source_end )
+	        << " is out of range (" << getSizeAsString() << ") at the first chunk";
 	LOG_IF( ! dst.isInRange( destination ), Debug, error )
-			<< "Index " << util::vector4<size_t>( destination )
-			<< " is out of range (" << getSizeAsString() << ") at the second chunk";
+	        << "Index " << util::vector4<size_t>( destination )
+	        << " is out of range (" << getSizeAsString() << ") at the second chunk";
 	LOG( Debug, verbose_info )
-			<< "Comparing range from " << util::vector4<size_t>( source_start ) << " to " << util::vector4<size_t>( source_end )
-			<< " and " << util::vector4<size_t>( destination );
+	        << "Comparing range from " << util::vector4<size_t>( source_start ) << " to " << util::vector4<size_t>( source_end )
+	        << " and " << util::vector4<size_t>( destination );
 	const size_t sstart = getLinearIndex( source_start );
 	const size_t send = getLinearIndex( source_end );
 	const size_t dstart = dst.getLinearIndex( destination );
-	return getValueArrayBase().compare( sstart, send, dst.getValueArrayBase(), dstart );
+	return ValueArray::compare(sstart, send, dst, dstart );
 }
 size_t Chunk::compare( const isis::data::Chunk &dst ) const
 {
 	if( getSizeAsVector() == dst.getSizeAsVector() )
-		return getValueArrayBase().compare( 0, getVolume() - 1, dst.getValueArrayBase(), 0 );
+		return ValueArray::compare(0, getVolume() - 1, dst, 0 );
 	else
 		return std::max( getVolume(), dst.getVolume() );
 }
 
-
-std::pair<util::ValueReference, util::ValueReference> Chunk::getMinMax ( ) const
-{
-	return getValueArrayBase().getMinMax();
+std::list<Chunk> Chunk::autoSplice ()const{
+	return autoSplice(static_cast<dimensions>(getRelevantDims()-1));
 }
-
-scaling_pair Chunk::getScalingTo( unsigned short typeID, autoscaleOption scaleopt )const
+std::list<Chunk> Chunk::autoSplice ( dimensions atDim )const
 {
-	return getValueArrayBase().getScalingTo( typeID, scaleopt );
-}
-scaling_pair Chunk::getScalingTo( unsigned short typeID, const std::pair<util::ValueReference, util::ValueReference> &minmax, autoscaleOption scaleopt )const
-{
-	return getValueArrayBase().getScalingTo( typeID, minmax, scaleopt );
-}
-
-std::list<Chunk> Chunk::autoSplice ( uint32_t acquisitionNumberStride )const
-{
-	if ( !isValid() ) {
-		LOG( Runtime, error ) << "Cannot splice invalid Chunk (missing properties are " << this->getMissing() << ")";
-		return std::list<Chunk>();
+	if ( !PropertyMap::isValid() ) {
+		LOG( Runtime, error ) << "Cannot spliceAt invalid Chunk (missing properties are " << this->getMissing() << ")";
+		return {};
 	}
 
-	util::fvector3 offset;
-	const util::fvector3 voxelSize = getValueAs<util::fvector3>( "voxelSize" );
-	const util::fvector3 voxelGap = getValueAsOr( "voxelGap",util::fvector3());
-	
-	const util::fvector3 distance = voxelSize + voxelGap;
-	const size_t atDim = getRelevantDims() - 1;
+	const auto distance = getValueAs<util::fvector3>( "voxelSize" ) + getValueAsOr( "voxelGap",util::fvector3());
 
 	LOG_IF( atDim < data::timeDim && distance[atDim] == 0, Runtime, error ) << "The voxel distance (voxelSize + voxelGap) at the splicing direction (" << atDim << ") is zero. This will likely cause errors in the Images structure.";
 
-	switch( atDim ) { // init offset with the given direction
-	case rowDim :
-		offset = getValueAs<util::fvector3>( "rowVec" );
-		break;
-	case columnDim:
-		offset = getValueAs<util::fvector3>( "columnVec" );
-		break;
-	case sliceDim:{
-		const auto svec=queryProperty( "sliceVec" );
-		if( svec ) {
-			offset = svec->as<util::fvector3>();
-		} else {
-			const util::fvector3 row = getValueAs<util::fvector3>( "rowVec" );
-			const util::fvector3 column = getValueAs<util::fvector3>( "columnVec" );
-			assert( util::fuzzyEqual<float>( util::sqlen(row), 1 ) );
-			assert( util::fuzzyEqual<float>( util::sqlen(column), 1 ) );
-			offset[0] = row[1] * column[2] - row[2] * column[1];
-			offset[1] = row[2] * column[0] - row[0] * column[2];
-			offset[2] = row[0] * column[1] - row[1] * column[0];
-		}
-	}break;
-	case timeDim :
-		LOG_IF( acquisitionNumberStride == 0, Runtime, error ) << "Splicing at timeDim without acquisitionNumberStride will very likely make the next reIndex() fail";
+	const auto orgsize=getSizeAsVector();
+
+	util::PropertyMap spliceMap = *this;
+	auto &indexOrigin = spliceMap.touchProperty("indexOrigin");
+	auto &acquisitionNumber = spliceMap.touchProperty("acquisitionNumber");
+	if(indexOrigin.isEmpty()){
+		indexOrigin = util::dvector3{0,0,0};
+		LOG(Runtime,error) << "Trying to splice a chunk without indexOrigin. Assuming " << indexOrigin;
+	}
+	if(acquisitionNumber.isEmpty()){
+		acquisitionNumber = 0u;
+		LOG(Runtime,error) << "Trying to splice a chunk without acquisitionNumber. Assuming " << acquisitionNumber;
 	}
 
-	// prepare some attributes
-	const util::fvector3 indexOriginOffset = atDim < data::timeDim ? offset * distance[atDim] : util::fvector3{0,0,0};
-	const bool acqWasList=queryProperty("acquisitionNumber")->size()==getDimSize(atDim);
-	const bool originWasList=queryProperty("indexOrigin")->size()==getDimSize(atDim);
-	
-	LOG( Debug, info ) << "Splicing chunk at dimenstion " << atDim + 1 << " with indexOrigin stride " << indexOriginOffset << " and acquisitionNumberStride " << acquisitionNumberStride;
-	std::list<Chunk> ret = splice( ( dimensions )atDim ); // do low level splice - get the chunklist
+	std::vector vecs{
+		getValueAs<util::dvector3>("rowVec"),
+		getValueAs<util::dvector3>("columnVec")
+	};
+	if(auto svec=queryProperty( "sliceVec" ); svec ) {
+		vecs.push_back(svec->as<util::dvector3>());
+	} else { // if sliceVec isn't given, compute it as Normal on rowVec and columnVec
+		assert( util::fuzzyEqual<float>( util::sqlen(vecs[0]), 1 ) );
+		assert( util::fuzzyEqual<float>( util::sqlen(vecs[1]), 1 ) );
+		vecs.push_back({
+			vecs[0][1] * vecs[1][2] - vecs[0][2] * vecs[1][1],
+			vecs[0][2] * vecs[1][0] - vecs[0][0] * vecs[1][2],
+			vecs[0][0] * vecs[1][1] - vecs[0][1] * vecs[1][0]
+		});
+	}
 
-	std::list<Chunk>::iterator it = ret.begin();
-	it++;// skip the first one
-
-	for( uint32_t cnt = 1; it != ret.end(); it++, cnt++ ) { // adapt some metadata in them 
-		if(!originWasList){
-			LOG( Debug, verbose_info ) << "Origin was " << it->queryProperty( "indexOrigin" ) << " will be moved by " << indexOriginOffset << "*"  << cnt;
-			it->touchProperty( "indexOrigin" )+= util::fvector3(indexOriginOffset * cnt);
+	// go through each to-splice dimension and explode indexOrigin and acquisitionNumber with the size of the given
+	// dimension if they aren't already
+	size_t stepsize=1;
+	for(auto dim=getRelevantDims()-1;dim>=atDim;--dim){
+		stepsize*=orgsize[dim];//expected size of the property grow with every processed dimension by this dimension
+		if(indexOrigin.size()<stepsize){
+			LOG_IF(stepsize%indexOrigin.size(),Runtime,error)
+			<< "The splicing stepsize " << stepsize
+			<< " is not a multiple of the amount of values in indexOrigin ("
+			<< indexOrigin.size() << "). This splice is most likely going to fail.";
+			if(dim<timeDim){
+				auto offset = vecs[dim] * distance[dim]; //direction and length to the next splice
+				auto op = [offset,dimsize=orgsize[dim], cnt=0](const util::Value &v)mutable->util::Value{
+					return v.as<util::dvector3>() + offset * (cnt++ % dimsize);
+				};
+				LOG(Debug,verbose_info) << "Stretching indexOrigin " << indexOrigin << " by " << orgsize[dim];
+				indexOrigin.explode(orgsize[dim],op);
+			} else // on timeDim indexOrigin is constant
+				indexOrigin.explode(orgsize[dim],[](const util::Value &v){return v;});
+			assert(indexOrigin.size()==stepsize);
 		}
-
-		if(!acqWasList && acquisitionNumberStride){//@todo acquisitionTime needs to be fixed as well
-			LOG( Debug, verbose_info ) << "acquisitionNumber was " << it->queryProperty( "acquisitionNumber" ) << " will be moved by " << acquisitionNumberStride << "*"  << cnt;
-			it->touchProperty( "acquisitionNumber" ) += acquisitionNumberStride * cnt; 
+		if(acquisitionNumber.size()<stepsize){
+			LOG_IF(stepsize%acquisitionNumber.size(),Runtime,error)
+				<< "The splicing stepsize " << stepsize
+				<< " is not a multiple of the amount of values in acquisitionNumber ("
+				<< acquisitionNumber.size() << "). This splice is most likely going to fail.";
+			auto op = [dimsize=orgsize[dim], cnt=0](const util::Value &v)mutable->util::Value{
+				const auto iv = v.as<uint32_t>();
+				return util::Value(iv * dimsize + (cnt++ % dimsize));
+			};
+			LOG(Debug,verbose_info) << "Stretching acquisitionNumber " << acquisitionNumber << " by " << orgsize[dim];
+			acquisitionNumber.explode(orgsize[dim],op);
+			assert(acquisitionNumber.size()==stepsize);
 		}
 	}
 
-	return ret;
+	LOG(Debug, info ) << "Splicing chunk at dimension " << atDim + 1;
+	LOG(Debug, info) << "indexOrigin-list is " << indexOrigin;
+	LOG(Debug,info) << "acquisitionNumber list is " << acquisitionNumber;
+
+	// do the actual splicing with the modified PropertyMap
+	return spliceAt(atDim,std::move(spliceMap));
 }
 
-std::list<Chunk> Chunk::splice ( dimensions atDim )const
+std::list<Chunk> Chunk::spliceAt (dimensions atDim )const{
+	return Chunk::spliceAt(atDim,util::PropertyMap(*this));
+}
+std::list<Chunk> Chunk::spliceAt (dimensions atDim, util::PropertyMap &&propSource )const
 {
 	std::list<Chunk> ret;
 
 	//@todo should be locking
-	typedef std::vector<ValueArrayReference> ValueArrayList;
 	const std::array<size_t, dims> wholesize = getSizeAsVector();
 	std::array<size_t, dims> spliceSize{1,1,1,1};
 	//copy the relevant dimensional sizes from wholesize (in case of sliceDim we copy only the first two elements of wholesize - making slices)
 	std::copy(std::begin(wholesize),std::begin(wholesize)+atDim,std::begin(spliceSize));
 	//get the spliced ValueArray's (the volume of the requested dims is the split-size - in case of sliceDim it is rows*columns)
-	const ValueArrayList pointers = this->getValueArrayBase().splice( util::product(spliceSize) );
+	const auto pointers = ValueArray::splice(util::product(spliceSize) );
+	assert(pointers.size()==util::product(wholesize)/util::product(spliceSize));
 
 	//create new Chunks from this ValueArray's
-	for( ValueArrayList::const_reference ref :  pointers ) {
-		ret.push_back( Chunk( ref, spliceSize[0], spliceSize[1], spliceSize[2], spliceSize[3] ) ); 
+	for( const ValueArray &ref :  pointers ) {
+		ret.push_back( Chunk( ref, spliceSize[0], spliceSize[1], spliceSize[2], spliceSize[3] ) );
 	}
-	PropertyMap dummyMap(*this);
-	dummyMap.splice(ret.begin(),ret.end(),false);//copy/splice properties into spliced chunks @todo why is this not const
+	propSource.splice(ret.begin(),ret.end(),false);//copy/spliceAt properties into spliced chunks / this will empty propSource
 	return ret;
 }
 
 size_t Chunk::useCount() const
 {
-	return getValueArrayBase().useCount();
+	return ValueArray::useCount();
 }
 
-void Chunk::flipAlong( const dimensions dim ) const
+void Chunk::flipAlong( const dimensions dim )
 {
 	const size_t elSize = getBytesPerVoxel();
 	const util::vector4<size_t> whole_size = getSizeAsVector();
 
-	std::shared_ptr<uint8_t> swap_ptr = std::static_pointer_cast<uint8_t>( get()->getRawAddress() );
+	auto swap_ptr = std::static_pointer_cast<uint8_t>( getRawAddress() );
 	uint8_t *swap_start = swap_ptr.get();
 	const uint8_t *const swap_end = swap_start + util::product(whole_size) * elSize;
 
@@ -315,7 +318,7 @@ void Chunk::flipAlong( const dimensions dim ) const
 	assert( block_volume );
 	block_volume *= elSize;
 	const size_t swap_volume = block_volume * whole_size[dim];
-	const boost::scoped_array<uint8_t> buff( new uint8_t[ block_volume ] );
+	uint8_t buff[ block_volume ];
 
 	//iterate over all swap-volumes
 	for( ; swap_start < swap_end; swap_start += swap_volume ) { //outer loop
@@ -324,9 +327,9 @@ void Chunk::flipAlong( const dimensions dim ) const
 		uint8_t *b = swap_start + swap_volume - block_volume; //last block within the swap-volume
 
 		for( ; a < b; a += block_volume, b -= block_volume ) { // grow a, shrink b (inner loop)
-			memcpy( buff.get(), a, block_volume );
+			memcpy( buff, a, block_volume );
 			memcpy( a, b, block_volume );
-			memcpy( b, buff.get(), block_volume );
+			memcpy( b, buff, block_volume );
 		}
 
 	}
@@ -343,42 +346,26 @@ void Chunk::swapDim( unsigned short dim_a,unsigned short dim_b, std::shared_ptr<
 	}
 }
 
-Chunk::iterator Chunk::begin()
-{
-	return asValueArrayBase().beginGeneric();
-}
-
-Chunk::iterator Chunk::end()
-{
-	return asValueArrayBase().endGeneric();
-}
-Chunk::const_iterator Chunk::begin()const
-{
-	return getValueArrayBase().beginGeneric();
-}
-
-Chunk::const_iterator Chunk::end()const
-{
-	return getValueArrayBase().endGeneric();
-}
-
-const util::ValueReference Chunk::getVoxelValue ( size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
+const util::Value Chunk::getVoxelValue (size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps ) const
 {
 	LOG_IF(!isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
-		<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << nrOfTimesteps
-		<< " is out of range (" << getSizeAsString() << ")";
+	    << "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << nrOfTimesteps
+	    << " is out of range (" << getSizeAsString() << ")";
 
-	return begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )];
+	const auto iter=begin();
+	return util::Value(iter[getLinearIndex({nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )]);
 }
-void Chunk::setVoxelValue ( const util::ValueReference &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
+void Chunk::setVoxelValue (const util::Value &val, size_t nrOfColumns, size_t nrOfRows, size_t nrOfSlices, size_t nrOfTimesteps )
 {
 	LOG_IF(!isInRange( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ), Debug, isis::error )
-			<< "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << nrOfTimesteps
-			<< " is out of range (" << getSizeAsString() << ")";
+	        << "Index " << util::vector4<size_t>( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} ) << nrOfTimesteps
+	        << " is out of range (" << getSizeAsString() << ")";
 
 	begin()[getLinearIndex( {nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps} )] = val;
 }
-
-
+std::ostream &operator<<(std::ostream &os, const Chunk &chunk)
+{
+	return os << static_cast<const isis::util::PropertyMap &>( chunk );
+}
 }
 }

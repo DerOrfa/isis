@@ -1,5 +1,4 @@
-#ifndef ITK_COMMON_HXX
-#define ITK_COMMON_HXX
+#pragma once
 
 #include "common.hpp"
 #include "itkAdapter.hpp"
@@ -138,4 +137,4 @@ template<typename TYPE> data::TypedImage<TYPE> translate_impl(data::TypedImage<T
 }
 }
 
-#endif //ITK_COMMON_HXX
+

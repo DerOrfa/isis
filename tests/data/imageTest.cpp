@@ -52,12 +52,12 @@ BOOST_AUTO_TEST_CASE ( image_init_test )
 
 		//inserting the same chunk twice should fail
 		BOOST_CHECK( ! img.insertChunk( ch ) );
-		
+
 		// but inserting another Chunk should work
 		ch = genSlice<float>( 4, 4, 0, 2 );
 		img.insertChunk( ch );
 		data::enableLog<util::DefaultMsgPrint>( notice );//back to normal
-		
+
 		// Chunks should be inserted based on their position (lowest first)
 		ch = genSlice<float>( 4, 4, 1, 1 );
 		BOOST_REQUIRE( img.insertChunk( ch ) );
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE ( image_init_test )
 
 		for( unsigned int i = 0; i < list.size(); i++ ) {
 			BOOST_CHECK_EQUAL( list[i].property( "indexOrigin" ), util::fvector3( {0, 0, static_cast<float>(i)} ) );
-			BOOST_CHECK_EQUAL( list[i].property( "acquisitionNumber" ), 2 - i ); // AcqNumber and time are in the oposite direction
+			BOOST_CHECK_EQUAL( list[i].property( "acquisitionNumber" ), 2 - i ); // AcqNumber and time are in the opposite direction
 			BOOST_CHECK_EQUAL( list[i].property( "acquisitionTime" ), 2 - i );
 		}
 
@@ -185,23 +185,23 @@ BOOST_AUTO_TEST_CASE ( copy_image_test )
 	BOOST_REQUIRE( img.isClean() );
 	BOOST_REQUIRE( img.isValid() );
 
-	data::Image copy = img.copyByID();
+	data::Image copy = img.copy();
 	BOOST_CHECK( img.compare( copy ) == 0 );
 }
 BOOST_AUTO_TEST_CASE ( ident_image_test )
 {
-	data::Chunk ch = genSlice<float>( 4, 4 ); 
-	std::vector<data::MemChunk<float> > chunks( 10, ch ); 
+	data::Chunk ch = genSlice<float>( 4, 4 );
+	std::vector<data::MemChunk<float> > chunks( 10, ch );
 	util::timestamp now=std::chrono::time_point_cast<util::timestamp::duration>(util::timestamp::clock::now());
 
 	for(int i=0;i<10;i++){
-		chunks[i].setValueAs<uint32_t>( "acquisitionNumber", i ); 
+		chunks[i].setValueAs<uint32_t>( "acquisitionNumber", i );
 		chunks[i].setValueAs<float>( "acquisitionTime", i );
-		chunks[i].setValueAs( "source", std::string("root/")+boost::lexical_cast<std::string>(i) );
-		chunks[i].setValueAs( "sequenceStart",now);
-		chunks[i].setValueAs( "sequenceDescription","test");
+		chunks[i].setValue( "source", std::string("root/")+std::to_string(i) );
+		chunks[i].setValue( "sequenceStart",now);
+		chunks[i].setValue( "sequenceDescription",std::string("test"));
 	}
-	
+
 	data::Image img( chunks );
 	BOOST_CHECK_EQUAL(img.identify(),std::string("S0_test from root taken at ")+util::PropertyValue(now).toString());
 }
@@ -242,20 +242,20 @@ BOOST_AUTO_TEST_CASE ( proplist_image_splice_test )
 
 	// make c a proplist
 	for( int i = 0; i < 4; i++ ) {
-		ch.touchProperty( "some_list").push_back(3-i); 
+		ch.touchProperty( "some_list").push_back(3-i);
 	}
 
-	data::Image img( ch );  
+	data::Image img( ch );
 	BOOST_CHECK_EQUAL( img.getRelevantDims(), 3 ); // still a 4x4x4 volume
 	BOOST_CHECK_EQUAL( img.property( "some_list").size(),4); // also still a proplist
 
 	BOOST_CHECK( const_cast<const data::Image&>(img).queryProperty( "nothing"));  //should be there (aka optional::operator bool=true)
 	BOOST_CHECK(img.property("nothing").isEmpty()); // but empty
-	
+
 	img.spliceDownTo(data::sliceDim);
 
 	BOOST_CHECK_EQUAL( img.getChunk( 0 ).getRelevantDims(), 2 ); // now its sliced
-	BOOST_CHECK( !img.hasProperty( "some_list")); // its in the chunks now
+	BOOST_CHECK( !img.hasProperty( "some_list")); // it's in the chunks now
 
 	BOOST_CHECK( const_cast<const data::Image&>(img).queryProperty( "nothing"));  //should still be there
 	BOOST_CHECK(img.property("nothing").isEmpty()); // but still empty
@@ -277,7 +277,7 @@ BOOST_AUTO_TEST_CASE ( minindexdim_test )
 	std::list<data::Chunk> chunks2( chunks1 );
 
 	data::Image img1( chunks1 );
-	data::Image img2( chunks2, boost::none, data::timeDim );
+	data::Image img2( chunks2, data::timeDim );
 
 	const util::vector4<size_t> size1{4, 4, 3, 1};
 	const util::vector4<size_t> size2{4, 4, 1, 3};
@@ -318,7 +318,7 @@ BOOST_AUTO_TEST_CASE ( type_selection_test )
 	BOOST_CHECK( img.isValid() );
 	BOOST_CHECK_EQUAL( img.copyChunksToVector( false ).size(), 4 );
 	BOOST_CHECK_EQUAL( img.getSizeAsVector(), size );
-	BOOST_CHECK_EQUAL( img.getMajorTypeID(), data::ValueArray<int16_t>( NULL, 0 ).getTypeID() );
+	BOOST_CHECK_EQUAL( img.getMajorTypeID(), util::typeID<int16_t>() );
 }
 
 BOOST_AUTO_TEST_CASE ( type_scale_test )
@@ -346,9 +346,9 @@ BOOST_AUTO_TEST_CASE ( type_scale_test )
 	BOOST_CHECK( img.isClean() );
 	BOOST_CHECK( img.isValid() );
 
-	data::scaling_pair scale = img.getScalingTo( data::ValueArray<uint8_t>::staticID() );
-	BOOST_CHECK_EQUAL( scale.first->as<double>(), 1. / 10 );
-	BOOST_CHECK_EQUAL( scale.second->as<double>(), 5 );
+	data::scaling_pair scale = img.getScalingTo( util::typeID<uint8_t>() );
+	BOOST_CHECK_EQUAL( scale.scale.as<double>(), 1. / 10 );
+	BOOST_CHECK_EQUAL( scale.offset.as<double>(), 5 );
 }
 
 BOOST_AUTO_TEST_CASE ( image_chunk_test )
@@ -406,35 +406,11 @@ BOOST_AUTO_TEST_CASE ( image_foreach_chunk_test )
 		}
 
 	data::Image img( chunks );
-
-	class : public data::ChunkOp
-	{
-		class : public data::VoxelOp<uint8_t>
-		{
-		public:
-			bool operator()( uint8_t &vox, const util::vector4<size_t>& /*pos*/ ) {
-				vox = 42;
-				return true;
-			}
-		} vox42;
-	public:
-		bool operator()( data::Chunk &ch, util::vector4<size_t> /*posInImage*/ ) {
-			return ch.foreachVoxel( vox42 ) == 0;
-		}
-	} set42;
-
-	class setIdx: public data::VoxelOp<uint8_t>
-	{
-		data::NDimensional<4> geometry;
-	public:
-		setIdx( data::NDimensional<4> geo ): geometry( geo ) {}
-		bool operator()( uint8_t &vox, const util::vector4<size_t>& pos ) {
-			vox = geometry.getLinearIndex( pos );
-			return true;
-		}
-	};
-
-	BOOST_REQUIRE_EQUAL( img.foreachChunk( set42 ), 0 );
+	
+	auto vox_set42 = [](uint8_t &vox) {vox = 42;};
+	auto ch_set42 = [vox_set42]( data::Chunk &ch ) {data::TypedChunk<uint8_t>(ch).foreachVoxel( vox_set42 );};
+	
+	img.foreachChunk( ch_set42 );
 
 	util::vector4<size_t> imgSize = img.getSizeAsVector();
 
@@ -448,8 +424,9 @@ BOOST_AUTO_TEST_CASE ( image_foreach_chunk_test )
 		}
 	}
 
-	setIdx setidx( img );
-	BOOST_REQUIRE_EQUAL( img.foreachVoxel<uint8_t>( setidx ), 0 );
+	auto vox_setIdx = [&img]( uint8_t &vox, util::vector4<size_t> pos ) {vox = img.getLinearIndex( pos );};
+
+	data::TypedImage<uint8_t>(img).foreachVoxel( vox_setIdx );
 	uint8_t cnt = 0;
 
 	for( size_t t = 0; t < imgSize[data::timeDim]; t++ ) {
@@ -520,12 +497,12 @@ BOOST_AUTO_TEST_CASE ( image_const_iterator_test )
 
 	BOOST_CHECK( start + img.getVolume() == end );
 
-	BOOST_CHECK_EQUAL( *i, util::Value<int>( 42 ) ); // first voxel should be 42
-	BOOST_CHECK_EQUAL( *( ++i ), util::Value<int>( 0 ) ); // but the second should be 0
+	BOOST_CHECK_EQUAL( *i, 42 ); // first voxel should be 42
+	BOOST_CHECK_EQUAL( *( ++i ), 0 ); // but the second should be 0
 
 	i += img.getLinearIndex( {1, 1, 1} );
-	BOOST_CHECK_EQUAL( *i, util::Value<int>( 0 ) ); // we missed the next 42 just by one voxel
-	BOOST_CHECK_EQUAL( *( --i ), util::Value<int>( 42 ) ); // here it is
+	BOOST_CHECK_EQUAL( *i, 0 ); // we missed the next 42 just by one voxel
+	BOOST_CHECK_EQUAL( *( --i ), 42 ); // here it is
 
 	BOOST_CHECK_EQUAL( std::distance( start, i ), img.getLinearIndex( {1, 1, 1} ) ); //we should be exactly at the position of the second 42 now
 
@@ -542,31 +519,59 @@ BOOST_AUTO_TEST_CASE ( image_const_iterator_test )
 BOOST_AUTO_TEST_CASE ( typed_image_const_iterator_test )
 {
 	//  get a voxel from inside and outside the image
-	std::list<data::Chunk> chunks;
+	std::list<data::TypedChunk<float>> chunks;
 
-	for( int i = 0; i < 3; i++ )
+	for( int i = 0; i < 3; i++ ){
 		chunks.push_back( genSlice<float>( 3, 3, i, i ) );
+		BOOST_CHECK(chunks.back().isValid());
+		BOOST_CHECK(chunks.back().is<float>());
+	}
 
-	std::list<data::Chunk>::iterator k = chunks.begin();
+	auto k = chunks.begin();
 	( k++ )->voxel<float>( 0, 0 ) = 42.0;
 	( k++ )->voxel<float>( 1, 1 ) = 42.0;
 	( k++ )->voxel<float>( 2, 2 ) = 42;
 
+	data::TypedChunk<float> second = *(++chunks.begin());//keep the second chunk for later
+
 	const data::TypedImage<float> img = data::Image( chunks );
+	BOOST_CHECK( chunks.empty());//the list should be empty here
 
 	std::list<data::Chunk> empty;
 	BOOST_REQUIRE( img.isClean() );
 	BOOST_CHECK( img.isValid() );
 
-	data::TypedImage< float >::const_iterator start = img.begin();
-	data::TypedImage< float >::const_iterator end = img.end();
-	data::TypedImage< float >::const_iterator i = start;
+	auto start = img.begin();
+	auto end = img.end();
+
+	BOOST_CHECK_EQUAL( //start should point at the beginning of the first chunk
+	    (const float*)start,
+	    img.getChunkAt(0).beginTyped<float>()
+	);
 
 	BOOST_CHECK( start < end );
 	BOOST_CHECK_EQUAL( std::distance( start, end ), img.getVolume() );
 	BOOST_CHECK_EQUAL( std::distance( end, start ), -img.getVolume() );
 
+	//going the whole volume from the start should get us exactly to the end
 	BOOST_CHECK( start + img.getVolume() == end );
+
+	//@todo going beyond the end should always be "end"
+
+	auto i = start;
+
+	//we should have done cheap copies only, thus the data used in the image should still be the same
+	BOOST_REQUIRE_EQUAL(
+	    img.getChunk(0,0,1,0).castTo<float>(),
+	    second.castTo<float>()
+	);
+
+
+	BOOST_CHECK_EQUAL(
+	    (const float*)(start+3*3),//this should be exactly the first voxel in the second chunk
+	    (const float*)second.begin()
+	);
+
 
 	BOOST_CHECK_EQUAL( *i, 42 ); // first voxel should be 42
 	BOOST_CHECK_EQUAL( *( ++i ), 0 ); // but the second should be 0
@@ -614,15 +619,15 @@ BOOST_AUTO_TEST_CASE ( image_iterator_test )
 
 	BOOST_CHECK( start + img.getVolume() == end );
 
-	BOOST_CHECK_EQUAL( *i, util::Value<int>( 42 ) ); // first voxel should be 42
-	BOOST_CHECK_EQUAL( *( ++i ), util::Value<int>( 0 ) ); // but the second should be 0
+	BOOST_CHECK_EQUAL( *i, 42 ); // first voxel should be 42
+	BOOST_CHECK_EQUAL( *( ++i ), 0 ); // but the second should be 0
 
 	i += img.getLinearIndex( {1, 1, 1} );
-	BOOST_CHECK_EQUAL( *i, util::Value<int>( 0 ) ); // we missed the next 42 just by one voxel
-	BOOST_CHECK_EQUAL( *( --i ), util::Value<int>( 42 ) ); // here it is
+	BOOST_CHECK_EQUAL( *i, 0 ); // we missed the next 42 just by one voxel
+	BOOST_CHECK_EQUAL( *( --i ), 42 ); // here it is
 
-	( *i ) = util::Value<int>( 23 );
-	BOOST_CHECK_EQUAL( *i, util::Value<int>( 23 ) ); // not anymore
+	( *i ) = 23;
+	BOOST_CHECK_EQUAL( *i, 23 ); // not anymore
 
 	BOOST_CHECK_EQUAL( std::distance( start, i ), img.getLinearIndex( {1, 1, 1} ) ); //we should be exactly at the position of the second 42 now
 }
@@ -635,7 +640,7 @@ BOOST_AUTO_TEST_CASE ( image_iterator_for_test )
 	for( int i = 0; i < 3; i++ )
 		chunks.push_back( genSlice<float>( 3, 3, i, i ) );
 
-	std::list<data::Chunk>::iterator k = chunks.begin();
+	auto k = chunks.begin();
 	( k++ )->voxel<float>( 0, 0 ) = 42.0;
 	( k++ )->voxel<float>( 1, 1 ) = 42.0;
 	( k++ )->voxel<float>( 2, 2 ) = 42;
@@ -644,15 +649,14 @@ BOOST_AUTO_TEST_CASE ( image_iterator_for_test )
 
 	float v_sum=0;
 
-	//iterate through image and get values as references (will implicitely make ValueReference from the Adapter
-	// Note: ValueBase cannot be used, as it cannot exist on its own
-	for(util::ValueReference v:img){
-		v_sum+=v->as<float>();
+	//iterate through image and get values as references (will implicitly make Value from the Adapter)
+	for(util::Value v:img){
+		v_sum+=v.as<float>();
 	}
 	BOOST_CHECK_EQUAL(v_sum,42*3);
 
 	v_sum=0;
-	//Adapter can also just act as ValueReference through "->"-Magic
+	//Adapter can also just act as Value through "->"-Magic
 	for(auto v:img){
 		v_sum+=v->as<float>();
 	}
@@ -660,7 +664,7 @@ BOOST_AUTO_TEST_CASE ( image_iterator_for_test )
 
 		// zeroing
 	for(auto v:img){ //would be the same with util::ValueReference
-		v=util::Value<float>(0);
+		v=0;
 	}
 	BOOST_CHECK_EQUAL(img.voxel<float>(0,0),0);
 	BOOST_CHECK_EQUAL(img.voxel<float>(1,1),0);
@@ -763,13 +767,13 @@ BOOST_AUTO_TEST_CASE ( image_voxel_value_test )
 
 
 	for ( int i = 0; i < 3; i++ ) {
-		BOOST_CHECK_EQUAL( img.getVoxelValue( i, i, i )->as<int>(), 42 );
-		img.setVoxelValue( util::Value<int>( 23 ), i, i, i );
+		BOOST_CHECK_EQUAL( img.getVoxelValue( i, i, i ).as<int>(), 42 );
+		img.setVoxelValue( 23, i, i, i );
 	}
 
 	/// check for setting voxel data
 	for ( int i = 0; i < 3; i++ ) {
-		BOOST_CHECK_EQUAL( img.getVoxelValue( i, i, i )->as<int>(), 23 );
+		BOOST_CHECK_EQUAL( img.getVoxelValue( i, i, i ).as<int>(), 23 );
 	}
 }
 
@@ -788,19 +792,19 @@ BOOST_AUTO_TEST_CASE( image_minmax_test )
 	BOOST_CHECK( img.isValid() );
 
 	{
-		std::pair<util::ValueReference, util::ValueReference> minmax = img.getMinMax();
-		BOOST_CHECK( minmax.first->is<float>() );
-		BOOST_CHECK( minmax.second->is<float>() );
-		BOOST_CHECK_EQUAL( minmax.first->as<float>(), 0 );
-		BOOST_CHECK_EQUAL( minmax.second->as<float>(), 4 );
+		const auto minmax = img.getMinMax();
+		BOOST_CHECK( minmax.first.is<float>() );
+		BOOST_CHECK( minmax.second.is<float>() );
+		BOOST_CHECK_EQUAL( minmax.first.as<float>(), 0 );
+		BOOST_CHECK_EQUAL( minmax.second.as<float>(), 4 );
 	}
 	{
 		//this should be 0,0 because the first chunk only has zeros
-		std::pair<util::ValueReference, util::ValueReference> minmax = img.getChunk( 0, 0, 0, 0 ).getMinMax();
-		BOOST_CHECK( minmax.first->is<float>() );
-		BOOST_CHECK( minmax.second->is<float>() );
-		BOOST_CHECK_EQUAL( minmax.first->as<float>(), 0 );
-		BOOST_CHECK_EQUAL( minmax.second->as<float>(), 0 );
+		const auto minmax = img.getChunk( 0, 0, 0, 0 ).getMinMax();
+		BOOST_CHECK( minmax.first.is<float>() );
+		BOOST_CHECK( minmax.second.is<float>() );
+		BOOST_CHECK_EQUAL( minmax.first.as<float>(), 0 );
+		BOOST_CHECK_EQUAL( minmax.second.as<float>(), 0 );
 	}
 }
 BOOST_AUTO_TEST_CASE( orientation_test )
@@ -833,11 +837,11 @@ BOOST_AUTO_TEST_CASE( memimage_test )
 	data::Image img( chunks );
 	BOOST_REQUIRE( img.isClean() );
 	{
-		std::pair<util::ValueReference, util::ValueReference> minmax = img.getMinMax();
-		BOOST_CHECK( minmax.first->is<float>() );
-		BOOST_CHECK( minmax.second->is<float>() );
-		BOOST_CHECK_EQUAL( minmax.first->as<float>(), 0 );
-		BOOST_CHECK_EQUAL( minmax.second->as<float>(), 2 * 2 * 1000 );
+		const auto minmax = img.getMinMax();
+		BOOST_CHECK( minmax.first.is<float>() );
+		BOOST_CHECK( minmax.second.is<float>() );
+		BOOST_CHECK_EQUAL( minmax.first.as<float>(), 0 );
+		BOOST_CHECK_EQUAL( minmax.second.as<float>(), 2 * 2 * 1000 );
 	}
 	{
 		// Conversion to uint8_t (will downscale [0-255])
@@ -855,28 +859,28 @@ BOOST_AUTO_TEST_CASE( memimage_test )
 				const util::PropertyMap
 				&c2 = img2.getChunk( 0, 0, i, j );
 				BOOST_REQUIRE( c1.isValid
-							   () );
+				               () );
 				BOOST_CHECK( c2.isValid
-							 () );
+				             () );
 				BOOST_CHECK_EQUAL( c1, c2 );
 			}
 
-		std::pair<util::ValueReference, util::ValueReference> minmax = img2.getMinMax();
-		BOOST_CHECK( minmax.first->is<uint8_t>() );
-		BOOST_CHECK( minmax.second->is<uint8_t>() );
-		BOOST_CHECK_EQUAL( minmax.first->as<uint8_t>(), 0 );
-		BOOST_CHECK_EQUAL( minmax.second->as<uint8_t>(), 255 );
+		const auto minmax = img2.getMinMax();
+		BOOST_CHECK( minmax.first.is<uint8_t>() );
+		BOOST_CHECK( minmax.second.is<uint8_t>() );
+		BOOST_CHECK_EQUAL( minmax.first.as<uint8_t>(), 0 );
+		BOOST_CHECK_EQUAL( minmax.second.as<uint8_t>(), 255 );
 	}
 	{
 		// Conversion to int16_t (will upscale [0-32k) )
 		data::MemImage<int16_t> img2( img );
 		BOOST_REQUIRE( img2.reIndex() );
 		BOOST_CHECK_EQUAL( static_cast<util::PropertyMap>( img ), static_cast<util::PropertyMap>( img2 ) );
-		std::pair<util::ValueReference, util::ValueReference> minmax = img2.getMinMax();
-		BOOST_CHECK( minmax.first->is<int16_t>() );
-		BOOST_CHECK( minmax.second->is<int16_t>() );
-		BOOST_CHECK_EQUAL( minmax.first->as<int16_t>(), 0 );
-		BOOST_CHECK_EQUAL( minmax.second->as<int16_t>(), std::numeric_limits<int16_t>::max() );
+		const auto minmax = img2.getMinMax();
+		BOOST_CHECK( minmax.first.is<int16_t>() );
+		BOOST_CHECK( minmax.second.is<int16_t>() );
+		BOOST_CHECK_EQUAL( minmax.first.as<int16_t>(), 0 );
+		BOOST_CHECK_EQUAL( minmax.second.as<int16_t>(), std::numeric_limits<int16_t>::max() );
 	}
 } // END memimage_test
 
@@ -900,11 +904,9 @@ BOOST_AUTO_TEST_CASE( typediamge_test )
 	BOOST_REQUIRE( img.isClean() );
 	BOOST_REQUIRE( chunks.empty() );
 	{
-		std::pair<util::ValueReference, util::ValueReference> minmax = img.getMinMax();
-		BOOST_CHECK( minmax.first->is<uint8_t>() );
-		BOOST_CHECK( minmax.second->is<int16_t>() );
-		BOOST_CHECK_EQUAL( minmax.first->as<int16_t>(), 0 );
-		BOOST_CHECK_EQUAL( minmax.second->as<int16_t>(), std::numeric_limits<int16_t>::max() );
+		const auto minmax = img.getMinMax();
+		BOOST_CHECK_EQUAL( minmax.first.as<int16_t>(), 0 );
+		BOOST_CHECK_EQUAL( minmax.second.as<int16_t>(), std::numeric_limits<int16_t>::max() );
 	}
 	{
 		// Conversion to uint8_t (will downscale [0-255])
@@ -925,11 +927,11 @@ BOOST_AUTO_TEST_CASE( typediamge_test )
 				BOOST_CHECK( ( void * )&c1.voxel<int16_t>( 0, 0 ) != ( void * )&c2.voxel<uint8_t>( 0, 0 ) );
 			}
 
-		std::pair<util::ValueReference, util::ValueReference> minmax = img2.getMinMax();
-		BOOST_CHECK( minmax.first->is<uint8_t>() );
-		BOOST_CHECK( minmax.second->is<uint8_t>() );
-		BOOST_CHECK_EQUAL( minmax.first->as<uint8_t>(), 0 );
-		BOOST_CHECK_EQUAL( minmax.second->as<uint8_t>(), std::numeric_limits<uint8_t>::max() );
+		const auto minmax = img2.getMinMax();
+		BOOST_CHECK( minmax.first.is<uint8_t>() );
+		BOOST_CHECK( minmax.second.is<uint8_t>() );
+		BOOST_CHECK_EQUAL( minmax.first.as<uint8_t>(), 0 );
+		BOOST_CHECK_EQUAL( minmax.second.as<uint8_t>(), std::numeric_limits<uint8_t>::max() );
 	}
 } // END typedimage_test
 
@@ -941,10 +943,10 @@ BOOST_AUTO_TEST_CASE ( image_init_test_sizes_and_values )
 	unsigned int nrT = 20;
 	const char *needed[] = {"voxelSize", "rowVec", "columnVec", "sliceVec", "sequenceNumber"};
 	static boost::numeric::converter < uint16_t, double,
-		   boost::numeric::conversion_traits<uint16_t, double>,
-		   boost::numeric::def_overflow_handler,
-		   boost::numeric::RoundEven<double>
-		   > converter;
+	       boost::numeric::conversion_traits<uint16_t, double>,
+	       boost::numeric::def_overflow_handler,
+	       boost::numeric::RoundEven<double>
+	       > converter;
 
 	std::list<data::Chunk> chunks;
 
@@ -1005,11 +1007,11 @@ BOOST_AUTO_TEST_CASE ( image_init_test_sizes_and_values )
 	const data::Chunk cpSource = img.getChunk( 0, 0, 12, 8, false );
 
 	cpSource.copyRange(
-		{0, 0, 0, 0},
-		{cpSource.getSizeAsVector()[0] - 1, cpSource.getSizeAsVector()[1] - 1, 0, 0},
-		chSlice
+	    {0, 0, 0, 0},
+	    {cpSource.getSizeAsVector()[0] - 1, cpSource.getSizeAsVector()[1] - 1, 0, 0},
+	    chSlice
 	);
-	float *pValues = ( ( std::shared_ptr<float> ) chSlice.getValueArray<float>() ).get();
+	float *pValues = chSlice.begin();
 	float *pRun = pValues;
 
 	for ( unsigned int iy = 0; iy < nrY; iy++ ) {
@@ -1023,7 +1025,7 @@ BOOST_AUTO_TEST_CASE ( image_init_test_sizes_and_values )
 BOOST_AUTO_TEST_CASE ( image_splice_test )
 {
 	data::MemChunk<uint8_t> original( 10, 10, 10, 10 );
-	original.setValueAs<uint32_t>( "acquisitionNumber", 1 );
+	original.setValueAs<uint32_t>( "acquisitionNumber", 0 );
 	original.setValueAs( "indexOrigin", util::fvector3( {0, 0} ) );
 	original.setValueAs( "voxelSize", util::fvector3( {1, 1, 1} ) );
 	original.setValueAs( "rowVec", util::fvector3( {1, 0, 0} ) );
@@ -1039,7 +1041,7 @@ BOOST_AUTO_TEST_CASE ( image_splice_test )
 	BOOST_CHECK_EQUAL( chunks.size(), 100 );
 
 	for( size_t i = 0; i < chunks.size(); i++ ) {
-		BOOST_CHECK_EQUAL( chunks[i].getValueAs<int32_t>( "acquisitionNumber" ), i + 1 );
+		BOOST_CHECK_EQUAL( chunks[i].getValueAs<int32_t>( "acquisitionNumber" ), i );
 		BOOST_CHECK_EQUAL( chunks[i].getValueAs<util::fvector3>( "indexOrigin" ), util::fvector3( {0, 0, static_cast<float>(i % 10)} ) );
 	}
 }
@@ -1212,8 +1214,8 @@ BOOST_AUTO_TEST_CASE( image_transformCoords_test_spm )
 {
 	/*this first transformCoordsTest based on the outcome of the SPM8 dicom import. SPM flips the columnVec
 	and so has to recalculate the index origin of the image. The flip of the columnVector is described by
-	he transform matrix.
-	At the end we compare the output of the our flipped isis image and the outcome of the spm dicom import.
+	the transform matrix.
+	At the end we compare the output of the flipped isis image and the outcome of the spm dicom import.
 	*/
 	//ground truth (pure irony, since it comes from SPM :-) )
 	util::fvector3 SPMIo = util::fvector3( {92.5167, -159.366, -108.687} );
@@ -1302,7 +1304,7 @@ BOOST_AUTO_TEST_CASE ( image_swapdim_test )
 	for(int i=0; i<30;i++){
 		chunks.push_back(genSlice<uint32_t>( 50, 40, i,i ));
 	}
-	
+
 	data::Image img( chunks );
 	data::NDimensional<4> oldshape=img;
 	BOOST_REQUIRE( img.isClean() );
@@ -1310,8 +1312,8 @@ BOOST_AUTO_TEST_CASE ( image_swapdim_test )
 
 	uint32_t cnt=0;
 	for( data::Image::reference ref :  img )
-		ref = util::Value<uint32_t>( cnt++);
-	
+		ref = cnt++;
+
 	img.swapDim(data::columnDim,data::sliceDim);
 
 	for(size_t z=0;z<30;z++)

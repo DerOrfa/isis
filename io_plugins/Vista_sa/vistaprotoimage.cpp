@@ -22,25 +22,20 @@
 #include <isis/core/io_interface.h>
 #include <fstream>
 
-namespace isis
-{
-namespace image_io
-{
-
-namespace _internal
+namespace isis::image_io::_internal
 {
 	
-template<typename T> data::ValueArrayReference reader( data::ByteArray data, size_t offset, size_t size )
+template<typename T> data::ValueArray reader(data::ByteArray data, size_t offset, size_t size )
 {
-	return data.atByID( data::ValueArray<T>::staticID(), offset, size );
+	return data.atByID( util::typeID<T>(), offset, size );
 }
 
-template<> data::ValueArrayReference reader<bool>( data::ByteArray data, size_t offset, size_t size )
+template<> data::ValueArray reader<bool>(data::ByteArray data, size_t offset, size_t size )
 {
-	return reader< uint8_t >( data, offset, size )->as<bool>(); //@todo check if scaling is computed
+	return reader< uint8_t >( data, offset, size ).as<bool>(); //@todo check if scaling is computed
 }
 
-VistaInputImage::VistaInputImage( data::ByteArray data, data::ValueArray< uint8_t >::iterator data_start ): m_data( data ), m_data_start( data_start )
+VistaInputImage::VistaInputImage( data::ByteArray data, data::TypedArray< uint8_t >::iterator data_start ): m_data( data ), m_data_start( data_start )
 {
 	big_endian=true;
 	vista2isis["bit"] =   _internal::reader<bool>;
@@ -92,7 +87,7 @@ bool VistaInputImage::add( util::PropertyMap props )
 		<< "Don't know what to do with nframes="<< vistaTree.queryProperty( "nframes" ) 
 		<< " that differs from nbands=" << vistaTree.queryProperty( "nbands" );
 
-	data::ValueArrayReference ch_data = m_reader( m_data, std::distance( m_data.begin(), m_data_start ) + ch_offset, util::product(ch_size) );
+	data::ValueArray ch_data = m_reader(m_data, std::distance(m_data.begin(), m_data_start ) + ch_offset, util::product(ch_size) );
 
 	//those are not needed anymore
 	vistaTree.remove( "ncolumns" );
@@ -106,7 +101,7 @@ bool VistaInputImage::add( util::PropertyMap props )
 	vistaTree.remove( "repn" );
 	
 	if(vistaTree.hasProperty( "length" )){
-		LOG_IF(vistaTree.getValueAs<uint64_t>("length") != (ch_data->getLength()*ch_data->bytesPerElem()),Runtime,warning)
+		LOG_IF(vistaTree.getValueAs<uint64_t>("length") != (ch_data.getLength()*ch_data.bytesPerElem()),Runtime,warning)
 			<< "Length given in the header (" << *vistaTree.queryProperty("length") <<") does not fit the images size " << ch_size;
 		vistaTree.remove( "length" );
 	}
@@ -118,9 +113,9 @@ bool VistaInputImage::add( util::PropertyMap props )
 		vistaTree.remove( "component_repn" );
 	}
 
-	LOG( Runtime, verbose_info ) << "Creating " << ch_data->getTypeName() << "-Chunk of size "
+	LOG( Runtime, verbose_info ) << "Creating " << ch_data.typeName() << "-Chunk of size "
 								 << ch_size << " (offset was " << std::distance( m_data.begin(), m_data_start ) + ch_offset << " / "
-								 << std::distance( m_data_start + ch_offset + ch_data->getLength()*ch_data->bytesPerElem(), m_data.end() ) << " bytes are left)";
+								 << std::distance( m_data_start + ch_offset + ch_data.getLength()*ch_data.bytesPerElem(), m_data.end() ) << " bytes are left)";
 
 	push_back( data::Chunk( ch_data, ch_size[0], ch_size[1], ch_size[2] ) );
 	static_cast<util::PropertyMap &>( back() ) = props;
@@ -172,7 +167,7 @@ void VistaInputImage::transformFromFunctional()
 	//then splice up into volumes again
 	dst.remove( "vista/slice_time" );
 	dst.setValueAs<uint32_t>( "acquisitionNumber", 0 );
-	list< data::Chunk > ret = dst.autoSplice(1);
+	list< data::Chunk > ret = dst.autoSplice();
 	util::PropertyMap::DiffMap differences = front().getDifference( back() ); // figure out which properties differ between the timesteps
 	differences.erase( "acquisitionNumber" ); // this will be set later
 
@@ -241,7 +236,7 @@ void VistaInputImage::store( std::list< data::Chunk >& out, const util::Property
 			out.back().setValueAs( "sequenceNumber", sequence );
 
 		if( big_endian )
-			out.back().asValueArrayBase().endianSwap(); //if endianess wasn't swapped till now, do it now
+			out.back().endianSwap(); //if endianess wasn't swapped till now, do it now
 		if(feedback) 
 			++(*feedback);
 	}
@@ -266,16 +261,16 @@ void WriterSpec::modHeaderImpl(isis::util::PropertyMap& props, const isis::util:
 	props.setValueAs<uint64_t>("nbands",  size[data::sliceDim]);
 
 }
-uint16_t WriterSpec::storeVImageImpl(std::list< isis::data::Chunk >& chunks, std::ofstream& out, isis::data::scaling_pair scaling)
+uint16_t WriterSpec::storeVImageImpl(std::list< data::Chunk >& chunks, std::ofstream& out, data::scaling_pair scaling)
 {
 	while(!chunks.empty()){
-		data::ValueArrayReference ref = chunks.front().asValueArrayBase().convertByID( m_storeTypeID, scaling );
-		if(ref.isEmpty()) // if conversion failed
+		auto ref = chunks.front().convertByID( m_storeTypeID, scaling );
+		if(!ref.isValid()) // if conversion failed
 			return chunks.front().getTypeID(); // abort writing and return the failed type
 		
-		ref->endianSwap();
-		const size_t size = m_sizeFact*ref->getLength();
-		std::shared_ptr<const char> raw = std::static_pointer_cast<const char>( ref->getRawAddress() );
+		ref.endianSwap();
+		const size_t size = m_sizeFact*ref.getLength();
+		std::shared_ptr<const char> raw = std::static_pointer_cast<const char>( ref.getRawAddress() );
 		out.write(raw.get(),size);
 		chunks.pop_front(); //remove written chunk - we wont need it anymore
 	}
@@ -291,16 +286,16 @@ uint16_t typeSpecImpl< util::color24 >::storeVImageImpl(std::list< isis::data::C
 {
 	
 	for(data::Chunk &ref:chunks){ //first make shure all are util::color24 (they might be color48)
-		if(!ref.convertToType( data::ValueArray<util::color24>::staticID(), scaling )) // if conversion failed
+		if(!ref.convertToType( util::typeID<util::color24>(), scaling )) // if conversion failed
 			return ref.getTypeID(); // abort writing and return the failed type
 	}
 	
+	for(data::Chunk &ch:chunks)//write red from each voxel from each chunk
+		ch.as<util::color24>().foreachVoxel([&out](util::color24 &vox){out.put(vox.r);});//first write all red
 	for(data::Chunk &ch:chunks)
-		for(util::color24 &col:ch.asValueArray<util::color24>())out.put(col.r);//write red from each voxel from each chunk
+		ch.as<util::color24>().foreachVoxel([&out](util::color24 &vox){out.put(vox.g);});//then green
 	for(data::Chunk &ch:chunks)
-		for(util::color24 &col:ch.asValueArray<util::color24>())out.put(col.g);//same for green
-	for(data::Chunk &ch:chunks)
-		for(util::color24 &col:ch.asValueArray<util::color24>())out.put(col.b);//same for blue
+		ch.as<util::color24>().foreachVoxel([&out](util::color24 &vox){out.put(vox.g);});//and then for blue
 	return 0;
 }
 
@@ -338,7 +333,8 @@ VistaOutputImage::VistaOutputImage(data::Image src){
 			for(size_t time=0;time<imgSize[data::timeDim];time++){
 				push_back(src.getChunk(0,0,slice,time,false)); // store the chunks in the list dim-swapped
 				back().remove(acquisitionNumber);
-				back().remove(acquisitionTime);
+				if(back().hasProperty(acquisitionTime))
+					back().remove(acquisitionTime);
 			}
 		imageProps.remove(indexOrigin); // we use the positions of the chunks in this case
 	} else {
@@ -354,18 +350,19 @@ VistaOutputImage::VistaOutputImage(data::Image src){
 	}
 	
 	
-	storeTypeID=0;
-	for(const_iterator c=begin();c!=end();c++){
+	storeTypeID=std::variant_npos;
+	for(auto c=begin();c!=end();c++){
 		unsigned short myID=c->getTypeID();
 		switch(myID){ // some types need fallbacks @todo messages should not be repeating
-			case data::ValueArray<int8_t>::staticID(): typeFallback<int8_t,int16_t>(myID);//fall back to short
-			case data::ValueArray<uint16_t>::staticID():typeFallback<uint16_t,int32_t>(myID); //fall back to int
-			case data::ValueArray<util::color48>::staticID():typeFallback<util::color48,util::color24>(myID);
+			case util::typeID<int8_t>(): typeFallback<int8_t,int16_t>(myID);break;//fall back to short
+			case util::typeID<uint16_t>():typeFallback<uint16_t,int32_t>(myID);break; //fall back to int
+			case util::typeID<util::color48>():typeFallback<util::color48,util::color24>(myID);break;
+			default:;
 		}
 
-		std::map<unsigned short,boost::shared_ptr<WriterSpec> >::const_iterator me = isis2vista.find(myID);
+		auto me = isis2vista.find(myID);
 		if(me!=isis2vista.end()){//if myID is a supported type
-			if(storeTypeID==0){
+			if(storeTypeID==std::variant_npos){
 				storeTypeID=myID;
 				continue;
 			}
@@ -380,12 +377,12 @@ VistaOutputImage::VistaOutputImage(data::Image src){
 			}
 				
 		} else {
-			LOG(Runtime,error) << "Chunk data type " << util::MSubject(c->getTypeName()) << " is not supported, aborting ..";
+			LOG(Runtime,error) << "Chunk data type " << util::MSubject(c->typeName()) << " is not supported, aborting ..";
 			ImageFormat_VistaSa::throwGenericError("unsupported type");
 		}
 	}
 	scaling = src.getScalingTo(storeTypeID); //@todo we only need this if we do a type conversion
-	assert(storeTypeID);
+	assert(storeTypeID!=std::variant_npos);
 
 }
 
@@ -394,7 +391,7 @@ void VistaOutputImage::storeVImages(std::ofstream& out)
 	const uint16_t fail=isis2vista[storeTypeID]->storeVImageImpl(*this,out,scaling);
 	
 	if(fail){
-		LOG(Runtime,error) << "Failed to store "  << util::getTypeMap(false,true)[fail] << "-Chunk as " << isis2vista[storeTypeID]->m_vistaRepnName;
+		LOG(Runtime,error) << "Failed to store "  << util::getTypeMap(true)[fail] << "-Chunk as " << isis2vista[storeTypeID]->m_vistaRepnName;
 		clear();//clear this proto image
 	}
 }
@@ -427,7 +424,7 @@ void VistaOutputImage::storeHeader(const util::PropertyMap &ch, const util::vect
 	store.queryProperty("rowVec")->swap(*store.queryProperty("columnVec"));
 	
 	if(store.hasBranch("vista")){
-		util::PropertyMap vista;vista.branch("vista")=store.branch("vista"); //workaround for #66
+		util::PropertyMap vista;vista.touchBranch("vista")=store.branch("vista"); //workaround for #66
 		store.remove(vista);
 		util::PropertyMap::PathSet rejected= store.join(vista.branch("vista"));
 		LOG_IF(!rejected.empty(),Runtime,warning) << "Failed to store properties from the vista branch because there are already some with the same name: " << rejected;
@@ -456,17 +453,17 @@ void VistaOutputImage::writeMetadata(std::ofstream& out, const isis::util::Prope
 		out << indenter  << "\t" << ref.first << ": ";
 		util::slist list;
 		switch(ref.second.getTypeID()){
-			case util::Value<std::string>::staticID(): // string need to be in ""
+			case util::typeID<std::string>(): // string need to be in ""
 				out << "\"" << ref.second.castTo<std::string>() << "\"";
 				break;
-			case util::Value<util::fvector3>::staticID(): //value lists and vectors need to be in "" and space separated
-			case util::Value<util::fvector4>::staticID():
-			case util::Value<util::dvector3>::staticID(): 
-			case util::Value<util::dvector4>::staticID():
-			case util::Value<util::ivector4>::staticID():
-			case util::Value<util::ilist>::staticID():
-			case util::Value<util::dlist>::staticID():
-			case util::Value<util::slist>::staticID():
+			case util::typeID<util::fvector3>(): //value lists and vectors need to be in "" and space separated
+			case util::typeID<util::fvector4>():
+			case util::typeID<util::dvector3>(): 
+			case util::typeID<util::dvector4>():
+			case util::typeID<util::ivector4>():
+			case util::typeID<util::ilist>():
+			case util::typeID<util::dlist>():
+			case util::typeID<util::slist>():
 				list=ref.second.as<util::slist>();
 				util::listToOStream(list.begin(),list.end(),out," ","\"","\"");
 				break;
@@ -480,6 +477,4 @@ void VistaOutputImage::writeMetadata(std::ofstream& out, const isis::util::Prope
 }
 
 
-}
-}
 }

@@ -3,11 +3,20 @@
 
 #include <boost/test/unit_test.hpp>
 #include <isis/core/common.hpp>
+#include <isis/core/stringop.hpp>
 
-namespace isis
+namespace isis::test
 {
-namespace test
+
+template<typename T> void string2Test(const std::string &text,T value)
 {
+	T target;
+	util::stringTo(text,target);
+	if constexpr (std::is_floating_point_v<T>)
+		BOOST_CHECK_CLOSE_FRACTION(target,value,1e-6);
+	else
+		BOOST_CHECK_EQUAL(target,value);
+}
 
 // TestCase object instantiation
 BOOST_AUTO_TEST_CASE( fuzzy_equal_test )
@@ -31,17 +40,27 @@ BOOST_AUTO_TEST_CASE( fuzzy_equal_test )
 	BOOST_CHECK( util::fuzzyEqual( a4, b4, 1 ) ); // distance of epsilon for float is _not_ considered equal for double
 }
 
+BOOST_AUTO_TEST_CASE( from_chars_test )
+{
+//	string2Test<bool>("true",true); not supported yet
+	string2Test<float>("2.3",2.3);
+	string2Test<double>("2.3",2.3);
+	string2Test<long double>("2.3",2.3);
+	string2Test<int>("1234",1234);
+	string2Test<short >("1234",1234);
+	string2Test<std::complex<double> >("(12,34)",{12,34});
+}
+
 BOOST_AUTO_TEST_CASE( string_to_list_test )
 {
 	const std::list<int> i_numbers{1,2,3,4,50};
 	const std::list<std::string> s_numbers{"1","2","3","4","50"};
 	
-	BOOST_CHECK_EQUAL(util::stringToList<std::string>("1,2;3\t4 50"),s_numbers);
-	BOOST_CHECK_EQUAL(util::stringToList<int>("1,2;3\t4  50"),i_numbers);
+	BOOST_CHECK_EQUAL(util::stringToList<std::string>("1,2;3\t4 50"s),s_numbers);
+	BOOST_CHECK_EQUAL(util::stringToList<int>("1,2;3\t4  50"s),i_numbers);
 	
 	const std::list<std::string> multiline{"Hello","there","world  (how are you)"};
-	BOOST_CHECK_EQUAL(util::stringToList<std::string>("Hello\rthere\nworld  (how are you)",std::regex("[[.newline.][.carriage-return.]]")),multiline);
+	BOOST_CHECK_EQUAL(util::stringToList<std::string>("Hello\rthere\nworld  (how are you)"s,std::regex("[[.newline.][.carriage-return.]]")),multiline);
 }
 
-}
 }

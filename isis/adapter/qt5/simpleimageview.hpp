@@ -17,19 +17,20 @@
  *
  */
 
-#ifndef SIMPLEIMAGEVIEW_HPP
-#define SIMPLEIMAGEVIEW_HPP
+#pragma once
 
 #include <QWidget>
 #include <QGraphicsView>
 #include "../../core/image.hpp"
+#include "qimage_loader.hpp"
+#include "qimage_adapter.hpp"
+#include <QMainWindow>
 
 class QSlider;
 class QLabel;
 class QButtonGroup;
 
-namespace isis{
-namespace qt5{
+namespace isis::qt5{
 namespace _internal {
 
 class MriGraphicsView: public QGraphicsView
@@ -51,13 +52,13 @@ Q_SIGNALS:
 };
 
 class TransferFunction{
-	data::ValueArrayBase::Converter c;
-	std::pair<util::ValueReference,util::ValueReference> minmax;
+	data::ValueArray::Converter c;
+	std::pair<util::Value, util::Value> minmax;
 protected:
 	data::scaling_pair scale;
 public:
-	TransferFunction(std::pair<util::ValueReference,util::ValueReference> in_minmax);
-	virtual void operator()(uchar *dst, const data::ValueArrayBase &line)const=0;
+	TransferFunction(std::pair<util::Value, util::Value> in_minmax);
+	virtual void operator()(uchar *dst, const data::ValueArray &line)const=0;
 	std::pair<double,double> updateScale(qreal bottom, qreal top);
 };
 
@@ -70,7 +71,7 @@ class SimpleImageView : public QWidget
 	size_t curr_slice=0,curr_time=0;
 	QLabel *pos_label,*value_label;
 	data::Image m_img;
-	enum {normal=0,complex,color,mask}type;
+	enum {unsupported=-1,normal=0,complex,color,mask}type;
 	QButtonGroup *transfer_function_group;
 	std::shared_ptr<_internal::TransferFunction> transfer_function,magnitude_transfer,phase_transfer;
 	
@@ -86,10 +87,17 @@ protected Q_SLOTS:
 	void doSave();
 	void onMouseMoved(QPointF pos);
 public:
-    SimpleImageView(data::Image img, QString title="", QWidget *parent=nullptr);
+    explicit SimpleImageView(data::Image img, QString title="", QWidget *parent=nullptr);
+};
+
+class MainImageView : public QMainWindow{
+	Q_OBJECT
+
+	QTabWidget *tabs= nullptr;
+public:
+	MainImageView();
+public Q_SLOTS:
+	void images_loaded(isis::qt5::IsisImageList images,QStringList rejects);
 };
 
 }
-}
-
-#endif // SIMPLEIMAGEVIEW_HPP

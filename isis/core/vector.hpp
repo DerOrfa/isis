@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef VECTOR_HPP
-#define VECTOR_HPP
+#pragma once
 
 #ifdef _MSC_VER
 #pragma warning(disable:4290)
@@ -25,7 +24,6 @@
 #include <type_traits>
 
 #include <array>
-#include <boost/operators.hpp>
 
 namespace isis
 {
@@ -46,7 +44,7 @@ namespace isis
 			x = op( *(src++), rhs);
 	}
 	template<typename TYPE1,typename TYPE2> using scalar_only = 
-		typename std::enable_if< std::is_scalar<TYPE1>::value && std::is_scalar<TYPE2>::value,int>;
+		typename std::enable_if< std::is_scalar_v<TYPE1> && std::is_scalar_v<TYPE2>,int>;
 	}
 	/// @endcond _internal
 
@@ -193,17 +191,17 @@ namespace util
 template<typename TYPE> using vector3 = std::array<TYPE, 3>;
 template<typename TYPE> using vector4 = std::array<TYPE, 4>;
 
-typedef std::array<float,4> fvector4;
-typedef std::array<double,4> dvector4;
-typedef std::array<int32_t,4> ivector4;
-typedef std::array<float,3> fvector3;
-typedef std::array<double,3> dvector3;
-typedef std::array<int32_t,3> ivector3;
+typedef vector4<float> fvector4;
+typedef vector4<double> dvector4;
+typedef vector4<int32_t> ivector4;
+typedef vector3<float> fvector3;
+typedef vector3<double> dvector3;
+typedef vector3<int32_t> ivector3;
 
 }
 }
 
-/// Streaming output for FixedVector
+/// @cond _internal
 namespace std
 {
 
@@ -214,4 +212,5 @@ operator<<( basic_ostream<charT, traits> &out, const std::array<TYPE, SIZE>& s )
 	return out;
 }
 }
-#endif //VECTOR_HPP
+/// @endcond _internal
+

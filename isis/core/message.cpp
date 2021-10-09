@@ -27,9 +27,7 @@
 #include <term.h>
 #endif
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 namespace _internal
 {
@@ -88,6 +86,13 @@ std::string Message::strTime(const char *formatting)const
 	return buffer.str();
 }
 
+MSubject::MSubject( const std::string &cont ):std::string(cont) {}
+MSubject::MSubject( std::string &&cont ):std::string(cont){}
+MSubject::MSubject(const std::filesystem::directory_entry& entry):std::string(std::filesystem::path(entry).native()){}
+
+NoSubject::NoSubject( const std::string &cont ):std::string(cont) {}
+NoSubject::NoSubject( std::string &&cont ):std::string(cont){}
+
 Message::Message( std::string object, std::string module, std::string file, int line, LogLevel level, std::weak_ptr<MessageHandlerBase> _commitTo )
 	: commitTo( _commitTo ),
 	  m_object( object ),
@@ -98,7 +103,7 @@ Message::Message( std::string object, std::string module, std::string file, int 
 	  m_level( level )
 {}
 
-Message::Message( Message &&src ) : std::ostringstream(std::forward<std::ostringstream>(src) ),
+Message::Message( Message &&src ) noexcept : std::ostringstream(std::forward<std::ostringstream>(src) ),
 	  commitTo( src.commitTo ),
 	  m_object( src.m_object ),
 	  m_module( src.m_module ),
@@ -112,7 +117,7 @@ Message::Message( Message &&src ) : std::ostringstream(std::forward<std::ostring
 Message::~Message()
 {
 	if ( shouldCommit() ) {
-		commitTo.lock()->commit( *this );
+		commitTo.lock()->guardedCommit(*this);
 		std::ostringstream::str( "" );
 		clear();
 		commitTo.lock()->requestStop( m_level );
@@ -120,7 +125,7 @@ Message::~Message()
 }
 
 
-std::string Message::merge(const std::string color_code)const
+std::string Message::merge(const std::string& color_code)const
 {
 	const std::string reset_code(color_code.empty()? "":"\033[0m");
 	const std::string s_prefix(color_code.empty()? "\"":"\x1B[1m");
@@ -128,7 +133,7 @@ std::string Message::merge(const std::string color_code)const
 	
 	std::string ret( str() );
 	size_t found = std::string::npos;
-	std::list<std::string>::const_iterator subj = m_subjects.begin();
+	auto subj = m_subjects.begin();
 
 	if ( ( found = ret.find( "{o}" ) ) != std::string::npos ){
 		ret.replace( found, 3, m_object );
@@ -138,13 +143,9 @@ std::string Message::merge(const std::string color_code)const
 	found = 0;
 
 	while ( ( found = ret.find( "{s}", found ) ) != std::string::npos ){
-		if(subj->empty())
-			ret.erase(found, 3);
-		else {
-			std::string insert=s_prefix + * ( subj++ ) + s_suffix;
-			ret.replace( found, 3, insert );
-			found+=insert.length();
-		}
+		std::string insert=s_prefix + * ( subj++ ) + s_suffix;
+		ret.replace( found, 3, insert );
+		found+=insert.length();
 	}
 
 	return  color_code+ret+reset_code;
@@ -167,6 +168,12 @@ std::string Message::str() const{
 }
 
 LogLevel MessageHandlerBase::m_stop_below = error;
+
+void MessageHandlerBase::guardedCommit(const Message &msg)
+{
+	std::scoped_lock lock(mutex);
+	commit(msg);
+}
 
 DefaultMsgPrint::DefaultMsgPrint(LogLevel level): MessageHandlerBase( level ), istty(isatty(fileno(stderr))) {}
 
@@ -210,16 +217,16 @@ void DefaultMsgPrint::commit_tty(const Message& mesg)
 
 #ifndef NDEBUG //if with debug-info
 		fprintf(
-			stderr,"%s:%s[%s:%d]%s\n",
+			stderr,"\r%s:%s[%s:%d]%s\n",
 			mesg.m_module.c_str(),
 			logLevelName( mesg.m_level ),
-			mesg.m_file.leaf().c_str(),
+			mesg.m_file.filename().c_str(),
 			mesg.m_line,
 			mesg.merge(color_code).c_str()
 		);
 #else
 		fprintf(
-			stderr,"%s:%s[%s]%s\n",
+			stderr,"\r%s:%s[%s]%s\n",
 			mesg.m_module.c_str(),
 			logLevelName( mesg.m_level ),
 			mesg.m_object.c_str(),
@@ -236,10 +243,9 @@ void DefaultMsgPrint::commit_pipe(const Message& mesg)
 		util::logLevelName( mesg.m_level ),
 		mesg.merge("").c_str(),
 		mesg.strTime("%T").c_str(),
-		mesg.m_file.leaf().c_str(),
+		mesg.m_file.filename().c_str(),
 		mesg.m_line
 	);
 }
 
-}
 }

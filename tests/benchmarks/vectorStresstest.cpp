@@ -1,5 +1,6 @@
 #include <isis/core/matrix.hpp>
 #include <boost/timer.hpp>
+#include <iostream>
 
 using namespace isis;
 
@@ -10,8 +11,8 @@ int main()
 	util::vector4<float> v1{1, 1, 0, 0};
 
 	util::Matrix4x4<float> test{
-		1 / sqrt( 2 ), -1 / sqrt( 2 ), 0, 0,
-		1 / sqrt( 2 ),  1 / sqrt( 2 ), 0, 0
+		1 / std::sqrt( 2.f ), -1 / std::sqrt( 2.f ), 0, 0,
+		1 / std::sqrt( 2.f ),  1 / std::sqrt( 2.f ), 0, 0
 	};
 	const float len = util::len(v1);
 

@@ -1,19 +1,20 @@
 #include <isis/core/endianess.hpp>
 #include <isis/core/valuearray.hpp>
 #include <boost/timer.hpp>
+#include <isis/core/valuearray_typed.hpp>
 
 using namespace isis;
 
 template<typename T> void testEndianSwap( size_t size )
 {
-	const data::ValueArray<T> source( size );
-	data::ValueArray<T> target( size );
+	const data::TypedArray<T> source( size );
+	data::TypedArray<T> target( size );
 
 	boost::timer timer;
 	data::endianSwapArray( source.begin(), source.end(), target.begin() );
 
 	std::cout
-			<< "byteswapped " << size << " elements " << data::ValueArray<T>::staticName()
+			<< "byteswapped " << size << " elements " << util::typeName<T>()
 			<< " in " << timer.elapsed() << " seconds " << std::endl;
 
 }

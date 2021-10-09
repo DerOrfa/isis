@@ -16,15 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HISTOGRAM_H
-#define HISTOGRAM_H
+#pragma once
 
 #include "../core/image.hpp"
 #include <type_traits>
 #include <cmath>
 
-namespace isis{
-namespace math{
+namespace isis::math{
 namespace _internal{
 	
 template<typename T, typename IType> std::array<size_t,(size_t)std::exp2(sizeof(T)*8)> histogram_impl(IType chunk){
@@ -64,6 +62,5 @@ template<typename T> std::array<double,(size_t)std::exp2(sizeof(T)*8)> normalize
 	return _internal::normalized_histogram_impl<T,data::TypedChunk<T>>(image);
 }
 }
-}
 
-#endif // HISTOGRAM_H
+

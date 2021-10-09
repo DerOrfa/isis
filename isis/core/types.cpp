@@ -1,120 +1,84 @@
-//
-// C++ Implementation: types
-//
-// Description:
-//
-//
-// Author: Enrico Reimer<reimer@cbs.mpg.de>, (C) 2009
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
-
-/// @cond _internal
-
-#ifdef _MSC_VER
-#pragma warning(disable:4800 4996)
-#endif
-
-#include "value.hpp"
-#include "valuearray.hpp"
 #include "types.hpp"
-#include <complex>
-#include <boost/mpl/for_each.hpp>
+#include "value.hpp"
+#include "types_array.hpp"
 
+namespace isis{
+namespace util{
 
-namespace isis
-{
-namespace util
-{
+#define setName(type,name) template<> std::string _internal::name_visitor::operator()<type>(const type&)const{return name;}
 
-/*
- * Define types for the Value<>-System here.
- * There must be a streaming output available for every type used here.
- * template<typename charT, typename traits,typename TYPE > basic_ostream<charT, traits>& operator<<(basic_ostream<charT, traits> &out,const TYPE& s)
- */
+setName( bool, "boolean" );
 
+setName( int8_t, "s8bit" );
+setName( uint8_t, "u8bit" );
 
-#define DEF_TYPE(TYPE,NAME)  \
-	template<> const char Value<TYPE>::m_typeName[]=#NAME
+setName( int16_t, "s16bit" );
+setName( uint16_t, "u16bit" );
 
-DEF_TYPE( bool, boolean );
+setName( int32_t, "s32bit" );
+setName( uint32_t, "u32bit" );
 
-DEF_TYPE( int8_t, s8bit );
-DEF_TYPE( uint8_t, u8bit );
+setName( int64_t, "s64bit" );
+setName( uint64_t, "u64bit" );
 
-DEF_TYPE( int16_t, s16bit );
-DEF_TYPE( uint16_t, u16bit );
+setName( float, "float" );
+setName( double, "double" );
 
-DEF_TYPE( int32_t, s32bit );
-DEF_TYPE( uint32_t, u32bit );
+setName( color24, "color24" );
+setName( color48, "color48" );
 
-DEF_TYPE( int64_t, s64bit );
-DEF_TYPE( uint64_t, u64bit );
+setName( fvector3, "fvector3" );
+setName( fvector4, "fvector4" );
+setName( dvector3, "dvector3" );
+setName( dvector4, "dvector4" );
+setName( ivector3, "ivector3" );
+setName( ivector4, "ivector4" );
+ 
+setName( ilist, "list<int32_t>" );
+setName( dlist, "list<double>" );
+setName( slist, "list<string>" );
 
-DEF_TYPE( float, float );
-DEF_TYPE( double, double );
+setName( std::complex<float>, "complex<float>" );
+setName( std::complex<double>, "complex<double>" );
 
-DEF_TYPE( color24, color24 );
-DEF_TYPE( color48, color48 );
+setName( util::Selection, "Selection" );
 
-DEF_TYPE( fvector3, fvector3 );
-DEF_TYPE( fvector4, fvector4 );
-DEF_TYPE( dvector3, dvector3 );
-DEF_TYPE( dvector4, dvector4 );
-DEF_TYPE( ivector3, ivector3 );
-DEF_TYPE( ivector4, ivector4 );
+setName( std::string, "string" );
+// setName( Selection, "selection" );
 
-DEF_TYPE( ilist, list<int32_t> );
-DEF_TYPE( dlist, list<double> );
-DEF_TYPE( slist, list<string> );
+setName( timestamp, "timestamp" );
+setName( duration, "duration" );
+setName( date, "date" );
 
-DEF_TYPE( std::complex<float>, complex<float> );
-DEF_TYPE( std::complex<double>, complex<double> );
+#undef setName
 
-DEF_TYPE( std::string, string );
-DEF_TYPE( Selection, selection );
-
-DEF_TYPE( timestamp, timestamp );
-DEF_TYPE( duration, duration );
-DEF_TYPE( date, date );
-
-API_EXCLUDE_BEGIN;
-namespace _internal
-{
-struct type_lister {
-	std::map< unsigned short, std::string > &m_map;
-	bool m_withValues, m_withValueArrays;
-	type_lister( std::map< unsigned short, std::string > &map, bool withValues, bool withValueArrays ): m_map( map ), m_withValues( withValues ), m_withValueArrays( withValueArrays ) {}
-	template<typename SRC> void operator()( SRC ) {//will be called by the mpl::for_each
-		if( m_withValues )m_map.insert( std::make_pair( util::Value<SRC>::staticID(), util::Value<SRC>::staticName() ) );
-
-		if( m_withValueArrays )m_map.insert( std::make_pair( data::ValueArray<SRC>::staticID(), data::ValueArray<SRC>::staticName() ) );
-	}
-};
-
+namespace _internal{
+template<std::size_t index = std::variant_size_v<ValueTypes>-1> void insert_types(std::map<size_t, std::string> &map,bool arrayTypesOnly) {
+	typedef util::Value::TypeByIndex<index> v_type;
+	if(
+		!arrayTypesOnly || 
+		_internal::variant_index<data::ArrayTypes,std::remove_cv_t<std::shared_ptr<v_type>>>()!=std::variant_npos
+	) //if either we don't want "arrayTypesOnly" or v_type is an array type
+		map[index]=util::typeName<v_type>(); //notice we always use the values type list to map type ids to type names
+	insert_types<index-1>(map,arrayTypesOnly);
 }
-API_EXCLUDE_END;
-
-std::map< unsigned short, std::string > getTypeMap( bool withValues, bool withValueArrays )
-{
-	std::map< unsigned short, std::string > ret;
-	boost::mpl::for_each<_internal::types>( _internal::type_lister( ret, withValues, withValueArrays ) );
-	return ret;
+template<> void insert_types<0>(std::map<size_t, std::string> &map,bool arrayTypesOnly){
+	typedef util::Value::TypeByIndex<0> v_type;
+	if(
+		!arrayTypesOnly || 
+		_internal::variant_index<data::ArrayTypes,std::remove_cv_t<std::shared_ptr<v_type>>>()!=std::variant_npos
+	) //if either we don't want "arrayTypesOnly" or v_type is an array type
+		map[0]=util::typeName<v_type>(); //notice we always use the values type list to map type ids to type names
 }
-
-std::map< std::string, unsigned short > getTransposedTypeMap( bool withValues, bool withValueArrays )
-{
-	typedef std::map< std::string, unsigned short> transposedMapType;
-	typedef std::map< unsigned short, std::string > mapType;
-	transposedMapType ret;
-	for( mapType::const_reference ref : util::getTypeMap( withValues, withValueArrays ) ) {
-		ret[ref.second] = ref.first;
-	}
-	return ret;
 }
 
 }
+}
+
+std::map<size_t, std::string> isis::util::getTypeMap(bool arrayTypesOnly){
+	std::map<size_t, std::string> types;
+	_internal::insert_types(types,arrayTypesOnly);
+	return types;
 }
 
 isis::util::date& std::operator+=(isis::util::date& x, const isis::util::duration& y)
@@ -125,5 +89,32 @@ isis::util::date& std::operator-=(isis::util::date& x, const isis::util::duratio
 {
 	return x-=chrono::duration_cast<chrono::days>(y);
 }
+std::ostream &std::operator<<(std::ostream &out, const isis::util::duration &s)
+{
+	return out<<s.count()<<"ms";
+}
+std::ostream &std::operator<<(std::ostream &out, const isis::util::date &s)
+{
+	const time_t tme(chrono::duration_cast<chrono::seconds>(s.time_since_epoch()).count());
+	return out<<std::put_time(std::localtime(&tme), "%x");
+}
+std::ostream &std::operator<<(std::ostream &out, const isis::util::timestamp &s)
+{
+	const chrono::seconds sec=std::chrono::duration_cast<chrono::seconds>(s.time_since_epoch());
+	const time_t tme(sec.count());
+	if(s>=(isis::util::timestamp()+std::chrono::hours(24))) // if we have a real timepoint (not just time)
+		out<<std::put_time(std::localtime(&tme), "%c"); // write time and date
+	else {
+		out<<std::put_time(std::localtime(&tme), "%X"); // otherwise, write just the time
+	}
+	// and maybe with milliseconds
 
-/// @endcond
+	chrono::milliseconds msec = s.time_since_epoch()-sec;
+	assert(msec.count()<1000);
+	if(msec.count()){
+		if(msec.count()<0)
+			msec+=chrono::seconds(1);
+		out << "+" << std::to_string(msec.count()) << "ms";
+	}
+	return out;
+}

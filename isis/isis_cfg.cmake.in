@@ -1,0 +1,66 @@
+cmake_policy(SET CMP0057 NEW) #for IN_LIST
+get_filename_component(ISIS_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+find_dependency(Boost 1.55 REQUIRED)
+find_dependency(Threads REQUIRED)
+
+macro( select_lib name)
+    if(${ISIS_STATIC_LIBS})
+        if(TARGET ISIS::${name}-STATIC)
+            add_library(ISIS::${name} INTERFACE IMPORTED)  #imported targets can't be aliased
+            target_link_libraries(ISIS::${name} INTERFACE ISIS::${name}-STATIC) # so we have to create a fake one
+            message(STATUS "Using static linked version of ISIS::${name}")
+        else()
+            message(SEND_ERROR "Static linking of ISIS was requested, but there is no static version of ISIS::${name}")
+        endif()
+    else()
+        if(TARGET ISIS::${name}-SHARED)
+            add_library(ISIS::${name} INTERFACE IMPORTED)  #imported targets can't be aliased
+            target_link_libraries(ISIS::${name} INTERFACE ISIS::${name}-SHARED) # so we have to create a fake one
+            message(STATUS "Using dynamically linked version of ISIS::${name}")
+        else()
+            message(SEND_ERROR "Dynamic linking of ISIS was requested, but there is no shared version of ISIS::${name}")
+        endif()
+    endif()
+endmacro()
+
+set(ISIS_RUNTIME_LOG @ISIS_RUNTIME_LOG@ CACHE BOOL "Enable runtime logging through isis (note this only has an effect on your compile, not of the isis libraries)")
+set(ISIS_DEBUG_LOG @ISIS_DEBUG_LOG@ CACHE BOOL "Enable debug logging through isis (note this only has an effect on your compile, not of the isis libraries)")
+
+# enable RUNTIME_LOG
+if(ISIS_RUNTIME_LOG)
+  add_definitions(-D_ENABLE_LOG=1)
+else()
+  add_definitions(-D_ENABLE_LOG=0)
+endif()
+
+# enable DEBUG_LOG
+if(ISIS_DEBUG_LOG)
+  add_definitions(-D_ENABLE_DEBUG=1)
+  message(STATUS "Debug code enabled, this will will have a big impact on the performance")
+else()
+  add_definitions(-D_ENABLE_DEBUG=0)
+endif()
+
+if(NOT TARGET ISIS::isis_core-SHARED OR NOT TARGET ISIS::isis_core-STATIC)
+    include("${ISIS_CMAKE_DIR}/ISISTargets.cmake")
+endif()
+
+option(ISIS_STATIC_LIBS "Try to link the isis libraries statically" OFF)
+
+select_lib(isis_core)
+
+if(NOT ISIS_FIND_COMPONENTS)
+    message(STATUS "No additional ISIS components defined. Options are: Math Qt")
+else()
+    if(Qt IN_LIST ISIS_FIND_COMPONENTS)
+        set(Qt5Widgets_DIR "@Qt5Widgets_DIR@" CACHE PATH "Path to Qt5WidgetsConfig.cmake")
+        find_package(Qt5Widgets)
+        select_lib(isis_qt5)
+    endif()
+
+    if(Math IN_LIST ISIS_FIND_COMPONENTS)
+        select_lib(isis_math)
+    endif()
+endif()

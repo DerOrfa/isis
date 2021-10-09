@@ -15,8 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef IMAGEFORMAT_VISTA_SA_HPP
-#define IMAGEFORMAT_VISTA_SA_HPP
+#pragma once
 
 #include <isis/core/io_interface.h>
 #include <isis/core/fileptr.hpp>
@@ -52,10 +51,10 @@ public:
 
 
 protected:
-	util::istring suffixes( io_modes /*mode = both */ )const override {return ".v";}
+	std::list<util::istring> suffixes(io_modes /*mode = both */ )const override {return {".v"};}
 };
 
 }
 }
 
-#endif // IMAGEFORMAT_VISTA_SA_HPP
+
