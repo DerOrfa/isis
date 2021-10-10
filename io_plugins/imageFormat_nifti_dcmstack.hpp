@@ -17,8 +17,7 @@
 */
 
 
-#ifndef IMAGEFORMAT_NIFTI_PARSER_HPP
-#define IMAGEFORMAT_NIFTI_PARSER_HPP
+#pragma once
 
 
 #include <isis/core/chunk.hpp>
@@ -48,4 +47,4 @@ private:
 }
 }
 
-#endif // IMAGEFORMAT_NIFTI_PARSER_HPP
+

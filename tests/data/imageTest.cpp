@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE ( image_init_test )
 
 		for( unsigned int i = 0; i < list.size(); i++ ) {
 			BOOST_CHECK_EQUAL( list[i].property( "indexOrigin" ), util::fvector3( {0, 0, static_cast<float>(i)} ) );
-			BOOST_CHECK_EQUAL( list[i].property( "acquisitionNumber" ), 2 - i ); // AcqNumber and time are in the oposite direction
+			BOOST_CHECK_EQUAL( list[i].property( "acquisitionNumber" ), 2 - i ); // AcqNumber and time are in the opposite direction
 			BOOST_CHECK_EQUAL( list[i].property( "acquisitionTime" ), 2 - i );
 		}
 
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE ( ident_image_test )
 		chunks[i].setValueAs<float>( "acquisitionTime", i );
 		chunks[i].setValue( "source", std::string("root/")+std::to_string(i) );
 		chunks[i].setValue( "sequenceStart",now);
-		chunks[i].setValue( "sequenceDescription","test");
+		chunks[i].setValue( "sequenceDescription",std::string("test"));
 	}
 
 	data::Image img( chunks );
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE ( proplist_image_splice_test )
 	img.spliceDownTo(data::sliceDim);
 
 	BOOST_CHECK_EQUAL( img.getChunk( 0 ).getRelevantDims(), 2 ); // now its sliced
-	BOOST_CHECK( !img.hasProperty( "some_list")); // its in the chunks now
+	BOOST_CHECK( !img.hasProperty( "some_list")); // it's in the chunks now
 
 	BOOST_CHECK( const_cast<const data::Image&>(img).queryProperty( "nothing"));  //should still be there
 	BOOST_CHECK(img.property("nothing").isEmpty()); // but still empty
@@ -640,7 +640,7 @@ BOOST_AUTO_TEST_CASE ( image_iterator_for_test )
 	for( int i = 0; i < 3; i++ )
 		chunks.push_back( genSlice<float>( 3, 3, i, i ) );
 
-	std::list<data::Chunk>::iterator k = chunks.begin();
+	auto k = chunks.begin();
 	( k++ )->voxel<float>( 0, 0 ) = 42.0;
 	( k++ )->voxel<float>( 1, 1 ) = 42.0;
 	( k++ )->voxel<float>( 2, 2 ) = 42;
@@ -649,7 +649,7 @@ BOOST_AUTO_TEST_CASE ( image_iterator_for_test )
 
 	float v_sum=0;
 
-	//iterate through image and get values as references (will implicitely make Value from the Adapter)
+	//iterate through image and get values as references (will implicitly make Value from the Adapter)
 	for(util::Value v:img){
 		v_sum+=v.as<float>();
 	}
@@ -1025,7 +1025,7 @@ BOOST_AUTO_TEST_CASE ( image_init_test_sizes_and_values )
 BOOST_AUTO_TEST_CASE ( image_splice_test )
 {
 	data::MemChunk<uint8_t> original( 10, 10, 10, 10 );
-	original.setValueAs<uint32_t>( "acquisitionNumber", 1 );
+	original.setValueAs<uint32_t>( "acquisitionNumber", 0 );
 	original.setValueAs( "indexOrigin", util::fvector3( {0, 0} ) );
 	original.setValueAs( "voxelSize", util::fvector3( {1, 1, 1} ) );
 	original.setValueAs( "rowVec", util::fvector3( {1, 0, 0} ) );
@@ -1041,7 +1041,7 @@ BOOST_AUTO_TEST_CASE ( image_splice_test )
 	BOOST_CHECK_EQUAL( chunks.size(), 100 );
 
 	for( size_t i = 0; i < chunks.size(); i++ ) {
-		BOOST_CHECK_EQUAL( chunks[i].getValueAs<int32_t>( "acquisitionNumber" ), i + 1 );
+		BOOST_CHECK_EQUAL( chunks[i].getValueAs<int32_t>( "acquisitionNumber" ), i );
 		BOOST_CHECK_EQUAL( chunks[i].getValueAs<util::fvector3>( "indexOrigin" ), util::fvector3( {0, 0, static_cast<float>(i % 10)} ) );
 	}
 }
@@ -1214,8 +1214,8 @@ BOOST_AUTO_TEST_CASE( image_transformCoords_test_spm )
 {
 	/*this first transformCoordsTest based on the outcome of the SPM8 dicom import. SPM flips the columnVec
 	and so has to recalculate the index origin of the image. The flip of the columnVector is described by
-	he transform matrix.
-	At the end we compare the output of the our flipped isis image and the outcome of the spm dicom import.
+	the transform matrix.
+	At the end we compare the output of the flipped isis image and the outcome of the spm dicom import.
 	*/
 	//ground truth (pure irony, since it comes from SPM :-) )
 	util::fvector3 SPMIo = util::fvector3( {92.5167, -159.366, -108.687} );

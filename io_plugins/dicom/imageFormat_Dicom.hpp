@@ -24,9 +24,7 @@
 #include <functional>
 #include "imageFormat_DicomDictionary.hpp"
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 namespace _internal{
 util::istring id2Name( const uint16_t group, const uint16_t element );
@@ -38,7 +36,7 @@ data::Chunk getj2k(data::ByteArray bytes);
 
 template <boost::endian::order Order> struct Tag{
 	boost::endian::endian_buffer<Order, int_least16_t, 16> group,element;
-	uint32_t getID32()const{
+	[[nodiscard]] uint32_t getID32()const{
 		const uint32_t grp=group.value();
 		const uint16_t elm=element.value();
 		return (grp<<16)+elm;
@@ -57,6 +55,7 @@ class DicomElement{
 	const data::ByteArray &source;
 	size_t position;
 	boost::endian::order endian;
+	bool is_eof=false;
 	typedef std::variant<
 	    ExplicitVrTag<boost::endian::order::big> *,
 	    ExplicitVrTag<boost::endian::order::little> *,
@@ -83,13 +82,14 @@ class DicomElement{
 		}
 		return ret;
 	}
-	bool extendedLength()const;
-	uint_fast8_t tagLength()const;
+	[[nodiscard]] bool extendedLength()const;
+	[[nodiscard]] uint_fast8_t tagLength()const;
 public:
 	bool implicit_vr=false;
 	bool next(size_t position);
 	bool next();
 	bool endian_swap()const;
+	bool eof() const{return is_eof;}
 	template<typename T> data::TypedArray<T> dataAs()const{
 		return dataAs<T>(getLength()/sizeof(T));
 	}
@@ -97,12 +97,12 @@ public:
 		return source.at<T>(position+tagLength(),len,endian_swap());
 	}
 	const uint8_t *data()const;
-	util::istring getIDString()const;
-	uint32_t getID32()const;
-	size_t getLength()const;
-	size_t getPosition()const;
-	std::string getVR()const;
-	util::PropertyMap::PropPath getName()const;
+	[[nodiscard]] util::istring getIDString()const;
+	[[nodiscard]] uint32_t getID32()const;
+	[[nodiscard]] size_t getLength()const;
+	[[nodiscard]] size_t getPosition()const;
+	[[nodiscard]] std::string getVR()const;
+	[[nodiscard]] util::PropertyMap::PropPath getName()const;
 	DicomElement(const data::ByteArray &_source, size_t _position, boost::endian::order endian,bool _implicit_vr);
 	std::optional<util::Value> getValue();
 	std::optional<util::Value> getValue(std::string vr);
@@ -117,19 +117,18 @@ class ImageFormat_Dicom: public FileFormat
 	static bool parseCSAValueList( const isis::util::slist &val, const util::PropertyMap::PropPath &name, const util::istring &vr, isis::util::PropertyMap &map );
 	static data::Chunk readMosaic( data::Chunk source );
 protected:
-	util::istring suffixes( io_modes modes )const override;
+	[[nodiscard]] std::list<util::istring> suffixes(io_modes modes )const override;
 public:
 	ImageFormat_Dicom();
 	static const char dicomTagTreeName[];
 	static const char unknownTagName[];
 	static void parseCSA(const data::ByteArray &data, isis::util::PropertyMap &map, std::list<util::istring> dialects );
-	static void sanitise( util::PropertyMap &object, std::list<util::istring> dialect );
-	std::string getName()const override;
-	std::list<util::istring> dialects()const override;
+	static void sanitise( util::PropertyMap &object, const std::list<util::istring>& dialect );
+	[[nodiscard]] std::string getName()const override;
+	[[nodiscard]] std::list<util::istring> dialects()const override;
 
 	std::list<data::Chunk> load(std::streambuf *source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override;
 	std::list<data::Chunk> load(data::ByteArray source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ) override;
 	void write( const data::Image &image,     const std::string &filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> progress )override;
 };
-}
 }

@@ -1,6 +1,7 @@
 #include <isis/core/io_factory.hpp>
 #include <isis/core/io_application.hpp>
 #include <isis/core/application.hpp>
+#include <isis/core/console_progress_bar.hpp>
 #include <algorithm>
 #include <regex>
 
@@ -196,7 +197,7 @@ int main( int argc, char *argv[] )
 	std::list<data::Image> images1, images2;
 	util::slist ignore = app.parameters["ignore"];
 	ignore.push_back( "source" );
-	std::shared_ptr<util::ConsoleFeedback> feedback( new util::ConsoleFeedback );
+	auto feedback = std::make_shared<util::ConsoleProgressBar>();
 
 	if( in1.second >= 0 && in2.second >= 0 ) { // seems like we got numbers
 		app.parameters["in1"] = util::slist( 1, in1.first );
@@ -227,7 +228,7 @@ int main( int argc, char *argv[] )
 		std::filesystem::path sPath2 = ( src2.size() == 1 ) ? src2.front() : getCommonSource( images2 ).native();
 
 
-		LOG( DiffLog, notice ) << "Comparing " << images1.size() << " images from \"" << sPath1 << "\" and " << images2.size() << " from \"" << sPath2 << "\"";
+		LOG( DiffLog, notice ) << "Comparing " << images1.size() << " images from " << sPath1 << " and " << images2.size() << " from " << sPath2;
 
 		for (
 			auto first = images1.begin();

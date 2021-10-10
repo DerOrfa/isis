@@ -21,11 +21,11 @@
 #include "istring.hpp"
 #include <set>
 #include <algorithm>
+#include <optional>
 #include <boost/property_tree/ptree_fwd.hpp>
+#include <ostream>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 /// @cond _internal
 namespace _internal
@@ -77,12 +77,13 @@ public:
 		PropPath( const char *key );
 		PropPath( const key_type &key );
 		explicit PropPath( const std::list<key_type> &path );
-		PropPath operator/( const PropPath &s )const;
+		[[nodiscard]] PropPath operator/( const PropPath &s )const;
 		PropPath &operator/=( const PropPath &s );
-		bool operator==( const key_type &s )const {return *this == PropPath( s );}
-		bool operator!=( const key_type &s )const {return *this != PropPath( s );}
-		size_t length()const;
-		std::string toString()const;
+		[[nodiscard]] bool operator==( const key_type &s )const {return *this == PropPath( s );}
+		[[nodiscard]] bool operator!=( const key_type &s )const {return *this != PropPath( s );}
+		[[nodiscard]] size_t length()const;
+		[[nodiscard]] std::string toString()const;
+		friend std::ostream &operator<<(std::ostream &os, const PropPath &path);
 	};
 
 	///a list to store keys only (without the corresponding values)
@@ -92,37 +93,22 @@ public:
 	///a flat map, matching complete paths as keys to the corresponding values
 	typedef std::map<PropPath, PropertyValue> FlatMap;
 
-	/// @cond _internal
-	template<typename T> class NeededsList: public std::list<PropPath>
-	{
-	public:
-		NeededsList() {
-			const std::list< PropertyMap::key_type > buff = util::stringToList<PropertyMap::key_type>( T::neededProperties ); //@todo really bad voodoo
-			assign( buff.begin(), buff.end() );
-		}
-		void applyTo( PropertyMap &props ) {
-			for( const PropPath & ref: *this ) {
-				props.addNeeded( ref );
-			}
-		}
-	};
-	/// @endcond _internal
-
-
 protected:
 	static Node &nullnode();
 	typedef PropPath::const_iterator propPathIterator;
 	container_type container;
 
-/// @cond _internal
+	/// @cond _internal
 	/////////////////////////////////////////////////////////////////////////////////////////
-	// internal predicats
+	// internal predicates
 	/////////////////////////////////////////////////////////////////////////////////////////
+	typedef std::function<bool(const PropertyValue &val)> leaf_predicate;
+	typedef std::function<bool(const PropPath &path, const PropertyValue &val)> key_predicate;
 	/// allways true
-	struct TrueP { bool operator()( const PropertyValue &ref )const;};
+	static const leaf_predicate trueP;
 	/// true when the Property is needed and empty
-	struct InvalidP { bool operator()( const PropertyValue &ref )const;};
-	struct EmptyP { bool operator()( const PropertyValue &ref )const;};
+	static const leaf_predicate invalidP;
+	static const leaf_predicate emptyP;
 
 	void readPtree(const boost::property_tree::ptree &tree, bool skip_empty=true);
 
@@ -130,11 +116,10 @@ protected:
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// internal functors
 	/////////////////////////////////////////////////////////////////////////////////////////
-	template<class Predicate> struct WalkTree;
+	struct WalkTree;
 	template<typename ITER> struct Splicer;
 	struct IsEmpty;
 
-	template<typename T> PathSet getLocal()const;
 API_EXCLUDE_END;
 /// @endcond _internal
 
@@ -160,7 +145,7 @@ API_EXCLUDE_END;
 			if ( found != root.end() ) {//and we found the entry
 				return findEntryImpl<CONST>( found->second.branch().container, next, pathEnd ); //continue there
 			}
-		} else if ( found != root.end() ) {// if its the leaf and we found the entry
+		} else if ( found != root.end() ) {// if it's the leaf and we found the entry
 			return found->second; // return that entry
 		}
 
@@ -171,7 +156,7 @@ API_EXCLUDE_END;
 	template<typename T> T* queryValueAsImpl( const PropPath &path, const std::optional<size_t> &at ) {
 		const auto &found = queryProperty( path );
 
-		if( found && found->size()>at.value_or(0) ) {// apparently it has a value so lets try use that
+		if( found && found->size()>at.value_or(0) ) {// apparently it has a value so let's try to use that
 			if( !found->is<T>() ) {
 				if( !found->transform<T>() ) {// convert to requested type
 					LOG( Runtime, warning ) << "Conversion of Property " << path << " from " << util::MSubject( found->getTypeName() ) << " to "
@@ -231,11 +216,9 @@ API_EXCLUDE_END;
 	template<typename T> T* tryFetchEntry( const PropPath &path );
 
 	/// create a list of keys for every entry for which the given scalar predicate is true.
-	template<class Predicate> PathSet genKeyList()const {
-		PathSet k;
-		std::for_each( container.begin(), container.end(), WalkTree<Predicate>( k, PropPath() ) );
-		return k;
-	}
+	PathSet genKeyList(const leaf_predicate &predicate)const;
+	PathSet genKeyList(const key_predicate &predicate)const;
+
 	/**
 	 * Adds a property with status needed.
 	 * \param path identifies the property to be added or if already existsing to be flagged as needed
@@ -258,11 +241,12 @@ public:
 	// constructors
 	/////////////////////////////////////////////////////////////////////////////////////////
 	PropertyMap() = default;
-	explicit PropertyMap( const container_type &cont );
+	explicit PropertyMap( container_type cont );
 
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// Common rw-accessors
 	/////////////////////////////////////////////////////////////////////////////////////////
+
 	/**
 	 * Access the property referenced by the path.
 	 * If the property does not exist nullptr is returned.
@@ -275,12 +259,17 @@ public:
 	/// @copydoc queryProperty( const PropPath &path )const
 	PropertyValue* queryProperty( const PropPath &path );
 
+	/* Get PropertyMaps or PropertyValues at the local level
+	 * \returns a PathSet to all PropertyMaps or PropertyValues on this branch
+	 */
+	template<typename T> PathSet getLocal()const;
+
 	/**
 	 * Get the property at the path, or an empty one if there is none.
 	 * \param path the path to the property
 	 * \returns the requested property or an empty property
 	 */
-	PropertyValue property( const PropPath &path )const;
+	const PropertyValue property( const PropPath &path )const;
 
 	/**
 	 * Access the property referenced by the path, create it if its not there.
@@ -375,6 +364,8 @@ public:
 
 	bool insert(const std::pair<PropPath,PropertyValue> &p);
 	bool insert(const std::pair<std::string,PropertyValue> &p);
+	bool insert(std::pair<PropPath,PropertyValue> &&p);
+	bool insert(std::pair<std::string,PropertyValue> &&p);
 
 	/**
 	 * extract Property or branch from this PropertyMap and move it into dst.
@@ -407,17 +398,6 @@ public:
 	 * \returns a flat list of the paths to all properties in the PropertyMap
 	 */
 	PathSet getKeys()const;
-
-	/**
-	 * Get a list of the paths of all properties directly on this branch.
-	 * \returns a flat list of the paths to all properties in the PropertyMap
-	 */
-	PathSet localProps()const;
-	/**
-	 * Get a list of the paths of all sub-branches directly on this branch.
-	 * \returns a flat list of the paths to all properties in the PropertyMap
-	 */
-	PathSet localBranches()const;
 
 	/**
 	 * Get a list of missing properties.
@@ -503,11 +483,11 @@ public:
 	 * \note all empty properties will be removed afterwards (including needed properties)
 	 */
 	template<typename ITER> void splice( ITER first, ITER last, bool lists_only ){
-		const PathSet empty_before=genKeyList<EmptyP>();
+		const PathSet empty_before=genKeyList(emptyP);
 		std::for_each( container.begin(), container.end(), Splicer<ITER>( first, last, PropPath(), lists_only) );
 		//some cleanup
-		//delete all thats empty now, but wasn't back then (we shouldn't delete what where empty before) / spliters are moved so source will become empty
-		const PathSet empty_after=genKeyList<EmptyP>();
+		//delete all that's empty now, but wasn't back then (we shouldn't delete what where empty before) / spliters are moved so source will become empty
+		const PathSet empty_after=genKeyList(emptyP);
 		std::list<PropPath> deletes;
 		std::set_difference(empty_after.begin(),empty_after.end(),empty_before.begin(),empty_before.end(),std::back_inserter(deletes));
 		LOG_IF(!deletes.empty(),Debug,info) << "Properties " << MSubject(deletes) << " became empty while splicing, deleting them";
@@ -554,7 +534,6 @@ public:
 		static_assert(knownType<T>(),"invalid type");
 		return setValue(path, Value(val ), at);
 	}//@todo maybe remove the templated version
-	PropertyValue &setValueAs( const PropPath &path, const char *val, size_t at );
 
 	/**
 	 * Request a property value via the given key in the given type.
@@ -618,7 +597,7 @@ public:
 
 		if( fetched->isEmpty() ) { // we just created one, so set its value to def
 			*fetched = def;
-		} else if( !fetched->is<T>() ) { // apparently it already has a value so lets try use that
+		} else if( !fetched->is<T>() ) { // apparently it already has a value so let's try to use that
 			if( !transform<T>( path, path ) ) {
 				throw std::logic_error(fetched->toString(true)+" cannot be transformed to "+util::typeName<T>() );
 			}
@@ -707,50 +686,44 @@ public:
 	 * \param label print the type of the property (see Value::toString())
 	 */
 	std::ostream &print( std::ostream &out, bool label = false )const;
+	friend std::ostream &operator<<(std::ostream &os, const PropertyMap &map);
 };
 
 class PropertyMap::Node : protected std::variant<std::monostate, PropertyValue, PropertyMap>
 {
 	friend PropertyMap;
-	PropertyMap& branch(){return std::get<PropertyMap>(*this);}
-	const PropertyMap& branch()const{return std::get<PropertyMap>(*this);}
-	template<typename T> bool is()const{return std::holds_alternative<T>(*this);}
+	[[nodiscard]] PropertyMap& branch();
+	[[nodiscard]] const PropertyMap& branch()const;
+	template<typename T> [[nodiscard]] bool is()const{return std::holds_alternative<T>(*this);}
 public:
 	Node()=default;
-	bool operator==(const Node& other)const{return variant()==other.variant();}
-	bool operator!=(const Node& other)const{return variant()!=other.variant();}
-	explicit operator bool() const {return !is<std::monostate>();}
-	Node(const PropertyValue &val):std::variant<std::monostate, PropertyValue, PropertyMap>(val){}
-	Node(const PropertyMap &map):std::variant<std::monostate, PropertyValue, PropertyMap>(map){}
-	std::variant<std::monostate, PropertyValue, PropertyMap>& variant(){return *this;}
-	const std::variant<std::monostate, PropertyValue, PropertyMap>& variant()const{return *this;}
-	bool isBranch()const{return is<PropertyMap>();}
-	bool isProperty()const{return is<PropertyValue>();}
-	PropertyValue& operator->(){return std::get<PropertyValue>(*this);}
-	PropertyValue& operator*(){return std::get<PropertyValue>(*this);}
-	const PropertyValue& operator->()const{return std::get<PropertyValue>(*this);}
-	const PropertyValue& operator*()const{return std::get<PropertyValue>(*this);}
+	[[nodiscard]] bool operator==(const Node& other)const;
+	[[nodiscard]] bool operator!=(const Node& other)const;
+	explicit operator bool() const;
+	Node(const PropertyValue &val);
+	Node(const PropertyMap &map);
+	[[nodiscard]] std::variant<std::monostate, PropertyValue, PropertyMap>& variant();
+	[[nodiscard]] const std::variant<std::monostate, PropertyValue, PropertyMap>& variant()const;
+	[[nodiscard]] bool isBranch()const;
+	[[nodiscard]] bool isProperty()const;
+	bool isEmpty()const;
+	[[nodiscard]] PropertyValue& operator->();
+	[[nodiscard]] PropertyValue& operator*();
+	[[nodiscard]] const PropertyValue& operator->()const;
+	[[nodiscard]] const PropertyValue& operator*()const;
+	friend std::ostream &operator<<(std::ostream &os, const Node &node);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // internal functors
 /////////////////////////////////////////////////////////////////////////////////////////
 /// @cond _internal
-template<class Predicate> struct PropertyMap::WalkTree {
+struct PropertyMap::WalkTree {
 	PathSet &m_out;
-	const PropPath &name;
-	WalkTree( PathSet &out, const PropPath &prefix ): m_out( out ), name( prefix ) {}
-	void operator()( const std::monostate &val )const {}
-	void operator()( container_type::const_reference ref ) const {//recursion
-		std::visit( WalkTree( m_out, name / ref.first ), ref.second.variant() );
-	}
-	void operator()( const PropertyValue &val )const {
-		if ( Predicate()( val ) )
-			m_out.insert( m_out.end(), name );
-	}
-	void operator()( const PropertyMap &sub )const { //call my own recursion for each element
-		std::for_each( sub.container.begin(), sub.container.end(), *this );
-	}
+	PropPath name={};
+	const key_predicate &m_key_predicate;
+	WalkTree( PathSet &out, const key_predicate &predicate);
+	void operator()( const std::pair<PropertyMap::key_type, PropertyMap::Node> &ref );
 };
 template<typename ITER> struct PropertyMap::Splicer {
 	const ITER &first, &last;
@@ -770,12 +743,13 @@ template<typename ITER> struct PropertyMap::Splicer {
 	void operator()( const std::monostate &val )const {}
 	void operator()( PropertyValue &val )const {
 		if(val.isEmpty())return; // abort if there is nothing to spliceAt
-		else if(lists_only && val.size() <= 1)return;  //abort if we don't want do move scalars
+		else if(lists_only && val.size() <= 1)return;  //abort if we don't want to move scalars
 
 		if( val.size() % blocks ) { // just copy all which cannot be properly spliced to the destination
-			LOG_IF( val.size() > 1, Runtime, warning ) << "Not splicing non scalar property " << MSubject( name ) << " because its length "
-			    << MSubject( val.size() ) << " doesn't fit the amount of targets(" << MSubject( blocks ) << ")"; //tell the user if its no scalar
-
+			if(val.size() > 1){
+				LOG_IF( val.size() > 1, Runtime, warning ) << "Not splicing non scalar property " << MSubject( name ) << " because its length "
+				<< MSubject( val.size() ) << " doesn't fit the amount of targets(" << MSubject( blocks ) << ")"; //tell the user if its no scalar
+			}
 			PropertyValue &first_prop = _internal::un_shared_ptr(*first).touchProperty( name );
 			first_prop.transfer(val);
 			ITER i = first;
@@ -797,15 +771,6 @@ template<typename ITER> struct PropertyMap::Splicer {
 		std::for_each( sub.container.begin(), sub.container.end(), *this );
 	}
 };
-struct PropertyMap::IsEmpty
-{
-	template <typename T> bool operator()( T & operand ) const{
-		return operand.isEmpty();
-	}
-	bool operator()( std::monostate & operand ) const{
-		return true;
-	}
-};
 /// @endcond _internal
 
 template<typename T> PropertyMap::PathSet PropertyMap::getLocal()const{
@@ -824,7 +789,7 @@ template<typename T> const T* PropertyMap::tryFindEntry( const PropPath &path )c
 			if( ref )
 				return &std::get<T>( ref );
 		} catch ( const std::bad_variant_access &e ) {
-			LOG( Runtime, error ) << "Got errror " << e.what() << " when accessing " << MSubject( path );
+			LOG( Runtime, error ) << "Got error " << e.what() << " when accessing " << MSubject( path );
 		}
 	} else {
 		LOG( Runtime, error ) << "Got empty path, will return nothing";
@@ -846,7 +811,7 @@ template<typename T> T* PropertyMap::tryFetchEntry( const PropPath &path ) {
 	try {
 		mapped_type &n = fetchEntry( path );
 		if(!n.is<T>()){
-			if(std::visit(IsEmpty(),n.variant())) //if target is empty but of wrong type
+			if(n.isEmpty()) //if target is empty but of wrong type
 				n = T(); // reset it to empty with right type
 			else {
 				LOG( Runtime, error ) << "Trying to fetch existing entry " << MSubject( path ) << " as wrong type";
@@ -863,37 +828,3 @@ template<typename T> T* PropertyMap::tryFetchEntry( const PropPath &path ) {
 
 
 }
-}
-/// @cond _internal
-namespace std
-{
-/// Streaming output for Nodes
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::PropertyMap::Node &s )
-{
-	return std::visit([&](const auto &v)->basic_ostream<charT, traits>&{return out << v;},s.variant());
-}
-
-/// Streaming output for std::monostate (does nothing)
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const std::monostate &s ){return out;}
-
-/// Streaming output for PropertyMap::PropPath
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::PropertyMap::PropPath &s )
-{
-	isis::util::listToOStream( s.begin(), s.end(), out, std::string( 1, s.pathSeperator ).c_str(), "", "" );
-	return out;
-}
-
-/// Streaming output for PropertyMap
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::PropertyMap &s )
-{
-	const isis::util::PropertyMap::FlatMap buff = s.getFlatMap();
-	isis::util::listToOStream( buff.begin(), buff.end(), out );
-	return out;
-}
-}
-/// @endcond _internal
-

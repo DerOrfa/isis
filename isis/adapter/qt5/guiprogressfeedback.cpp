@@ -18,47 +18,82 @@
  */
 
 #include "guiprogressfeedback.hpp"
+#include "common.hpp"
 #include <QProgressBar>
-#include <QHBoxLayout>
-#include <QVariant>
+#include <QStatusBar>
+#include <QLabel>
 
-isis::qt5::GUIProgressFeedback::GUIProgressFeedback(bool autohide, QWidget* parent):QGroupBox(parent),show_always(!autohide),progressbar(new QProgressBar(this))
+isis::qt5::QProgressBarWrapper::QProgressBarWrapper(int display_max):disp_max(display_max){}
+
+void isis::qt5::QProgressBarWrapper::update()
 {
-	if(!autohide)
-		QWidget::show();
-	setLayout(new QHBoxLayout());
-	layout()->addWidget(progressbar);
-	progressbar->connect(this,SIGNAL(signalNewValue(int)),SLOT(setValue(int)));
-	progressbar->connect(this,SIGNAL(signalNewMax(int)),SLOT(setMaximum(int)));
+	if(max==0)
+		return;
+	const auto ratio=int(current* disp_max/max);
+	emit sigSetVal(ratio);
+}
+void isis::qt5::QProgressBarWrapper::show(size_t _max, std::string _header)
+{
+	emit sigShow(QString::fromStdString(_header));
+	emit sigSetVal(0);
+	restart(_max);
+}
+size_t isis::qt5::QProgressBarWrapper::progress(size_t step)
+{
+	current+=step;
+	update();
+	return current;
+}
+void isis::qt5::QProgressBarWrapper::close()
+{
+	max=0;
+	current=0;
+	emit sigClose();
+}
+size_t isis::qt5::QProgressBarWrapper::getMax()
+{
+	return max;
+}
+size_t isis::qt5::QProgressBarWrapper::extend(size_t by)
+{
+	max+=by;
+	update();
+	return max;
+}
+void isis::qt5::QProgressBarWrapper::restart(size_t new_max)
+{
+	current=0;
+	max=new_max;
+	update();
 }
 
-
-void isis::qt5::GUIProgressFeedback::close()
+isis::qt5::QStatusBarProgress::QStatusBarProgress(QStatusBar *_status_bar)
+:status_bar(_status_bar),progress_bar(new QProgressBar),header_bar(new QLabel)
 {
-	setProperty("visible",true);
+	assert(status_bar);
+	connect(this,&QProgressBarWrapper::sigShow,this,&QStatusBarProgress::onShow);
+	connect(this,&QProgressBarWrapper::sigClose,this,&QStatusBarProgress::onClose);
+	connect(this,&QProgressBarWrapper::sigSetVal,progress_bar,&QProgressBar::setValue);
 }
-
-size_t isis::qt5::GUIProgressFeedback::extend(size_t by)
+void isis::qt5::QStatusBarProgress::onShow(QString header)
 {
-	emit signalNewMax(getMax()+by);
-	return getMax();
+	if(status_bar){
+		header_bar->setText(header);
+		progress_bar->setValue(0);
+		status_bar->insertWidget(0,header_bar);
+		status_bar->insertWidget(1,progress_bar);
+		header_bar->show();
+		progress_bar->show();
+	} else
+		LOG(Debug,error) << "Calling show on status bar that was deleted";
 }
-
-size_t isis::qt5::GUIProgressFeedback::getMax()
+void isis::qt5::QStatusBarProgress::onClose()
 {
-	return progressbar->maximum();
-}
-
-size_t isis::qt5::GUIProgressFeedback::progress(const std::string message, size_t step)
-{
-	emit signalNewValue(progressbar->value()+step);
-	return progressbar->value();
-}
-
-void isis::qt5::GUIProgressFeedback::show(size_t max, std::string header)
-{
-	emit signalNewMax(max);
-	emit signalNewValue(0);
-	setProperty("title",QString::fromStdString(header));
-	setProperty("visible",true);
+	if(status_bar){
+		header_bar->clear();
+		status_bar->removeWidget(header_bar);
+		progress_bar->setValue(0);
+		status_bar->removeWidget(progress_bar);
+	} else
+		LOG(Debug,error) << "Calling close on status bar that was deleted";
 }

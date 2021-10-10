@@ -23,14 +23,11 @@
 
 #include "io_application.hpp"
 #include "io_factory.hpp"
-#include <boost/mpl/for_each.hpp>
 
 
-namespace isis
+namespace isis::data
 {
-namespace data
-{
-	IOApplication::IOApplication( const char name[], bool have_input, bool have_output, const char cfg[] ):
+IOApplication::IOApplication( std::string_view name, bool have_input, bool have_output, std::string_view cfg ):
 	Application( name, cfg ), m_input( have_input )
 {
 	if ( have_input )
@@ -149,17 +146,17 @@ std::list< Image > IOApplication::autoload( bool exitOnError,const std::string &
 }
 std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameters, bool exitOnError, const std::string &suffix,  std::shared_ptr<util::ProgressFeedback> feedback, util::slist* rejected)
 {
-	util::slist input = parameters[std::string( "in" ) + suffix];
-	util::slist rf = parameters[std::string( "rf" ) + suffix];
-	util::slist dl = parameters[std::string( "rdialect" ) + suffix];
+	const util::slist input = parameters[std::string( "in" ) + suffix];
+	const util::slist rf = parameters[std::string( "rf" ) + suffix];
+	const util::slist dl = parameters[std::string( "rdialect" ) + suffix];
 	
-	bool no_progress = parameters["np"];
+	const bool no_progress = parameters["np"];
 
 	if( !no_progress && feedback ) {
 		data::IOFactory::setProgressFeedback( feedback );
 	}
 
-	std::list<util::istring> formatstack=util::makeIStringList(rf);
+	const std::list<util::istring> formatstack=util::makeIStringList(rf);
 
 	std::list< Image > tImages;
 	if(input.size()==1 && input.front()=="-"){
@@ -184,8 +181,8 @@ std::list< Image > IOApplication::autoload ( const util::ParameterMap &parameter
 			exit( 1 );
 		} 
 	} else {
-		for( std::list<data::Image>::const_iterator a = tImages.begin(); a != tImages.end(); a++ ) {
-			for( std::list<data::Image>::const_iterator b = a; ( ++b ) != tImages.end(); ) {
+		for( auto a = tImages.begin(); a != tImages.end(); a++ ) {
+			for( auto b = a; ( ++b ) != tImages.end(); ) {
 				const data::Image &aref = *a, bref = *b;
 				LOG_IF( aref.getDifference( bref ).empty(), Runtime, warning ) << "The metadata of the images "
 						<< aref.identify(true,false) << ":" << std::distance<std::list<Image> ::const_iterator>( tImages.begin(), a )
@@ -217,15 +214,15 @@ bool IOApplication::autowrite ( const util::ParameterMap &parameters, std::list<
 	const util::slist dl = parameters[std::string( "wdialect" ) + suffix];
 	LOG( Runtime, info )
 			<< "Writing " << out_images.size() << " images"
-			<< ( repn ? std::string( " as " ) + ( std::string )repn : "" )
+			<< ( repn ? std::string( " as " ) + static_cast<std::string>(repn) : "" )
 			<< " to " << util::MSubject( output )
 			<< ( wf.empty() ? "" : std::string( " using the format: " ) + util::listToString(wf.begin(),wf.end()) )
 			<< ( ( !wf.empty() && !dl.empty() ) ? " and" : "" )
 			<< ( dl.empty() ? "" : std::string( " using the dialect: " ) + util::listToString(dl.begin(),dl.end()) );
 
-	if( repn != 0 ) {
+	if( repn ) {
 		for( std::list<Image>::reference ref :  out_images ) {
-			ref.convertToType( repn ); //noscale is 0 but 1 in the selection
+			ref.convertToType( static_cast<unsigned short>(repn) );
 		}
 	}
 
@@ -250,12 +247,5 @@ Image IOApplication::fetchImage()
 	return ret;
 }
 
-std::shared_ptr< util::MessageHandlerBase > IOApplication::getLogHandler( std::string module, LogLevel level ) const
-{
-	return isis::util::Application::getLogHandler( module, level );
-}
-
-
-}
 }
 

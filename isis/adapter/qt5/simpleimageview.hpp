@@ -17,19 +17,20 @@
  *
  */
 
-#ifndef SIMPLEIMAGEVIEW_HPP
-#define SIMPLEIMAGEVIEW_HPP
+#pragma once
 
 #include <QWidget>
 #include <QGraphicsView>
 #include "../../core/image.hpp"
+#include "qimage_loader.hpp"
+#include "qimage_adapter.hpp"
+#include <QMainWindow>
 
 class QSlider;
 class QLabel;
 class QButtonGroup;
 
-namespace isis{
-namespace qt5{
+namespace isis::qt5{
 namespace _internal {
 
 class MriGraphicsView: public QGraphicsView
@@ -86,10 +87,17 @@ protected Q_SLOTS:
 	void doSave();
 	void onMouseMoved(QPointF pos);
 public:
-    SimpleImageView(data::Image img, QString title="", QWidget *parent=nullptr);
+    explicit SimpleImageView(data::Image img, QString title="", QWidget *parent=nullptr);
+};
+
+class MainImageView : public QMainWindow{
+	Q_OBJECT
+
+	QTabWidget *tabs= nullptr;
+public:
+	MainImageView();
+public Q_SLOTS:
+	void images_loaded(isis::qt5::IsisImageList images,QStringList rejects);
 };
 
 }
-}
-
-#endif // SIMPLEIMAGEVIEW_HPP

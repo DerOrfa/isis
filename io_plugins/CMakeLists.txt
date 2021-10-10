@@ -24,7 +24,7 @@ option(ISIS_IOPLUGIN_VISTA_SA "Enable standalone Vista-IO plugin" OFF)
 option(ISIS_IOPLUGIN_NULL "Enable Null-IO plugin" OFF)
 option(ISIS_IOPLUGIN_PNG "Enable PNG-IO plugin" OFF)
 option(ISIS_IOPLUGIN_IMAGEMAGIC "Enable plugin for ImageMagic based IO" OFF)
-option(ISIS_IOPLUGIN_DICOM "Enable Dicom-IO plugin" OFF)
+option(ISIS_IOPLUGIN_DICOM "Enable Dicom-IO plugin" ON)
 option(ISIS_IOPLUGIN_COMP "Enable proxy plugin for compressed data (gz, bzip2 and Z)" ON)
 option(ISIS_IOPLUGIN_TAR "Enable proxy plugin for reading tar archives" ON)
 option(ISIS_IOPLUGIN_FDF "Enable plugin for reading fdf files" OFF)
@@ -212,7 +212,7 @@ endif()
 ############################################################
 if(ISIS_IOPLUGIN_DICOM)
 	find_library(OPENJPEG_LIBRARY openjp2)
-	find_path(OPENJPEG_INCLUDE_DIR openjpeg.h PATH_SUFFIXES openjpeg-2.3)
+	find_path(OPENJPEG_INCLUDE_DIR openjpeg.h PATH_SUFFIXES openjpeg-2.3 openjpeg-2.4)
 
 	add_library(isisImageFormat_Dicom SHARED dicom/imageFormat_Dicom.cpp dicom/imageFormat_DicomParser.cpp dicom/imageFormat_DicomDictionary.cpp)
 	

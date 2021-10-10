@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef IO_INTERFACE_H
-#define IO_INTERFACE_H
+#pragma once
 
 #ifdef __cplusplus
 #include <string>
@@ -76,7 +75,7 @@ public:
 	enum io_modes {read_only = 1, write_only = 2, both = 3};
 protected:
 	/// \return the file-suffixes the plugin supports
-	virtual util::istring suffixes( io_modes modes = both )const = 0;
+	virtual std::list<util::istring> suffixes(io_modes modes = both)const = 0;
 	static constexpr float invalid_float=-std::numeric_limits<float>::infinity();
 public:
 	static void throwGenericError( const std::string& desc );
@@ -197,4 +196,4 @@ extern "C" {
 }
 #endif
 
-#endif //IO_INTERFACE_H
+

@@ -44,7 +44,7 @@ class ImageFormat_Tar: public FileFormat{
 
 				size |= reinterpret_cast<uint8_t *>( tar_header.size )[11];
 			} else if( tar_header.size[10] != 0 ) { //normal octal
-				//get the size
+				//get the size @todo use strtoll
 				std::stringstream buff( tar_header.size );
 				size = 0, next_header_in = 0;
 
@@ -67,7 +67,7 @@ class ImageFormat_Tar: public FileFormat{
 		return red;
 	}
 protected:
-	util::istring suffixes( io_modes modes )const override {return "tar";}
+	std::list<util::istring> suffixes( io_modes modes )const override {return {"tar"};}
 public:
 	std::string getName()const override {return "tar reading proxy";};
 	void write( const data::Image &image, const std::string &filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )override {

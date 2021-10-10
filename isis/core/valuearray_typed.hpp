@@ -41,7 +41,7 @@ public:
 		LOG_IF(!other.is<TYPE>(),Debug,info) << "Made a converted " << typeName() << " copy of a " << other.typeName() << " array";
 	}
 	/// Create a typed value array from scratch
-	TypedArray(size_t length):TypedArray(ValueArray::make<TYPE>(length), scaling_pair(1, 0)){} //this will call the constructor for creation from ValueArray but we know we won't need any conversion or scaling
+	TypedArray(size_t length):TypedArray(ValueArray::make<TYPE>(length), scaling_pair(1, 0)){} //this will call the constructor for creation from ValueArray, but we know we won't need any conversion or scaling
 	/// Basic copy constructor
 	TypedArray(const TypedArray<TYPE> &ref):TypedArray(static_cast<const ValueArray&>(ref), scaling_pair(1, 0)){}//same as above
 	TypedArray(TypedArray<TYPE> &&ref): ValueArray(std::move(ref)), me(castTo<TYPE>()){};
@@ -49,10 +49,10 @@ public:
 	/// Create an invalid array of the correct type.
 	TypedArray():TypedArray(std::shared_ptr<TYPE>(),0){}//(makes sure me is valid)
 
-	iterator begin(){return me.get();}
-	iterator end(){return me.get()+getLength();}
-	const_iterator begin()const{return me.get();}
-	const_iterator end()const{return me.get()+getLength();}
+	iterator begin(){return iterator(me.get());}
+	iterator end(){return begin()+getLength();}
+	const_iterator begin()const{return const_iterator(me.get());}
+	const_iterator end()const{return begin()+getLength();}
 
     typename const_iterator::difference_type getDistanceTo(const const_iterator &it)const{
         return std::distance(begin(),it);
@@ -84,5 +84,18 @@ public:
 		LOG_IF(at>=getLength(),Debug,error) << "Index " << at << " is behind the arrays length (" << getLength() << ")";
 		return *(begin()+at);
 	}
+	[[nodiscard]] std::shared_ptr<void> getRawAddress(size_t offset=0) override{
+		const std::shared_ptr<const void> ptr=const_cast<const TypedArray<TYPE>*>(this)->getRawAddress(offset );
+		return std::const_pointer_cast<void>( ptr );
+	};
+	[[nodiscard]] std::shared_ptr<const void> getRawAddress(size_t offset=0) const override{
+		std::shared_ptr<const TYPE> b_ptr= castTo<TYPE>();
+		if( offset ) {
+			_internal::DelProxy proxy( *this );
+			auto o_ptr=reinterpret_cast<const uint8_t*>(b_ptr.get());
+			return std::shared_ptr<const void>( o_ptr+offset, proxy );
+		} else
+			return std::static_pointer_cast<const void>(b_ptr);
+	};
 };
 }

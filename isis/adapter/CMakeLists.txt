@@ -12,14 +12,16 @@
 # optional components
 ############################################################
 option(ISIS_QT5 "Enable adapter to the Qt5 library" OFF)
+option(ISIS_PYTHON "Enable adapter to the Qt5 library" OFF)
 
 if(ISIS_QT5)
 	set(ISIS_QT_VERSION_API "0.0.0")
 	string( REGEX MATCH "^[0-9]+" ISIS_QT_VERSION_SO ${ISIS_QT_VERSION_API})
 
-	find_package(Qt5Widgets)
+	find_package(Qt5 COMPONENTS Widgets)
 
 	set(CMAKE_AUTOMOC ON)
+	set(CMAKE_AUTOUIC ON)
 	add_lib(isis_qt5
 		"qt5/*.cpp" "qt5/*.hpp" "isis/adapter/qt5"
 		"isis_core-TYPE;Qt5::Widgets" "Threads::Threads"
@@ -55,4 +57,8 @@ if(ISIS_ITK)
 		"isis_core-TYPE;isis_math-TYPE" "ITKCommon;ITKTransform"
 		"0.0.0" "0.0.0"
 	)
+endif()
+
+if(ISIS_PYTHON)
+	add_subdirectory(python)
 endif()

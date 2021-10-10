@@ -35,15 +35,14 @@ void readDataItems(DicomElement &token, std::multimap<uint32_t, data::ValueArray
 	}
 	assert(token.getID32()==0xFFFEE0DD);//we expect a sequence delimiter (will be eaten by the calling loop)
 }
+util::PropertyMap readSequence(DicomElement &token,std::multimap<uint32_t,data::ValueArray> &data_elements,const std::function<bool(DicomElement &token)>& delimiter);
 util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap<uint32_t,data::ValueArray> &data_elements){
 	size_t start=token.getPosition();
 	util::PropertyMap ret;
 
 	do{
-		//break the loop if we find a delimiter
-		if(
-		    token.getID32()==0xFFFEE00D //Item Delim. Tag
-		){
+		//break the loop if we find an item delimiter
+		if(token.getID32()==0xFFFEE00D){
 			token.next(token.getPosition()+8);
 			break;
 		}
@@ -64,8 +63,11 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 				    << "Found " << inserted->second.typeName() << "-data for " << token.getIDString() << " at " << token.getPosition()
 				    << " it is " <<token.getLength() << " bytes long";
 			}
+			if(!token.next())
+			    break;
 		}else if(vr=="SQ"){ // http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_7.5.html
-			uint32_t len=token.getLength();
+
+            uint32_t len=token.getLength();
 			const auto name=token.getName();
 
 			//get to first item
@@ -75,26 +77,50 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 				token.next(token.getPosition()+4+2+2+4);//explicit SQ (4 bytes tag-id + 2bytes "SQ" + 2bytes reserved + 4 bytes length)
 
 			const size_t start_sq=token.getPosition();
-			LOG_IF(len==0xffffffff,Debug,verbose_info) << "Sequence of undefined length found (" << name << "), looking for items at " << start_sq;
-			LOG_IF(len!=0xffffffff,Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start_sq;
 
-			//load items (which themself again are made of tags)
-			while(token.getPosition()-start_sq<len && token.getID32()!=0xFFFEE0DD){ //break the loop when we find the sequence delimiter tag or reach the end
-				assert(token.getID32()==0xFFFEE000);//must be an item-tag
-				const size_t item_len=token.getLength();
-				token.next(token.getPosition()+8);
-				util::PropertyMap subtree=readStream(token,item_len,data_elements);
-				ret.touchBranch(name).transfer(subtree);
-			}
-			LOG(Debug,verbose_info) << "Sequence " << name << " finished, continuing at " << token.getPosition()+token.getLength()+8;
+            std::function<bool(DicomElement &token)> delimiter;
+
+            if(len==0xffffffff){
+                LOG(Debug,verbose_info) << "Sequence of undefined length found (" << name << "), looking for items at " << start_sq;
+                delimiter=[](DicomElement &t){
+                    if(t.getID32()==0xFFFEE0DD) { //sequence delimiter
+                        t.next(t.getPosition()+8); // eat the delimiter and exit
+                        return true;
+                    } else
+                        return false;
+                };
+            } else {
+                assert(len<stream_len); //sequence length mus be shorter then the stream its in
+                LOG(Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start_sq;
+                delimiter=[start_sq,len](DicomElement &t){return t.getPosition()>=start_sq+len;};
+            }
+
+            util::PropertyMap subtree=readSequence(token,data_elements,delimiter);
+            ret.touchBranch(name).transfer(subtree);
+			LOG(Debug,verbose_info) << "Sequence " << name << " started at " << start_sq << " finished, continuing at " << token.getPosition();
 		}else{
 			auto value=token.getValue(vr);
 			if(value){
 				ret.touchProperty(token.getName())=*value;
 			}
-		}
-	}while(token.next() && token.getPosition()-start<stream_len);
+            if(!token.next())
+                break;
+        }
+	}while(token.getPosition()-start<stream_len);
 	return ret;
+}
+
+util::PropertyMap readSequence(DicomElement &token,std::multimap<uint32_t,data::ValueArray> &data_elements, const std::function<bool(DicomElement &token)>& delimiter){
+    util::PropertyMap ret;
+    //load items (which themself again are made of tags)
+    while(!delimiter(token) && !token.eof()){
+        assert(token.getID32()==0xFFFEE000);//must be an item-tag
+        const size_t item_len=token.getLength();
+        token.next(token.getPosition()+8);
+        util::PropertyMap buffer=readStream(token,item_len,data_elements);
+        ret.transfer(buffer);
+    }
+    return ret;
 }
 template<typename T>
 data::ValueArray repackValueArray(data::ValueArray &data){
@@ -186,18 +212,18 @@ public:
 const char ImageFormat_Dicom::dicomTagTreeName[] = "DICOM";
 const char ImageFormat_Dicom::unknownTagName[] = "UnknownTag/";
 
-util::istring ImageFormat_Dicom::suffixes( io_modes modes )const
+std::list<util::istring> ImageFormat_Dicom::suffixes(io_modes modes )const
 {
 	if( modes == write_only )
-		return util::istring();
+		return {};
 	else
-		return ".ima .dcm";
+		return {".ima",".dcm"};
 }
 std::string ImageFormat_Dicom::getName()const {return "Dicom";}
 std::list<util::istring> ImageFormat_Dicom::dialects()const {return {"siemens","withExtProtocols","nocsa","keepmosaic","forcemosaic"};}
 
 
-void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::istring> dialects )
+void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<util::istring>& dialects )
 {
 	const util::istring prefix = util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/";
 	util::PropertyMap &dicomTree = object.touchBranch( dicomTagTreeName );
@@ -299,9 +325,9 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 			util::fvector3 row, column;
 			auto b = buff.begin();
 
-			for ( int i = 0; i < 3; i++ )row[i] = *b++;
+			for ( int i = 0; i < 3; i++ )row[i] = float(*b++);
 
-			for ( int i = 0; i < 3; i++ )column[i] = *b++;
+			for ( int i = 0; i < 3; i++ )column[i] = float(*b++);
 
 			object.setValueAs( "rowVec" , row );
 			object.setValueAs( "columnVec", column );
@@ -331,7 +357,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, std::list<util::ist
 		auto CSA_SliceRes =object.queryValueAs<float>("DICOM/CSASeriesHeaderInfo/SliceResolution");
 
 		if( CSA_SliceNumber && CSA_SliceRes ){
-			util::fvector3 orig {0,0,*CSA_SliceNumber / *CSA_SliceRes	};
+			util::fvector3 orig {0,0,float(*CSA_SliceNumber) / *CSA_SliceRes	};
 			LOG(Runtime, info) << "Synthesize missing indexOrigin from SIEMENS CSA HEADER/ProtocolSliceNumber as " << orig;
 			object.setValueAs("indexOrigin", orig);
 		} else {
@@ -506,7 +532,7 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 	const auto rowVec = source.getValueAs<util::fvector3>( "rowVec" );
 	const auto columnVec = source.getValueAs<util::fvector3>( "columnVec" );
 	//remove the additional mosaic offset
-	//eg. if there is a 10x10 Mosaic, substract the half size of 9 Images from the offset
+	//eg. if there is a 10x10 Mosaic, subtract the half size of 9 Images from the offset
 	const util::fvector3 fovCorr = ( voxelSize + voxelGap ) * size * ( matrixSize - 1 ) / 2; // @todo this will not include the voxelGap between the slices
 	auto &origin = source.refValueAs<util::fvector3>( "indexOrigin" );
 	origin = origin + ( rowVec * fovCorr[0] ) + ( columnVec * fovCorr[1] );
@@ -541,9 +567,9 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 	// update fov
 	if ( dest.hasProperty( "fov" ) ) {
 		auto &ref = dest.refValueAs<util::fvector3>( "fov" );
-		ref[0] /= matrixSize;
-		ref[1] /= matrixSize;
-		ref[2] = voxelSize[2] * images + voxelGap[2] * ( images - 1 );
+		ref[0] /= float(matrixSize);
+		ref[1] /= float(matrixSize);
+		ref[2] = voxelSize[2] * float(images) + voxelGap[2] * float( images - 1 );
 	}
 
 	// for every slice add acqTime to Multivalue
@@ -597,15 +623,13 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 	size_t meta_info_length = _internal::DicomElement(source,128+4,boost::endian::order::little,false).getValue()->as<uint32_t>();
 	std::multimap<uint32_t,data::ValueArray> data_elements;
 
-	LOG(Debug,info)<<"Reading Meta Info begining at " << 158 << " length: " << meta_info_length-14;
+	LOG(Debug,info)<<"Reading Meta Info beginning at " << 158 << " length: " << meta_info_length-14;
 	_internal::DicomElement m(source,158,boost::endian::order::little,false);
 	util::PropertyMap meta_info=readStream(m,meta_info_length-14,data_elements);
 
 	const auto transferSyntax= meta_info.getValueAsOr<std::string>("TransferSyntaxUID","1.2.840.10008.1.2");
-	boost::endian::order endian;
 	bool implicit_vr=false;
 	if(transferSyntax=="1.2.840.10008.1.2"){  // Implicit VR Little Endian
-		 endian=boost::endian::order::little;
 		 implicit_vr=true;
 	} else if(
 	    transferSyntax.substr(0,19)=="1.2.840.10008.1.2.1" // Explicit VR Little Endian
@@ -613,11 +637,9 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 	    || transferSyntax=="1.2.840.10008.1.2.4.90" //JPEG 2000 Image Compression (Lossless Only)
 #endif //HAVE_OPENJPEG
 	){
-		 endian=boost::endian::order::little;
 	} else if(transferSyntax=="1.2.840.10008.1.2.2"){ //explicit big endian
-		 endian=boost::endian::order::big;
 	} else {
-		LOG(Runtime,error) << "Sorry, transfer syntax " << transferSyntax <<  " is not (yet) supportet";
+		LOG(Runtime,error) << "Sorry, transfer syntax " << transferSyntax <<  " is not (yet) supported";
 		ImageFormat_Dicom::throwGenericError("Unsupported transfer syntax");
 	}
 
@@ -703,7 +725,7 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 
 void ImageFormat_Dicom::write( const data::Image &/*image*/, const std::string &/*filename*/, std::list<util::istring> /*dialects*/, std::shared_ptr<util::ProgressFeedback> /*feedback*/ )
 {
-	throw( std::runtime_error( "writing dicom files is not yet supportet" ) );
+	throw( std::runtime_error( "writing dicom files is not yet supported" ) );
 }
 
 ImageFormat_Dicom::ImageFormat_Dicom()

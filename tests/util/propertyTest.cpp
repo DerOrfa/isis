@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE( property_compare_test )
 	for(int i=0;i<5;i++){
 		fives16bit.push_back((uint16_t)5);
 		fivesint.push_back((int)5);
-		fivesstr.push_back("5");
+		fivesstr.push_back(std::string("5"));
 	}
 
 	BOOST_CHECK( fives16bit.eq(fivesint)); // not the same type

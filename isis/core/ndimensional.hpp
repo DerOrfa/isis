@@ -10,20 +10,18 @@
 //
 //
 
-#ifndef NDIMENSIONAL_H
-#define NDIMENSIONAL_H
+#pragma once
 
 #define __need_size_t
-#include <stddef.h>
+#include <cstddef>
 #include <algorithm>
 #include <string>
 #include "common.hpp"
+#include "stringop.hpp"
 #include "vector.hpp"
 #include "progressfeedback.hpp"
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 
 /// Base class for anything that has dimensional size
@@ -51,18 +49,10 @@ template<unsigned short DIMS> class NDimensional
 			return {index};
 		}
 	}
-	constexpr bool _rangeCheck( const std::array<size_t,DIMS> &d, unsigned short DIM )const
-	{
-		return DIM ?
-			( d[DIM] < m_dim[DIM] ) && _rangeCheck( d, DIM - 1 ):
-			d[0] < m_dim[0];
-	}
-
-
 
 protected:
 	static constexpr size_t dims = DIMS;
-	NDimensional() {}
+	NDimensional() = default;
 public:
 	/**
 	 * Initializes the size-vector.
@@ -70,9 +60,7 @@ public:
 	 * \param d array with sizes to use. (d[0] is most iterating element / lowest dimension)
 	 */
 	void init(const std::array<size_t,DIMS> &d ) {m_dim = d;}
-	NDimensional( const NDimensional &src ) {//@todo default copier should do the job
-		init( src.m_dim );
-	}
+	NDimensional( const NDimensional &src ) = default;
 	/**
 	 * Compute linear index from n-dimensional index,
 	 * \param coord array of indexes (d[0] is most iterating element / lowest dimension)
@@ -93,18 +81,22 @@ public:
 	 * \param coord index to be checked (d[0] is most iterating element / lowest dimension)
 	 * \returns true if given index will get a reasonable result when used for getLinearIndex
 	 */
-	bool isInRange( const std::array<size_t,DIMS> &coord )const {
-		return _rangeCheck( coord, DIMS - 1 );
+	constexpr bool isInRange( const std::array<size_t,DIMS> &coord )const {
+		for(unsigned short i=0;i<DIMS;i++){
+			if(coord[i]>=m_dim[i])
+				return false;
+		}
+		return true;
 	}
 	/**
 	 * Get the size of the object in elements of TYPE.
 	 * \returns \f$ \prod_{i=0}^{DIMS-1} getDimSize(i) \f$
 	 */
-	size_t getVolume()const {
+	[[nodiscard]] size_t getVolume()const {
 		return _dimStride( DIMS );
 	}
 	///\returns the size of the object in the given dimension
-	size_t getDimSize( size_t idx )const {
+	[[nodiscard]] size_t getDimSize( size_t idx )const {
 		return m_dim[idx];
 	}
 
@@ -121,6 +113,7 @@ public:
 	/**
 	 * get amount of relevant dimensions (last dim with size>1)
 	 * e.g. on a slice (1x64x1x1) it will be 2
+	 * Therefore getDimSize(getRelevantDims()-1) will be 64
 	 */
 	size_t getRelevantDims()const {
 		size_t ret = 0;
@@ -172,6 +165,5 @@ public:
 };
 
 }
-}
 
-#endif // NDIMENSIONAL_H
+

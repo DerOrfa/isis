@@ -16,16 +16,14 @@
 
 */
 
-#ifndef PROGPARAMETER_HPP
-#define PROGPARAMETER_HPP
+#pragma once
 
 #include "property.hpp"
 #include <string>
 #include <map>
+#include <ostream>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 /**
  * Container class for programm parameters (commandline parameters) given to applications derived from isis.
@@ -36,7 +34,7 @@ namespace util
 class ProgParameter: public PropertyValue
 {
 	std::string m_description;
-	bool m_hidden, m_parsed;
+	bool m_hidden=false, m_parsed=false;
 public:
 	/**
 	 * Default constructor.
@@ -59,19 +57,19 @@ public:
 	 * Parameters of type bool will be set true in any case.
 	 * Important: you cannot parse into empty parameters  because they dont have a type.
 	 * \param props the value as string written on commandline to be put into this parameter
-	 * \return true if parsing was succesful, false otherwise
+	 * \return true if parsing was successful, false otherwise
 	 */
 	bool parse( const std::string &prop );
 	bool parse_list( const util::slist &props_list );
 	
 	/// \return the description string
-	const std::string &description()const;
+	[[nodiscard]] const std::string &description()const;
 	/* set the description string
 	*  \param desc description to be set */
 	void setDescription( const std::string &desc );
 	/**
 	 * Implicit cast to Value T.
-	 * If the parameter does not contain T, a rutime error will be raised
+	 * If the parameter does not contain T, a runtime error will be raised
 	 */
 	template<typename T> operator const T()const {
 		LOG_IF( isEmpty(), isis::CoreDebug, isis::error ) << "Program parameters must not be empty. Please set it to any value.";
@@ -81,45 +79,26 @@ public:
 	explicit operator bool()const;
 
 	/// \returns true, if the parameter was ever successfully parsed
-	bool isParsed()const;
+	[[nodiscard]] bool isParsed()const;
 
 	///returns true for hidden parameters, false otherwise
-	bool isHidden()const;
+	[[nodiscard]] bool isHidden()const;
 
 	///\copydoc isHidden
 	bool &hidden();
+
+	friend std::ostream &operator<<(std::ostream &os, const ProgParameter &parameter);
 };
 
 /**
  * A Map of all current Program Parameters when reading from the commandline.
- * Handles instances of ProgParameter for every expected programm parameter and sets them by reading an argc/argv pair.
+ * Handles instances of ProgParameter for every expected program parameter and sets them by reading an argc/argv pair.
  */
 class ParameterMap: public std::map<std::string, ProgParameter>
 {
-	struct neededP {
-		bool operator()( const_reference ref )const {return ref.second.isNeeded();}
-	};
-	struct notneededP {
-		bool operator()( const_reference ref )const {return !ref.second.isNeeded();}
-	};
-	struct hiddenP {
-		bool operator()( const_reference ref )const {return ref.second.isHidden();}
-	};
-	template<class T> void printWithout() {
-		std::map<key_type, mapped_type, key_compare> result( *this );
-
-		for (
-			iterator found = std::find_if( result.begin(), result.end(), T() );
-			found != result.end();
-			found = std::find_if( found, result.end(), hiddenP() )
-		)
-			result.erase( found++ );
-
-		std::cout << result << std::endl;
-	}
 	bool parsed;
 public:
-	const ProgParameter operator[]( const std::string key )const;
+	ProgParameter operator[]( const std::string key )const;
 	ProgParameter &operator[]( const std::string key );
 	/*
 	 * Default constructor to create an empty parameter map
@@ -135,33 +114,9 @@ public:
 	bool parse( int argc, char **argv );
 
 	/// \returns true, if ALL needed parameter were correctly parsed, false otherwise
-	bool isComplete()const;
+	[[nodiscard]] bool isComplete()const;
 };
 
 }
-}
-/// @cond _internal
-namespace std
-{
-/// Streaming output for ProgParameter - classes
-template<typename charT, typename traits> basic_ostream<charT, traits>&
-operator<<( basic_ostream<charT, traits> &out, const isis::util::ProgParameter &s )
-{
-	const std::string &desc = s.description();
 
-	if ( ! desc.empty() ) {
-		out << desc << ", ";
-	}
 
-	LOG_IF( s.isEmpty(), isis::CoreDebug, isis::error ) << "Program parameters must not be empty. Please set it to any value.";
-	assert( !s.isEmpty() );
-	out << "default=\"" << s.toString( false ) << "\", type=" << s.getTypeName();
-
-	if ( s.isNeeded() )out << " (needed)";
-
-	return out;
-}
-}
-/// @endcond _internal
-
-#endif // PROGPARAMETER_HPP

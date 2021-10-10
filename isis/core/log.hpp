@@ -10,20 +10,15 @@
 //
 //
 
-#ifndef LOG_H
-#define LOG_H
+#pragma once
 
 #include <string>
 #include "message.hpp"
 #include "singletons.hpp"
-#include <limits.h>
+#include <climits>
 
 /// @cond _internal
-namespace isis
-{
-namespace util
-{
-namespace _internal
+namespace isis::util::_internal
 {
 
 template<class MODULE> class Log
@@ -49,8 +44,6 @@ public:
 };
 
 }
-}
-}
 /// @endcond
 
 #define ENABLE_LOG(MODULE,HANDLE_CLASS,set)\
@@ -62,4 +55,4 @@ public:
 #define LOG_IF(PRED,MODULE,LEVEL)\
 	if(!(MODULE::use && (PRED)));else isis::util::_internal::Log<MODULE>::send(__FILE__,__FUNCTION__,__LINE__,LEVEL)
 
-#endif
+

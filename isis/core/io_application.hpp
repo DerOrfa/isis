@@ -17,25 +17,19 @@
 
 */
 
-#ifndef DATA_IOAPPLICATION_HPP
-#define DATA_IOAPPLICATION_HPP
+#pragma once
 
 #include "application.hpp"
 #include "progressfeedback.hpp"
 #include "image.hpp"
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 
 class IOApplication: public util::Application
 {
+protected:
 	bool m_input;
-	template< typename TYPE > std::list<data::TypedImage<TYPE> > convertTo( const std::list<data::Image> &src ) {
-		return std::list<data::TypedImage<TYPE> >( src.begin(), src.end() );
-	}
-
 public:
 	std::list<data::Image> images;
 	/**
@@ -67,10 +61,10 @@ public:
 	static void addOutput( util::ParameterMap &parameters, const std::string &desc = "", const std::string &suffix = "", bool needed = true );
 	void addOutput( const std::string &desc = "", const std::string &suffix = "", bool needed = true );
 	
-	IOApplication( const char name[], bool have_input = true, bool have_output = true, const char cfg[]="" );
-	virtual ~IOApplication();
-	virtual bool init( int argc, char **argv, bool exitOnError = true );
-	virtual void printHelp( bool withHidden = false ) const;
+	explicit IOApplication( std::string_view name, bool have_input = true, bool have_output = true, std::string_view cfg="" );
+	~IOApplication();
+	bool init( int argc, char **argv, bool exitOnError = true ) override;
+	void printHelp( bool withHidden = false ) const override;
 
 	/**
 	 * Get the next image from the input.
@@ -86,7 +80,7 @@ public:
 	 * that all chunks of this image are of the given type (using convertToType).
 	 * If the input image list is empty, an exception is thrown.
 	 * You might want to check the amount of available images via images.size().
-	 * \param copy enforce deep copy of the data, even if its not neccessary
+	 * \param copy enforce deep copy of the data, even if its not necessary
 	 * \returns the currently first image in the input chain represented in the given type
 	 */
 	template<typename TYPE> TypedImage<TYPE> fetchImageAs( bool copy = true ) {
@@ -96,7 +90,7 @@ public:
 	/** Load data into the input list of the Application using the internal ParameterMap.
 	 * This is the default loading function, it is calling autoload( const util::ParameterMap &, std::list< Image >&, bool, const std::string &, std::shared_ptr< util::ConsoleFeedback > )
 	 * with the ParameterMap of the application and stores the loaded image in its input list (see fetchImage and fetchImageAs).
-	 * \note usually there is no nedd to explicitely call that function. It is called automatically by init() if the Application is set up for input (see IOApplication()).
+	 * \note usually there is no need to explicitly call that function. It is called automatically by init() if the Application is set up for input (see IOApplication()).
 	 */
 	std::list< Image > autoload(bool exitOnError = false,const std::string &suffix = "",util::slist* rejected=nullptr);
 
@@ -139,10 +133,8 @@ public:
 	/// \overload autowrite( const util::ParameterMap &, Image, bool, const std::string &, std::shared_ptr< util::ConsoleFeedback > feedback)
 	static bool autowrite( const util::ParameterMap &parameters, std::list< Image > out_images, bool exitOnError = false, const std::string &suffix = "");
 
-	virtual std::shared_ptr<util::MessageHandlerBase> getLogHandler( std::string module, isis::LogLevel level )const;
 };
 
 }
-}
 
-#endif // DATA_IOAPPLICATION_HPP
+

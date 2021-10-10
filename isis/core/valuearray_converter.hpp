@@ -17,8 +17,7 @@
 
 */
 
-#ifndef TYPEPTR_CONVERTER_H
-#define TYPEPTR_CONVERTER_H
+#pragma once
 
 #include <memory>
 #include <map>
@@ -26,9 +25,7 @@
 
 /// @cond _internal
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 
 class ValueArray;
@@ -48,7 +45,11 @@ public:
 API_EXCLUDE_BEGIN;
 namespace _internal
 {
-class ValueArrayConverterMap : public std::map< int , std::map<int, std::shared_ptr<const ValueArrayConverterBase> > >
+typedef std::shared_ptr<const ValueArrayConverterBase> ConverterPtr;
+typedef std::map< size_t, std::map<size_t, ConverterPtr> > ConverterMap;
+
+
+class ValueArrayConverterMap : public ConverterMap
 {
 public:
 	ValueArrayConverterMap();
@@ -57,7 +58,5 @@ public:
 }
 API_EXCLUDE_END;
 }
-}
 
 /// @endcond _internal
-#endif // TYPEPTR_CONVERTER_H

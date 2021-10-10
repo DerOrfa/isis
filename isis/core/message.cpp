@@ -103,7 +103,7 @@ Message::Message( std::string object, std::string module, std::string file, int 
 	  m_level( level )
 {}
 
-Message::Message( Message &&src ) : std::ostringstream(std::forward<std::ostringstream>(src) ),
+Message::Message( Message &&src ) noexcept : std::ostringstream(std::forward<std::ostringstream>(src) ),
 	  commitTo( src.commitTo ),
 	  m_object( src.m_object ),
 	  m_module( src.m_module ),
@@ -117,7 +117,7 @@ Message::Message( Message &&src ) : std::ostringstream(std::forward<std::ostring
 Message::~Message()
 {
 	if ( shouldCommit() ) {
-		commitTo.lock()->commit( *this );
+		commitTo.lock()->guardedCommit(*this);
 		std::ostringstream::str( "" );
 		clear();
 		commitTo.lock()->requestStop( m_level );
@@ -125,7 +125,7 @@ Message::~Message()
 }
 
 
-std::string Message::merge(const std::string color_code)const
+std::string Message::merge(const std::string& color_code)const
 {
 	const std::string reset_code(color_code.empty()? "":"\033[0m");
 	const std::string s_prefix(color_code.empty()? "\"":"\x1B[1m");
@@ -169,6 +169,12 @@ std::string Message::str() const{
 
 LogLevel MessageHandlerBase::m_stop_below = error;
 
+void MessageHandlerBase::guardedCommit(const Message &msg)
+{
+	std::scoped_lock lock(mutex);
+	commit(msg);
+}
+
 DefaultMsgPrint::DefaultMsgPrint(LogLevel level): MessageHandlerBase( level ), istty(isatty(fileno(stderr))) {}
 
 void DefaultMsgPrint::commit( const Message &mesg )
@@ -211,7 +217,7 @@ void DefaultMsgPrint::commit_tty(const Message& mesg)
 
 #ifndef NDEBUG //if with debug-info
 		fprintf(
-			stderr,"%s:%s[%s:%d]%s\n",
+			stderr,"\r%s:%s[%s:%d]%s\n",
 			mesg.m_module.c_str(),
 			logLevelName( mesg.m_level ),
 			mesg.m_file.filename().c_str(),
@@ -220,7 +226,7 @@ void DefaultMsgPrint::commit_tty(const Message& mesg)
 		);
 #else
 		fprintf(
-			stderr,"%s:%s[%s]%s\n",
+			stderr,"\r%s:%s[%s]%s\n",
 			mesg.m_module.c_str(),
 			logLevelName( mesg.m_level ),
 			mesg.m_object.c_str(),

@@ -2,7 +2,7 @@
 #define NOMINMAX 1
 
 #include <boost/test/unit_test.hpp>
-#include "../../isis/adapter/qt5/common.hpp"
+#include "../../isis/adapter/qt5/qimage_adapter.hpp"
 #include <QImage>
 #include <tuple>
 

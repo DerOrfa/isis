@@ -1,9 +1,7 @@
 #include "common.hpp"
 #include <string>
 
-namespace isis
-{
-namespace util
+namespace isis::util
 {
 
 std::string getLastSystemError()
@@ -40,7 +38,7 @@ std::filesystem::path getRootPath(std::list< std::filesystem::path > sources,boo
 		sources.sort();
 	sources.erase( std::unique( sources.begin(), sources.end() ), sources.end() );
 	
-	// thats to short
+	// that's too short
 	if( sources.empty() ) {
 		LOG( Runtime, error ) << "Failed to get root path (list is empty)";
 	} else if( sources.size() == 1 ) // ok, we got one unique path, return that
@@ -64,5 +62,4 @@ std::filesystem::path getRootPath(std::list< std::filesystem::path > sources,boo
 }
 
 
-}
 }

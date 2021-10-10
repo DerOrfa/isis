@@ -10,21 +10,19 @@
 //
 //
 
-#ifndef CHUNK_H
-#define CHUNK_H
+#pragma once
 
 #include "vector.hpp"
 #include "valuearray.hpp"
 #include "log.hpp"
 #include "propmap.hpp"
 #include "common.hpp"
-#include <string.h>
+#include <cstring>
 #include <list>
+#include <ostream>
 #include "ndimensional.hpp"
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 
 class Chunk;
@@ -44,7 +42,7 @@ protected:
 	 */
 	Chunk(bool fakeValid=false);
 public:
-	static const char *neededProperties;
+	static std::list<PropPath> neededProperties;
 	typedef ValueArray::iterator iterator;
 	typedef ValueArray::const_iterator const_iterator;
 
@@ -197,22 +195,30 @@ public:
 
 	/**
 	 * Splices the chunk at the uppermost dimension and automatically sets indexOrigin and acquisitionNumber appropriately.
-	 * This automatically selects the upermost dimension of the chunk to be spliced and will compute the correct offsets
+	 * This automatically selects the uppermost dimension of the chunk to be spliced and will compute the correct offsets
 	 * for indexOrigin and acquisitionNumberOffset which will be applied to the resulting splices.
 	 *
 	 * E.g. autoSplice() on a chunk of the size 512x512x128, with rowVec 1,0,0, columnVec 0,1,0 and indexOrigin 0,0,0
 	 * will result in 128 chunks of the size 512x512x1, with constant rowVec's 1,0,0, and columnVec's 0,1,0  while the indexOrigin will be going from 0,0,0 to 0,0,128
 	 * (If voxelSize is 1,1,1 and voxelGap is 0,0,0). The acquisitionNumber will be reset to a simple incrementing counter starting at acquisitionNumberOffset.
-	 * \attention As this will also move alle properties into the "splinters" this chunk will be invalid afterwards
+	 * \attention As this will also move all properties into the "splinters" this chunk will be invalid afterwards
 	 */
-	std::list<Chunk> autoSplice( uint32_t acquisitionNumberStride = 0 )const;
+	[[nodiscard]] std::list<Chunk> autoSplice()const;
+	/**
+	 * Same as autoSplice( uint32_t acquisitionNumberStride = 0 ) but with arbitrary splicing depth
+	 * @param atDim the dimension at which the splicing should be done. That means atDim=sliceDim results in a list of slices.
+	 * @param acquisitionNumberStride
+	 * @return
+	 */
+	[[nodiscard]] std::list<Chunk> autoSplice( dimensions atDim)const;
 
 	/**
 	 * Splices the chunk at the given dimension and all dimensions above.
 	 * E.g. spliceAt\(columnDim\) on a chunk of the size 512x512x128 will result in 512*128 chunks of the size 512x1x1
 	 * \attention As this will also move alle properties into the "splinters" this chunk will be invalid afterwards
 	 */
-	std::list<Chunk> spliceAt(isis::data::dimensions atDim )const;
+	std::list<Chunk> spliceAt(isis::data::dimensions atDim)const;
+	std::list<Chunk> spliceAt(isis::data::dimensions atDim, util::PropertyMap &&propSource )const;
 
 	/**
 	  * Flips the chunk along a dimension dim in image space.
@@ -223,6 +229,8 @@ public:
 	void swapDim(unsigned short dim_a,unsigned short dim_b,std::shared_ptr<util::ProgressFeedback> feedback=std::shared_ptr<util::ProgressFeedback>());
 
 	bool isValid()const{return ValueArray::isValid() && util::PropertyMap::isValid();}
+
+	friend std::ostream &operator<<(std::ostream &os, const Chunk &chunk);
 };
 
 template<typename TYPE> class TypedChunk : public Chunk{
@@ -362,17 +370,3 @@ public:
 };
 
 }
-}
-/// @cond _internal
-namespace std
-{
-/// Streaming output for Chunk (forward to PropertyMap)
-template<typename charT, typename traits>
-basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::data::Chunk &s )
-{
-	return out << static_cast<const isis::util::PropertyMap &>( s );
-}
-}
-/// @endcond _internal
-
-#endif // CHUNK_H

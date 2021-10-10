@@ -12,7 +12,7 @@ namespace test
 
 BOOST_AUTO_TEST_CASE ( chunklist_insert_test )
 {
-	data::_internal::SortedChunkList chunks( "rowVec,columnVec,sliceVec,coilChannelMask,sequenceNumber" );
+	data::_internal::SortedChunkList chunks( {"rowVec","columnVec","sliceVec","coilChannelMask","sequenceNumber"} );
 	chunks.addSecondarySort( "acquisitionNumber" );
 	chunks.addSecondarySort( "acquisitionTime" );
 
@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE ( chunklist_insert_test )
 
 BOOST_AUTO_TEST_CASE ( chunklist_sort_test )
 {
-	data::_internal::SortedChunkList chunks( "rowVec,columnVec,sliceVec,coilChannelMask,sequenceNumber" );
+	data::_internal::SortedChunkList chunks({"rowVec", "columnVec", "sliceVec", "coilChannelMask", "sequenceNumber"} );
 	chunks.addSecondarySort( "acquisitionNumber" );
 	chunks.addSecondarySort( "acquisitionTime" );
 

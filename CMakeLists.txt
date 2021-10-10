@@ -13,8 +13,8 @@ cmake_minimum_required(VERSION 3.15.0)
 # set isis version number
 ############################################################
 set(ISIS_VERSION_MAJOR "0")
-set(ISIS_VERSION_MINOR "7")
-set(ISIS_VERSION_PATCH "16")
+set(ISIS_VERSION_MINOR "8")
+set(ISIS_VERSION_PATCH "0")
 
 set(ISIS_VERSION
   ${ISIS_VERSION_MAJOR}.${ISIS_VERSION_MINOR}.${ISIS_VERSION_PATCH}
@@ -58,6 +58,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 ############################################################
+# conan based dependency resolution
+############################################################
+option(USE_CONAN "Use conan for dependencies" OFF)
+if(USE_CONAN)
+	include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+endif()
+
+############################################################
 # Logging options are global for all components in the tree
 ############################################################
 option(ISIS_RUNTIME_LOG "Enable runtime logging" ON)
@@ -83,7 +91,7 @@ else()
   add_definitions(-D_ENABLE_DEBUG=0)
 endif()
 
-# since ISIS stongly depends on the boost libraries we will configure them
+# since ISIS strongly depends on the boost libraries we will configure them
 # globally.
 if(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS iostreams unit_test_framework)
@@ -92,7 +100,7 @@ else()
 endif()
 
 ############################################################
-# Macro to generate manpages for CLI programms
+# Macro to generate manpages for CLI programs
 ############################################################
 set(MANPAGES OFF CACHE BOOL "Create manpages for the tools")
 
@@ -150,8 +158,8 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/COPYING.txt")
 set(CPACK_PACKAGE_VERSION_MAJOR ${ISIS_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${ISIS_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${ISIS_VERSION_PATCH})
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${ISIS_CORE_REV_STRING}-${CMAKE_SYSTEM_NAME}-${PROCESSOR}-${CMAKE_BUILD_TYPE})
-#SET(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${ISIS_VERSION_MAJOR}.${ISIS_VERSION_MINOR}")
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${ISIS_CORE_REV_STRING}-${CMAKE_SYSTEM_NAME}-${CMAKE_BUILD_TYPE})
+SET(CPACK_PACKAGING_INSTALL_PREFIX "/usr") #prevent the productbuild generator from stuffing files into "/Applications"
 set(CPACK_NSIS_MODIFY_PATH ON)
 set(CPACK_NSIS_URL_INFO_ABOUT "http:\\\\\\\\isis-group.github.com/isis")
 include(CPack)

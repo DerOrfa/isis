@@ -1,17 +1,12 @@
 #include "value.hpp"
-#include "valuearray_iterator.hpp"
 
 #include <sstream>
 
 namespace isis::util{
 
-Value::Value(const ValueTypes &v): ValueTypes(v){
-	LOG(Debug,verbose_info) << "Value copy created from " << v;
-}
+Value::Value(const ValueTypes &v): ValueTypes(v){}
 
-Value::Value(ValueTypes &&v): ValueTypes(v){
-	LOG(Debug,verbose_info) << "Value move created from " << v;
-}
+Value::Value(ValueTypes &&v): ValueTypes(v){}
 
 std::string Value::toString(bool with_typename)const{
 	std::stringstream o;
@@ -95,7 +90,6 @@ bool Value::convert(const Value &from, Value &to) {
 			    break;
 		    case boost::numeric::cInRange:
 			    return true;
-			    break;
 		}
 	} else {
 		LOG( Runtime, error )
@@ -146,7 +140,7 @@ bool Value::eq(const Value &ref )const {
 }
 
 Value Value::plus(const Value &ref )const{return Value(*this).add(ref);}
-Value Value::minus(const Value &ref )const{return Value(*this).substract(ref);}
+Value Value::minus(const Value &ref )const{return Value(*this).subtract(ref);}
 Value Value::multiply(const Value &ref )const{return Value(*this).multiply_me(ref);}
 Value Value::divide(const Value &ref )const{return Value(*this).divide_me(ref);}
 
@@ -158,7 +152,7 @@ Value& Value::add(const Value &ref )
 	return std::visit(op,static_cast<ValueTypes&>(*this));
 }
 
-Value& Value::substract(const Value &ref )
+Value& Value::subtract(const Value &ref )
 {
 	auto op=[&](auto ptr)->Value&{
 		return operatorWrapper_me(_internal::type_minus<decltype(ptr)>(), ref );
@@ -184,6 +178,10 @@ Value& Value::divide_me(const Value &ref )
 
 bool Value::apply(const isis::util::Value& other){
 	return convert(other,*this);
+}
+std::ostream &operator<<(std::ostream &out, const Value &s)
+{
+	return s.print(false,out);
 }
 
 }

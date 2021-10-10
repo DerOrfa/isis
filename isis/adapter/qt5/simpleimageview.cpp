@@ -23,7 +23,6 @@
 #include "../../core/io_factory.hpp"
 #include <QSlider>
 #include <QGridLayout>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QGraphicsView>
 #include <QWheelEvent>
@@ -33,9 +32,11 @@
 #include <QPushButton>
 #include <QFileDialog>
 #include <QGraphicsSceneEvent>
+#include <QStatusBar>
+#include "guiprogressfeedback.hpp"
+#include <memory>
 
-namespace isis{
-namespace qt5{
+namespace isis::qt5{
 namespace _internal{
 	
 TransferFunction::TransferFunction(std::pair<util::Value, util::Value> in_minmax): minmax(in_minmax)
@@ -397,7 +398,7 @@ void SimpleImageView::onMouseMoved(QPointF pos){
 	graphicsView->moveCrosshair(pos);
 	pos_label->setText(QString("Position: %1-%2").arg(pos.x()).arg(pos.y()));
 	
-	const QRect rect(0,0,m_img.getDimSize(data::rowDim),m_img.getDimSize(data::rowDim));
+	const QRect rect(0,0,m_img.getDimSize(data::rowDim),m_img.getDimSize(data::columnDim));
 	
 	if(rect.contains(pos.toPoint())){
 		const std::string value=m_img.getVoxelValue(pos.x(),pos.y(),curr_slice,curr_time).toString();
@@ -405,5 +406,22 @@ void SimpleImageView::onMouseMoved(QPointF pos){
 	} else 
 		value_label->setText(QString("Value: --"));
 }
+
+MainImageView::MainImageView()
+{
+	setCentralWidget(tabs = new QTabWidget(this));
+
+	auto progressFeedback=std::make_shared<QStatusBarProgress>(statusBar());
+	data::IOFactory::setProgressFeedback(progressFeedback);
+
+	resize(800,600);
+}
+void MainImageView::images_loaded(isis::qt5::IsisImageList images, QStringList rejects)
+{
+	for(const data::Image &img:images){
+		auto v=new SimpleImageView(img,"",tabs);
+		tabs->addTab(v,QString::fromStdString(img.identify(true,false)));
+	}
 }
 }
+

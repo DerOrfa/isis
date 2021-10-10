@@ -21,8 +21,7 @@
  *
  *****************************************************************/
 
-#ifndef IMAGEFORMAT_VISTA_H_
-#define IMAGEFORMAT_VISTA_H_
+#pragma once
 
 // global includes
 #include <viaio/VImage.h>
@@ -225,7 +224,7 @@ private:
 
 				if ( strcmp ( name, "sex" ) == 0 ) {
 					VGetAttrValue( &posn, NULL, VStringRepn, &val );
-					util::Selection genderSelection( "female,male,other" );
+					util::Selection genderSelection( {"female","male","other"} );
 
 					if ( std::string( ( VString ) val ) == "female" ) {
 						genderSelection.set( "female" );
@@ -508,4 +507,4 @@ private:
 }
 }//namespace image_io isis
 
-#endif /* IMAGEFORMAT_VISTA_H_ */
+

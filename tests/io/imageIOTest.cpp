@@ -22,6 +22,7 @@ BOOST_AUTO_TEST_CASE ( imageNameGenTest )
 	data::MemChunk<uint8_t> ch( 5, 5, 5 );
 	ch.setValueAs( "indexOrigin", util::fvector3( {0, 0, 2} ) );
 	ch.setValueAs<uint32_t>( "acquisitionNumber", 0 );
+	ch.setValueAs<uint32_t>( "sequenceNumber", 0 );
 	ch.setValueAs<float>( "acquisitionTime", 1234 );
 	ch.setValueAs( "rowVec", util::fvector3( {1, 0} ) );
 	ch.setValueAs( "columnVec", util::fvector3( {0, 1} ) );

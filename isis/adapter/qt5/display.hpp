@@ -1,5 +1,4 @@
-#ifndef DISPLAY_HPP
-#define DISPLAY_HPP
+#pragma once
 
 #include "../../core/image.hpp"
 
@@ -17,4 +16,4 @@ namespace qt5{
 }
 }
 
-#endif //DISPLAY_HPP
+

@@ -26,32 +26,34 @@ namespace isis::util
  */
 class Singletons
 {
-	// a map typeid => unique_ptr<void> with dedicated delete functions, so we can hide the actual type from unique_ptr
+	// unique_ptr<void> with a dedicated delete functions, so we can hide the actual type from unique_ptr
 	// in order to keep the pointer (and in extend the registry) type free
-	using registry = std::map<std::type_index,std::unique_ptr<void,std::function<void(void const*)>>>;
+	using single_ptr = std::unique_ptr<void,std::function<void(void const*)>>;
+	// and an attached priority
+	using singleton = std::pair<int,single_ptr>;
+	using registry = std::map<std::type_index,singleton>;
 
 	Singletons()=default;
-	virtual ~Singletons();
-	static std::map<int, Singletons::registry> &getRegistryStack();
+	~Singletons();
+	static registry &getRegistry();
 public:
 	/**
 	 * The first call creates a singleton of type T with the priority PRIO (ascending order),
-	 * all repetetive calls return this object.
+	 * all repetitive calls return this object.
+	 * PRIO is ignored on repeated calls
 	 * \return a reference to the same object of type T.
 	 */
 	template<class T, int PRIO = INT_MAX-1, typename... ARGS> static T &get(ARGS&&... args) {
-		auto &registry=getRegistryStack()[PRIO];
-		auto singleton_it = registry.find(typeid(T));
-		if ( singleton_it==registry.end()) {
+		singleton &sngl= getRegistry()[typeid(T)];
+		if ( !sngl.second ) {
 			// create singleton in unique_ptr where only the deleter knows the type
-			registry::mapped_type ptr(
+			sngl = {PRIO,single_ptr (
 				new T(&args...),
 				[](void const *p){delete(static_cast<T const*>(p));}
-			);
-			singleton_it=registry.emplace(typeid(T),std::move(ptr)).first;
+			)};
 		}
-		assert(singleton_it!=registry.end());
-		return *(static_cast<T*>(singleton_it->second.get()));
+		assert(sngl.second);
+		return *(static_cast<T*>(sngl.second.get()));
 	}
 };
 

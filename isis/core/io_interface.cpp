@@ -48,6 +48,10 @@ void FileFormat::write( const std::list< data::Image >& images, const std::strin
 
 std::list<data::Chunk> FileFormat::load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ){
 	//try open file
+	if(std::filesystem::file_size(filename)==0){
+		LOG(Runtime,warning) << "Ignoring empty file " << filename;
+		return {};
+	}
 	data::FilePtr ptr(filename);
 	if( !ptr.good() ) {
 		if( errno ) {
@@ -147,9 +151,10 @@ void FileFormat::throwSystemError( int err, const std::string& desc )
 
 std::list< util::istring > FileFormat::getSuffixes( io_modes mode )const
 {
-	std::list<util::istring> ret = util::stringToList<util::istring>( suffixes( mode ).c_str() );
-	for( util::istring & ref :  ret ) {
-		ref.erase( 0, ref.find_first_not_of( '.' ) ); // remove leading . if there are some
+	std::list<util::istring> ret;
+
+	for( const util::istring & ref :  suffixes( mode ) ) {
+		ret.push_back(ref.substr(ref.find_first_not_of( '.' )));
 	}
 	ret.sort( _internal::moreCmp ); //start with the longest suffix
 	return ret;

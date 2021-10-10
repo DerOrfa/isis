@@ -18,23 +18,21 @@
 	#include <dlfcn.h>
 #endif
 
-#include <sys/resource.h>
 #include <filesystem>
 #include <iostream>
-#include <vector>
 #include <algorithm>
+#include <utility>
 
 #include "log.hpp"
 #include "common.hpp"
 #include "singletons.hpp"
+#include "fileptr.hpp"
 
 
-namespace isis
+namespace isis::data
 {
-namespace data
-{
 
-IOFactory::io_error::io_error(const char *what,FileFormatPtr format):std::runtime_error(what),p_format(format){}
+IOFactory::io_error::io_error(const char *what,FileFormatPtr format):std::runtime_error(what),p_format(std::move(format)){}
 IOFactory::FileFormatPtr IOFactory::io_error::which()const{
 	return p_format;
 }
@@ -83,11 +81,11 @@ IOFactory::IOFactory()
 #endif
 }
 
-bool IOFactory::registerFileFormat( const FileFormatPtr plugin, bool front ){
+bool IOFactory::registerFileFormat( const FileFormatPtr& plugin, bool front ){
 	return get().registerFileFormat_impl( plugin, front );
 }
 
-bool IOFactory::registerFileFormat_impl( const FileFormatPtr plugin, bool front )
+bool IOFactory::registerFileFormat_impl( const FileFormatPtr& plugin, bool front )
 {
 	if ( !plugin )return false;
 
@@ -150,7 +148,7 @@ unsigned int IOFactory::findPlugins( const std::string &path )
 #else
 					if ( dlclose( handle ) != 0 )
 						std::cerr << "Failed to release plugin " << pluginName << " (was loaded at " << handle << ")";
-					// TODO we cannot use LOG here, because the loggers are gone allready
+					// TODO we cannot use LOG here, because the loggers are gone already
 #endif
 				};
 
@@ -195,14 +193,14 @@ IOFactory &IOFactory::get()
 
 std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback){
 	bool overridden=true;
-	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &v );
+	const std::filesystem::path* filename = std::get_if<std::filesystem::path>( &v );
 	if(formatstack.empty()){
 		if(filename){
 			overridden=false;
 			formatstack=getFormatStack(filename->string());
 		} else {
 			LOG(Runtime,error) << "I got no format stack and no filename to deduce it from, won't load anything..";
-			return std::list<Chunk>();
+			return {};
 		}
 	}
 	FileFormatList readerList = getFileFormatList(formatstack);
@@ -212,7 +210,7 @@ std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istr
 				<< util::MSubject( *filename )
 				<< " does not exist as file, and no suitable plugin was found to generate data from "
 				<< ( overridden ? 
-						util::istring( "the requested format stack \"" ) + util::listToString<util::istring>(formatstack.begin(),formatstack.end()) + "\"": 
+						util::istring( "the requested format stack " ) + util::listToString<util::istring>(formatstack.begin(),formatstack.end()):
 						util::istring( "that name" )
 				);
 
@@ -220,8 +218,8 @@ std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istr
 			LOG( Runtime, error ) << "No plugin supporting the requested format stack " << formatstack << " was found";
 		} else {
 			LOG_IF(filename, Runtime, error ) << "No plugin found to read " << *filename;
-			LOG_IF(boost::get<std::streambuf*>(&v), Runtime, error ) << "No plugin found to load from stream";
-			LOG_IF(boost::get<ByteArray>(&v), Runtime, error ) << "No plugin found to load from memory";
+			LOG_IF(std::holds_alternative<std::streambuf*>(v), Runtime, error ) << "No plugin found to load from stream";
+			LOG_IF(std::holds_alternative<ByteArray>(v), Runtime, error ) << "No plugin found to load from memory";
 		}
 	} else {
 		while( !readerList.empty() ) {
@@ -240,7 +238,7 @@ std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istr
 			LOG_IF(!filename, ImageIoDebug, info ) << "plugin to load " << with_dialect << ": " << format->getName();
 
 			try {
-				std::list<data::Chunk> loaded =boost::apply_visitor(
+				std::list<data::Chunk> loaded =std::visit(
 					[&](auto val) { return format->load( val, formatstack, use_dialects, feedback ); },
 					v
 				);
@@ -260,30 +258,29 @@ std::list<Chunk> IOFactory::load_impl(const load_source &v, std::list<util::istr
 			}
 		}
 	}
-	return std::list<Chunk>();
+	return {};
 }
 
-std::list<util::istring> IOFactory::getFormatStack( std::string filename ){
+std::list<util::istring> IOFactory::getFormatStack( const std::string& filename ){
 	const std::filesystem::path fname( filename );
-	auto ret = util::stringToList<util::istring>( fname.filename().string(), '.' ); // get all suffixes (and the basename)
+	auto ret = util::stringToList<std::string>( fname.filename().string(), '.' ); // get all suffixes (and the basename)
 	if( !ret.empty() )ret.pop_front(); // remove the basename
-	return ret;
+	return util::makeIStringList(ret);
 }
 
 IOFactory::FileFormatList IOFactory::getFileFormatList( std::list<util::istring> format)
 {
 	FileFormatList ret;
-	std::list<util::istring> buffer=format;
 
-	while( !buffer.empty() ) {
-		const util::istring wholeName=util::listToString<util::istring>( buffer.begin(), buffer.end(), ".", "", "" ); // (re)construct the rest of the suffix
-		const std::map<util::istring, FileFormatList>::iterator found = get().io_suffix.find( wholeName );
+	while( !format.empty() ) {
+		const auto wholeName=util::listToString<util::istring>( format.begin(), format.end(), ".", "", "" ); // (re)construct the rest of the suffix
+		const auto found = get().io_suffix.find( wholeName );
 
 		if( found != get().io_suffix.end() ) {
 			LOG( Debug, verbose_info ) << found->second.size() << " plugins support suffix " << wholeName;
 			ret.insert( ret.end(), found->second.begin(), found->second.end() );
 		}
-		buffer.pop_front(); // remove one suffix, and try again
+		format.pop_front(); // remove one suffix, and try again
 	}
 
 	return ret;
@@ -294,7 +291,7 @@ std::list< Image > IOFactory::chunkListToImageList( std::list<Chunk> &src, util:
 	LOG_IF(src.empty(),Debug,warning) << "Calling chunkListToImageList with an empty chunklist";
 	// throw away invalid chunks
 	size_t errcnt=0;
-	for(std::list<Chunk>::iterator i=src.begin();i!=src.end();){
+	for(auto i=src.begin();i!=src.end();){
 		if(!i->isValid()){
 			LOG(image_io::Runtime, error ) << "Rejecting invalid chunk. Missing properties: " << i->getMissing();
 			errcnt++;
@@ -335,14 +332,14 @@ std::list< Image > IOFactory::chunkListToImageList( std::list<Chunk> &src, util:
 
 std::list< Chunk > IOFactory::loadChunks( const load_source &v, std::list<util::istring> formatstack, std::list<util::istring> dialects)
 {
-	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &v );
+	const std::filesystem::path* filename = std::get_if<std::filesystem::path>( &v );
 	if(filename)
 		assert(!std::filesystem::is_directory( *filename ));
-	return get().load_impl( v, formatstack, dialects, get().m_feedback );
+	return get().load_impl( v, std::move(formatstack), std::move(dialects), get().m_feedback );
 }
 
 
-std::list< Image > IOFactory::load( const util::slist &paths, std::list<util::istring> formatstack, std::list<util::istring> dialects, isis::util::slist* rejected )
+std::list< Image > IOFactory::load( const util::slist &paths, const std::list<util::istring>& formatstack, const std::list<util::istring>& dialects, isis::util::slist* rejected )
 {
 	std::list<Chunk> chunks;
 	for( const std::string & path :  paths ) {
@@ -360,7 +357,7 @@ std::list< Image > IOFactory::load( const util::slist &paths, std::list<util::is
 		}
 		chunks.splice(chunks.end(),loaded);
 	}
-	const std::list<data::Image> images = chunkListToImageList( chunks, rejected );
+	std::list<data::Image> images = chunkListToImageList( chunks, rejected );
 	LOG( Runtime, info ) << "Generated " << images.size() << " images out of " << paths;
 
 	// store paths of red, but rejected chunks
@@ -374,15 +371,15 @@ std::list< Image > IOFactory::load( const util::slist &paths, std::list<util::is
 	return images;
 }
 
-std::list<data::Image> IOFactory::load( const load_source &source, std::list<util::istring> formatstack, std::list<util::istring> dialects, isis::util::slist* rejected )
+std::list<data::Image> IOFactory::load( const load_source &source, const std::list<util::istring>& formatstack, const std::list<util::istring>& dialects, isis::util::slist* rejected )
 {
-	const std::filesystem::path* filename = boost::get<std::filesystem::path>( &source );
+	const std::filesystem::path* filename = std::get_if<std::filesystem::path>( &source );
 	if(filename)
 		return load( util::slist{filename->native()}, formatstack, dialects );
 	else {
 		try{
 			std::list<Chunk> loaded=get().load_impl( source , formatstack, dialects, get().m_feedback);
-			const std::list<data::Image> images = chunkListToImageList( loaded, rejected );
+			std::list<data::Image> images = chunkListToImageList( loaded, rejected );
 			LOG( Runtime, info ) << "Generated " << images.size() << " images";
 			return images;
 		} catch (io_error &e){
@@ -392,26 +389,19 @@ std::list<data::Image> IOFactory::load( const load_source &source, std::list<uti
 	}
 }
 
-std::list<Chunk> isis::data::IOFactory::loadPath(const std::filesystem::path& path, std::list<util::istring> formatstack, std::list<util::istring> dialects, util::slist* rejected)
+std::list<Chunk> isis::data::IOFactory::loadPath(const std::filesystem::path& path, const std::list<util::istring>& formatstack, const std::list<util::istring>& dialects, util::slist* rejected)
 {
 	std::list<Chunk> ret;
 	const size_t length = std::distance( std::filesystem::directory_iterator( path ), std::filesystem::directory_iterator() ); //@todo this will also count directories
 	if( m_feedback ) {
 		m_feedback->show( length, std::string( "Reading " ) + std::to_string(length) + " files from " + path.native() );
 	}
-	
-	rlimit rlim;
-	size_t open_files = io_formats.size() + length + 50; //just guessing todo find a way to get the actual amount of open files
+
 	bool no_mapping=false;
-	getrlimit(RLIMIT_NOFILE, &rlim);
-	if(rlim.rlim_cur<open_files){
-		if(rlim.rlim_max>open_files){
-			rlim.rlim_cur=open_files;
-			setrlimit(RLIMIT_NOFILE, &rlim);
-		} else {
-			LOG(Runtime,warning) << "Can't increase the limit for open files to " << length << ", falling back to remapped mode";
-			no_mapping=true;
-		}
+	// if we can handle the opened plugins plus the additional files
+	if(!data::FilePtr::checkLimit(io_formats.size() + length)){
+		LOG(Runtime,warning) << "Can't increase the limit for open files to " << length << ", falling back to remapped mode";
+		no_mapping=true;
 	}
 
 	for ( std::filesystem::directory_iterator i( path ); i != std::filesystem::directory_iterator(); ++i )  {
@@ -444,13 +434,14 @@ std::list<Chunk> isis::data::IOFactory::loadPath(const std::filesystem::path& pa
 	return ret;
 }
 
-bool IOFactory::write( const data::Image &image, const std::string &path, std::list<util::istring> formatstack, std::list<util::istring> dialects )
+bool IOFactory::write(const data::Image &image, const std::string &path, const std::list<util::istring> &formatstack, const std::list<
+	util::istring> &dialects )
 {
-	return write( std::list< isis::data::Image >(1,image), path, formatstack, dialects );
+	return write( std::list< isis::data::Image >{image}, path, formatstack, dialects );
 }
 
 
-bool IOFactory::write( std::list< isis::data::Image > images, const std::string &path, std::list<util::istring> formatstack, std::list<util::istring> dialects )
+bool IOFactory::write( std::list< isis::data::Image > images, const std::string &path, std::list<util::istring> formatstack, const std::list<util::istring> &dialects )
 {
 	if(formatstack.empty())
 		formatstack=getFormatStack(path);
@@ -486,7 +477,7 @@ void IOFactory::setProgressFeedback( std::shared_ptr<util::ProgressFeedback> fee
 
 	if( This.m_feedback )This.m_feedback->close();
 
-	This.m_feedback = feedback;
+	This.m_feedback = std::move(feedback);
 }
 
 IOFactory::FileFormatList IOFactory::getFormats()
@@ -495,5 +486,4 @@ IOFactory::FileFormatList IOFactory::getFormats()
 }
 
 
-}
 } // namespaces data isis

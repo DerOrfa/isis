@@ -1,5 +1,4 @@
-#ifndef TYPES_HPP
-#define TYPES_HPP
+#pragma once
 
 #include <variant>
 #include <complex>
@@ -8,9 +7,9 @@
 #include "selection.hpp"
 #include <iomanip>
 
-namespace std{namespace chrono{
+namespace std::chrono{
 typedef duration<int32_t,ratio<int(3600*24)> > days;  
-}}
+}
 
 namespace isis::util{
 
@@ -76,4 +75,4 @@ std::map< std::string, unsigned short> getTransposedTypeMap( bool withValues = t
 }
 
 
-#endif // TYPES_HPP
+

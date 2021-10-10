@@ -16,10 +16,11 @@
 #include <string>
 #include <ctime>
 #include <list>
-#include <stdio.h>
+#include <cstdio>
 
 #include <chrono>
 #include <filesystem>
+#include <mutex>
 
 namespace isis
 {
@@ -32,7 +33,7 @@ namespace util
  * Use this to mark the a volatile part of a logging message.
  * eg. \code LOG(Debug,info) << "Loading File " << MSubject(filename); \endcode
  * This will then be ignored when looking for repeating log-messages or can be used for text highlighting.
- * \note anything which is no string literal will aumatically used wrapped as Subject. Use NoSubject to prevent this.
+ * \note anything which is no string literal will automatically used wrapped as Subject. Use NoSubject to prevent this.
  */
 class MSubject : public std::string
 {
@@ -58,8 +59,8 @@ public:
 		text << cont;
 		assign( text.str() );
 	}
-	NoSubject( const std::string &cont );
-	NoSubject( std::string &&cont );
+	explicit NoSubject( const std::string &cont );
+	explicit NoSubject( std::string &&cont );
 };
 
 const char *logLevelName( LogLevel level );
@@ -71,11 +72,13 @@ class Message;
 class MessageHandlerBase
 {
 	static LogLevel m_stop_below;
+	std::mutex mutex;
 protected:
-	MessageHandlerBase( LogLevel level ): m_level( level ) {}
-	virtual ~MessageHandlerBase() {}
+	explicit MessageHandlerBase( LogLevel level ): m_level( level ) {}
+	virtual ~MessageHandlerBase() = default;
 public:
 	LogLevel m_level;
+	void guardedCommit(const Message &msg );
 	virtual void commit( const Message &msg ) = 0;
 	/**
 	 * Set loglevel below which the system should stop the process.
@@ -105,9 +108,9 @@ public:
 	LogLevel m_level;
 	Message( std::string object, std::string module, std::string file, int line, LogLevel level, std::weak_ptr<MessageHandlerBase> _commitTo );
 	Message( const Message &src )=delete;
-	Message( Message &&src );
-	~Message();
-	std::string merge(const std::string color_code)const;
+	Message( Message &&src ) noexcept ;
+	~Message()override;
+	std::string merge(const std::string& color_code)const;
 	std::string strTime(const char *formatting="%c")const;
 	template<size_t SIZE> Message &operator << ( const char (&str)[SIZE] ) { //send string literals as text
 		*( ( std::ostringstream * )this ) << str;
@@ -115,6 +118,11 @@ public:
 	}
 	template<typename T> Message &operator << (const T& val ) { // for everything else default to MSubject
 		m_subjects.push_back( MSubject( val ) );
+		*( ( std::ostringstream * )this ) << "{s}";
+		return *this;
+	}
+	Message &operator << (const std::filesystem::path& val ) { // path's default ostream adds '"' - we don't want that
+		m_subjects.push_back( MSubject( val.native() ) );
 		*( ( std::ostringstream * )this ) << "{s}";
 		return *this;
 	}
@@ -136,9 +144,8 @@ class DefaultMsgPrint : public MessageHandlerBase
 {
 	bool istty;
 public:
-	DefaultMsgPrint( LogLevel level );
-	virtual ~DefaultMsgPrint() {}
-	void commit( const Message &mesg );
+	explicit DefaultMsgPrint( LogLevel level );
+	void commit( const Message &mesg )final;
 	void commit_tty(const Message &mesg);
 	void commit_pipe(const Message &mesg);
 };

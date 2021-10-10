@@ -17,8 +17,7 @@
  * 
  */
 
-#ifndef ISISITKIMAGE_H
-#define ISISITKIMAGE_H
+#pragma once
 
 #include <itkImage.h>
 #include "../../core/image.hpp"
@@ -100,4 +99,4 @@ public:
 }
 }
 
-#endif // ISISITKIMAGE_H
+

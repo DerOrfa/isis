@@ -17,8 +17,7 @@
 
 */
 
-#ifndef GENERIC_TYPE_HPP
-#define GENERIC_TYPE_HPP
+#pragma once
 
 #include <stdexcept>
 #include <cstdlib>
@@ -145,4 +144,4 @@ public:
 }
 }
 }
-#endif // GENERIC_TYPE_HPP
+

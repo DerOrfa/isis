@@ -5,23 +5,35 @@
 namespace isis::util{
 
 typedef std::variant<
-  bool
-, int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t
-, float, double
-, color24, color48
-, fvector3, dvector3, ivector3
-, fvector4, dvector4, ivector4
-, ilist, dlist, slist
-, std::string, isis::util::Selection
-, std::complex<float>, std::complex<double>
-, date, timestamp, duration
+  bool //0
+, int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t //8
+, float, double //10
+, color24, color48 //12
+, fvector3, dvector3, ivector3 //15
+, fvector4, dvector4, ivector4 //18
+, ilist, dlist, slist //21
+, std::string, isis::util::Selection //23
+, std::complex<float>, std::complex<double> //25
+, date, timestamp, duration //28
 > ValueTypes;
 
+/**
+ * Get the id of the type T
+ * @tparam T the type for which the id is requested
+ * @return the id of the type T if T is a known type
+ * @return std::variant_npos otherwise
+ */
 template<typename T> static constexpr size_t typeID(){
 	return _internal::variant_index<ValueTypes,std::remove_cv_t<T>>();
 }
+/**
+ * Check if T is a known type.
+ * @tparam T the type to be checked
+ * @return true if T is a known type
+ * @return false otherwise
+ */
 template<typename T> static constexpr bool knownType(){
-	const auto id=_internal::variant_index<ValueTypes,std::remove_cv_t<T>>();
+	const auto id=typeID<T>();
 	return id!=std::variant_npos;
 }
 
@@ -86,37 +98,8 @@ namespace std{
 	};
 
 	/// streaming output for duration and timestamp
-	template<typename charT, typename traits>
-	basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::duration &s )
-	{
-		return out<<s.count()<<"ms";
-	}
-	template<typename charT, typename traits>
-	basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::timestamp &s )
-	{
-		const chrono::seconds sec=std::chrono::duration_cast<chrono::seconds>(s.time_since_epoch());
-		const time_t tme(sec.count());
-		if(s>=(isis::util::timestamp()+std::chrono::hours(24))) // if we have a real timepoint (not just time)
-			out<<std::put_time(std::localtime(&tme), "%c"); // write time and date
-		else {
-			out<<std::put_time(std::localtime(&tme), "%X"); // otherwise write just the time 
-		}
-		// and maybe with milliseconds
-		
-		chrono::milliseconds msec = s.time_since_epoch()-sec;
-		assert(msec.count()<1000);
-		if(msec.count()){
-			if(msec.count()<0)
-				msec+=chrono::seconds(1);
-			out << "+" << std::to_string(msec.count()) << "ms";
-		}
-		return out;
-	}
-	template<typename charT, typename traits>
-	basic_ostream<charT, traits>& operator<<( basic_ostream<charT, traits> &out, const isis::util::date &s )
-	{
-		const time_t tme(chrono::duration_cast<chrono::seconds>(s.time_since_epoch()).count());
-		return out<<std::put_time(std::localtime(&tme), "%x"); 
-	}
+	ostream& operator<<( ostream &out, const isis::util::duration &s );
+	ostream& operator<<( ostream &out, const isis::util::timestamp &s );
+	ostream& operator<<( ostream &out, const isis::util::date &s );
 }
 /// @endcond _internal

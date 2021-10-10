@@ -16,8 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef BINARISE_H
-#define BINARISE_H
+#pragma once
 
 #include "histogram.hpp"
 
@@ -65,4 +64,4 @@ template<typename T> T otsu_thres(const data::TypedChunk<T> &image){
 }
 }
 }
-#endif // BINARISE_H
+

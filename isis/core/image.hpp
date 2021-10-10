@@ -10,8 +10,7 @@
 //
 //
 
-#ifndef IMAGE_H
-#define IMAGE_H
+#pragma once
 
 #include "chunk.hpp"
 
@@ -50,7 +49,7 @@ public:
 	typedef _internal::ImageIteratorTemplate<ValueArray, true> const_iterator;
 	typedef iterator::reference reference;
 	typedef const_iterator::reference const_reference;
-	static const char *neededProperties;
+	static std::list<PropPath> neededProperties;
 protected:
 	_internal::SortedChunkList set;
 	std::vector<std::shared_ptr<Chunk> > lookup;
@@ -91,7 +90,7 @@ private:
 
 protected:
 	bool clean;
-	static const char *defaultChunkEqualitySet;
+	static std::list<isis::util::PropertyMap::PropPath> defaultChunkEqualitySet;
 
 	/**
 	 * Search for a dimensional break in all stored chunks.
@@ -372,7 +371,7 @@ public:
 	 * \param key the name of the property to search for
 	 * \param unique when true empty, non existing or consecutive duplicates won't be added
 	 */
-	std::list<util::PropertyValue> getChunksProperties ( const util::PropertyMap::key_type &key, bool unique = false ) const;
+	std::list<util::PropertyValue> getChunksProperties ( const util::PropertyMap::PropPath &key, bool unique = false ) const;
 
 	/**
 	 * Get a list of the properties of the chunks for the given key.
@@ -423,7 +422,8 @@ public:
 
 	/**
 	 * Get the maximum and the minimum voxel value of the image.
-	 * The results are converted to T. If they dont fit an error ist send.
+	 * The results are converted to T. If they don't fit an error ist send.
+	 * \note If the datatype is a vector the minimum/maximum across all elements is computed
 	 * \returns a pair of T storing the minimum and maximum values of the image.
 	 */
 	template<typename T> std::pair<T, T> getMinMaxAs() const {
@@ -432,7 +432,12 @@ public:
 		return std::make_pair ( minmax.first.as<T>(), minmax.second.as<T>() );
 	}
 
-	/// Get the maximum and the minimum voxel value of the image as a pair of ValueReference-objects.
+	/**
+	 * Get the maximum and the minimum voxel value of the image.
+	 * The results are converted to T. If they don't fit an error ist send.
+	 * \note If the datatype is a vector the minimum/maximum across all elements is computed
+	 * \returns a pair storing the minimum and maximum Values of the image.
+	 */
 	std::pair<util::Value, util::Value> getMinMax(bool unify=true) const;
 
 	/**
@@ -502,7 +507,7 @@ public:
 	 * \note This is a deep copy, no data will be shared between the Image and the ValueArray. It will waste a lot of memory, use it wisely.
 	 * \returns a ValueArray containing the voxeldata of the Image (but not its Properties)
 	 */
-	ValueArray copyAsValueArray() const;
+	ValueArray copyAsValueArray() const; //@todo have as copyAsMemChunk too (maybe get rid of copyAsMemChunk, and maye MemChunk alltogether)
 	/**
 	 * Copy all voxel data of the image into an existing ValueArray using its type.
 	 * If neccessary a conversion into the datatype of the target is done using min/max of the image.
@@ -549,6 +554,7 @@ public:
 	/**
 	 * Automatically spliceAt the given dimension and all dimensions above.
 	 * e.g. spliceDownTo(sliceDim) will result in an image made of slices (aka 2d-chunks).
+	 * So getRelevantDims() on the chunks will be 2 (aka sliceDim).
 	 */
 	size_t spliceDownTo ( dimensions dim );
 
@@ -631,12 +637,12 @@ public:
 		LOG_IF(result==false, Runtime, error) << "Conversion to " << util::MSubject( util::typeName<T>() ) << " failed.";
 	}
 	/// cheap copy another TypedImage
-	TypedImage &operator= ( const TypedImage &ref ) { //its already of the given type - so just copy it
+	TypedImage &operator= ( const TypedImage &ref ) { //it's already of the given type - so just copy it
 		Image::operator= ( ref );
 		return *this;
 	}
 	/// cheap copy another Image and make sure all chunks have type T
-	TypedImage &operator= ( const Image &ref ) { // copy the image, and make sure its of the given type
+	TypedImage &operator= ( const Image &ref ) { // copy the image, and make sure it's of the given type
 		Image::operator= ( ref );
 		convertToType ( util::typeID<T>() );
 		return *this;
@@ -653,7 +659,7 @@ public:
 		}
 		std::vector<TypedArray<T>> buff(lookup.size());
 		for(size_t i=0;i<lookup.size();i++){
-			assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
+			assert(lookup[i]->template is<T>());//it's a typed image, so all chunks should be T
 			buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArray (if its actually T)
 		}
 		return iterator( buff );
@@ -667,7 +673,7 @@ public:
 		}
 		std::vector<TypedArray<T>> buff(lookup.size());
 		for(size_t i=0;i<lookup.size();i++){
-			assert(lookup[i]->template is<T>());//its a typed image, so all chunks should be T
+			assert(lookup[i]->template is<T>());//it's a typed image, so all chunks should be T
 			buff[i]=*lookup[i];//there is a cheap-copy-constructor for TypedArray from ValueArray (if its actually T)
 			assert((float*)buff[i].begin()==lookup[i]->template beginTyped<T>()); //make sure it was a cheap copy
 		}
@@ -770,7 +776,7 @@ public:
 	 * This makes a deep copy of the given image.
 	 * The image data are converted to T if necessary.
 	 */
-	MemImage &operator= ( const Image &ref ) { // copy the image, and make sure its of the given type
+	MemImage &operator= ( const Image &ref ) { // copy the image, and make sure it's of the given type
 
 		Image::operator= ( ref ); // ok we just copied the whole image
 
@@ -800,4 +806,4 @@ public:
 }
 }
 
-#endif // IMAGE_H
+

@@ -1,5 +1,4 @@
-#ifndef NUMERIC_CONVERT_HPP
-#define NUMERIC_CONVERT_HPP
+#pragma once
 
 #include <limits>
 #include <assert.h>
@@ -7,9 +6,7 @@
 #include "valuearray.hpp"
 
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 API_EXCLUDE_BEGIN;
 /// @cond _internal
@@ -296,7 +293,6 @@ template<typename T> void numeric_copy( const T *src, T *dst, size_t size )
 }
 
 }
-}
 
 
-#endif // NUMERIC_CONVERT_HPP
+
