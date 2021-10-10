@@ -185,6 +185,7 @@ size_t PropertyValue::explode(size_t factor, std::function<Value(const Value &)>
 		}
 		e=container.erase(e);
 	}
+	return container.size();
 }
 
 
