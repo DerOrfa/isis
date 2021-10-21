@@ -179,7 +179,7 @@ unsigned int IOFactory::findPlugins( const std::string &path )
 				LOG( Runtime, warning ) << "Could not load library " << util::MSubject( pluginName ) << ":" <<  util::MSubject( dlerror() );
 #endif
 		} else {
-			LOG( Runtime, verbose_info ) << "Ignoring " << *itr << " because it doesn't match " << pluginFilterStr;
+			LOG( Runtime, verbose_info ) << "Ignoring " << itr->path() << " because it doesn't match " << pluginFilterStr;
 		}
 	}
 
@@ -420,7 +420,7 @@ std::list<Chunk> isis::data::IOFactory::loadPath(const std::filesystem::path& pa
 			ret.splice(ret.end(),loaded);
 		} catch(const io_error &e) {
 			LOG( Runtime, notice )
-				<< "Failed to load " <<  *i << " using " <<  e.which()->getName() << " ( " << e.what() << " )";
+				<< "Failed to load " <<  i->path() << " using " <<  e.which()->getName() << " ( " << e.what() << " )";
 		}
 
 		if( m_feedback )

@@ -157,7 +157,7 @@ ValueArray ValueArray::copyByID(size_t ID, const scaling_pair &scaling) const
 		return conv->generate( *this, getScaling( scaling, ID ) );
 	} else {
 		LOG( Runtime, error ) << "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true )[ID];
-		return ValueArray(); // return an invalid array
+		return {}; // return an invalid array
 	}
 }
 bool ValueArray::copyTo(ValueArray& dst, scaling_pair scaling) const
@@ -277,9 +277,9 @@ std::size_t ValueArray::compare(std::size_t start, std::size_t end, const ValueA
 
 const ValueArray::Converter & ValueArray::getConverterFromTo(unsigned short fromID, unsigned short toID)
 {
-	const _internal::ValueArrayConverterMap::const_iterator f1 = converters().find( fromID );
+	const auto f1 = converters().find( fromID );
 	LOG_IF( f1 == converters().end(), Debug, error ) << "There is no known conversion from " << util::getTypeMap()[fromID];
-	const _internal::ValueArrayConverterMap::mapped_type::const_iterator f2 = f1->second.find( toID );
+	const auto f2 = f1->second.find( toID );
 	LOG_IF( f2 == f1->second.end(), Debug, error ) << "There is no known conversion from " << util::getTypeMap()[fromID] << " to " << util::getTypeMap()[toID];
 	return f2->second;
 }
@@ -309,7 +309,7 @@ bool ValueArray::isInteger() const
 		[](auto ptr){
 			return std::is_integral_v<typename decltype(ptr)::element_type>;
 			},static_cast<const ArrayTypes&>(*this)
-			);
+		);
 }
 std::ostream &operator<<(std::ostream &os, const ValueArray &array)
 {
