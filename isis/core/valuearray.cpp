@@ -206,12 +206,11 @@ std::size_t ValueArray::getTypeID() const{
 }
 
 ValueArray ValueArray::convertByID(unsigned short ID, scaling_pair scaling) const{
-	scaling = getScaling(scaling, ID);
-
-	assert(scaling.valid );
 	if( !scaling.isRelevant() && getTypeID() == ID ) { // if type is the same and scaling is 1/0
 		return *this; //cheap copy
 	} else {
+		scaling = getScaling(scaling, ID);
+		assert(scaling.valid );
 		return copyByID( ID, scaling ); // convert into new
 	}
 }
