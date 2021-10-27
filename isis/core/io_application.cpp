@@ -48,10 +48,33 @@ IOApplication::~IOApplication()
 
 bool IOApplication::init( int argc, char **argv, bool exitOnError )
 {
-	const bool ok = util::Application::init( argc, argv, exitOnError );
+	bool ok = initBase( argc, argv);
 
-	if ( !ok  )
-		return false;
+	if(parameters["help-io"]){
+		printIOHelp();
+		exit(0);
+	}
+
+	if ( ! parameters.isComplete() ) {
+		std::cerr << "Missing parameters: ";
+
+		for ( const auto &P: parameters ) {
+			if ( P.second.isNeeded() ) {std::cerr << "-" << P.first << "  ";}
+		}
+
+		std::cerr << std::endl;
+		printHelp();
+		ok = false;
+	}
+
+	if ( !ok  ){
+		if(exitOnError){
+			std::cerr << "Exiting..." << std::endl;
+			exit(1);
+		}
+		else
+			return false;
+	}
 
 	if ( m_input ) {
 		images.splice(images.end(),autoload( exitOnError ));
@@ -120,23 +143,19 @@ void IOApplication::addOutput(const std::string& desc, const std::string& suffix
 }
 
 
-void IOApplication::printHelp( bool withHidden ) const
+void IOApplication::printIOHelp() const
 {
-	if( !parameters["help-io"].isParsed() ) { // if help-io was not given - print normal help
-		Application::printHelp( withHidden );
-	} else if( parameters["help-io"].as<bool>() ) { // if help-io was set to true
-		std::cerr << std::endl << "Available IO Plugins:" << std::endl;
-		data::IOFactory::FileFormatList plugins = data::IOFactory::getFormats();
-		for( data::IOFactory::FileFormatList::const_reference pi :  plugins ) {
-			std::cerr << std::endl << "\t" << pi->getName() << " (" << pi->plugin_file << ")" << std::endl;
-			std::cerr << "\t=======================================" << std::endl;
-			const std::list<util::istring> suff = pi->getSuffixes();
-			const std::list<util::istring> dialects = pi->dialects();
-			std::cerr << "\tsupported suffixes: " << util::listToString<util::istring>( suff.begin(), suff.end(), "\", \"", "\"", "\"" ).c_str()  << std::endl;
+	std::cerr << std::endl << "Available IO Plugins:" << std::endl;
+	data::IOFactory::FileFormatList plugins = data::IOFactory::getFormats();
+	for( data::IOFactory::FileFormatList::const_reference pi :  plugins ) {
+		std::cerr << std::endl << "\t" << pi->getName() << " (" << pi->plugin_file << ")" << std::endl;
+		std::cerr << "\t=======================================" << std::endl;
+		const std::list<util::istring> suff = pi->getSuffixes();
+		const std::list<util::istring> dialects = pi->dialects();
+		std::cerr << "\tsupported suffixes: " << util::listToString<util::istring>( suff.begin(), suff.end(), "\", \"", "\"", "\"" ).c_str()  << std::endl;
 
-			if( !dialects.empty() )
-				std::cerr << "\tsupported dialects: " << util::listToString( dialects.begin(), dialects.end(), "\", \"", "\"", "\"" )  << std::endl;
-		}
+		if( !dialects.empty() )
+			std::cerr << "\tsupported dialects: " << util::listToString( dialects.begin(), dialects.end(), "\", \"", "\"", "\"" )  << std::endl;
 	}
 }
 
