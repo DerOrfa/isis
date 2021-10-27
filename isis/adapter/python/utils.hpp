@@ -37,6 +37,8 @@ load(std::string path,util::slist formatstack={},util::slist dialects={});
 std::pair<std::list<isis::data::Image>,util::slist>
 load_list(util::slist paths,util::slist formatstack={},util::slist dialects={});
 
+bool write(std::list<data::Image> images, std::string path, util::slist sFormatstack={},util::slist sDialects={}, py::object repn=py::none());
+
 py::dict getMetaDataFromPropertyMap(const util::PropertyMap &ob);
 py::dict getMetaDataFromImage(const data::Image &img, bool merge_chunk_data);
 
