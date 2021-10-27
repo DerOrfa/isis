@@ -119,13 +119,8 @@ void IOApplication::addOutput( util::ParameterMap &parameters, const std::string
 	parameters[std::string( "wdialect" ) + suffix] = util::slist();
 	parameters[std::string( "wdialect" ) + suffix].needed() = false;
 	parameters[std::string( "wdialect" ) + suffix].setDescription( "Choose dialect(s) for writing" + desc + ". Use \"--help-io\" for a list of the plugins and their supported dialects" );
-	auto types = util::getTypeMap( true );
 
-	for( auto i = types.begin(); i != types.end(); i++ ) {
-		i->second.resize( i->second.find_last_not_of( '*' ) + 1 );
-	}
-
-	parameters[std::string( "repn" ) + suffix] = util::Selection( types );
+	parameters[std::string( "repn" ) + suffix] = util::Selection( util::getTypeMap( true ) );
 	parameters[std::string( "repn" ) + suffix].needed() = false;
 	parameters[std::string( "repn" ) + suffix].setDescription(
 		"Representation in which the data" + desc + " shall be written" );
