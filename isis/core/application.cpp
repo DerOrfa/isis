@@ -135,29 +135,41 @@ void Application::addExample ( const std::string& params, const std::string& des
 	m_examples.emplace_back( params, desc );
 }
 
-bool Application::init( int argc, char **argv, bool exitOnError )
+bool Application::initBase( int argc, char **argv )
 {
-	bool err = false;
 	m_filename=argv[0];
-
-	if ( parameters.parse( argc, argv ) ) {
-		if ( parameters["help"] ) {
-			printHelp( true );
-			exit( 0 );
-		}
-	} else {
+	if ( !parameters.parse( argc, argv ) ){
 		LOG( Runtime, error ) << "Failed to parse the command line";
-		err = true;
+		return false;
 	}
+
+	if ( parameters["help"] ) {
+		printHelp( true );
+		exit( 0 );
+	}
+
 	auto cfg=parameters.find("cfg");
 	if(cfg!=parameters.end()){
-		if(!addConfigFile(cfg->second.as<std::string>()) && exitOnError){
-			std::cerr << "Exiting..." << std::endl;
-			exit( 1 );
-		}
+		if(!addConfigFile(cfg->second.as<std::string>()))
+			return false;
 	}
 
 	resetLogging();
+
+	if(!parameters["np"])
+		feedback() = std::make_shared<util::ConsoleProgressBar>();
+
+
+	const std::string loc=parameters["locale"];
+	if(!loc.empty())
+		std::setlocale(LC_ALL,loc.c_str());
+
+	return true;
+}
+
+bool Application::init( int argc, char **argv, bool exitOnError )
+{
+	bool err = initBase(argc,argv);
 
 	if ( ! parameters.isComplete() ) {
 		std::cerr << "Missing parameters: ";
@@ -167,25 +179,14 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 		}
 
 		std::cerr << std::endl;
+		printHelp();
 		err = true;
 	}
 
-	if ( err ) {
-		printHelp();
-
-		if( exitOnError ) {
-			std::cerr << "Exiting..." << std::endl;
-			exit( 1 );
-		}
+	if ( err && exitOnError ) { //we did printHelp already above
+		std::cerr << "Exiting..." << std::endl;
+		exit( 1 );
 	}
-
-	if(!parameters["np"])
-		feedback() = std::make_shared<util::ConsoleProgressBar>();
-
-
-	const std::string loc=parameters["locale"];
-	if(!loc.empty())
-		std::setlocale(LC_ALL,loc.c_str());
 
 	return ! err;
 }
