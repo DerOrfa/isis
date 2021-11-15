@@ -24,6 +24,7 @@ struct tag_length_visitor
 struct tag_vr_visitor
 {
 	template<boost::endian::order Order> std::string operator()(const ExplicitVrTag<Order> *_tag)const{
+		assert(isalpha(_tag->vr[0]) && isalpha(_tag->vr[1]));
 		return std::string(_tag->vr,_tag->vr+2);
 	}
 	template<boost::endian::order Order> std::string operator()(const ImplicitVrTag<Order> *_tag)const{
@@ -140,7 +141,8 @@ std::optional<util::Value> DicomElement::getValue(std::string vr){
 		LOG_IF(ret,Debug,verbose_info) << "Parsed " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << *ret;
 		LOG_IF(!ret,Runtime,verbose_info) << "Failed to parse " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position;
 	} else {
-		LOG(Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
+		LOG_IF(vr.empty(),Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
+		LOG_IF(!vr.empty(),Debug,error) << "Ignoring entry " << getName() << "/" << getIDString() << " at " << position << " because of empty VR";
 	}
 
 	return ret;
