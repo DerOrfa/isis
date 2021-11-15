@@ -564,17 +564,17 @@ Image Image::copyByID( short unsigned int ID, const scaling_pair &scaling ) cons
 std::vector< Chunk > Image::copyChunksToVector( bool copy_metadata )const
 {
 	std::vector<isis::data::Chunk> ret;
+	LOG_IF(!this->isClean(),Runtime,error) << "Running copyChunksToVector on a non-clean image";
+	assert(this->isClean());
 	ret.reserve( lookup.size() );
-	std::vector<std::shared_ptr<Chunk> >::const_iterator at = lookup.begin();
-	const std::vector<std::shared_ptr<Chunk> >::const_iterator end = lookup.end();
-
-	while ( at != end ) {
-		ret.push_back( **( at++ ) );
-
-		if( copy_metadata )
-			ret.back().join( *this );
-	}
-
+	auto meta=static_cast<const util::PropertyMap*>(this);
+	std::transform(lookup.begin(),lookup.end(),ret.begin(),[copy_metadata,meta](const std::shared_ptr<Chunk> &ch)->data::Chunk{
+			Chunk cpy(*ch);
+			if( copy_metadata )
+				cpy.join(*meta);
+			return cpy;
+		}
+	);
 	return ret;
 }
 
