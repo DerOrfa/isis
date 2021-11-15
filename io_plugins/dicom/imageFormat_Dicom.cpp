@@ -65,7 +65,9 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 			}
 			if(!token.next())
 			    break;
-		}else if(vr=="SQ"){ // http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_7.5.html
+		}
+		else if(vr=="SQ")
+		{ // http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_7.5.html
 
             uint32_t len=token.getLength();
 			const auto name=token.getName();
@@ -90,7 +92,7 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
                         return false;
                 };
             } else {
-                assert(len<stream_len); //sequence length mus be shorter then the stream its in
+                assert(len<stream_len); //sequence length mus be shorter than the stream its in
                 LOG(Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start_sq;
                 delimiter=[start_sq,len](DicomElement &t){return t.getPosition()>=start_sq+len;};
             }
@@ -98,7 +100,9 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
             util::PropertyMap subtree=readSequence(token,data_elements,delimiter);
             ret.touchBranch(name).transfer(subtree);
 			LOG(Debug,verbose_info) << "Sequence " << name << " started at " << start_sq << " finished, continuing at " << token.getPosition();
-		}else{
+		}
+		else
+		{
 			auto value=token.getValue(vr);
 			if(value){
 				ret.touchProperty(token.getName())=*value;
@@ -106,7 +110,7 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
             if(!token.next())
                 break;
         }
-	}while(token.getPosition()-start<stream_len);
+	}while(token.getPosition()<start+stream_len);
 	return ret;
 }
 

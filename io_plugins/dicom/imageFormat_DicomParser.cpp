@@ -100,20 +100,22 @@ bool DicomElement::next(){
 	return next(position+len+tagLength());
 }
 bool DicomElement::next(size_t _position){
+	position=_position;
 	if(source.getLength()<_position+8) {
 	    is_eof=true;
         return false;
     }
-	position=_position;
-	switch(endian){
-	    case boost::endian::order::big:
-		    tag=makeTag<boost::endian::order::big>();
-		    break;
-	    case boost::endian::order::little:
-		    tag=makeTag<boost::endian::order::little>();
-		    break;
+	else {
+		switch(endian){
+			case boost::endian::order::big:
+				tag = makeTag<boost::endian::order::big>();
+				break;
+			case boost::endian::order::little:
+				tag = makeTag<boost::endian::order::little>();
+				break;
+		}
+		return true;
 	}
-	return true;
 }
 
 
