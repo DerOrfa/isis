@@ -169,7 +169,7 @@ bool Application::initBase( int argc, char **argv )
 
 bool Application::init( int argc, char **argv, bool exitOnError )
 {
-	bool err = initBase(argc,argv);
+	bool good = initBase(argc,argv);
 
 	if ( ! parameters.isComplete() ) {
 		std::cerr << "Missing parameters: ";
@@ -180,15 +180,15 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 
 		std::cerr << std::endl;
 		printHelp();
-		err = true;
+		good = false;
 	}
 
-	if ( err && exitOnError ) { //we did printHelp already above
+	if ( !good && exitOnError ) { //we did printHelp already above
 		std::cerr << "Exiting..." << std::endl;
 		exit( 1 );
 	}
 
-	return ! err;
+	return good;
 }
 std::list<std::shared_ptr<MessageHandlerBase>> Application::resetLogging()
 {
