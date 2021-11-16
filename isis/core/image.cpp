@@ -568,7 +568,7 @@ std::vector< Chunk > Image::copyChunksToVector( bool copy_metadata )const
 	assert(this->isClean());
 	ret.reserve( lookup.size() );
 	auto meta=static_cast<const util::PropertyMap*>(this);
-	std::transform(lookup.begin(),lookup.end(),ret.begin(),[copy_metadata,meta](const std::shared_ptr<Chunk> &ch)->data::Chunk{
+	std::transform(lookup.begin(),lookup.end(),std::back_inserter(ret),[copy_metadata,meta](const std::shared_ptr<Chunk> &ch)->data::Chunk{
 			Chunk cpy(*ch);
 			if( copy_metadata )
 				cpy.join(*meta);
