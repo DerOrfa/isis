@@ -222,13 +222,16 @@ bool IOApplication::autowrite ( const util::ParameterMap &parameters, Image out_
 }
 bool IOApplication::autowrite ( const util::ParameterMap &parameters, std::list< Image > out_images, bool exitOnError, const std::string &suffix)
 {
-	const util::Selection repn = parameters[std::string( "repn" ) + suffix];
+	std::optional<util::Selection> repn;
+	if(parameters[std::string( "repn" ) + suffix].isParsed())
+		repn = parameters[std::string( "repn" ) + suffix].as<util::Selection>();
+
 	const std::string output = parameters[std::string( "out" ) + suffix];
 	const util::slist wf = parameters[std::string( "wf" ) + suffix];
 	const util::slist dl = parameters[std::string( "wdialect" ) + suffix];
 	LOG( Runtime, info )
 			<< "Writing " << out_images.size() << " images"
-			<< ( repn ? std::string( " as " ) + static_cast<std::string>(repn) : "" )
+			<< ( repn ? std::string( " as " ) + static_cast<std::string>(*repn) : "" )
 			<< " to " << util::MSubject( output )
 			<< ( wf.empty() ? "" : std::string( " using the format: " ) + util::listToString(wf.begin(),wf.end()) )
 			<< ( ( !wf.empty() && !dl.empty() ) ? " and" : "" )
@@ -236,7 +239,7 @@ bool IOApplication::autowrite ( const util::ParameterMap &parameters, std::list<
 
 	if( repn ) {
 		for( std::list<Image>::reference ref :  out_images ) {
-			ref.convertToType( static_cast<unsigned short>(repn) );
+			ref.convertToType( static_cast<unsigned short>(*repn) );
 		}
 	}
 
