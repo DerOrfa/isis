@@ -136,7 +136,7 @@ std::optional<util::Value> DicomElement::getValue(std::string vr){
 			ret=generator.scalar(this);
 		else if(generator.list)
 			ret=generator.list(this);
-		else { // fallback for non- supportet lists @todo
+		else { // fallback for non- supported lists @todo
 			assert(false);
 		}
 
@@ -415,7 +415,7 @@ namespace _internal{
 	    {"SS",{scalar_generate<int16_t>, list_generate<int16_t, int32_t>,sizeof(int16_t)}},
 	    {"SL",{scalar_generate<int32_t>, list_generate<int32_t, int32_t>,sizeof(int32_t)}},
 	    {"US",{scalar_generate<uint16_t>,list_generate<uint16_t,int32_t>,sizeof(uint16_t)}},
-	    {"UL",{scalar_generate<uint32_t>,nullptr,                        sizeof(uint32_t)}},
+	    {"UL",{scalar_generate<uint32_t>,list_generate<uint32_t,int32_t>,sizeof(uint32_t)}}, //@todo deal with potential overflow
 	    //"normal" string types
 	    {"LT",{string_generate,nullptr,0}},
 	    {"UT",{string_generate,nullptr,0}},

@@ -211,6 +211,56 @@ public:
 	}
 };
 
+// stolen from https://github.com/malaterre/GDCM/blob/e501d71938a0889f55885e4401fbfe60a8b7c4bd/Examples/Cxx/rle2img.cxx
+void delta_decode(const char *inbuffer, size_t length, data::TypedArray<uint16_t> &outbuffer)
+{
+	// RLE pass
+	std::vector<char> temp;
+	uint16_t *output = outbuffer.begin();
+	for(size_t i = 0; i < length; ++i)
+	{
+		if( inbuffer[i] == (char)0xa5 )
+		{
+			//unsigned char repeat = (unsigned char)inbuffer[i+1] + 1;
+			//assert( (unsigned char)inbuffer[i+1] != 255 );
+			int repeat = (unsigned char)inbuffer[i+1] + 1;
+			char value = inbuffer[i+2];
+			while(repeat)
+			{
+				temp.push_back( value );
+				--repeat;
+			}
+			i+=2;
+		}
+		else
+		{
+			temp.push_back( inbuffer[i] );
+		}
+	}
+
+	// Delta encoding pass
+	unsigned short delta = 0;
+	for(size_t i = 0; i < temp.size(); ++i)
+	{
+		if( temp[i] == 0x5a )
+		{
+			unsigned char v1 = (unsigned char)temp[i+1];
+			unsigned char v2 = (unsigned char)temp[i+2];
+			unsigned short value = (unsigned short)(v2 * 256 + v1);
+			*(output++) = value;
+			delta = value;
+			i+=2;
+		}
+		else
+		{
+			unsigned short value = (unsigned short)(temp[i] + delta);
+			*(output++) = value;
+			delta = value;
+		}
+		//assert( output[output.size()-1] == ref[output.size()-1] );
+	}
+}
+
 }
 
 const char ImageFormat_Dicom::dicomTagTreeName[] = "DICOM";
@@ -641,7 +691,8 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 	    || transferSyntax=="1.2.840.10008.1.2.4.90" //JPEG 2000 Image Compression (Lossless Only)
 #endif //HAVE_OPENJPEG
 	){
-	} else if(transferSyntax=="1.2.840.10008.1.2.2"){ //explicit big endian
+//	} else if(transferSyntax=="1.2.840.10008.1.2.2"){ //explicit big endian
+	} else if(transferSyntax=="1.3.46.670589.33.1.4.1"){ //CT-private-ELE (little endian explicit VR)
 	} else {
 		LOG(Runtime,error) << "Sorry, transfer syntax " << transferSyntax <<  " is not (yet) supported";
 		ImageFormat_Dicom::throwGenericError("Unsupported transfer syntax");
@@ -668,9 +719,25 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 
 	//extract actual image data from data_elements
 	std::list<data::ValueArray> img_data;
-	for(auto e_it=data_elements.find(0x7FE00010);e_it!=data_elements.end() && e_it->first==0x7FE00010;){
-		img_data.push_back(e_it->second);
-		data_elements.erase(e_it++);
+	if(transferSyntax=="1.3.46.670589.33.1.4.1"){  // CT-private-ELE stores image data elsewhere
+		for(auto e_it = data_elements.find(0x07A1100A); e_it != data_elements.end() && e_it->first == 0x07A1100A;){
+			auto compression= props.getValueAs<std::string>("UnknownTag/(07a1,1011)");
+			LOG(Runtime, info) << "Found CT-private-ELE image data at " << e_it->first << " compression is " << compression;
+			if(compression == "PMSCT_RLE1" ){
+				const char *in=reinterpret_cast<const char *>(e_it->second.castTo<uint8_t>().get());
+				data::TypedArray<uint16_t> out(props.getValueAs<uint32_t>("Rows")*props.getValueAs<uint32_t>("Columns"));
+				_internal::delta_decode(in,e_it->second.getLength(),out);
+				img_data.push_back(std::move(out));
+				data_elements.erase(e_it++);
+			} else
+				LOG(Runtime,error) << "Unknown compression for CT-private-ELE image data.";
+		}
+	}
+	else {
+		for(auto e_it = data_elements.find(0x7FE00010); e_it != data_elements.end() && e_it->first == 0x7FE00010;){
+			img_data.push_back(e_it->second);
+			data_elements.erase(e_it++);
+		}
 	}
 
 	if(img_data.empty()){
