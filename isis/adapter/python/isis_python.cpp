@@ -69,10 +69,28 @@ py::class_<data::Image, data::NDimensional<4>, util::PropertyMap>(m, "image")
 	.def(py::init([](const data::Chunk &chk){return data::Image(chk);}))
 	.def("__array__",[](data::Image &img){return python::make_array(img);})
 	.def_property_readonly("nparray",[](data::Image &img){return python::make_array(img);})
+	.def("write",[](const data::Image &img, std::string path, util::slist sFormatstack,util::slist sDialects, py::object repn){
+			 return python::write({img},path,sFormatstack,sDialects,repn);
+		 },
+		 "Write the image as file. If not given, formatstack will be deduced from filename.",
+		 "filepath"_a,
+		 "formatstack"_a=util::slist{},
+		 "dialects"_a=util::slist{},
+		 "repn"_a=py::none()
+	)
 	.def("getChunks",
 		 [](const data::Image &img, bool copy_metadata) {return img.copyChunksToVector(copy_metadata);	},
 		 "get all chunks of pixel data that make the image",
-		 py::arg("copy_metadata")=false
+		 py::arg("copy_metadata")=true
+	)
+	.def("getChunk",
+	 	[](const data::Image &img, py::args tCoords) {
+			util::vector4<size_t> coords{0,0,0,0};
+			std::transform(tCoords.begin(),tCoords.end(),coords.begin(),[](const py::handle &c){return c.cast<size_t>();});
+			LOG(python::Debug,info) << "Returning chunk at " << coords;
+			return img.getChunk(coords[1],coords[0],coords[2],coords[3]);//numpy defaults to row major
+		},
+		"get the chunk at the given image coordinates (row,column,slice,time)"
 	)
 	.def("__repr__", [](const data::Image &img) {
 		return img.identify(false,false)+" " + img.getSizeAsString() + " " + img.getMajorTypeName();
@@ -95,5 +113,13 @@ m.def("load",&python::load_list,
 	  "filepaths"_a,
 	  "formatstack"_a=util::slist{},
 	  "dialects"_a=util::slist{}
+);
+m.def("write",&python::write,
+	  "Write images as file(s). If not given, formatstack will be deduced from filename.",
+	  "images"_a,
+	  "filepath"_a,
+	  "formatstack"_a=util::slist{},
+	  "dialects"_a=util::slist{},
+	  "repn"_a=py::none()
 );
 }

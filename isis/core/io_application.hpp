@@ -64,7 +64,7 @@ public:
 	explicit IOApplication( std::string_view name, bool have_input = true, bool have_output = true, std::string_view cfg="" );
 	~IOApplication();
 	bool init( int argc, char **argv, bool exitOnError = true ) override;
-	void printHelp( bool withHidden = false ) const override;
+	void printIOHelp() const;
 
 	/**
 	 * Get the next image from the input.

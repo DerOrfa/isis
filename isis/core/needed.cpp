@@ -23,7 +23,7 @@ std::list<isis::util::PropertyMap::PropPath>
 
 std::list<isis::util::PropertyMap::PropPath>
     isis::data::Image::defaultChunkEqualitySet = {
-		"sequenceNumber","voxelSize","rowVec","columnVec","sliceVec","coilChannelMask","echoTime",
+		"DICOM/SeriesInstanceUID", "sequenceNumber","voxelSize","rowVec","columnVec","sliceVec","coilChannelMask","echoTime",
 		"DICOM/EchoNumbers","DICOM/SIEMENS CSA HEADER/ImaCoilString"
 	};
 

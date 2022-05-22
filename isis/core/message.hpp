@@ -40,15 +40,20 @@ class MSubject : public std::string
 public:
 	template<typename T> MSubject( const T &cont ) {
 		std::ostringstream text;
-		text << cont;
+		if constexpr(std::is_pointer_v<T>){
+			text << std::hex << cont;
+		} else if constexpr(std::is_same_v<T,std::filesystem::path>){
+			text << cont.native();
+		} else {
+			text << cont;
+		}
 		assign( text.str() );
 	}
-	MSubject( const std::filesystem::directory_entry& entry );
 	MSubject( const std::string &cont );
 	MSubject( std::string &&cont );
 };
 /**
- * Wrapper to explicitely mark something as non-"Subject" in a logging message.
+ * Wrapper to explicitly mark something as non-"Subject" in a logging message.
  * See MSubject for the opposite.
  */
 class NoSubject : public std::string
@@ -118,11 +123,6 @@ public:
 	}
 	template<typename T> Message &operator << (const T& val ) { // for everything else default to MSubject
 		m_subjects.push_back( MSubject( val ) );
-		*( ( std::ostringstream * )this ) << "{s}";
-		return *this;
-	}
-	Message &operator << (const std::filesystem::path& val ) { // path's default ostream adds '"' - we don't want that
-		m_subjects.push_back( MSubject( val.native() ) );
 		*( ( std::ostringstream * )this ) << "{s}";
 		return *this;
 	}

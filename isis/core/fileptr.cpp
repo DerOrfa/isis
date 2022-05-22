@@ -28,7 +28,7 @@ rlim_t FilePtr::file_count=0;
 
 void FilePtr::Closer::operator()( void *p )
 {
-	LOG( Debug, verbose_info ) << "Unmapping and closing " << util::MSubject( filename ) << " it was mapped at " << p;
+	LOG( Debug, verbose_info ) << "Unmapping and closing " << filename << " it was mapped at " << p;
 	bool unmapped = false;
 #ifdef WIN32
 	unmapped = UnmapViewOfFile( p );

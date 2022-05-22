@@ -153,6 +153,19 @@ std::pair<std::list<data::Image>, util::slist> load_list(util::slist paths,util:
 std::pair<std::list<data::Image>, util::slist> load(std::string path,util::slist formatstack,util::slist dialects){
 	return load_list({path},formatstack,dialects);
 }
+bool write(std::list<data::Image> images, std::string path, util::slist sFormatstack,util::slist sDialects, py::object repn){
+	if(!repn.is_none()){
+		util::Selection sRepn(util::getTypeMap( true ));
+		if(sRepn.set(repn.cast<std::string>().c_str())){
+			for( auto &ref :  images ) {
+				ref.convertToType( static_cast<unsigned short>(sRepn) );
+			}
+		} else
+			return false;
+	}
+	return data::IOFactory::write(images,path,util::makeIStringList(sFormatstack),util::makeIStringList(sDialects));
+}
+
 py::object value2object(const util::ValueTypes &val)
 {
 	return std::visit([](const auto &value)->py::object{
@@ -269,6 +282,10 @@ data::Image makeImage(py::buffer b, py::dict metadata)
 	} else
 		throw std::runtime_error("Incompatible data type!");
 
+}
+TypeMap::TypeMap(){
+	fill();
+	emplace_hint(end(),pybind11::format_descriptor<bool>::format(),util::typeID<bool>());
 }
 }
 

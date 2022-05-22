@@ -135,49 +135,26 @@ void Application::addExample ( const std::string& params, const std::string& des
 	m_examples.emplace_back( params, desc );
 }
 
-bool Application::init( int argc, char **argv, bool exitOnError )
+bool Application::initBase( int argc, char **argv )
 {
-	bool err = false;
 	m_filename=argv[0];
-
-	if ( parameters.parse( argc, argv ) ) {
-		if ( parameters["help"] ) {
-			printHelp( true );
-			exit( 0 );
-		}
-	} else {
+	if ( !parameters.parse( argc, argv ) ){
 		LOG( Runtime, error ) << "Failed to parse the command line";
-		err = true;
+		return false;
 	}
+
+	if ( parameters["help"] ) {
+		printHelp( true );
+		exit( 0 );
+	}
+
 	auto cfg=parameters.find("cfg");
 	if(cfg!=parameters.end()){
-		if(!addConfigFile(cfg->second.as<std::string>()) && exitOnError){
-			std::cerr << "Exiting..." << std::endl;
-			exit( 1 );
-		}
+		if(!addConfigFile(cfg->second.as<std::string>()))
+			return false;
 	}
 
 	resetLogging();
-
-	if ( ! parameters.isComplete() ) {
-		std::cerr << "Missing parameters: ";
-
-		for ( const auto &P: parameters ) {
-			if ( P.second.isNeeded() ) {std::cerr << "-" << P.first << "  ";}
-		}
-
-		std::cerr << std::endl;
-		err = true;
-	}
-
-	if ( err ) {
-		printHelp();
-
-		if( exitOnError ) {
-			std::cerr << "Exiting..." << std::endl;
-			exit( 1 );
-		}
-	}
 
 	if(!parameters["np"])
 		feedback() = std::make_shared<util::ConsoleProgressBar>();
@@ -187,7 +164,31 @@ bool Application::init( int argc, char **argv, bool exitOnError )
 	if(!loc.empty())
 		std::setlocale(LC_ALL,loc.c_str());
 
-	return ! err;
+	return true;
+}
+
+bool Application::init( int argc, char **argv, bool exitOnError )
+{
+	bool good = initBase(argc,argv);
+
+	if ( ! parameters.isComplete() ) {
+		std::cerr << "Missing parameters: ";
+
+		for ( const auto &P: parameters ) {
+			if ( P.second.isNeeded() ) {std::cerr << "-" << P.first << "  ";}
+		}
+
+		std::cerr << std::endl;
+		printHelp();
+		good = false;
+	}
+
+	if ( !good && exitOnError ) { //we did printHelp already above
+		std::cerr << "Exiting..." << std::endl;
+		exit( 1 );
+	}
+
+	return good;
 }
 std::list<std::shared_ptr<MessageHandlerBase>> Application::resetLogging()
 {

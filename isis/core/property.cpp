@@ -185,6 +185,7 @@ size_t PropertyValue::explode(size_t factor, std::function<Value(const Value &)>
 		}
 		e=container.erase(e);
 	}
+	return container.size();
 }
 
 
@@ -296,7 +297,9 @@ PropertyValue& PropertyValue::operator *=( const Value &second ){front().multipl
 PropertyValue& PropertyValue::operator /=( const Value &second ){front().divide_me(second);return *this;}
 
 bool PropertyValue::operator<(const isis::util::PropertyValue& y) const{return lt(y);}
-std::ostream &operator<<(std::ostream &out, const PropertyValue &s){return out<<s.toString(true);}
+std::ostream &operator<<(std::ostream &out, const PropertyValue &s){
+	return out<<s.toString(false);//should be false as this will be used implicitly in a lot of cases
+}
 
 }
 /// @endcond _internal
