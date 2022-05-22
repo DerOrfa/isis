@@ -1,23 +1,28 @@
-include(FetchContent)
-FetchContent_Declare(
-        pybind11
-        GIT_REPOSITORY https://github.com/pybind/pybind11
-        GIT_TAG        v2.6.2
-)
+option(USE_SYSTEM_PYBIND "Use the system's pybind11 (instead of downloading it)" OFF)
 
-FetchContent_GetProperties(pybind11)
-if(NOT pybind11_POPULATED)
-    FetchContent_Populate(pybind11)
-    add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-endif()
+if(USE_SYSTEM_PYBIND)
+    find_package(pybind11 CONFIG REQUIRED)
+    message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIRS}")
+else(USE_SYSTEM_PYBIND)
+    include(FetchContent)
+    FetchContent_Declare(
+            pybind11
+            GIT_REPOSITORY https://github.com/pybind/pybind11
+            GIT_TAG        v2.9.2
+    )
+
+    FetchContent_GetProperties(pybind11)
+    if(NOT pybind11_POPULATED)
+        FetchContent_Populate(pybind11)
+        add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
+    endif()
+endif(USE_SYSTEM_PYBIND)
 
 pybind11_add_module(pyisis isis_python.cpp logging.cpp utils.cpp)
 
 #add_library(pyisis MODULE isis_python.cpp utils.cpp logging.cpp)
 target_link_libraries(pyisis PRIVATE pybind11::module isis_core)
 set_property(TARGET pyisis PROPERTY POSITION_INDEPENDENT_CODE ON)
-pybind11_extension(pyisis)
-pybind11_strip(pyisis)
 
 find_package(Python)
 set(PYTHON_MODULE_PATH ${Python_SITELIB} CACHE PATH "Installation path for platform independent modules")
