@@ -1,8 +1,8 @@
-debian/tmp/usr/share/isis/cmake usr/share/isis
-debian/tmp/usr/include/isis/config.hpp usr/include/isis/
-debian/tmp/usr/include/isis/core usr/include/isis/
-debian/tmp/usr/include/isis/math usr/include/isis/
-debian/tmp/usr/lib/*isis_core.so usr/lib/
-debian/tmp/usr/lib/*isis_core.a usr/lib/
-debian/tmp/usr/lib/*isis_math.so usr/lib/
-debian/tmp/usr/lib/*isis_math.a usr/lib/
+usr/share/isis/cmake
+usr/include/isis/config.hpp usr/include/isis/
+usr/include/isis/core usr/include/isis/
+usr/include/isis/math usr/include/isis/
+usr/lib/${DEB_HOST_MULTIARCH}/*isis_core.so
+usr/lib/${DEB_HOST_MULTIARCH}/*isis_core.a
+usr/lib/${DEB_HOST_MULTIARCH}/*isis_math.so
+usr/lib/${DEB_HOST_MULTIARCH}/*isis_math.a
