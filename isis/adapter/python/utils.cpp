@@ -169,5 +169,9 @@ data::Image makeImage(py::buffer b, std::map<std::string, util::ValueTypes> meta
 		throw std::runtime_error("Incompatible data type!");
 
 }
+TypeMap::TypeMap(){
+	fill();
+	emplace_hint(end(),pybind11::format_descriptor<bool>::format(),util::typeID<bool>());
+}
 }
 

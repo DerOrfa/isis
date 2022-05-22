@@ -16,7 +16,7 @@ namespace isis::python{
 
 //mapping pybind format string back to isis type-ids
 struct TypeMap : std::map<std::string,size_t>{
-	TypeMap(){fill();}
+	TypeMap();
 	template<size_t ID=1> void fill(){
 		if constexpr(ID<std::variant_size_v<util::ValueTypes>){
 			typedef util::Value::TypeByIndex<ID> isis_type;
