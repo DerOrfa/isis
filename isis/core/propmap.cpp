@@ -171,7 +171,7 @@ size_t PropertyMap::PropPath::length()const
 
 	size_t ret = 0;
 	for( const_reference ref :  *this )
-	ret += ref.length();
+		ret += ref.length();
 	return ret + size() - 1;
 }
 
@@ -701,12 +701,14 @@ void PropertyMap::deduplicate(std::list<std::shared_ptr<PropertyMap>> maps){
 		p->remove( common, false ); //this _won't_ keep needed properties - so from here on the "maps" are invalid
 
 	const PathSet rej = this->transfer(common);
-	LOG_IF(!rej.empty(),Debug,error) << "Some props where rejected when joining the commons into the me (" << rej << ")";
+	LOG_IF(!rej.empty(),Debug,error) << "Some props where rejected when joining the commons into me (" << rej << ")";
 }
 
 std::ostream &PropertyMap::print( std::ostream &out, bool label )const
 {
 	FlatMap buff = getFlatMap();
+	if(buff.empty())
+		return out;
 	size_t key_len = std::max_element(
 		buff.begin(),buff.end(),
 		[](auto &a, auto &b){return a.first.length()<b.first.length();}

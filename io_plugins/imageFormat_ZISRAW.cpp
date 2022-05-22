@@ -203,7 +203,7 @@ std::function<data::Chunk()> ImageFormat_ZISRAW::SubBlock::getChunkGenerator()co
 		case 2:{throwGenericError("implement me LZW");}break;//LZW
 		case 4:{
 			if(DirectoryEntry.PixelType==10 || DirectoryEntry.PixelType==11)
-				throwGenericError(std::string("Unsupportet pixel type ("+std::to_string(DirectoryEntry.PixelType)+") for compressed data"));
+				throwGenericError(std::string("Unsupported pixel type ("+std::to_string(DirectoryEntry.PixelType)+") for compressed data"));
 
 			decoder = [size,isis_type,pixel_size](data::ByteArray image_data){
 				data::Chunk chk=jxrRead(size[0],size[1],image_data,isis_type,pixel_size);
@@ -244,26 +244,35 @@ ImageFormat_ZISRAW::Directory::Directory(data::ByteArray &source, const size_t o
 
 data::Chunk ImageFormat_ZISRAW::transferFromMosaic(std::list<SubBlock> segments, unsigned short type_id,std::shared_ptr<util::ProgressFeedback> feedback){
 	
+	if(segments.size()==1){ //only one segment no stitching necessary
+		return segments.front().getChunkGenerator()();
+	}
+
 	auto boundaries=SubBlock::getBoundaries(segments);
 
-	auto dst=data::Chunk::createByID(type_id, boundaries["X"].size(),boundaries["Y"].size(),1,1,true);
+	auto dst=data::Chunk::createByID(type_id, boundaries["X"].size(),boundaries["Y"].size(),boundaries["Z"].size(),1,true);
 	assert(dst.getVolume());
-	
-	int32_t xoffset=-boundaries["X"].min, yoffset=-boundaries["Y"].min;
-	
+
+	int32_t xoffset=-boundaries["X"].min;
+	int32_t yoffset=-boundaries["Y"].min;
+	int32_t zoffset=-boundaries["Z"].min;
+
 	std::list<std::thread> jobs;
 	for(SubBlock &s:segments){
 		auto dims = s.getDimsInfo();
-		const auto &X = dims['X'], &Y = dims['Y'];;
+		const auto &X = dims['X'], &Y = dims['Y'], &Z=dims['Z'];;
 		const int xscale = X.StoredSize ? X.size / X.StoredSize : 1;
 		const int yscale = Y.StoredSize ? Y.size / Y.StoredSize : 1;
+		const int zscale = Z.StoredSize ? Z.size / Z.StoredSize : 1;
 		assert(X.start / xscale + xoffset >= 0);
 		assert(Y.start / yscale + yoffset >= 0);
+		assert(Z.start / zscale + zoffset >= 0);
 
-		const std::array<size_t, 4> pos = {
+		const util::vector4<size_t> pos = {
 			size_t(X.start / xscale + xoffset),
 			size_t(Y.start / yscale + yoffset),
-			0, 0
+			size_t(Z.start / zscale + zoffset),
+			0
 		};
 
 		auto op = [&s,pos,&feedback,&dst](){
@@ -302,7 +311,7 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 	}
 	
 	struct { 
-		float pixel_size;
+		util::fvector3 pixel_size;
 		unsigned short type_id;
 	}image_info;
 	memset(&image_info,0,sizeof(image_info));
@@ -310,11 +319,12 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 	struct Pyramid{
 		Pyramid(const boost::property_tree::ptree &_xml_data):xml_data(_xml_data){}
 		Pyramid()=default;
-		std::vector<std::list<SubBlock>> tiles;
+		std::vector<std::map<size_t,std::list<SubBlock>>> tiles; // [pyramid layer][in image layer (z-coord)]
 		boost::property_tree::ptree xml_data;
 		float pyramid_factor;
 		std::string getName()const{
-			return xml_data.empty() ? std::string("_unknown_") : xml_data.get<std::string>("<xmlattr>.Name");
+			auto name = xml_data.get_optional<std::string>("<xmlattr>.Name");
+			return name ? *name : std::string("_unknown_");
 		}
 	};
 	std::vector<Pyramid> pyramids;
@@ -326,21 +336,36 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 		boost::property_tree::ptree image_props=meta.get_child("Information.Image");
 
 		image_info.type_id = PixelTypeMapStr.at(image_props.get<std::string>("PixelType"));
-		image_info.pixel_size = meta.get<float>("Scaling.Items.Distance.Value",1./1000)*1000;
-		
+
+		auto scaling = meta.get_child_optional("Scaling.Items");
+		if(scaling){
+			std::map<std::string,float> scale_map;
+			for(auto s:*scaling){
+				scale_map[s.second.get<std::string>("<xmlattr>.Id")]=s.second.get<float>("Value");
+			}
+			image_info.pixel_size={scale_map["X"],scale_map["Y"],scale_map["Z"]};
+		} else{
+			float flat_scaling = meta.get<float>("Scaling.Items.Distance.Value",1./1000);
+			image_info.pixel_size = {flat_scaling,flat_scaling,1};
+		}
+		image_info.pixel_size*=1000;
+
 		auto scenes= meta.get_child_optional("Information.Image.Dimensions.S.Scenes");
-		
+
+		bool pyramid_found = false;
 		if(scenes){
 			//and prepare a pyramid for each Scene
 			for(auto scene:*scenes){
-				pyramids.emplace_back(scene.second);
 				auto pyramid=scene.second.get_child_optional("PyramidInfo");
 				if(pyramid){
+					pyramids.emplace_back(scene.second);
 					pyramids.back().tiles.resize(pyramid->get<size_t>("PyramidLayersCount")+1);
 					pyramids.back().pyramid_factor=pyramid->get<float>("MinificationFactor");
+					pyramid_found = true;
 				}
 			}
-		} else {
+		}
+		if(!pyramid_found) {
 			LOG(Runtime,info)<< "No pyramid header found, assuming flat image";
 			pyramids.emplace_back();
 			pyramids.back().tiles.resize(1);
@@ -373,19 +398,22 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 				const int scaleFactor= pyramids[scene].pyramid_factor;
 				assert(scaleFactor>1);
 				int level = std::log10(scale)/std::log10(scaleFactor);
-				LOG(Runtime,verbose_info) 
-					<< "Got Pyramid segment " << std::make_pair(e.dims[0].StoredSize,e.dims[1].StoredSize) 
-					<< "-Image for " <<  pyramids[scene].getName()
+				LOG(Runtime,verbose_info)
+					<< "Got " << util::ivector3{e.getDimsMap()['X'].StoredSize,e.getDimsMap()['Y'].StoredSize,e.getDimsMap()['Z'].StoredSize}
+					<< " Pyramid segment for " <<  pyramids[scene].getName()
 					<< " at level " << level << " (scale: " << scale << ")";
-						
-				pyramids[scene].tiles[level].emplace_back(source,e.FilePosition,dump_stream);
-				assert(pyramids[scene].tiles[level].back().isNormalImage());
+				SubBlock block(source,e.FilePosition,dump_stream);
+				auto z_coord=block.getDimsInfo()['Z'].start;
+				pyramids[scene].tiles[level][z_coord].emplace_back(std::move(block));
+				assert(pyramids[scene].tiles[level].begin()->second.back().isNormalImage()); //last block in first slice of current pyramid level
 			} else {
-				LOG(Runtime,verbose_info) 
-					<< "Got base segment " << std::make_pair(e.dims[0].StoredSize,e.dims[1].StoredSize) 
-					<< "-Image for " <<  pyramids[scene].getName();
-				pyramids[scene].tiles[0].emplace_back(source,e.FilePosition,dump_stream);
-				assert(pyramids[scene].tiles[0].back().isNormalImage());
+				LOG(Runtime,verbose_info)
+					<< "Got " << util::ivector3{e.getDimsMap()['X'].StoredSize,e.getDimsMap()['Y'].StoredSize,e.getDimsMap()['Z'].StoredSize}
+					<< " base segment for " <<  pyramids[scene].getName();
+				SubBlock block(source,e.FilePosition,dump_stream);
+				auto z_coord=block.getDimsInfo()['Z'].start;
+				pyramids[scene].tiles[0][z_coord].emplace_back(std::move(block));
+				assert(pyramids[scene].tiles[0].begin()->second.back().isNormalImage()); //last block in first slice of pyramid level 0 (only one)
 			}
 		}
 		
@@ -393,46 +421,57 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 		for(const auto &pyramid:pyramids){
 
 			for(size_t i=0;i<pyramid.tiles.size();i++){
-				assert(!pyramid.tiles[i].empty());
-				auto bounds=SubBlock::getBoundaries(pyramid.tiles[i]);
-				std::array<size_t, 2> size{bounds["X"].size(),bounds["Y"].size()};
-				
-				const size_t estimated_size=util::product(size)*PixelSizeMap.at(pyramid.tiles[i].front().DirectoryEntry.PixelType)/(1024*1024);
-				if(checkDialect(dialects,"max16G") && estimated_size> 16*1024){
-					LOG(Runtime,notice) << "Skipping " << size << " image as its resulting in-memory size " << std::to_string(estimated_size)+"MB" << " would exceed the limit of 16G";
-				}else if(checkDialect(dialects,"max8G") && estimated_size> 8*1024){
-					LOG(Runtime,notice) << "Skipping " << size << " image as its resulting in-memory size " << std::to_string(estimated_size)+"MB" << " would exceed the limit of 8G";
-				} else if(checkDialect(dialects,"max4G") && estimated_size> 4*1024){
-					LOG(Runtime,notice) << "Skipping " << size << " image as its resulting in-memory size " << std::to_string(estimated_size)+"MB" << " would exceed the limit of 4G";
-				} else {
-					ret.push_back(transferFromMosaic(pyramid.tiles[i],image_info.type_id,feedback));
-					LOG(Runtime,info) 
-						<<  ret.back().getSizeAsString() << " Image created for pyramid level " << i 
-						<< " of " << pyramid.getName()  
-						<< " from " << pyramid.tiles[i].size() << " tiles";
+				for(auto z:pyramid.tiles[i]){
+					auto &current_layer = z.second;
+					assert(!current_layer.empty());
+					auto bounds=SubBlock::getBoundaries(current_layer);
+					std::array<size_t, 2> size{bounds["X"].size(),bounds["Y"].size()};
+					assert(bounds["Z"].size()==1); // must be just one slice
 
-	// 				ret.back().touchBranch("XML").transfer(pyramid[i].front().xml_data);
-					
-					const float pixel_size=image_info.pixel_size*std::pow(pyramid.pyramid_factor,i);
-					ret.back().setValueAs<util::fvector3>("voxelSize",{pixel_size,pixel_size,1});
-					ret.back().setValueAs("pixelSize_micron",pixel_size*1000);
-					ret.back().setValueAs("pyramidLevel",(uint64_t)i);
-					ret.back().setValueAs("sequenceNumber",(uint64_t)i);
-					
-					const auto center=pyramid.xml_data.get_optional<std::string>("CenterPosition");
-					if(center){
-						const auto fCenter=util::Value(*center).as<util::fvector3>();
-						const util::fvector3 origin{
-							fCenter[0]-size[0]/2,
-							fCenter[1]-size[1]/2,
-							0
+					const size_t estimated_size=util::product(size)*PixelSizeMap.at(current_layer.front().DirectoryEntry.PixelType)/(1024*1024);
+					if(checkDialect(dialects,"max16G") && estimated_size> 16*1024){
+						LOG(Runtime,notice) << "Skipping " << size << " image as its resulting in-memory size " << std::to_string(estimated_size)+"MB" << " would exceed the limit of 16G";
+					}else if(checkDialect(dialects,"max8G") && estimated_size> 8*1024){
+						LOG(Runtime,notice) << "Skipping " << size << " image as its resulting in-memory size " << std::to_string(estimated_size)+"MB" << " would exceed the limit of 8G";
+					} else if(checkDialect(dialects,"max4G") && estimated_size> 4*1024){
+						LOG(Runtime,notice) << "Skipping " << size << " image as its resulting in-memory size " << std::to_string(estimated_size)+"MB" << " would exceed the limit of 4G";
+					} else {
+						ret.push_back(transferFromMosaic(current_layer,image_info.type_id,feedback));
+						// 				ret.back().touchBranch("XML").transfer(pyramid[i].front().xml_data);
+
+						const util::fvector3 voxel_size{
+							image_info.pixel_size[0] * float(std::pow(pyramid.pyramid_factor,i)),
+							image_info.pixel_size[1] * float(std::pow(pyramid.pyramid_factor,i)),
+							image_info.pixel_size[2]
 						};
-						ret.back().setValueAs("indexOrigin",origin);
-					}
-					
-					ret.back().setValueAs("region",pyramid.getName());
-				}
+						ret.back().setValueAs<util::fvector3>("voxelSize",voxel_size);
+						ret.back().setValueAs("pyramidLevel",(uint64_t)i);
+						ret.back().setValueAs("sequenceNumber",(uint64_t)i);
+						ret.back().setValueAs("acquisitionNumber",z.first);
 
+						util::fvector3 origin{
+							voxel_size[0] * bounds["X"].min,
+							voxel_size[1] * bounds["Y"].min,
+							voxel_size[2] * bounds["Z"].min
+						};
+
+						// @todo test me
+						const auto center=pyramid.xml_data.get_optional<std::string>("CenterPosition");
+						if(center){
+							const auto fCenter=util::Value(*center).as<util::fvector3>();
+							origin[0] = fCenter[0]-size[0]/2;
+							origin[1] = fCenter[1]-size[1]/2;
+						}
+
+						ret.back().setValueAs("indexOrigin", origin);
+						ret.back().setValueAs("region",pyramid.getName());
+
+						LOG(Runtime,info)
+							<<  ret.back().getSizeAsString() << " Chunk created for pyramid level " << i
+							<< " of " << pyramid.getName()
+							<< " from " << current_layer.size() << " tiles at " << origin;
+					}
+				}
 			}
 		}
 		return ret;

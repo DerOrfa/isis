@@ -227,7 +227,7 @@ public:
 	}
 	ImageFormat_orthanc(){}
 protected:
-	util::istring suffixes(isis::image_io::FileFormat::io_modes modes) const override{return ".orthanc";}
+	std::list<util::istring> suffixes(isis::image_io::FileFormat::io_modes modes) const override{return {".orthanc"};}
 };
 
 }

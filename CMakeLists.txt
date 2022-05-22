@@ -91,7 +91,7 @@ else()
   add_definitions(-D_ENABLE_DEBUG=0)
 endif()
 
-# since ISIS stongly depends on the boost libraries we will configure them
+# since ISIS strongly depends on the boost libraries we will configure them
 # globally.
 if(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS iostreams unit_test_framework)
@@ -100,7 +100,7 @@ else()
 endif()
 
 ############################################################
-# Macro to generate manpages for CLI programms
+# Macro to generate manpages for CLI programs
 ############################################################
 set(MANPAGES OFF CACHE BOOL "Create manpages for the tools")
 

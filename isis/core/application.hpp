@@ -55,6 +55,19 @@ protected:
 	typedef std::shared_ptr<MessageHandlerBase>( Application::*setLogFunction )( LogLevel level )const;
 	std::map<std::string, std::list<setLogFunction> > logs;
 	virtual std::shared_ptr<MessageHandlerBase> makeLogHandler(isis::LogLevel level) const;
+	/**
+	 * Base initialisation parameter parsing
+	 * - stores argv[0] as m_filename
+	 * - parses parameters and returns false if that fails
+	 * - calls printHelp() and exits when "help" is found in parameters
+	 * - reads configuration file if "cfg"  is found in parameters
+	 * - returns false if that fails
+	 * - (re)sets logging according to parameters
+	 * - sets util::ConsoleProgressBar as logging sink unless "np" is found in parameters
+	 * - sets locale according to parameter "locale" if given ("C" is isis default)
+	 * @return false if parameter parsing fails (from cfg or command line), true otherwise
+	 */
+	bool initBase( int argc, char **argv );
 
 public:
 
@@ -129,7 +142,7 @@ public:
 	 * \param exitOnError if true the program will exit, if there is a problem during the initialisation (like missing parameters).
 	 */
 	virtual bool init( int argc, char **argv, bool exitOnError = true );
-	
+
 	/**
 	 * (re)set log Handlers by calling setLog for each registered module.
 	 * Useful if Application::makeLogHandler was reimplemented and its behavior changes during runtime.

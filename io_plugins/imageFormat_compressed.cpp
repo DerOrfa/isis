@@ -55,7 +55,7 @@ protected:
 	std::list<util::istring> suffixes( io_modes modes = both )const override {
 		std::list<util::istring> formats{"gz","bz2","Z","xz"};
 #ifdef HAVE_LZMA
-		write.push_back("xz");
+		formats.push_back("xz");
 #endif //HAVE_LZMA
 		if( modes != write_only )
 			formats.insert(formats.end(), {"tgz", "tbz", "taz"});
@@ -70,7 +70,7 @@ public:
 		util::istring format = formatstack.back();
 		formatstack.back()="tar"; // push in "tar" in case its one of the following
 
-		if( format == "tgz" )in->push( boost::iostreams::gzip_decompressor() ); // if its tgz,tbz or taz it IS tar
+		if( format == "tgz" )in->push( boost::iostreams::gzip_decompressor() ); // if It's tgz,tbz or taz it IS tar
 		else if( format == "tbz" )in->push( boost::iostreams::bzip2_decompressor() );
 		else if( format == "taz" )in->push( boost::iostreams::zlib_decompressor() );
 		else {
@@ -81,7 +81,7 @@ public:
 #ifdef HAVE_LZMA
 			else if( format == "xz" )in->push( boost::iostreams::lzma_decompressor() );
 #endif
-			else { // ok, no idea what going on, cry for mamy
+			else { // ok, no idea what going on, cry for mammy
 				throwGenericError( "Cannot determine the compression format" );
 			}
 		}
@@ -103,7 +103,7 @@ public:
 		std::ifstream file(filename);
 		file.exceptions(std::ios_base::badbit);
 
-		// set up progress bar if its enabled but don't fiddle with it if its set up already
+		// set up progress bar if its enabled but don't fiddle with it if it's set up already
 		bool set_up=false;
 		if( feedback && feedback->getMax() == 0 ) {
 			set_up=true;

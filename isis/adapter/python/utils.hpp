@@ -37,7 +37,16 @@ load(std::string path,util::slist formatstack={},util::slist dialects={});
 std::pair<std::list<isis::data::Image>,util::slist>
 load_list(util::slist paths,util::slist formatstack={},util::slist dialects={});
 
-data::Image makeImage(py::buffer b, std::map<std::string,util::ValueTypes> metadata);
+bool write(std::list<data::Image> images, std::string path, util::slist sFormatstack={},util::slist sDialects={}, py::object repn=py::none());
 
-std::variant<py::none, util::ValueTypes,std::list<util::ValueTypes>> property2python(util::PropertyValue val);
+py::dict getMetaDataFromPropertyMap(const util::PropertyMap &ob);
+py::dict getMetaDataFromImage(const data::Image &img, bool merge_chunk_data);
+
+data::Image makeImage(py::buffer b, py::dict metadata);
+
+py::object value2object(const util::ValueTypes &val);
+py::object property2object(const util::PropertyValue &val);
+
+util::Value object2value(pybind11::handle ob);
+util::PropertyValue object2property(pybind11::handle ob);
 }

@@ -24,6 +24,7 @@ struct tag_length_visitor
 struct tag_vr_visitor
 {
 	template<boost::endian::order Order> std::string operator()(const ExplicitVrTag<Order> *_tag)const{
+		assert(isalpha(_tag->vr[0]) && isalpha(_tag->vr[1]));
 		return std::string(_tag->vr,_tag->vr+2);
 	}
 	template<boost::endian::order Order> std::string operator()(const ImplicitVrTag<Order> *_tag)const{
@@ -99,20 +100,22 @@ bool DicomElement::next(){
 	return next(position+len+tagLength());
 }
 bool DicomElement::next(size_t _position){
+	position=_position;
 	if(source.getLength()<_position+8) {
 	    is_eof=true;
         return false;
     }
-	position=_position;
-	switch(endian){
-	    case boost::endian::order::big:
-		    tag=makeTag<boost::endian::order::big>();
-		    break;
-	    case boost::endian::order::little:
-		    tag=makeTag<boost::endian::order::little>();
-		    break;
+	else {
+		switch(endian){
+			case boost::endian::order::big:
+				tag = makeTag<boost::endian::order::big>();
+				break;
+			case boost::endian::order::little:
+				tag = makeTag<boost::endian::order::little>();
+				break;
+		}
+		return true;
 	}
-	return true;
 }
 
 
@@ -133,14 +136,15 @@ std::optional<util::Value> DicomElement::getValue(std::string vr){
 			ret=generator.scalar(this);
 		else if(generator.list)
 			ret=generator.list(this);
-		else { // fallback for non- supportet lists @todo
+		else { // fallback for non- supported lists @todo
 			assert(false);
 		}
 
 		LOG_IF(ret,Debug,verbose_info) << "Parsed " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position << " as "  << *ret;
 		LOG_IF(!ret,Runtime,verbose_info) << "Failed to parse " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position;
 	} else {
-		LOG(Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
+		LOG_IF(vr.empty(),Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
+		LOG_IF(!vr.empty(),Debug,error) << "Ignoring entry " << getName() << "/" << getIDString() << " at " << position << " because of empty VR";
 	}
 
 	return ret;
@@ -411,7 +415,7 @@ namespace _internal{
 	    {"SS",{scalar_generate<int16_t>, list_generate<int16_t, int32_t>,sizeof(int16_t)}},
 	    {"SL",{scalar_generate<int32_t>, list_generate<int32_t, int32_t>,sizeof(int32_t)}},
 	    {"US",{scalar_generate<uint16_t>,list_generate<uint16_t,int32_t>,sizeof(uint16_t)}},
-	    {"UL",{scalar_generate<uint32_t>,nullptr,                        sizeof(uint32_t)}},
+	    {"UL",{scalar_generate<uint32_t>,list_generate<uint32_t,int32_t>,sizeof(uint32_t)}}, //@todo deal with potential overflow
 	    //"normal" string types
 	    {"LT",{string_generate,nullptr,0}},
 	    {"UT",{string_generate,nullptr,0}},

@@ -11,13 +11,22 @@ if(NOT pybind11_POPULATED)
     add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
 endif()
 
-add_library(isis MODULE isis_python.cpp utils.cpp logging.cpp)
+pybind11_add_module(pyisis isis_python.cpp logging.cpp utils.cpp)
 
-target_link_libraries(isis PRIVATE pybind11::module isis_core)
+#add_library(pyisis MODULE isis_python.cpp utils.cpp logging.cpp)
+target_link_libraries(pyisis PRIVATE pybind11::module isis_core)
+set_property(TARGET pyisis PROPERTY POSITION_INDEPENDENT_CODE ON)
+pybind11_extension(pyisis)
+pybind11_strip(pyisis)
 
-set_property(TARGET isis PROPERTY POSITION_INDEPENDENT_CODE ON)
+find_package(Python)
+set(PYTHON_MODULE_PATH ${Python_SITELIB} CACHE PATH "Installation path for platform independent modules")
+set(PYTHON_MODULE_PATH_ARCH ${Python_SITEARCH} CACHE PATH "Installation path for platform dependent modules")
 
-pybind11_extension(isis)
-pybind11_strip(isis)
+message(STATUS "platform dependent python modules will be installed to ${PYTHON_MODULE_PATH_ARCH}")
+install (TARGETS pyisis
+        RUNTIME DESTINATION ${PYTHON_MODULE_PATH_ARCH} COMPONENT RuntimeLibraries
+        LIBRARY DESTINATION ${PYTHON_MODULE_PATH_ARCH} COMPONENT RuntimeLibraries
+)
 
-set_target_properties(isis PROPERTIES CXX_VISIBILITY_PRESET "hidden"	CUDA_VISIBILITY_PRESET "hidden")
+#set_target_properties(pyisis PROPERTIES CXX_VISIBILITY_PRESET "hidden"	CUDA_VISIBILITY_PRESET "hidden")

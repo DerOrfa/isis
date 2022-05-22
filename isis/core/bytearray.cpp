@@ -18,6 +18,7 @@
  */
 
 #include "bytearray.hpp"
+#include "color.hpp"
 
 namespace isis::data{
 

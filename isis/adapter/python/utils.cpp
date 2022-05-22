@@ -4,12 +4,31 @@
 
 #include "utils.hpp"
 #include "pybind11/stl.h"
+#include "pybind11/chrono.h"
 #include <type_traits>
 #include "../../core/io_factory.hpp"
 #include "logging.hpp"
 
 namespace isis::python{
 namespace _internal{
+typedef std::variant< //a reduced adapter to prevent ambiguous conversions (e.g. signed/unsigned)
+		  bool, int, double
+		, util::dvector3, util::ivector3
+		, util::dvector4, util::ivector4
+		, std::string
+		, std::complex<double>
+		, util::timestamp, util::duration
+	> reduced_adapter_wo_lists;
+typedef std::variant< //a reduced adapter to prevent ambiguous conversions (e.g. signed/unsigned)
+bool, int, double
+	, util::dvector3, util::ivector3
+	, util::dvector4, util::ivector4
+	, std::string
+	, util::slist, util::ilist, util::dlist
+	, std::complex<double>
+	, util::timestamp, util::duration
+	> reduced_adapter_w_lists;
+
 	py::capsule make_capsule(const std::shared_ptr<void> &ptr)
 	{
 		return py::capsule(new std::shared_ptr<void>(ptr), [](void *f)
@@ -17,6 +36,28 @@ namespace _internal{
 			LOG(Debug,info) << "Freeing shared_ptr capsule at " << f;
 			delete reinterpret_cast<std::shared_ptr<void> *>(f);
 		});
+	}
+
+	//generic typecast plus some special cases
+	template<typename T> py::object type2object(const T &v){
+		return py::cast(v);
+	}
+	template<> py::object type2object<util::Selection>(const util::Selection &v){
+		return py::str(static_cast<std::string>(v));
+	}
+	template<> py::object type2object<util::date>(const util::date &v){
+		//pybind has no special conversion for date
+		// Lazy initialise the PyDateTime import
+		if (!PyDateTimeAPI) { PyDateTime_IMPORT; }
+
+		time_t tme(std::chrono::duration_cast<std::chrono::seconds>(v.time_since_epoch()).count());
+		std::tm localtime = *std::localtime(&tme);
+
+		py::handle handle(PyDate_FromDate(
+			localtime.tm_year + 1900,
+			localtime.tm_mon + 1,
+			localtime.tm_mday));
+		return py::reinterpret_steal<py::object>(handle);
 	}
 
 	std::pair<std::vector<size_t>,std::vector<size_t>>
@@ -51,7 +92,7 @@ namespace _internal{
 		shape_v.push_back(3);
 		strides_v.push_back(sizeof(uint8_t));
 		return py::buffer_info(
-			const_cast<uint8_t*>(&ptr->r),//its ok to drop the const here, we mark the buffer as readonly
+			const_cast<uint8_t*>(&ptr->r),//It's ok to drop the const here, we mark the buffer as readonly
 			shape_v, strides_v,
 			true);
 	}
@@ -60,7 +101,7 @@ namespace _internal{
 		shape_v.push_back(3);
 		strides_v.push_back(sizeof(uint16_t));
 		return py::buffer_info(
-			const_cast<uint16_t*>(&ptr->r),//its ok to drop the const here, we mark the buffer as readonly
+			const_cast<uint16_t*>(&ptr->r),//It's ok to drop the const here, we mark the buffer as readonly
 			shape_v, strides_v,
 			true);
 	}
@@ -73,9 +114,10 @@ namespace _internal{
 
 py::array make_array(data::Chunk &ch)
 {
-	return py::array(ch.visit(
-		[&ch](auto ptr)->py::buffer_info{return _internal::make_buffer_impl(ptr,ch);}
-	),_internal::make_capsule(ch.getRawAddress()));
+	//@todo maybe create with py::array_t<T,py::array::c_style> so we could skip the reshape
+	auto info = ch.visit([&ch](auto ptr){return _internal::make_buffer_impl(ptr,ch);});
+	auto array = py::array(info,_internal::make_capsule(ch.getRawAddress()));
+	return array;
 }
 
 py::array make_array(data::Image &img)
@@ -101,7 +143,7 @@ std::pair<std::list<data::Image>, util::slist> load_list(util::slist paths,util:
 {
 	std::list<util::istring> _formatstack,_dialects;
 	util::slist rejects;
-	auto conversion= [](const std::string &s)->util::istring {return s.c_str();};
+	auto conversion= [](const std::string_view &s)->util::istring {return {s.data(),s.length()};};
 	std::transform(formatstack.begin(),formatstack.end(),std::back_inserter(_formatstack),conversion);
 	std::transform(dialects.begin(),dialects.end(),std::back_inserter(_dialects),conversion);
 
@@ -111,32 +153,100 @@ std::pair<std::list<data::Image>, util::slist> load_list(util::slist paths,util:
 std::pair<std::list<data::Image>, util::slist> load(std::string path,util::slist formatstack,util::slist dialects){
 	return load_list({path},formatstack,dialects);
 }
+bool write(std::list<data::Image> images, std::string path, util::slist sFormatstack,util::slist sDialects, py::object repn){
+	if(!repn.is_none()){
+		util::Selection sRepn(util::getTypeMap( true ));
+		if(sRepn.set(repn.cast<std::string>().c_str())){
+			for( auto &ref :  images ) {
+				ref.convertToType( static_cast<unsigned short>(sRepn) );
+			}
+		} else
+			return false;
+	}
+	return data::IOFactory::write(images,path,util::makeIStringList(sFormatstack),util::makeIStringList(sDialects));
+}
 
-std::variant<py::none, util::ValueTypes, std::list<util::ValueTypes>> property2python(util::PropertyValue p)
+py::object value2object(const util::ValueTypes &val)
 {
-	if(p.is<util::Selection>())
-		p.transform<std::string>();
-	switch(p.size()){
-		case 0:return {};
-		case 1:return p.front();
-		default:return std::list<util::ValueTypes>(p.begin(),p.end());
+	return std::visit([](const auto &value)->py::object{
+		return _internal::type2object(value);
+	},val);
+}
+py::object property2object(const util::PropertyValue &val)
+{
+	switch(val.size()){
+		case 0:return py::none();
+		case 1:return value2object(val.front());
+		default:
+			py::list ret;
+			for(const auto &value:val)
+				ret.append(value2object(value));
+			return ret;
 	}
 }
-data::Image makeImage(py::buffer b, std::map<std::string, util::ValueTypes> metadata)
+util::Value object2value(pybind11::handle ob)
+{
+	return std::visit([](auto &&v)->util::Value{return v;},ob.cast<_internal::reduced_adapter_w_lists>());
+}
+util::PropertyValue object2property(pybind11::handle ob)
+{
+	//tell pybind to try to make it one of the supported value types (except lists)
+	// @todo this is messy, maybe better expose PropertyValue to python directly
+	try{
+		return std::visit([](auto &&v)->util::Value{return v;},ob.cast<_internal::reduced_adapter_wo_lists>());
+	} catch(py::cast_error&){} //ignore error
+
+	//try again as list
+	util::PropertyValue ret;
+	for(auto v:ob)
+		ret.push_back(object2value(v));
+	return ret;
+}
+
+
+py::dict getMetaDataFromPropertyMap(const util::PropertyMap &ob) {
+	py::dict ret;
+	for(auto &set:ob.getFlatMap()){
+		ret[set.first.toString().c_str()]=python::property2object(set.second);
+	}
+	LOG(Debug,verbose_info) << "Transferred " << ret.size() << " properties from a PropertyMap";
+	return ret;
+}
+py::dict getMetaDataFromImage(const data::Image &img, bool merge_chunk_data) {
+	py::dict ret= getMetaDataFromPropertyMap(img);
+	if(merge_chunk_data){
+		for(const auto &set:img.getChunkAt(0,false).getFlatMap()){
+			// create an empty PropertyValue to collect all props
+			util::PropertyValue p;
+			for(auto &props:img.getChunksProperties(set.first)){ // for each PropertyValue "key" from each chunk
+				if(props.isEmpty()){
+					LOG(Runtime,warning) << "Not adding empty chunk property for " << set.first;
+				} else {
+					p.transfer(p.end(),props); //move all its contents into p
+				}
+			}
+			ret[set.first.toString().c_str()]=python::property2object(p);//make p dictionary entry
+			LOG(Debug,verbose_info) << "Added " << p.size() << " distinct properties from chunks for " << set.first;
+		}
+	}
+	return ret;
+}
+
+data::Image makeImage(py::buffer b, py::dict metadata)
 {
 	static const TypeMap type_map;
 	/* Request a buffer descriptor from Python */
 	py::buffer_info buffer = b.request();
+	if(buffer.shape.size()>4)
+		throw std::runtime_error("Only up to 4 dimensions are allowed!");
+
+	if(buffer.shape.size()>1){
+		std::swap(buffer.shape[0],buffer.shape[1]);
+		std::swap(buffer.strides[0],buffer.strides[1]);
+	}
+
 	if(auto found_type=type_map.find(buffer.format);found_type!=type_map.end()) //a supported type was found
 	{
-		if(buffer.shape.size()>4)
-			throw std::runtime_error("Only up to 4 dimensions are allowed!");
-
-		if(buffer.shape.size()>1){
-			std::swap(buffer.shape[0],buffer.shape[1]);
-			std::swap(buffer.strides[0],buffer.strides[1]);
-		}
-
 
 		util::vector4<size_t> sizes;
 		std::copy(buffer.shape.begin(),buffer.shape.end(),sizes.begin());
@@ -153,8 +263,12 @@ data::Image makeImage(py::buffer b, std::map<std::string, util::ValueTypes> meta
 		auto chk=data::Chunk(array,sizes[0],sizes[1],sizes[2],sizes[3]);
 
 		for(auto &prop:metadata){
-//			LOG(Debug,verbose_info) << "Setting property " << prop.first << " as " << prop.second;
-			chk.touchProperty(prop.first.c_str())=prop.second;
+			if(py::isinstance<py::str>(prop.first)){
+				LOG(Debug,verbose_info) << "Setting property " << prop.first;
+				chk.insert({prop.first.cast<std::string>(),object2property(prop.second)});
+			}
+			else
+				LOG(Runtime,error) << "Ignoring key " << prop.first << " as its not a string";
 		}
 
 		auto missing=chk.getMissing();

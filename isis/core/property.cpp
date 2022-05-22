@@ -127,6 +127,7 @@ bool PropertyValue::transform(uint16_t dstID)
 		container.swap(ret.container);
 		return true;
 	}
+	return container.size();
 }
 
 
@@ -176,6 +177,17 @@ std::vector< PropertyValue > PropertyValue::splice( const size_t len )
 	assert(isEmpty());
 	return ret;
 }
+size_t PropertyValue::explode(size_t factor, std::function<Value(const Value &)> op)
+{
+	for(auto e=container.begin();e!=container.end();){
+		for(size_t i=0;i<factor;i++){
+			container.insert(e,op(*e));
+		}
+		e=container.erase(e);
+	}
+	return container.size();
+}
+
 
 
 // Value hooks
@@ -285,7 +297,9 @@ PropertyValue& PropertyValue::operator *=( const Value &second ){front().multipl
 PropertyValue& PropertyValue::operator /=( const Value &second ){front().divide_me(second);return *this;}
 
 bool PropertyValue::operator<(const isis::util::PropertyValue& y) const{return lt(y);}
-std::ostream &operator<<(std::ostream &out, const PropertyValue &s){return out<<s.toString(true);}
+std::ostream &operator<<(std::ostream &out, const PropertyValue &s){
+	return out<<s.toString(false);//should be false as this will be used implicitly in a lot of cases
+}
 
 }
 /// @endcond _internal

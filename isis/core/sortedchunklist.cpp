@@ -190,7 +190,6 @@ bool SortedChunkList::insert( const Chunk &ch )
 
 	size_t sort_prop_size=ch.queryProperty(secondarySort.top().propertyName)->size();
 	if(sort_prop_size>1){ // secondary sort is multi value, we have to spliceAt the chunk and insert separately
-		// @todo handle cases where first level of splicing won't be enough
 		LOG(Runtime,info) << "Splicing chunk at top dim as secondary sorting property " << secondarySort.top().propertyName << " is a list of size " << sort_prop_size;
 		
 		// get rid of all not-to-be-splices props to save time
@@ -211,23 +210,27 @@ bool SortedChunkList::insert( const Chunk &ch )
 		);
 		
 		LOG(Debug,info) << "Removed " << not_spliced.back() << " before splicing";
-		
+
+		//find splicing depth
 		bool ok=true;
-		std::list<data::Chunk> spliced={chs};
-		while(spliced.front().queryProperty(secondarySort.top().propertyName)->size()>1){
-			const data::Chunk &front=spliced.front();
-			if(front.queryProperty(secondarySort.top().propertyName)->size() % front.getRelevantDims()){//this is not good
-				LOG(Runtime,error) << "Aborting to automatic splicing of chunk as amount of elements in splicing property does not fit amount of splices";
-				LOG(Runtime,error) << "Reverting to one chunk only. This is probably not going to end well ...";
-				spliced={chs};
+
+		//figure out the splicing depth based on the length of the secondary sort
+		dimensions splicedim=timeDim;
+		for(
+			size_t prod = 1;
+			splicedim>=rowDim;
+			splicedim=static_cast<dimensions>(splicedim-1)
+		){
+			prod *= chs.getDimSize(splicedim);
+			if(prod==sort_prop_size)
 				break;
-			}
-			for(auto org=spliced.begin();org!=spliced.end();){
-				spliced.splice(org,org->autoSplice());//put results of splicing of org *before* org
-				org=spliced.erase(org); // remove the old spliced up chunk and have org point to the next
+			else if(prod>sort_prop_size){
+				LOG(Runtime,error) << "Automatic splicing of chunk failed as amount of elements in splicing property does not fit amount of splices";
+				return false;
 			}
 		}
-		for(const data::Chunk &c:spliced){
+		
+		for(const data::Chunk &c:chs.autoSplice(splicedim)){
 			std::shared_ptr<Chunk> inserted=insert_impl(c);
 			if(inserted){
 				not_spliced.back().second.push_back(inserted); //list all chunks those extracted props belong into

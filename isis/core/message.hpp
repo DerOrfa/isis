@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <mutex>
 
 namespace isis
 {
@@ -39,15 +40,20 @@ class MSubject : public std::string
 public:
 	template<typename T> MSubject( const T &cont ) {
 		std::ostringstream text;
-		text << cont;
+		if constexpr(std::is_pointer_v<T>){
+			text << std::hex << cont;
+		} else if constexpr(std::is_same_v<T,std::filesystem::path>){
+			text << cont.native();
+		} else {
+			text << cont;
+		}
 		assign( text.str() );
 	}
-	MSubject( const std::filesystem::directory_entry& entry );
 	MSubject( const std::string &cont );
 	MSubject( std::string &&cont );
 };
 /**
- * Wrapper to explicitely mark something as non-"Subject" in a logging message.
+ * Wrapper to explicitly mark something as non-"Subject" in a logging message.
  * See MSubject for the opposite.
  */
 class NoSubject : public std::string
@@ -71,11 +77,13 @@ class Message;
 class MessageHandlerBase
 {
 	static LogLevel m_stop_below;
+	std::mutex mutex;
 protected:
 	explicit MessageHandlerBase( LogLevel level ): m_level( level ) {}
 	virtual ~MessageHandlerBase() = default;
 public:
 	LogLevel m_level;
+	void guardedCommit(const Message &msg );
 	virtual void commit( const Message &msg ) = 0;
 	/**
 	 * Set loglevel below which the system should stop the process.

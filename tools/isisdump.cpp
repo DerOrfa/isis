@@ -25,7 +25,7 @@ int main( int argc, char *argv[] )
 
 	const unsigned short imageDigits = std::log10( app.images.size() ) + 1;
 	std::cout.fill( '0' );
-	for( data::Image & ref :  app.images ) {
+	for( const data::Image & ref :  app.images ) {
 		std::cout << "======Image #" << std::setw( imageDigits )  << ++count1 << std::setw( 0 ) << " " << ref.getSizeAsString() << " (" << ref.identify( false ) << ") ======" << std::endl;
 		ref.print( std::cout, true );
 		int count2 = 0;
