@@ -55,7 +55,6 @@ void setup_logging(LogLevel level)
 	};
 
 	setLogging(util::Selection({"error", "warning", "notice", "info", "verbose_info"}, "notice" ),"all");
-	LOG(Runtime, verbose_info) << "isis logging will be sent through the python logging module";
 }
 void free_logging(LogLevel level)
 {
