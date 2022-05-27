@@ -29,6 +29,7 @@ option(ISIS_IOPLUGIN_COMP "Enable proxy plugin for compressed data (gz, bzip2 an
 option(ISIS_IOPLUGIN_TAR "Enable proxy plugin for reading tar archives" ON)
 option(ISIS_IOPLUGIN_FDF "Enable plugin for reading fdf files" OFF)
 option(ISIS_IOPLUGIN_FLIST "Enable proxy plugin which gets filenames from a file or stdin" ON)
+option(ISIS_IOPLUGIN_SFTP "Enable proxy plugin for sftp" ON)
 
 ############################################################
 # the plugins ...
@@ -227,6 +228,13 @@ if(ISIS_IOPLUGIN_DICOM)
 	endif(OPENJPEG_INCLUDE_DIR AND OPENJPEG_INCLUDE_DIR)
 	set(TARGETS ${TARGETS} isisImageFormat_Dicom)
 endif()
+
+if(ISIS_IOPLUGIN_SFTP)
+	find_library(LIB_SSH ssh2)
+	add_library(isisImageFormat_sftp SHARED sftp/imageFormat_sftp.cpp sftp/sftpclient.cpp)
+	target_link_libraries(isisImageFormat_sftp isis_core ${LIB_SSH} )
+	set(TARGETS ${TARGETS} isisImageFormat_sftp)
+endif(ISIS_IOPLUGIN_SFTP)
 
 ###########################################################################
 # prepare all plugins for installation
