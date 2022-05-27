@@ -91,9 +91,11 @@ void isis::qt5::QStatusBarProgress::onClose()
 {
 	if(status_bar){
 		header_bar->clear();
-		status_bar->removeWidget(header_bar);
 		progress_bar->setValue(0);
-		status_bar->removeWidget(progress_bar);
+		if(status_bar->isVisible()){
+			status_bar->removeWidget(header_bar);
+			status_bar->removeWidget(progress_bar);
+		}
 	} else
 		LOG(Debug,error) << "Calling close on status bar that was deleted";
 }
