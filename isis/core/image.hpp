@@ -215,10 +215,9 @@ public:
 	 * \returns A reference to the addressed voxel value. Reading and writing access
 	 * is provided.
 	 */
-	template <typename T> T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 )
+	template <KnownArrayType T> T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 )
 	{
 		checkMakeClean();
-		static_assert(util::knownType<T>());
 		const std::pair<size_t, size_t> index = commonGet ( first, second, third, fourth );
 		auto &data = chunkAt ( index.first ).castTo<T>();
 		return *(data.get()+index.second);
@@ -238,11 +237,9 @@ public:
 	 *
 	 * \returns A reference to the addressed voxel value. Only reading access is provided
 	 */
-	template <typename T> const T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 ) const
+	template <KnownArrayType T> const T &voxel ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0 ) const
 	{
 		LOG_IF(!clean,  Debug, warning )  << "Accessing voxels of a not-clean image. Pleas run reIndex first";
-
-		static_assert(util::knownType<T,ArrayTypes>());
 		const std::pair<size_t, size_t> index = commonGet ( first, second, third, fourth );
 		const auto &data = chunkPtrAt ( index.first )->castTo<T>();
 		return data.get()+index.second;
@@ -426,8 +423,7 @@ public:
 	 * \note If the datatype is a vector the minimum/maximum across all elements is computed
 	 * \returns a pair of T storing the minimum and maximum values of the image.
 	 */
-	template<typename T> std::pair<T, T> getMinMaxAs() const {
-		static_assert(util::knownType<T>(),"invalid type");// works only for T from _internal::types
+	template<KnownValueType T> std::pair<T, T> getMinMaxAs() const {
 		auto minmax = getMinMax();
 		return std::make_pair ( minmax.first.as<T>(), minmax.second.as<T>() );
 	}

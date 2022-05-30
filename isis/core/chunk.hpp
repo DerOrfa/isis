@@ -331,10 +331,9 @@ public:
 	 * \param nrOfTimesteps size of the resulting image
 	 * \param fakeValid set all needed properties to usefull values to make the Chunk a valid one
 	 */
-	template<typename T> MemChunk( const T *const org, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false  ):
+	template<KnownArrayType T> MemChunk( const T *const org, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false  ):
 	    MemChunk<TYPE>( nrOfColumns, nrOfRows, nrOfSlices, nrOfTimesteps, fakeValid )
 	{
-		static_assert(util::knownType<T>(),"invalid type");
 		this->copyFromMem( org, this->getVolume() );
 	}
 	/**

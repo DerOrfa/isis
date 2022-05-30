@@ -13,6 +13,8 @@ namespace isis::data::_internal{
 	class WritingValueAdapter;
 }
 
+template<typename T> concept KnownValueType = isis::util::_internal::variant_index<isis::util::ValueTypes ,std::remove_cv_t<T>>() !=std::variant_npos;
+
 namespace isis::util{
 
 class Value: public ValueTypes{
@@ -53,10 +55,10 @@ public:
 	Value &operator=(const Value&)=default;
 	Value &operator=(Value&&)=default;
 
-	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
+	template <KnownValueType T>
 	constexpr Value(T &&v):ValueTypes(v){}
 
-	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
+	template <KnownValueType T>
 	constexpr Value(const T &v):ValueTypes(v){}
 	
 	//copy
