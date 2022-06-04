@@ -141,10 +141,10 @@ endif()
 # PNG plugin
 ############################################################
 if(ISIS_IOPLUGIN_PNG)
-	find_package(PNG REQUIRED)
+	find_package(libpng REQUIRED)
 
 	add_library(isisImageFormat_png SHARED imageFormat_png.cpp)
-	target_link_libraries(isisImageFormat_png isis_core PNG::PNG Threads::Threads)
+	target_link_libraries(isisImageFormat_png isis_core libpng::libpng Threads::Threads)
 
 	set(TARGETS ${TARGETS} isisImageFormat_png)
 endif()
@@ -170,23 +170,26 @@ endif()
 if(ISIS_IOPLUGIN_COMP)
 	option(ISIS_IOPLUGIN_COMP_LZMA "Add support for lzma in the plugin for compressed data (xz)" OFF)
 
-	find_package(BZip2)
-	find_package(ZLIB)
+	find_package(bzip2 REQUIRED)
+	find_package(zlib REQUIRED)
 
 	add_library(isisImageFormat_comp_proxy SHARED imageFormat_compressed.cpp)
 	target_include_directories(isisImageFormat_comp_proxy PRIVATE ${BZIP2_INCLUDE_DIR})
 
 	if(ISIS_IOPLUGIN_COMP_LZMA)
-		find_library(LIB_LZMA "lzma")
-		find_path(INCPATH_LZMA "lzma.h")
-
-		target_link_libraries(isisImageFormat_comp_proxy ${LIB_LZMA})
+		if(USE_CONAN)
+			find_package(LibLZMA REQUIRED)
+		else(USE_CONAN)
+			find_library(LibLZMA_LIBRARIES "lzma")
+			find_path(LibLZMA_INCLUDE_DIRS "lzma.h")
+		endif(USE_CONAN)
+		target_link_libraries(isisImageFormat_comp_proxy ${LibLZMA_LIBRARIES})
 		target_sources(isisImageFormat_comp_proxy PRIVATE imageFormat_compressed_lzma.cpp)
 		target_compile_definitions(isisImageFormat_comp_proxy PRIVATE "HAVE_LZMA")
-		target_include_directories(isisImageFormat_comp_proxy PRIVATE ${INCPATH_LZMA})
+		target_include_directories(isisImageFormat_comp_proxy PRIVATE ${LibLZMA_INCLUDE_DIRS})
 	endif(ISIS_IOPLUGIN_COMP_LZMA)
 
-	target_link_libraries(isisImageFormat_comp_proxy isis_core ZLIB::ZLIB ${BZIP2_LIBRARIES} Boost::iostreams)
+	target_link_libraries(isisImageFormat_comp_proxy isis_core zlib::zlib ${BZIP2_LIBRARIES} boost::iostreams)
 	set(TARGETS ${TARGETS} isisImageFormat_comp_proxy)
 endif()
 
@@ -195,7 +198,7 @@ endif()
 ############################################################
 if(ISIS_IOPLUGIN_TAR)
   add_library(isisImageFormat_tar_proxy SHARED imageFormat_tar.cpp)
-  target_link_libraries(isisImageFormat_tar_proxy isis_core Boost::iostreams)
+  target_link_libraries(isisImageFormat_tar_proxy isis_core boost::iostreams)
   set(TARGETS ${TARGETS} isisImageFormat_tar_proxy)
 endif()
 

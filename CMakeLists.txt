@@ -58,14 +58,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 ############################################################
-# conan based dependency resolution
-############################################################
-option(USE_CONAN "Use conan for dependencies" OFF)
-if(USE_CONAN)
-	include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
-endif()
-
-############################################################
 # Logging options are global for all components in the tree
 ############################################################
 option(ISIS_RUNTIME_LOG "Enable runtime logging" ON)
@@ -195,7 +187,9 @@ endif()
 add_subdirectory(isis)
 
 # configure tests
-add_subdirectory(tests)
+if(BUILD_TESTING)
+	add_subdirectory(tests)
+endif(BUILD_TESTING)
 
 # build the ISIS tools.
 if(ISIS_BUILD_TOOLS)

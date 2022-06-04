@@ -1,9 +1,7 @@
 import platform
 
-from conans import ConanFile
-from conans.model.options import PackageOption
-from conan.tools.cmake import CMakeToolchain, CMake
-from conan.tools.layout import cmake_layout
+from conan import ConanFile
+from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
 from os import path
 
 
@@ -36,19 +34,19 @@ class isis(ConanFile):
 
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = ["CMakeLists.txt", "COPYING.txt", "isis/*", "io_plugins/*", "cmake/*", "tools/*"]
-    generators = "cmake_paths", "cmake_find_package", "CMakeToolchain"
+    generators = "CMakeDeps", "CMakeToolchain"
 
 
     requires = [
         "boost/[>1.30]",
-        "jsoncpp/[~=1]",
+        "libpng/[>1.2]",
+        ("jsoncpp/[~=1]", "private"),
         ("fftw/[~=3]", "private"),
-        ("lzma_sdk/[~=9]", "private"),
-        ("openjpeg/[~=2]", "private"),
-        ("libpng/[>1.2]", "private")
+        ("xz_utils/[~=5]", "private"),
+        ("openjpeg/[~=2]", "private")
     ]
 
-    def configure(self):
+    def config_options(self):
         if(self.options.testing):
             self.exports_sources.append("tests/*")
         self.options['fftw'].precision = "single"
@@ -57,18 +55,15 @@ class isis(ConanFile):
         if self.options.with_qt5:
             self.requires("qt/[~=5]")
         if self.options.with_python:
-            self.requires("pybind11/[>2.6.0]", "private")
+            self.requires("pybind11/[>2.9.0]", "private")
         if self.options.io_zisraw:
             self.requires("jxrlib/cci.20170615", "private")
 
-    def layout(self):
-        cmake_layout(self)
-
     def generate(self):
-        tc = CMakeToolchain(self) # https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html?highlight=cmaketoolchain
         self.python_path = path.join("lib", "python3", "dist-packages")
+        tc = CMakeToolchain(self)
 
-        for var in ["USE_CONAN", "ISIS_RUNTIME_LOG", "ISIS_IOPLUGIN_COMP_LZMA", "ISIS_IOPLUGIN_PNG"]:
+        for var in ["USE_CONAN", "ISIS_RUNTIME_LOG", "ISIS_IOPLUGIN_PNG"]:
             tc.variables[var] = True
 
         tc.variables["ISIS_QT5"] = bool(self.options.with_qt5)
@@ -77,10 +72,18 @@ class isis(ConanFile):
         tc.variables["ISIS_DEBUG_LOG"] = bool(self.options.debug_log)
         tc.variables["ISIS_IOPLUGIN_ZISRAW"] = bool(self.options.io_zisraw)
         tc.variables["BUILD_TESTING"] = bool(self.options.testing)
+        tc.variables["ISIS_IOPLUGIN_SFTP"] = False
+        tc.variables["ISIS_IOPLUGIN_COMP_LZMA"] = True
 
-        tc.variables["PYTHON_MODULE_PATH"] = self.python_path
-        tc.variables["PYTHON_MODULE_PATH_ARCH"] = self.python_path
+        if self.options.with_python:
+            tc.variables["USE_SYSTEM_PYBIND"] = True
+            tc.variables["PYTHON_MODULE_PATH"] = self.python_path
+            tc.variables["PYTHON_MODULE_PATH_ARCH"] = self.python_path
         tc.generate()
+
+        deps = CMakeDeps(self)
+        # This writes all the config files (xxx-config.cmake)
+        deps.generate()
 
     def build(self):
         cmake = CMake(self)
