@@ -38,7 +38,7 @@ public:
 	/// Create a property and store the given single value object.
 	PropertyValue(const Value &ref, bool _needed = false ): m_needed(_needed ) {container.push_back(ref);}
 	/// Create a property and store the given single value object.
-	PropertyValue(Value &&ref, bool _needed = false ): m_needed(_needed ){container.push_back(ref);}
+	PropertyValue(Value &&ref, bool _needed = false ): m_needed(_needed ){container.emplace_back(ref);}
 
 	////////////////////////////////////////////////////////////////////////////
 	// List operations
