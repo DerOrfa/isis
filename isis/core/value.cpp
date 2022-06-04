@@ -4,10 +4,6 @@
 
 namespace isis::util{
 
-Value::Value(const ValueTypes &v): ValueTypes(v){}
-
-Value::Value(ValueTypes &&v): ValueTypes(v){}
-
 std::string Value::toString(bool with_typename)const{
 	std::stringstream o;
 	print(with_typename,o);
@@ -120,6 +116,10 @@ bool Value::isInteger() const
 
 bool Value::isValid() const{return !ValueTypes::valueless_by_exception();}
 
+Value Value::operator+(const std::string &rhs) const{return this->as<std::string>()+rhs;}
+Value Value::operator+(const duration &rhs) const{return chrono_math<std::plus<>>(rhs);}
+Value Value::operator-(const duration &rhs) const{return chrono_math<std::minus<>>(rhs);}
+
 bool Value::gt(const Value &ref )const {
 	auto op = [&](auto ptr){
 		return operatorWrapper(_internal::type_greater<decltype(ptr)>(),ref,false );
@@ -139,42 +139,6 @@ bool Value::eq(const Value &ref )const {
 	return std::visit(op,static_cast<const ValueTypes&>(*this));
 }
 
-Value Value::plus(const Value &ref )const{return Value(*this).add(ref);}
-Value Value::minus(const Value &ref )const{return Value(*this).subtract(ref);}
-Value Value::multiply(const Value &ref )const{return Value(*this).multiply_me(ref);}
-Value Value::divide(const Value &ref )const{return Value(*this).divide_me(ref);}
-
-Value& Value::add(const Value &ref )
-{
-	auto op=[&](auto ptr)->Value&{
-		return operatorWrapper_me(_internal::type_plus<decltype(ptr)>(), ref );
-	};
-	return std::visit(op,static_cast<ValueTypes&>(*this));
-}
-
-Value& Value::subtract(const Value &ref )
-{
-	auto op=[&](auto ptr)->Value&{
-		return operatorWrapper_me(_internal::type_minus<decltype(ptr)>(), ref );
-	};
-	return std::visit(op,static_cast<ValueTypes&>(*this));
-}
-
-Value& Value::multiply_me(const Value &ref )
-{
-	auto op=[&](auto ptr)->Value&{
-		return operatorWrapper_me(_internal::type_mult<decltype(ptr)>(), ref );
-	};
-	return std::visit(op,static_cast<ValueTypes&>(*this));
-}
-
-Value& Value::divide_me(const Value &ref )
-{
-	auto op=[&](auto ptr)->Value&{
-		return operatorWrapper_me(_internal::type_div<decltype(ptr)>(), ref );
-	};
-	return std::visit(op,static_cast<ValueTypes&>(*this));
-}
 
 bool Value::apply(const isis::util::Value& other){
 	return convert(other,*this);

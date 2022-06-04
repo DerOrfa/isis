@@ -204,61 +204,28 @@ short unsigned int PropertyValue::getTypeID() const{
 	return begin()->typeID();//use begin() instead of front() to avoid warning about single value operation on a multi value Property
 }
 
-PropertyValue& PropertyValue::add( const PropertyValue& ref ){
-	LOG_IF(ref.isEmpty(),Debug,error) << "Adding an empty property, won't do anything";
-	auto mine_it=container.begin();
-	auto other_it=ref.container.begin();
-
-	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
-		mine_it->add(*other_it);
-	return *this;
-}
-PropertyValue& PropertyValue::subtract(const PropertyValue& ref ){
-	LOG_IF(ref.isEmpty(),Debug,error) << "Subtracting an empty property, won't do anything";
-	auto mine_it=container.begin();
-	auto other_it=ref.container.begin();
-
-	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
-		mine_it->subtract(*other_it);
-	return *this;
-}
-PropertyValue& PropertyValue::multiply_me( const PropertyValue& ref ){
-	LOG_IF(ref.isEmpty(),Debug,error) << "Multiplying with an empty property, won't do anything";
-	auto mine_it=container.begin();
-	auto other_it=ref.container.begin();
-
-	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
-		mine_it->multiply_me(*other_it);
-	return *this;
-}
-PropertyValue& PropertyValue::divide_me( const PropertyValue& ref ){
-	LOG_IF(ref.isEmpty(),Debug,error) << "Dividing by an empty property, won't do anything";
-	auto mine_it=container.begin();
-	auto other_it=ref.container.begin();
-
-	for(;mine_it != container.end() && other_it != ref.container.end();++mine_it,++other_it)
-		mine_it->divide_me(*other_it);
-	return *this;
-}
-
 PropertyValue PropertyValue::plus( const PropertyValue& ref ) const{
-	PropertyValue ret(*this);
-	ret.add(ref);
+	PropertyValue ret;
+	auto ret_it= std::inserter(ret.container,ret.container.begin());
+	std::transform(container.begin(),container.end(),ref.container.begin(),ret_it,std::plus<>{});
 	return ret;
 }
 PropertyValue PropertyValue::minus( const PropertyValue& ref ) const{
-	PropertyValue ret(*this);
-	ret.subtract(ref);
+	PropertyValue ret;
+	auto ret_it= std::inserter(ret.container,ret.container.begin());
+	std::transform(container.begin(),container.end(),ref.container.begin(),ret_it,std::minus<>{});
 	return ret;
 }
 PropertyValue PropertyValue::multiply( const PropertyValue& ref ) const{
-	PropertyValue ret(*this);
-	ret.multiply_me(ref);
+	PropertyValue ret;
+	auto ret_it= std::inserter(ret.container,ret.container.begin());
+	std::transform(container.begin(),container.end(),ref.container.begin(),ret_it,std::multiplies<>{});
 	return ret;
 }
 PropertyValue PropertyValue::divide( const PropertyValue& ref ) const{
-	PropertyValue ret(*this);
-	ret.divide_me(ref);
+	PropertyValue ret;
+	auto ret_it= std::inserter(ret.container,ret.container.begin());
+	std::transform(container.begin(),container.end(),ref.container.begin(),ret_it,std::divides<>{});
 	return ret;
 }
 
@@ -291,10 +258,10 @@ bool PropertyValue::lt( const PropertyValue& ref ) const{
 	return ret;
 }
 
-PropertyValue& PropertyValue::operator +=( const Value &second ){front().add(second);return *this;}
-PropertyValue& PropertyValue::operator -=( const Value &second ){ front().subtract(second);return *this;}
-PropertyValue& PropertyValue::operator *=( const Value &second ){front().multiply_me(second);return *this;}
-PropertyValue& PropertyValue::operator /=( const Value &second ){front().divide_me(second);return *this;}
+PropertyValue& PropertyValue::operator +=( const Value &second ){front()+=second;return *this;}
+PropertyValue& PropertyValue::operator -=( const Value &second ){ front()-=second;return *this;}
+PropertyValue& PropertyValue::operator *=( const Value &second ){front()*=second;return *this;}
+PropertyValue& PropertyValue::operator /=( const Value &second ){front()/=second;return *this;}
 
 bool PropertyValue::operator<(const isis::util::PropertyValue& y) const{return lt(y);}
 std::ostream &operator<<(std::ostream &out, const PropertyValue &s){

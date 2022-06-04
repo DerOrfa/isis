@@ -869,9 +869,9 @@ bool Image::convertToType( short unsigned int ID, scaling_pair scaling )
 	auto windowMax = queryProperty("window/max");
 	auto windowMin = queryProperty("window/min");
 	if(windowMax)
-		(*windowMax) = windowMax->multiply(scaling.scale).add(scaling.offset);
+		(*windowMax) = windowMax->multiply(scaling.scale).plus(scaling.offset);
 	if(windowMin)
-		(*windowMin) = windowMin->multiply(scaling.scale).add(scaling.offset);
+		(*windowMin) = windowMin->multiply(scaling.scale).plus(scaling.offset);
 
 	return retVal;
 }

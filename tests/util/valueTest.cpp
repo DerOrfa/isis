@@ -29,6 +29,29 @@ using util::Value;
 using util::fvector4;
 using util::ivector4;
 
+template<std::size_t index = 0> void lhs_type_test() {
+	typedef util::Value::TypeByIndex<index> v_type;
+	if constexpr(!(
+		std::is_same_v<bool,  v_type> ||
+		std::is_same_v<util::color24,  v_type> || std::is_same_v<util::color48, v_type> ||
+		std::is_same_v<util::fvector3, v_type> || std::is_same_v<util::fvector4,v_type> ||
+		std::is_same_v<util::dvector3, v_type> || std::is_same_v<util::dvector4,v_type> ||
+		std::is_same_v<util::ivector3, v_type> || std::is_same_v<util::ivector4,v_type> ||
+		std::is_same_v<util::Selection,v_type> || std::is_same_v<util::ivector4,v_type> ||
+		std::is_same_v<util::slist ,v_type> || std::is_same_v<util::ilist ,v_type> || std::is_same_v<util::dlist ,v_type> ||
+		std::is_same_v<util::date ,v_type> || std::is_same_v<util::timestamp ,v_type> ||
+		std::is_same_v<std::complex<float>,v_type> || std::is_same_v<std::complex<double>,v_type> ||
+		std::is_same_v<util::duration, v_type> || std::is_same_v<std::string,v_type>
+	)) {
+		Value v(v_type(10));
+		BOOST_TEST( v+5 == 10+5, v.toString(true) + "+5 should be 15");
+		BOOST_TEST( v-5 == 10-5, v.toString(true) + "-5 should be 5");
+		BOOST_TEST( v*5 == 10*5, v.toString(true) + "*5 should be 50");
+		BOOST_TEST( v/5 == 10/5, v.toString(true) + "/5 should be 2");
+	}
+	if constexpr(index < std::variant_size_v<util::ValueTypes>-1)
+		lhs_type_test<index+1>();
+}
 
 // TestCase object instantiation
 BOOST_AUTO_TEST_CASE( test_type_init )
@@ -38,6 +61,16 @@ BOOST_AUTO_TEST_CASE( test_type_init )
 	Value tInt(42 );   // integer
 	Value tStr(std::string("Hello World" ) ); // string
 	Value tFlt((float)3.1415 );
+}
+
+
+BOOST_AUTO_TEST_CASE( arit_lhs_test )
+{
+	lhs_type_test();
+	BOOST_CHECK_EQUAL(Value("10"s)+5,"10"s);//invalid operation, should be ignored
+	BOOST_CHECK_EQUAL(Value("10"s)+"5","105"s); // concatenating strings is allowed
+	// Value("10"s)-"5"; // should not compile
+	//@todo test chrono
 }
 
 // TestCase toString()
@@ -64,41 +97,26 @@ BOOST_AUTO_TEST_CASE( test_type_is )
 }
 
 // TestCase operators()
+BOOST_AUTO_TEST_CASE( rhs_operators )
+{
+	Value tInt1(21 );
+
+	BOOST_CHECK_EQUAL( tInt1 + 21, 42 );
+	BOOST_CHECK_EQUAL( tInt1 * 2, 42 );
+//	BOOST_CHECK_EQUAL( 42 - tInt1, tInt2 ); //@todo maybe add two sided operators
+
+}
+
+// TestCase operators()
 BOOST_AUTO_TEST_CASE( test_operators )
 {
 	Value tInt1(21 ), tInt2(21 );
-	Value _21str("21");
+	Value _21str("21"s);
 	
 	BOOST_CHECK_EQUAL( tInt1 + tInt2, 42 );
 	BOOST_CHECK_EQUAL( tInt1 * 2, 42 );
 //	BOOST_CHECK_EQUAL( 42 - tInt1, tInt2 ); //@todo maybe add two sided operators
 
-}
-BOOST_AUTO_TEST_CASE( test_ext_operators )
-{
-	Value tInt1(21 ), tInt2(21 );
-	Value _21str("21"s),_2str("2"s),_2strneg("-2"s);
-
-	// proper operation
-	BOOST_CHECK_EQUAL(tInt1.plus(_21str), Value(21+21 ) );
-	BOOST_CHECK_EQUAL(tInt1.minus(_21str), Value(21-21 ) );
-	BOOST_CHECK_EQUAL(tInt1.multiply(_21str), Value(21*21 ) );
-	BOOST_CHECK_EQUAL(tInt1.divide(Value("2"s)), Value(10 ) ); // int(21/2)=10
-
-	BOOST_CHECK_EQUAL(_2str.plus(Value(1)), _21str ); // "2" + "1" = "21"
-
-	{
-		Value buff=tInt1;
-		BOOST_REQUIRE_EQUAL(buff.multiply_me(_2str), Value(42 ) );
-		BOOST_REQUIRE_EQUAL(buff.divide_me(_2str), Value(21 ) );
-		BOOST_REQUIRE_EQUAL(buff.add(_2str), Value(23 ) );
-		BOOST_CHECK_EQUAL(buff.subtract(_21str), Value(2 ) );
-	}
-
-	BOOST_CHECK(!Value(50).eq(_2strneg));
-
-	// invalid operation should not change value
-	BOOST_CHECK_EQUAL(Value((uint16_t)50).plus(_2strneg), Value((uint16_t)50));
 }
 
 BOOST_AUTO_TEST_CASE( type_comparison_test )

@@ -297,42 +297,25 @@ public:
 	[[nodiscard]] bool eq( const PropertyValue &ref )const;
 
 	/**
-	 * \returns a PropertyValue with the results of \link Value::plus \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::operator+ \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue plus( const PropertyValue &ref )const;
 	/**
-	 * \returns a PropertyValue with the results of \link Value::minus \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::operator- \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue minus( const PropertyValue &ref )const;
 	/**
-	 * \returns a PropertyValue with the results of \link Value::multiply \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::operator* \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue multiply( const PropertyValue &ref )const;
 	/**
-	 * \returns a PropertyValue with the results of \link Value::divide \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::operator/ \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue divide( const PropertyValue &ref )const;
-
-	/**
-	 * \copydetails PropertyValue::gt
-	 */
-	PropertyValue& add( const PropertyValue &ref );
-	/**
-	 * \copydetails PropertyValue::gt
-	 */
-	PropertyValue& subtract(const PropertyValue &ref );
-	/**
-	 * \copydetails PropertyValue::gt
-	 */
-	PropertyValue& multiply_me( const PropertyValue &ref );
-	/**
-	 * \copydetails PropertyValue::gt
-	 */
-	PropertyValue& divide_me( const PropertyValue &ref );
 
 	////////////////////////////////////////////////////////////////////////////
 	// operators on "normal" values

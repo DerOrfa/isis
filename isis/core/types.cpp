@@ -5,7 +5,7 @@
 namespace isis{
 namespace util{
 
-#define setName(type,name) template<> std::string _internal::name_visitor::operator()<type>(const type&)const{return name;}
+#define setName(type,name) template<> const char* _internal::name_visitor::operator()<type>(const type&)const{return name;}
 
 setName( bool, "boolean" );
 

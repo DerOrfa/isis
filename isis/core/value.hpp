@@ -7,15 +7,25 @@
 #include "types_value.hpp"
 #include "value_converter.hpp"
 #include <functional>
+#include <complex>
 
 namespace isis::data::_internal{
     class ConstValueAdapter;
 	class WritingValueAdapter;
 }
-
 template<typename T> concept KnownValueType = isis::util::_internal::variant_index<isis::util::ValueTypes ,std::remove_cv_t<T>>() !=std::variant_npos;
+template<typename T> concept arithmetic = std::is_arithmetic_v<T> ;
 
 namespace isis::util{
+namespace _internal{
+template<KnownValueType T> std::string_view typename_with_fallback(){
+	return typeName<T>();
+}
+template<typename T> std::string_view typename_with_fallback(){
+	return typeid(T).name();
+}
+
+}
 
 class Value: public ValueTypes{
 	static const _internal::ValueConverterMap &converters();
@@ -41,6 +51,41 @@ class Value: public ValueTypes{
 		return *this;
 	}
 
+private:
+	template<class OP, arithmetic r_type> Value arithmetic_op(const r_type& rhs)const{
+		static const OP op;
+		auto visitor=[&](auto &&ptr)->Value{
+			typedef std::remove_cvref_t<decltype(ptr)> l_type;
+			if constexpr(std::is_arithmetic_v<l_type>)
+				return op(ptr,rhs);
+			else
+				LOG(Runtime,error) << "Invalid operation " << typeid(op).name() << " on " << util::typeName<l_type>() << " and " << _internal::typename_with_fallback<r_type>();
+			return ptr;
+		};
+		return std::visit(visitor,static_cast<const ValueTypes&>(*this));
+	}
+	template<class OP> Value arithmetic_op(const Value& rhs)const{
+		auto visitor=[this](const auto &ptr)->Value{
+			typedef std::remove_cvref_t<decltype(ptr)> r_type;
+			if constexpr(std::is_arithmetic_v<r_type>)
+				return this->arithmetic_op<OP>(ptr);
+			else
+				LOG(Runtime,error) << util::typeName<r_type>() << " cannot be used for arithmetics";
+			return *this;
+		};
+		return std::visit(visitor,static_cast<const ValueTypes&>(rhs));
+	}
+	template<class OP, typename C> Value chrono_math(const C &rhs)const requires std::is_same_v<duration,C> || std::is_same_v<timestamp,C>
+	{
+		static const OP op;
+		if(is<timestamp>())
+			return op(this->as<timestamp>(), rhs);
+		else if(is<date>())
+			return op(this->as<date>(), rhs);
+		else
+			LOG(Runtime,error) << "Invalid operation " << typeid(op).name() << " on " << typeName() << " and " << util::typeName<duration>();
+		return *this;
+	}
 public:
 	typedef _internal::ValueConverterMap::mapped_type::mapped_type Converter;
 
@@ -48,6 +93,7 @@ public:
 	static constexpr auto NumOfTypes =  std::variant_size_v<ValueTypes>;
 
 	// default constructors
+	Value()=default;
 	Value(Value &&v)=default;
 	Value(const Value &v)=default;
 
@@ -61,11 +107,6 @@ public:
 	template <KnownValueType T>
 	constexpr Value(const T &v):ValueTypes(v){}
 	
-	//copy
-	Value(const ValueTypes &v);
-	Value(ValueTypes &&v);
-	Value()=default;
-
 	[[nodiscard]] std::string typeName()const;
 	[[nodiscard]] size_t typeID()const;
 
@@ -169,29 +210,39 @@ public:
 	 */
 	[[nodiscard]] bool eq( const Value &ref )const;
 
-	[[nodiscard]] Value plus(const Value &ref )const;
-	[[nodiscard]] Value minus(const Value &ref )const;
-	[[nodiscard]] Value multiply(const Value &ref )const;
-	[[nodiscard]] Value divide(const Value &ref )const;
+	// Value arithmetics
+	// runs arithmetic operations (+,-,*,/) on the internal value and the given rhs
+	// result type is defined by c++ rules (not necessarily the original value type)
+	// +-operation with a string always results in a string
+	template<arithmetic r_type> [[nodiscard]] Value operator+(const r_type& rhs)const{return arithmetic_op<std::plus<>>(rhs);}
+	template<arithmetic r_type> [[nodiscard]] Value operator-(const r_type& rhs)const{return arithmetic_op<std::minus<>>(rhs);}
+	template<arithmetic r_type> [[nodiscard]] Value operator*(const r_type& rhs)const{return arithmetic_op<std::multiplies<>>(rhs);}
+	template<arithmetic r_type> [[nodiscard]] Value operator/(const r_type& rhs)const{return arithmetic_op<std::divides<>>(rhs);}
 
-	Value& add(const Value &ref );
-	Value& subtract(const Value &ref );
-	Value& multiply_me(const Value &ref );
-	Value& divide_me(const Value &ref );
+	template<arithmetic r_type> Value operator+=(const r_type& rhs){return *this=arithmetic_op<std::plus<>>(rhs);}
+	Value operator+=(const std::string& rhs){return *this=this->as<std::string>()+rhs;}
+	template<arithmetic r_type> Value operator-=(const r_type& rhs){return *this=arithmetic_op<std::minus<>>(rhs);}
+	template<arithmetic r_type> Value operator*=(const r_type& rhs){return *this=arithmetic_op<std::multiplies<>>(rhs);}
+	template<arithmetic r_type> Value operator/=(const r_type& rhs){return *this=arithmetic_op<std::divides<>>(rhs);}
 
-	Value operator+(const Value &ref )const{return plus(ref);};
-	Value operator-(const Value &ref )const{return minus(ref);};
-	Value operator*(const Value &ref )const{return multiply(ref);};
-	Value operator/(const Value &ref )const{return divide(ref);};
+	[[nodiscard]] Value operator+(const Value &ref )const{return arithmetic_op<std::plus<>>(ref);};
+	[[nodiscard]] Value operator-(const Value &ref )const{return arithmetic_op<std::minus<>>(ref);};
+	[[nodiscard]] Value operator*(const Value &ref )const{return arithmetic_op<std::multiplies<>>(ref);};
+	[[nodiscard]] Value operator/(const Value &ref )const{return arithmetic_op<std::divides<>>(ref);};
 
-	Value& operator+=(const Value &ref ){return add(ref);};
-	Value& operator-=(const Value &ref ){return subtract(ref);};
-	Value& operator*=(const Value &ref ){return multiply_me(ref);};
-	Value& operator/=(const Value &ref ){return divide_me(ref);};
+	Value operator+=(const Value &ref ){return *this=arithmetic_op<std::plus<>>(ref);};
+	Value operator-=(const Value &ref ){return *this=arithmetic_op<std::minus<>>(ref);};
+	Value operator*=(const Value &ref ){return *this=arithmetic_op<std::multiplies<>>(ref);};
+	Value operator/=(const Value &ref ){return *this=arithmetic_op<std::divides<>>(ref);};
 
-	bool operator<( const Value &ref )const{return lt(ref);};
-	bool operator>( const Value &ref )const{return gt(ref);};
-	bool operator==( const Value &ref )const{return eq(ref);};
+	// specialisations
+	[[nodiscard]] Value operator+(const std::string& rhs)const;
+	[[nodiscard]] Value operator+(const duration & rhs)const;
+	[[nodiscard]] Value operator-(const duration & rhs)const;
+
+	[[nodiscard]] bool operator<( const Value &ref )const{return lt(ref);};
+	[[nodiscard]] bool operator>( const Value &ref )const{return gt(ref);};
+	[[nodiscard]] bool operator==( const Value &ref )const{return eq(ref);};
 
 	/**
 	 * Set value to a new value but keep its type.
@@ -300,7 +351,7 @@ template<typename OPERATOR,bool modifying> struct type_op<OPERATOR,modifying,tru
 				    return inRange( first, buff );
 			}
 		}
-		throw std::domain_error(util::typeName<typename OPERATOR::second_argument_type>()+" not convertible to "+second.typeName());
+		throw std::domain_error(std::string(util::typeName<typename OPERATOR::second_argument_type>())+" not convertible to "+second.typeName());
 	}
 };
 }

@@ -29,7 +29,7 @@ option(ISIS_IOPLUGIN_COMP "Enable proxy plugin for compressed data (gz, bzip2 an
 option(ISIS_IOPLUGIN_TAR "Enable proxy plugin for reading tar archives" ON)
 option(ISIS_IOPLUGIN_FDF "Enable plugin for reading fdf files" OFF)
 option(ISIS_IOPLUGIN_FLIST "Enable proxy plugin which gets filenames from a file or stdin" ON)
-option(ISIS_IOPLUGIN_SFTP "Enable proxy plugin for sftp" ON)
+option(ISIS_IOPLUGIN_SFTP "Enable proxy plugin for sftp" OFF)
 
 ############################################################
 # the plugins ...

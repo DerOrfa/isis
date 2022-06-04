@@ -25,7 +25,7 @@ typedef timestamp::duration duration; // @todo float duration might be nice
 namespace _internal{
 struct name_visitor{
 	//linking will fail if a setName( ... ); is missing in types.cpp
-	template<typename T> std::string operator()(const T &)const; 
+	template<typename T> const char* operator()(const T &)const;
 };
 template<bool ENABLED> struct ordered{
 	static const bool lt=ENABLED,gt=ENABLED;
@@ -50,7 +50,7 @@ template<typename VariantType, typename T, std::size_t index = 0> constexpr std:
 }
 /// @encond _internal
 
-template<typename T> static std::string typeName(){
+template<typename T> static const char* typeName(){
 	return _internal::name_visitor().operator()(T());
 }
 
