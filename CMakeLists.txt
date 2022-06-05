@@ -85,11 +85,17 @@ endif()
 
 # since ISIS strongly depends on the boost libraries we will configure them
 # globally.
+if(USE_CONAN)
+	set(BOOST_NAME boost)
+else(USE_CONAN)
+	set(BOOST_NAME Boost)
+endif(USE_CONAN)
+
 if(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS iostreams unit_test_framework)
-else()
+else(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS iostreams)
-endif()
+endif(BUILD_TESTING)
 
 ############################################################
 # Macro to generate manpages for CLI programs
