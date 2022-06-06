@@ -294,11 +294,6 @@ std::list<Chunk> Chunk::spliceAt (dimensions atDim, util::PropertyMap &&propSour
 	return ret;
 }
 
-size_t Chunk::useCount() const
-{
-	return ValueArray::useCount();
-}
-
 void Chunk::flipAlong( const dimensions dim )
 {
 	const size_t elSize = getBytesPerVoxel();

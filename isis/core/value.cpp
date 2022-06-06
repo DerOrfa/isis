@@ -4,10 +4,6 @@
 
 namespace isis::util{
 
-Value::Value(const ValueTypes &v): ValueTypes(v){}
-
-Value::Value(ValueTypes &&v): ValueTypes(v){}
-
 std::string Value::toString(bool with_typename)const{
 	std::stringstream o;
 	print(with_typename,o);

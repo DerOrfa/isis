@@ -48,8 +48,11 @@ public:
 	static constexpr auto NumOfTypes =  std::variant_size_v<ValueTypes>;
 
 	// default constructors
+	Value()=default;
 	Value(Value &&v)=default;
 	Value(const Value &v)=default;
+
+	Value(const std::string_view &v): ValueTypes(std::string(v)){};
 
 	// default assignment
 	Value &operator=(const Value&)=default;
@@ -61,11 +64,6 @@ public:
 	template <KnownValueType T>
 	constexpr Value(const T &v):ValueTypes(v){}
 	
-	//copy
-	Value(const ValueTypes &v);
-	Value(ValueTypes &&v);
-	Value()=default;
-
 	[[nodiscard]] std::string typeName()const;
 	[[nodiscard]] size_t typeID()const;
 
