@@ -10,7 +10,7 @@
 #include "valuearray_minmax.hpp"
 #include "valuearray_iterator.hpp"
 
-template<typename T> concept KnownArrayType = isis::util::_internal::variant_index<isis::data::ArrayTypes,std::remove_cv_t<T>>() !=std::variant_npos;
+template<typename T> concept KnownArrayType = isis::util::_internal::variant_index<isis::data::ArrayTypes, std::shared_ptr<std::remove_cv_t<T>> >() !=std::variant_npos;
 
 namespace isis::data{
 
