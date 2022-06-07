@@ -97,6 +97,8 @@ public:
 	Value(Value &&v)=default;
 	Value(const Value &v)=default;
 
+	Value(const std::string_view &v): ValueTypes(std::string(v)){};
+
 	// default assignment
 	Value &operator=(const Value&)=default;
 	Value &operator=(Value&&)=default;
