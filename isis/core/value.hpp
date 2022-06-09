@@ -8,6 +8,7 @@
 #include "value_converter.hpp"
 #include <functional>
 #include <complex>
+#include <compare>
 
 namespace isis::data::_internal{
     class ConstValueAdapter;
@@ -51,7 +52,6 @@ class Value: public ValueTypes{
 		return *this;
 	}
 
-private:
 	template<class OP, arithmetic r_type> Value arithmetic_op(const r_type& rhs)const{
 		static const OP op;
 		auto visitor=[&](auto &&ptr)->Value{
@@ -87,6 +87,22 @@ private:
 		return *this;
 	}
 public:
+	std::partial_ordering operator<=>(const Value& rhs)const;
+	template<typename r_type> std::partial_ordering operator<=>(const r_type& rhs)const requires (!std::is_same_v<r_type,Value> && std::three_way_comparable<r_type>) {
+		auto visitor=[&](auto &&ptr)->std::partial_ordering{
+			typedef std::remove_cvref_t<decltype(ptr)> l_type;
+			if constexpr(std::three_way_comparable_with<l_type,r_type>)
+				return ptr<=>rhs;
+			else
+				LOG(Runtime,error) << "Cannot compare " << util::typeName<l_type>() << " and " << _internal::typename_with_fallback<r_type>();
+			return std::partial_ordering::unordered;
+		};
+		return std::visit(visitor,static_cast<const ValueTypes&>(*this));
+	}
+	template<typename r_type> bool operator==(const r_type& v)const{
+		return std::is_eq(*this <=> v);
+	};
+	bool operator==(const Value& v)const=default;
 	typedef _internal::ValueConverterMap::mapped_type::mapped_type Converter;
 
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
@@ -241,10 +257,6 @@ public:
 	[[nodiscard]] Value operator+(const std::string& rhs)const;
 	[[nodiscard]] Value operator+(const duration & rhs)const;
 	[[nodiscard]] Value operator-(const duration & rhs)const;
-
-	[[nodiscard]] bool operator<( const Value &ref )const{return lt(ref);};
-	[[nodiscard]] bool operator>( const Value &ref )const{return gt(ref);};
-	[[nodiscard]] bool operator==( const Value &ref )const{return eq(ref);};
 
 	/**
 	 * Set value to a new value but keep its type.

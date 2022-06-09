@@ -147,5 +147,17 @@ std::ostream &operator<<(std::ostream &out, const Value &s)
 {
 	return s.print(false,out);
 }
+std::partial_ordering Value::operator<=>(const Value &rhs) const
+{
+	auto visitor=[this](auto &&ptr)->std::partial_ordering{
+		typedef std::remove_cvref_t<decltype(ptr)> r_type;
+		if constexpr(std::three_way_comparable<r_type>)
+			return this->operator<=>(ptr);
+		else
+			LOG(Runtime,error) << "Cannot compare " << util::typeName<r_type>();
+		return std::partial_ordering::unordered;
+	};
+	return std::visit(visitor,static_cast<const ValueTypes&>(rhs));
+}
 
 }

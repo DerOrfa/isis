@@ -48,6 +48,8 @@ template<std::size_t index = 0> void lhs_type_test() {
 		BOOST_TEST( v-5 == 10-5, v.toString(true) + "-5 should be 5");
 		BOOST_TEST( v*5 == 10*5, v.toString(true) + "*5 should be 50");
 		BOOST_TEST( v/5 == 10/5, v.toString(true) + "/5 should be 2");
+		BOOST_CHECK_LE(v,5);
+		BOOST_CHECK_LT(v,5);
 	}
 	if constexpr(index < std::variant_size_v<util::ValueTypes>-1)
 		lhs_type_test<index+1>();
