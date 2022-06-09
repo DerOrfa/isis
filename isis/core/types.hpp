@@ -7,10 +7,6 @@
 #include "selection.hpp"
 #include <iomanip>
 
-namespace std::chrono{
-typedef duration<int32_t,ratio<int(3600*24)> > days;  
-}
-
 namespace isis::util{
 
 typedef std::list<int32_t> ilist;

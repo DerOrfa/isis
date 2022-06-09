@@ -3,10 +3,6 @@
 #include "types.hpp"
 #include "color.hpp"
 
-namespace std{namespace chrono{
-typedef duration<int32_t,ratio<int(3600*24)> > days;  
-}}
-
 namespace isis::data{
 
 typedef std::variant<
