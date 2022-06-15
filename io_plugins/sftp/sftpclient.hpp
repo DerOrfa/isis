@@ -20,18 +20,50 @@
 #pragma once
 
 #include <string>
-#include <libssh/libssh.h>
-#include <libssh/sftp.h>
+#include <libssh2.h>
+#include <libssh2_sftp.h>
 #include <isis/core/chunk.hpp>
 #include <streambuf>
 
+extern "C"
+{
+#include <libssh2.h>
+#include <libssh2_sftp.h>
+
+#ifdef WIN32
+#include <windows.h>
+#include <winsock2.h>
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#endif
+
+#include <sys/types.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <stdio.h>
+#include <ctype.h>
+}
+
+#include <mutex>
+#include <sstream>
+#include <iostream>
+#include <atomic>
+#include <iomanip>
+
 namespace isis::image_io
 {
-
+namespace _internal{
+struct ssh_session_deleter{void operator()(LIBSSH2_SESSION *p){libssh2_session_free(p);}};
+struct sftp_session_deleter{void operator()(LIBSSH2_SFTP *p){libssh2_sftp_shutdown(p);}};
+}
 class SftpClient
 {
-	ssh_session ssh;
-	sftp_session sftp;
+	int _sock;
+	std::unique_ptr<LIBSSH2_SESSION,_internal::ssh_session_deleter> session;
+	std::unique_ptr<LIBSSH2_SFTP, _internal::sftp_session_deleter> sftp;
 
 public:
 	bool is_dir(const std::string &path);
@@ -39,7 +71,7 @@ public:
 	class streambuf: public std::streambuf
 	{
 	public:
-		explicit streambuf(sftp_file file, std::size_t buff_sz = 1024 * 512);
+		explicit streambuf(LIBSSH2_SFTP_HANDLE* file, std::size_t buff_sz = 1024 * 512);
 		// copying not allowed
 		streambuf(const streambuf &) = delete;
 		streambuf &operator=(const streambuf &) = delete;
@@ -49,11 +81,15 @@ public:
 		int_type underflow();
 
 	private:
-		sftp_file p_file;
+		LIBSSH2_SFTP_HANDLE* p_file;
 		std::vector<char> buffer_;
 	};
-	SftpClient(std::string host, std::string username, std::string keyfile);
+	SftpClient(const std::string& host, const std::string& username, const std::string& keyfile);
 	~SftpClient();
-	std::list<isis::data::Chunk> load_file(std::string remotePath, std::list<util::istring> list) const;
+	[[nodiscard]] std::list<isis::data::Chunk> load_file(std::string remotePath, std::list<util::istring> list) const;
+protected:
+	bool open(std::string host, std::string username, std::string keyfile_name);
+	LIBSSH2_SESSION *init();
+	bool ok_or_throw(int err);
 };
 }
