@@ -9,17 +9,17 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v2
     - name: apt-get
-      run: sudo apt-get install cmake libboost-iostreams-dev libboost-system-dev libboost-test-dev libjsoncpp-dev libfftw3-dev libclfft-dev libopenjp2-7-dev
+      run: sudo apt-get install cmake libboost-iostreams-dev libboost-system-dev libboost-test-dev libjsoncpp-dev libfftw3-dev libclfft-dev libopenjp2-7-dev libssh2-1-dev
     - name: cmake
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_INSTALL_PREFIX=/tmp -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=on -DISIS_USE_FFTW=on -DISIS_IOPLUGIN_NULL=on -DISIS_IOPLUGIN_VISTA_SA=on
+        cmake .. -DCMAKE_INSTALL_PREFIX=/tmp -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=on -DISIS_USE_FFTW=on -DISIS_IOPLUGIN_NULL=on -DISIS_IOPLUGIN_SFTP=on
     - name: make
       run: |
         cd build

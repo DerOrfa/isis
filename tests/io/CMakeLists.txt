@@ -16,6 +16,8 @@ makeTest(imageIONullTest.cpp)
 makeTest(imageIONiiTest.cpp)
 makeTest(imageIOTest.cpp)
 
+if(ISIS_IOPLUGIN_VISTA_SA)
 add_executable( imageIOVistaTest imageIOVistaTest.cpp )
 target_link_libraries( imageIOVistaTest isis_math Boost::unit_test_framework )
 add_test(NAME imageIOVistaTest COMMAND imageIOVistaTest)
+endif(ISIS_IOPLUGIN_VISTA_SA)
