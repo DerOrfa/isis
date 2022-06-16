@@ -2,7 +2,9 @@
 # export library dependencies of isis_core
 ############################################################
 
-LIST(APPEND _DEPENDS ${Boost_LIBRARIES})
+find_package(Eigen3)
+
+LIST(APPEND _DEPENDS ${Boost_LIBRARIES} Eigen3::Eigen)
 
 set(_CPP_GLOB "*.cpp" "details/details_fft.cpp")
 set(_HPP_GLOB "*.hpp")
