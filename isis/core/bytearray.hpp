@@ -62,8 +62,7 @@ public:
 	 * \param len the requested length of the resulting ValueArray in elements (if that will go behind the end of the file, a warning will be issued).
 	 * \param swap_endianness if endianness should be swapped when reading data file (ignored when used on files opened for writing)
 	 */
-	template<typename T> TypedArray<T> at( size_t offset, size_t len = 0, bool swap_endianness = false ) {
-		static_assert(util::knownType<T>(),"invalid type");
+	template<KnownArrayType T> TypedArray<T> at( size_t offset, size_t len = 0, bool swap_endianness = false ) {
 		std::shared_ptr<T> ptr = std::static_pointer_cast<T>( getRawAddress( offset ) );
 
 		if( len == 0 ) {

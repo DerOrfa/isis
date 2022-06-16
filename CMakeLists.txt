@@ -41,8 +41,9 @@ add_definitions(-D_ISIS_VERSION_PATCH=${ISIS_VERSION_PATCH})
 set(ISIS_CORE_VERSION_API "4.0.0")
 string( REGEX MATCH "^[0-9]+" ISIS_CORE_VERSION_SO ${ISIS_CORE_VERSION_API})
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED yes)
+list(APPEND CMAKE_CXX_FLAGS "-fconcepts")
 
 if(NOT WIN32)
 ############################################################

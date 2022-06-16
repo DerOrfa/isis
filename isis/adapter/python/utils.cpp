@@ -232,7 +232,7 @@ py::dict getMetaDataFromImage(const data::Image &img, bool merge_chunk_data) {
 	return ret;
 }
 
-data::Image makeImage(py::buffer b, py::dict metadata)
+data::Chunk makeChunk(py::buffer b, const py::dict& metadata)
 {
 	static const TypeMap type_map;
 	/* Request a buffer descriptor from Python */
@@ -270,19 +270,22 @@ data::Image makeImage(py::buffer b, py::dict metadata)
 			else
 				LOG(Runtime,error) << "Ignoring key " << prop.first << " as its not a string";
 		}
-
-		auto missing=chk.getMissing();
-		if(missing.empty())
-			return data::Image(chk);
-		else{
-			LOG(Runtime,error) << "Cannot create image, following properties are missing: " << missing;
-			throw std::runtime_error("Invalid metadata!");
-		}
-
+		return chk;
 	} else
 		throw std::runtime_error("Incompatible data type!");
 
 }
+data::Image makeImage(py::buffer b, const py::dict& metadata){
+	auto chk = makeChunk(b,metadata);
+	auto missing=chk.getMissing();
+	if(missing.empty())
+		return {chk};
+	else{
+		LOG(Runtime,error) << "Cannot create image, following properties are missing: " << missing;
+		throw std::runtime_error("Invalid metadata!");
+	}
+}
+
 TypeMap::TypeMap(){
 	fill();
 	emplace_hint(end(),pybind11::format_descriptor<bool>::format(),util::typeID<bool>());

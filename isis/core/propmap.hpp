@@ -467,8 +467,7 @@ public:
 	 * \param to the path for the new PropertyValue
 	 * \returns true if the transformation was done, false if it failed
 	 */
-	template<typename DST> bool transform( const PropPath &from, const PropPath &to) {
-		static_assert(knownType<DST>(),"type must be known");
+	template<KnownValueType DST> bool transform( const PropPath &from, const PropPath &to) {
 		return transform( from, to, typeID<DST>());
 	}
 
@@ -530,8 +529,7 @@ public:
 	 * the reference can be used to not ask for the Property each time)
 	 */
 	//@todo can't we get rid of this'
-	template<typename T> PropertyValue &setValueAs( const PropPath &path, const T &val, const std::optional<size_t> &at=std::optional<size_t>() ) {
-		static_assert(knownType<T>(),"invalid type");
+	template<KnownValueType T> PropertyValue &setValueAs( const PropPath &path, const T &val, const std::optional<size_t> &at=std::optional<size_t>() ) {
 		return setValue(path, Value(val ), at);
 	}//@todo maybe remove the templated version
 
@@ -547,7 +545,7 @@ public:
 	 * \param at index of the value to return
 	 * \returns the property with given type, if not set yet T() is returned.
 	 */
-	template<typename T> T getValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() )const {
+	template<KnownValueType T> T getValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() )const {
 		return getValueAsImpl<T>(path,at);// uses single value ops, if at was not given
 	}
 
@@ -561,7 +559,7 @@ public:
 	 * \param at the index of the value to reference
 	 * \returns pointer to the requested value or nullptr
 	 */
-	template<typename T> T* queryValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() ) {
+	template<KnownValueType T> T* queryValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() ) {
 		return queryValueAsImpl<T>(path, at );
 	}
 	/**
@@ -574,7 +572,7 @@ public:
 	 * \param at the index of the value to reference
 	 * \returns T& referencing the requested value
 	 */
-	template<typename T> T& refValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() ) {
+	template<KnownValueType T> T& refValueAs( const PropPath &path, const std::optional<size_t> &at=std::optional<size_t>() ) {
 		const auto query=queryValueAs<T>(path,at);
 		LOG_IF(!query,Runtime,error) << "Referencing unavailable value " << MSubject( path ) << " this will probably crash";
 		return *query;
@@ -590,7 +588,7 @@ public:
 	 * \param def the default value to be used when creating the property
 	 * \returns pointer to the requested value or nullptr
 	 */
-	template<typename T> T& refValueAsOr( const PropPath &path, const T &def )  {
+	template<KnownValueType T> T& refValueAsOr( const PropPath &path, const T &def )  {
 		const auto fetched = tryFetchEntry<PropertyValue>( path );
 		if(!fetched)
 			throw std::invalid_argument(path.toString()+" is not available");
@@ -621,7 +619,7 @@ public:
 	 * \param def the value to be returned if the requested value does not exist
 	 * \returns the property with given type, if not set yet def is returned.
 	 */
-	template<typename T> T getValueAsOr( const PropPath &path, const T &def )const {
+	template<KnownValueType T> T getValueAsOr( const PropPath &path, const T &def )const {
 		auto ref = tryFindEntry<PropertyValue>( path );
 
 		if( ref && !ref->isEmpty() )
@@ -630,7 +628,7 @@ public:
 			return def;
 		}
 	}
-	template<typename T> T getValueAsOr( const PropPath &path, size_t at, const T &def )const {
+	template<KnownValueType T> T getValueAsOr( const PropPath &path, size_t at, const T &def )const {
 		const auto &ref = tryFindEntry<PropertyValue>( path );
 
 		if( ref && ref->size() > at )
