@@ -48,7 +48,7 @@ public:
 
 	iterator insert(iterator at,const Value& ref);
 
-	template<typename T> typename std::enable_if_t<knownType<T>(), iterator > insert(iterator at,const T& ref){
+	template<KnownValueType T> iterator insert(iterator at,const T& ref){
 		LOG_IF(!isEmpty() && getTypeID()!=typeID<T>(),Debug,error) << "Inserting inconsistent type " << MSubject(Value(ref).toString(true)) << " in " << MSubject(*this);
 		return container.emplace(at, ref);
 	}
@@ -204,7 +204,7 @@ public:
 	 * \note The needed flag won't be affected by that.
 	 * \note To prevent accidential use this can only be used explicetly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
 	 */
-	template<typename T> typename std::enable_if_t<knownType<T>(),PropertyValue&> operator=( const T &ref){
+	template<KnownValueType T> PropertyValue& operator=( const T &ref){
 	    container.clear();
 	    container.emplace_back(Value(ref));
 	    return *this;
@@ -345,7 +345,7 @@ public:
 	 * \warning This is using the more fuzzy Value::eq. So the type won't be compared and rounding might be done (which will send a warning to Debug).
 	 * \returns front().eq(second) if the property contains exactly one value, false otherwise
 	 */
-	template<typename T> typename std::enable_if<knownType<T>(),bool>::type operator ==( const T &second )const{return size()==1 && front().eq(second);}
+	template<KnownValueType T> bool operator ==( const T &second )const{return size()==1 && front().eq(second);}
 	/**
 	 * Unequality to a basic value.
 	 * Properties are unequal to basic values if:
@@ -354,7 +354,7 @@ public:
 	 * \warning This is using the more fuzzy Value::eq. So the type won't be compared and rounding might be done (which will send a warning to Debug).
 	 * \returns !front().eq(second) if the property contains exactly one value, false otherwise
 	 */
-	template<typename T> typename std::enable_if<knownType<T>(),bool>::type operator !=( const T &second )const{return size()==1 && !front().eq(second);}
+	template<KnownValueType T> bool operator !=( const T &second )const{return size()==1 && !front().eq(second);}
 
 	PropertyValue& operator +=( const Value &second );
 	PropertyValue& operator -=( const Value &second );

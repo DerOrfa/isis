@@ -20,21 +20,22 @@
 
 #include "histogram.hpp"
 
-namespace isis{
-namespace math{
+namespace isis::math{
 namespace _internal{
 
 template<typename T, typename IType> T otsu_thres_impl(const IType &image){
 	static_assert( std::is_integral<T>::value , "cannot compute threshold from non-integer types" );
-	auto p=math::normalized_histogram(image);
-	typedef decltype(p) hist_type;
+	auto hstg=histogram(image.begin(),image.end());
+	auto hstg_n=math::normalize_histogram(hstg.begin(),hstg.end(), image.getVolume());
+
+	typedef decltype(hstg_n) hist_type;
 
 	hist_type omega;
-	std::partial_sum(p.begin(),p.end(),omega.begin()); 
+	std::partial_sum(hstg_n.begin(),hstg_n.end(),omega.begin());
 	
 	hist_type range,prod,mu;
 	std::iota(range.begin(),range.end(),1); 
-	prod = p * range;
+	prod = hstg_n * range;
 	std::partial_sum(prod.begin(),prod.end(),mu.begin()); 
 	double mu_t = mu.back();
 	
@@ -61,7 +62,6 @@ template<typename T> T otsu_thres(const data::TypedImage<T> &image){
 }
 template<typename T> T otsu_thres(const data::TypedChunk<T> &image){
 	return _internal::otsu_thres_impl(image);
-}
 }
 }
 

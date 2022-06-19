@@ -25,6 +25,8 @@
 
 #include <array>
 
+template<typename T> concept scalar = std::is_scalar_v<T>;
+
 namespace isis
 {
 	/// @cond _internal
@@ -43,48 +45,46 @@ namespace isis
 		for (TYPE3 &x :dst)
 			x = op( *(src++), rhs);
 	}
-	template<typename TYPE1,typename TYPE2> using scalar_only = 
-		typename std::enable_if< std::is_scalar_v<TYPE1> && std::is_scalar_v<TYPE2>,int>;
 	}
 	/// @endcond _internal
 
 	// operations with other vectors
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> std::array<TYPE1,N>&
+	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
 	operator+=(std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) { _internal::binaryVecOp<std::plus<TYPE1>>(lhs,rhs,lhs);return lhs;}
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> std::array<TYPE1,N>&
+	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
 	operator-=(std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) { _internal::binaryVecOp<std::minus<TYPE1>>(lhs,rhs,lhs);return lhs;}
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> std::array<TYPE1,N>&
+	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
 	operator*=(std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) { _internal::binaryVecOp<std::multiplies<TYPE1>>(lhs,rhs,lhs);return lhs;}
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> std::array<TYPE1,N>&
+	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
 	operator/=(std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) { _internal::binaryVecOp<std::divides<TYPE1>>(lhs,rhs,lhs);return lhs;}
 
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> auto 
+	template<scalar TYPE1, scalar TYPE2, size_t N> auto
 	operator+(const std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) -> std::array<decltype(TYPE1()+TYPE2()),N>
 	{ std::array<decltype(TYPE1()+TYPE2()),N> ret;_internal::binaryVecOp<std::plus<decltype(TYPE1()+TYPE2())>>(lhs,rhs,ret);return ret;}
 
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> auto 
+	template<scalar TYPE1, scalar TYPE2, size_t N> auto
 	operator-(const std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) -> std::array<decltype(TYPE1()-TYPE2()),N>
 	{ std::array<decltype(TYPE1()-TYPE2()),N> ret;_internal::binaryVecOp<std::minus<decltype(TYPE1()-TYPE2())>>(lhs,rhs,ret);return ret;}
 
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> auto 
+	template<scalar TYPE1, scalar TYPE2, size_t N> auto
 	operator*(const std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) -> std::array<decltype(TYPE1()*TYPE2()),N>
 	{ std::array<decltype(TYPE1()*TYPE2()),N> ret;_internal::binaryVecOp<std::multiplies<decltype(TYPE1()*TYPE2())>>(lhs,rhs,ret);return ret;}
 
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> auto 
+	template<scalar TYPE1, scalar TYPE2, size_t N> auto
 	operator/(const std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) -> std::array<decltype(TYPE1()/TYPE2()),N>
 	{ std::array<decltype(TYPE1()/TYPE2()),N> ret;_internal::binaryVecOp<std::divides<decltype(TYPE1()/TYPE2())>>(lhs,rhs,ret);return ret;}
 
 	// operations with scalars
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> std::array<TYPE1,N>&
+	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
 	operator*=(std::array<TYPE1,N> &lhs, const TYPE2 &rhs ) {_internal::binaryOp<std::multiplies<TYPE1>>( lhs, rhs, lhs );return lhs;}
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> std::array<TYPE1,N>&
+	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
 	operator/=(std::array<TYPE1,N> &lhs, const TYPE2 &rhs ) {_internal::binaryOp<std::divides<TYPE1>>( lhs, rhs, lhs );return lhs;}
 
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> auto 
+	template<scalar TYPE1, scalar TYPE2, size_t N> auto
 	operator*(const std::array<TYPE1,N> &lhs, const TYPE2 &rhs)  -> std::array<decltype(TYPE1()*TYPE2()),N>
 	{std::array<decltype(TYPE1()*TYPE2()),N> ret;_internal::binaryOp<std::multiplies<decltype(TYPE1()*TYPE2())>>( lhs, rhs, ret );return ret;}
 
-	template<typename TYPE1, typename TYPE2, size_t N, typename _internal::scalar_only<TYPE1,TYPE2>::type=0> auto 
+	template<scalar TYPE1, scalar TYPE2, size_t N> auto
 	operator/(const std::array<TYPE1,N> &lhs, const TYPE2 &rhs )  -> std::array<decltype(TYPE1()/TYPE2()),N>
 	{std::array<decltype(TYPE1()/TYPE2()),N> ret;_internal::binaryOp<std::divides<decltype(TYPE1()/TYPE2())>>( lhs, rhs, ret );return ret;}
 

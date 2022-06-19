@@ -21,11 +21,12 @@
 #include <fcntl.h>
 #include <libssh2_sftp.h>
 #include <isis/core/io_factory.hpp>
+#include <netdb.h>
 
 namespace isis::image_io
 {
 
-SftpClient::streambuf::streambuf(sftp_file fptr, size_t buff_sz)
+SftpClient::streambuf::streambuf(LIBSSH2_SFTP_HANDLE *fptr, size_t buff_sz)
 	: p_file(fptr), buffer_(buff_sz + 1)
 {
 	char *end = &buffer_.front() + buffer_.size();
@@ -48,7 +49,7 @@ std::streambuf::int_type SftpClient::streambuf::underflow()
 
 	// start is now the start of the buffer, proper.
 	// Read from p_file in to the provided buffer
-	size_t n = sftp_read(p_file, start, buffer_.size() - (start - base));
+	size_t n = libssh2_sftp_read(p_file, start, buffer_.size() - (start - base));
 	if (n == 0)
 		return traits_type::eof();
 
@@ -58,60 +59,50 @@ std::streambuf::int_type SftpClient::streambuf::underflow()
 	return traits_type::to_int_type(*gptr());
 }
 
-SftpClient::SftpClient(std::string host, std::string username, std::string keyfile):ssh(ssh_new()), sftp(nullptr)
+SftpClient::SftpClient(const std::string& host, const std::string& username, const std::string& keyfile)	: session(init())
 {
-	if (ssh) {
-		ssh_options_set(ssh, SSH_OPTIONS_HOST, host.c_str());
-		ssh_options_set(ssh, SSH_OPTIONS_USER, username.c_str());
-
-		if (ssh_connect(ssh) == SSH_OK) {
-			const ssh_private_key priv = privatekey_from_file(ssh, keyfile.c_str(), 0, NULL);
-			const ssh_string pub = publickey_to_string(publickey_from_privatekey(priv));
-			if (ssh_userauth_pubkey(ssh, username.c_str(), pub, priv) == SSH_AUTH_SUCCESS) {
-				if ((sftp = sftp_new(ssh))) {
-					if (sftp_init(sftp) == SSH_OK)return; //only good way out
-					else LOG(Runtime, error) << "Error initializing SFTP session " << sftp_get_error(sftp);
-				}
-				else LOG(Runtime, error) << "Error allocating SFTP session: " << ssh_get_error(ssh);
-
-			}
-			else LOG(Runtime, error) << "Cannot authenticate with " << host;
-		}
-		else LOG(Runtime, error) << "Error connecting to hsm: " << ssh_get_error(ssh);
+	if (session) {
+		libssh2_session_set_blocking(session.get(), 1);
+		open(host,username, keyfile);
 	}
 	else LOG(Runtime, error) << "Failed to create ssh session";
-	ssh = nullptr;
-	sftp = nullptr;
 }
 
 SftpClient::~SftpClient()
 {
-	sftp_free(sftp);
-	ssh_free(ssh);
+	libssh2_exit();
+#ifdef WIN32
+	closesocket(_sock);
+#else
+	close(_sock);
+#endif
 }
 
 std::list<isis::data::Chunk> SftpClient::load_file(std::string remotePath, std::list<util::istring> formatstack) const
 {
 	std::list<isis::data::Chunk> ret;
-	if (ssh && sftp) {
-		sftp_file file = sftp_open(sftp, remotePath.c_str(), O_RDONLY, 0);
+	if (session && sftp) {
+		auto file = libssh2_sftp_open_ex(sftp.get(),
+										 remotePath.c_str(),
+										 remotePath.length(),
+										 LIBSSH2_FXF_READ,
+										 0,
+										 LIBSSH2_SFTP_OPENFILE);
 		if (file) {
 			streambuf buff(file);
-			if(formatstack.empty()) formatstack = util::stringToList<util::istring>(remotePath, '.');
+			if (formatstack.empty()) formatstack = util::stringToList<util::istring>(remotePath, '.');
 			try {
-				ret = isis::data::IOFactory::loadChunks(&buff,
-														formatstack);// this is actually not yielding any data, as the matcher's "load" always returns an empty list
+				ret = isis::data::IOFactory::loadChunks(&buff, formatstack);
 			}
 			catch (isis::data::IOFactory::io_error &e) {
 				LOG(Runtime, error) << e.what() << " while reading " << remotePath << " from sftp.";
-				sftp_close(file);
+				libssh2_sftp_close(file);
 				throw;
 			}
-			sftp_close(file);
+			libssh2_sftp_close(file);
 		}
 		else {
-			LOG(Runtime, warning) << "Failed to open remote file " << remotePath << " " << ssh_get_error(ssh) << " "
-								   << ssh_get_error(sftp);
+			LOG(Runtime, warning) << "Failed to open remote file " << remotePath;
 		}
 	}
 	else {
@@ -121,24 +112,134 @@ std::list<isis::data::Chunk> SftpClient::load_file(std::string remotePath, std::
 }
 std::list<std::string> SftpClient::get_listing(const std::string &remotePath)
 {
-	sftp_dir handle = sftp_opendir(sftp, remotePath.c_str());
+	auto handle = libssh2_sftp_open_ex(sftp.get(), remotePath.c_str(), remotePath.length(), 0, 0, LIBSSH2_SFTP_OPENDIR);
 	std::list<std::string> ret;
+	char filename_buffer[2048];
+	LIBSSH2_SFTP_ATTRIBUTES attr;
+	int err;
 	if (handle) {
-		for (sftp_attributes found = sftp_readdir(sftp, handle); found; found = sftp_readdir(sftp, handle)) {
-			if (found->name[0] == '.')continue; //skip hidden
-			ret.push_back(remotePath + "/" + found->name);
+		while (err = libssh2_sftp_readdir(handle, filename_buffer, 2048, &attr)) {
+			ok_or_throw(err);
+			if (filename_buffer[0] == '.')continue; //skip hidden
+			ret.push_back(remotePath + "/" + filename_buffer);
 		}
 	}
 	else {
-		const std::string ssh_error=ssh_get_error(ssh);
-		LOG(Runtime, error) << "Failed to open sftp path " << remotePath << " " << ssh_error;
-		FileFormat::throwGenericError(ssh_error);
+		FileFormat::throwGenericError(std::string("Failed to open sftp path ") + remotePath);
 	}
 	return ret;
 }
 bool SftpClient::is_dir(const std::string &path)
 {
-	auto stat=sftp_stat(sftp,path.c_str());
-	return stat->type == LIBSSH2_SFTP_TYPE_DIRECTORY;
+	LIBSSH2_SFTP_ATTRIBUTES stat;
+	ok_or_throw(libssh2_sftp_stat_ex(sftp.get(), path.c_str(), path.length(), LIBSSH2_SFTP_STAT, &stat));
+	return LIBSSH2_SFTP_S_ISDIR(stat.flags);
+}
+LIBSSH2_SESSION *SftpClient::init()
+{
+	// Initialize stupid windows systems
+#ifdef WIN32
+	WSADATA wsadata;
+		int err;
+
+		err = WSAStartup(MAKEWORD(2, 0), &wsadata);
+		if(err != 0) {
+			fprintf(stderr, "WSAStartup failed with error: %d\n", err);
+			return 1;
+		}
+#endif
+	// Initialize libssh2 on a thread safe manner, count the session instances.
+	auto err = libssh2_init(0);
+	if (err) {
+		LOG(Runtime, error) << "libssh2 initialization failed (" << err << ")";
+		return nullptr;
+	}
+
+	_sock = socket(AF_INET, SOCK_STREAM, 0);
+	return libssh2_session_init();
+}
+
+bool SftpClient::open(std::string host, std::string username, std::string keyfile_name)
+{
+	auto hst = gethostbyname(host.c_str());
+	auto addr= inet_ntoa(**(in_addr**)hst->h_addr_list);
+
+	sockaddr_in sin;
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(22);
+	sin.sin_addr.s_addr = inet_addr(addr);
+	if (connect(_sock, (struct sockaddr *) (&sin), sizeof(struct sockaddr_in)) != 0)
+		image_io::FileFormat::throwSystemError(errno);
+
+	ok_or_throw(libssh2_session_handshake(session.get(), _sock));
+
+	/* check what authentication methods are available */
+	auto userauthlist = libssh2_userauth_list(session.get(), username.c_str(), username.length());
+	util::slist
+		avail_auth = userauthlist ? util::stringToList<std::string>(std::string(userauthlist), ',') : util::slist();
+
+	while (!avail_auth.empty()) {
+		std::string pub_key=keyfile_name+".pub";
+		if(std::find(avail_auth.begin(), avail_auth.end(),"publickey")!=avail_auth.end()){
+			if(!ok_or_throw(libssh2_userauth_publickey_fromfile_ex(
+				session.get(),
+				username.c_str(), username.length(),
+				pub_key.c_str(), keyfile_name.c_str(),
+				nullptr)))
+			{
+				avail_auth.remove("publickey");
+				LOG(Runtime,info) << util::MSubject("publickey") << " authentication failed, moving on to " << avail_auth.front();
+			}
+			break;
+		}
+		//if we got here no known options are left
+		LOG(Runtime,warning) << "Ignoring unknown auth method " << avail_auth.front();
+		avail_auth.pop_front();
+	}
+	if (avail_auth.empty()) {
+		LOG(Runtime, error) << "Exhausted all available authentication methods on " << host << "(" << userauthlist
+							<< ")";
+		FileFormat::throwGenericError("authentication failed");
+	}
+
+	sftp.reset(libssh2_sftp_init(session.get()));
+	return sftp.operator bool();
+}
+bool SftpClient::ok_or_throw(int err)
+{
+	switch (err) {
+		case 0:
+			return true;//success
+		case LIBSSH2_ERROR_SOCKET_NONE:
+			FileFormat::throwGenericError("The socket is invalid.");
+			break;
+		case LIBSSH2_ERROR_ALLOC:
+			FileFormat::throwGenericError("An internal memory allocation call failed.");
+			break;
+		case LIBSSH2_ERROR_BANNER_SEND:
+			FileFormat::throwGenericError("Unable to send banner to remote host.");
+			break;
+		case LIBSSH2_ERROR_KEX_FAILURE:
+			FileFormat::throwGenericError("Encryption key exchange  with  the  remote host failed.");
+			break;
+		case LIBSSH2_ERROR_SOCKET_SEND:
+			FileFormat::throwGenericError("Unable to send data on socket.");
+			break;
+		case LIBSSH2_ERROR_SOCKET_TIMEOUT:
+			FileFormat::throwGenericError("Socket timeout");
+			break;
+		case LIBSSH2_ERROR_SOCKET_DISCONNECT:
+			FileFormat::throwGenericError("The socket was disconnected.");
+			break;
+		case LIBSSH2_ERROR_PROTO:
+			FileFormat::throwGenericError("An invalid SSH protocol response was received on the socket.");
+			break;
+		case LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED:
+			FileFormat::throwGenericError("The username/public-key combination was invalid.");
+			break;
+		default:
+			FileFormat::throwGenericError("Unknown ssh error");
+	}
+	return false;
 }
 }

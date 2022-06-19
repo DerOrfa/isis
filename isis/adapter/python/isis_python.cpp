@@ -59,6 +59,7 @@ py::class_<util::PropertyMap>(m, "PropertyMap")
 
 
 py::class_<data::Chunk, data::ValueArray, data::NDimensional<4>, util::PropertyMap>(m, "chunk")
+	.def(py::init(&python::makeChunk))
 	.def(py::init([](const data::Chunk &chk){return data::Chunk(chk);}))
 	.def_property_readonly("nparray",[](data::Chunk &chk){return python::make_array(chk);})
 	.def("__array__",[](data::Chunk &ch){return python::make_array(ch);})
