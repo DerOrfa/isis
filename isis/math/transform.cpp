@@ -103,7 +103,7 @@ bool transformCoords( util::PropertyMap& propertyObject, const util::vector4< si
 		Eigen::Vector3f boostScaling;
 
 		for ( unsigned short i = 0; i < 3; i++ ) {
-			physicalSize( i ) = size[i] * scaling[i];
+			physicalSize( i ) = static_cast<float>(size[i]) * scaling[i];
 			boostScaling( i ) = scaling[i];
 		}
 
@@ -183,13 +183,17 @@ data::dimensions mapScannerAxisToImageDimension(const data::Image &img, data::sc
 #pragma message("test me")
 	Eigen::Matrix4f latchedOrientation;
 	Eigen::Vector4f mapping;
-	latchedOrientation( getBiggestVecElemAbs(img.getValueAs<util::fvector3>("rowVec")), 0 ) = 1;
-	latchedOrientation( getBiggestVecElemAbs(img.getValueAs<util::fvector3>("columnVec")), 1 ) = 1;
-	latchedOrientation( getBiggestVecElemAbs(img.getValueAs<util::fvector3>("sliceVec")), 2 ) = 1;
+	auto rowLatch = getBiggestVecElemAbs(img.getValueAs<util::fvector3>("rowVec"));
+	auto columnLatch = getBiggestVecElemAbs(img.getValueAs<util::fvector3>("columnVec"));
+	auto sliceLatch = getBiggestVecElemAbs(img.getValueAs<util::fvector3>("sliceVec"));
+
+	latchedOrientation( static_cast<int>(rowLatch), 0 ) = 1;
+	latchedOrientation( static_cast<int>(columnLatch), 1 ) = 1;
+	latchedOrientation( static_cast<int>(sliceLatch), 2 ) = 1;
 	latchedOrientation( 3, 3 ) = 1;
 
-	for( size_t i = 0; i < 4; i++ ) {
-		mapping( i ) = i;
+	for( int i = 0; i < 4; i++ ) {
+		mapping( i ) = static_cast<float>(i);
 	}
 
 	return static_cast<data::dimensions>( (latchedOrientation * mapping)( scannerAxes ) );
