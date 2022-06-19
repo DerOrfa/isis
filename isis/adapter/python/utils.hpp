@@ -42,7 +42,8 @@ bool write(std::list<data::Image> images, std::string path, util::slist sFormats
 py::dict getMetaDataFromPropertyMap(const util::PropertyMap &ob);
 py::dict getMetaDataFromImage(const data::Image &img, bool merge_chunk_data);
 
-data::Image makeImage(py::buffer b, py::dict metadata);
+data::Image makeImage(py::buffer b, const py::dict& metadata);
+data::Chunk makeChunk(py::buffer b, const py::dict& metadata);
 
 py::object value2object(const util::ValueTypes &val);
 py::object property2object(const util::PropertyValue &val);

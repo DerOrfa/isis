@@ -13,6 +13,8 @@ namespace isis::data::_internal{
 	class WritingValueAdapter;
 }
 
+template<typename T> concept KnownValueType = isis::util::_internal::variant_index<isis::util::ValueTypes ,std::remove_cv_t<T>>() !=std::variant_npos;
+
 namespace isis::util{
 
 class Value: public ValueTypes{
@@ -46,24 +48,22 @@ public:
 	static constexpr auto NumOfTypes =  std::variant_size_v<ValueTypes>;
 
 	// default constructors
+	Value()=default;
 	Value(Value &&v)=default;
 	Value(const Value &v)=default;
+
+	Value(const std::string_view &v): ValueTypes(std::string(v)){};
 
 	// default assignment
 	Value &operator=(const Value&)=default;
 	Value &operator=(Value&&)=default;
 
-	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
+	template <KnownValueType T>
 	constexpr Value(T &&v):ValueTypes(v){}
 
-	template <typename T, std::enable_if_t<knownType<T>(), int> = 0>
+	template <KnownValueType T>
 	constexpr Value(const T &v):ValueTypes(v){}
 	
-	//copy
-	Value(const ValueTypes &v);
-	Value(ValueTypes &&v);
-	Value()=default;
-
 	[[nodiscard]] std::string typeName()const;
 	[[nodiscard]] size_t typeID()const;
 
