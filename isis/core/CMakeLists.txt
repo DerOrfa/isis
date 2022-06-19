@@ -53,7 +53,7 @@ endif()
 #add the core library
 add_lib(isis_core
 	"*.cpp" "*.hpp;*.h" "isis/core"
-	"boost::headers" #deps
+	"Boost::headers" #deps
 	"${LIBORC_LIB};${CURSES_LIBRARIES};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads;$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>" #private deps
 	${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API}
 )

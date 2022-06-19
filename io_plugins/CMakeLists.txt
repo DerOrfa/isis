@@ -168,14 +168,8 @@ endif()
 # COMP proxy plugin
 ############################################################
 if(ISIS_IOPLUGIN_COMP)
-	option(ISIS_IOPLUGIN_COMP_LZMA "Add support for lzma in the plugin for compressed data (xz)" OFF)
-
-	find_package(BZip2)
-	find_package(ZLIB)
-
 	add_library(isisImageFormat_comp_proxy SHARED imageFormat_compressed.cpp)
-	target_include_directories(isisImageFormat_comp_proxy PRIVATE ${BZIP2_INCLUDE_DIR})
-	target_link_libraries(isisImageFormat_comp_proxy isis_core ZLIB::ZLIB ${BZIP2_LIBRARIES} Boost::iostreams)
+	target_link_libraries(isisImageFormat_comp_proxy isis_core Boost::iostreams)
 	set(TARGETS ${TARGETS} isisImageFormat_comp_proxy)
 endif()
 
