@@ -12,7 +12,7 @@
 # optional components
 ############################################################
 option(ISIS_QT5 "Enable adapter to the Qt5 library" OFF)
-option(ISIS_PYTHON "Enable adapter to the Qt5 library" OFF)
+option(ISIS_PYTHON "Enable the python interface" OFF)
 
 if(ISIS_QT5)
 	set(ISIS_QT_VERSION_API "0.0.0")

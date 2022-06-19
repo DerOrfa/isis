@@ -17,6 +17,7 @@ class isis(ConanFile):
         "with_cli": [True, False],
         "with_qt5": [True, False],
         "with_python": [True, False],
+        "with_gsl": [True, False],
         "io_zisraw": [True, False],
         "io_sftp": [True, False],
         "io_png": [True, False],
@@ -26,6 +27,7 @@ class isis(ConanFile):
         "shared": True,
         "with_qt5": False,
         "with_cli": True,
+        "with_gsl": True,
         "with_python": True,
         "debug_log": False,
         "io_zisraw": True,
@@ -46,7 +48,6 @@ class isis(ConanFile):
         ("jsoncpp/[~=1]", "private"),
         ("fftw/[~=3]", "private"),
         ("openjpeg/[~=2]", "private"),
-        ("gsl/[~=2.7]","private"),
         ("eigen/[~=3]", "private")
     ]
 
@@ -66,6 +67,7 @@ class isis(ConanFile):
         if self.options.io_zisraw:   self.requires("jxrlib/cci.20170615", "private")
         if self.options.io_sftp:     self.requires("libssh2/[~=1]", "private")
         if self.options.io_png:      self.requires("libpng/[>1.2]", "private")
+        if self.options.with_gsl:    self.requires("gsl/[~=2.7]","private")
 
         if platform.system() == "Linux":
             self.requires("ncurses/[~=6]", "private")
@@ -94,6 +96,7 @@ class isis(ConanFile):
         #other
         tc.variables["BUILD_TESTING"] =    bool(self.options.testing)
         tc.variables["ISIS_QT5"] =         bool(self.options.with_qt5)
+        tc.variables["ISIS_USE_GSL"] =     bool(self.options.with_gsl)
         tc.variables["ISIS_BUILD_TOOLS"] = bool(self.options.with_cli)
         tc.variables["ISIS_CALC"] =        bool(self.options.with_cli)
         tc.variables["ISIS_DEBUG_LOG"] =   bool(self.options.debug_log)
