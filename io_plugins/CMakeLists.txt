@@ -141,15 +141,10 @@ endif()
 # PNG plugin
 ############################################################
 if(ISIS_IOPLUGIN_PNG)
-	if(USE_CONAN)
-		set(LIB_PNG_NAME libpng)
-	else(USE_CONAN)
-		set(LIB_PNG_NAME PNG)
-	endif(USE_CONAN)
-	find_package(${LIB_PNG_NAME} REQUIRED)
+	find_package(PNG REQUIRED)
 
 	add_library(isisImageFormat_png SHARED imageFormat_png.cpp)
-	target_link_libraries(isisImageFormat_png isis_core ${LIB_PNG_NAME}::${LIB_PNG_NAME} Threads::Threads)
+	target_link_libraries(isisImageFormat_png isis_core PNG::PNG Threads::Threads)
 
 	set(TARGETS ${TARGETS} isisImageFormat_png)
 endif()
@@ -173,36 +168,8 @@ endif()
 # COMP proxy plugin
 ############################################################
 if(ISIS_IOPLUGIN_COMP)
-	option(ISIS_IOPLUGIN_COMP_LZMA "Add support for lzma in the plugin for compressed data (xz)" OFF)
-
-	if(USE_CONAN)
-		set(LIB_BZIP2_NAME bzip2)
-		set(LIB_ZLIB_NAME zlib)
-	else(USE_CONAN)
-		set(LIB_BZIP2_NAME BZip2)
-		set(LIB_ZLIB_NAME ZLIB)
-	endif(USE_CONAN)
-
-	find_package(${LIB_BZIP2_NAME} REQUIRED)
-	find_package(${LIB_ZLIB_NAME} REQUIRED)
-
 	add_library(isisImageFormat_comp_proxy SHARED imageFormat_compressed.cpp)
-
-	if(ISIS_IOPLUGIN_COMP_LZMA)
-		if(USE_CONAN)
-			find_package(LibLZMA REQUIRED)
-		else(USE_CONAN)
-			find_library(LibLZMA_LIBRARIES "lzma")
-			find_path(LibLZMA_INCLUDE_DIRS "lzma.h")
-		endif(USE_CONAN)
-
-		target_link_libraries(isisImageFormat_comp_proxy ${LibLZMA_LIBRARIES})
-		target_sources(isisImageFormat_comp_proxy PRIVATE imageFormat_compressed_lzma.cpp)
-		target_compile_definitions(isisImageFormat_comp_proxy PRIVATE "HAVE_LZMA")
-		target_include_directories(isisImageFormat_comp_proxy PRIVATE ${LibLZMA_INCLUDE_DIRS})
-	endif(ISIS_IOPLUGIN_COMP_LZMA)
-
-	target_link_libraries(isisImageFormat_comp_proxy isis_core ${LIB_ZLIB_NAME}::${LIB_ZLIB_NAME} ${LIB_BZIP2_NAME}::${LIB_BZIP2_NAME} ${BOOST_NAME}::iostreams)
+	target_link_libraries(isisImageFormat_comp_proxy isis_core Boost::iostreams)
 	set(TARGETS ${TARGETS} isisImageFormat_comp_proxy)
 endif()
 
@@ -211,7 +178,7 @@ endif()
 ############################################################
 if(ISIS_IOPLUGIN_TAR)
   add_library(isisImageFormat_tar_proxy SHARED imageFormat_tar.cpp)
-  target_link_libraries(isisImageFormat_tar_proxy isis_core ${BOOST_NAME}::iostreams)
+  target_link_libraries(isisImageFormat_tar_proxy isis_core Boost::iostreams)
   set(TARGETS ${TARGETS} isisImageFormat_tar_proxy)
 endif()
 

@@ -18,6 +18,8 @@ class isis(ConanFile):
         "with_qt5": [True, False],
         "with_python": [True, False],
         "io_zisraw": [True, False],
+        "io_sftp": [True, False],
+        "io_png": [True, False],
         "testing": [True, False]
     }
     default_options = {
@@ -27,6 +29,8 @@ class isis(ConanFile):
         "with_python": True,
         "debug_log": False,
         "io_zisraw": True,
+        "io_sftp": True,
+        "io_png": True,
         "testing": False
     }
 
@@ -38,47 +42,62 @@ class isis(ConanFile):
 
 
     requires = [
-        "boost/[>1.30]",
-        "libpng/[>1.2]",
+        "boost/[>1.75]",
         ("jsoncpp/[~=1]", "private"),
         ("fftw/[~=3]", "private"),
-        ("xz_utils/[~=5]", "private"),
-        ("openjpeg/[~=2]", "private")
+        ("openjpeg/[~=2]", "private"),
+        ("gsl/[~=2.7]","private"),
+        ("eigen/[~=3]", "private")
     ]
 
     def config_options(self):
         if(self.options.testing):
             self.exports_sources.append("tests/*")
+        if self.options.io_sftp:
+            self.options['libssh2'].with_zlib = False #prevent imported zlib from conflicting with png
+
         self.options['fftw'].precision = "single"
+        self.options['boost'].lzma = True
 
     def requirements(self):
-        if self.options.with_qt5:
-            self.requires("qt/[~=5]")
-        if self.options.with_python:
-            self.requires("pybind11/[>2.9.0]", "private")
-        if self.options.io_zisraw:
-            self.requires("jxrlib/cci.20170615", "private")
+        if self.options.with_cli:    self.requires("muparser/[~=2]", "private")
+        if self.options.with_qt5:    self.requires("qt/[~=5]")
+        if self.options.with_python: self.requires("pybind11/[>2.9.0]", "private")
+        if self.options.io_zisraw:   self.requires("jxrlib/cci.20170615", "private")
+        if self.options.io_sftp:     self.requires("libssh2/[~=1]", "private")
+        if self.options.io_png:      self.requires("libpng/[>1.2]", "private")
+
+        if platform.system() == "Linux":
+            self.requires("ncurses/[~=6]", "private")
 
     def generate(self):
         self.python_path = path.join("lib", "python3", "dist-packages")
         tc = CMakeToolchain(self)
 
-        for var in ["USE_CONAN", "ISIS_RUNTIME_LOG", "ISIS_IOPLUGIN_PNG"]:
+        for var in ["ISIS_RUNTIME_LOG"]:
             tc.variables[var] = True
 
-        tc.variables["ISIS_QT5"] = bool(self.options.with_qt5)
-        tc.variables["ISIS_BUILD_TOOLS"] = bool(self.options.with_cli)
-        tc.variables["ISIS_PYTHON"] = bool(self.options.with_python)
-        tc.variables["ISIS_DEBUG_LOG"] = bool(self.options.debug_log)
-        tc.variables["ISIS_IOPLUGIN_ZISRAW"] = bool(self.options.io_zisraw)
-        tc.variables["BUILD_TESTING"] = bool(self.options.testing)
-        tc.variables["ISIS_IOPLUGIN_SFTP"] = False
-        tc.variables["ISIS_IOPLUGIN_COMP_LZMA"] = True
 
+
+        #io plugins
+        tc.variables["ISIS_IOPLUGIN_ZISRAW"] = bool(self.options.io_zisraw)
+        tc.variables["ISIS_IOPLUGIN_SFTP"] = bool(self.options.io_sftp)
+        tc.variables["ISIS_IOPLUGIN_PNG"] = bool(self.options.io_png)
+
+        #python adapter
+        tc.variables["ISIS_PYTHON"] = bool(self.options.with_python)
         if self.options.with_python:
             tc.variables["USE_SYSTEM_PYBIND"] = True
             tc.variables["PYTHON_MODULE_PATH"] = self.python_path
             tc.variables["PYTHON_MODULE_PATH_ARCH"] = self.python_path
+
+        #other
+        tc.variables["BUILD_TESTING"] =    bool(self.options.testing)
+        tc.variables["ISIS_QT5"] =         bool(self.options.with_qt5)
+        tc.variables["ISIS_BUILD_TOOLS"] = bool(self.options.with_cli)
+        tc.variables["ISIS_CALC"] =        bool(self.options.with_cli)
+        tc.variables["ISIS_DEBUG_LOG"] =   bool(self.options.debug_log)
+
         tc.generate()
 
         deps = CMakeDeps(self)

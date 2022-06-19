@@ -183,10 +183,10 @@ void ImageFormat_Dicom::parseCSA(const data::ByteArray &data, util::PropertyMap 
 	const size_t len = data.getLength();
 
 	for ( std::string::size_type pos = 0x10; pos < ( len - sizeof( int32_t ) ); ) {
-		pos += parseCSAEntry( &data[pos], map, dialects );
+		pos += parseCSAEntry( &data[pos], len - sizeof( int32_t ), map, dialects );
 	}
 }
-size_t ImageFormat_Dicom::parseCSAEntry(const uint8_t *at, util::PropertyMap &map, std::list<util::istring> dialects )
+size_t ImageFormat_Dicom::parseCSAEntry(const uint8_t *at, size_t data_len, util::PropertyMap &map, std::list<util::istring> dialects )
 {
 	size_t pos = 0;
 	const char *const name = ( char * )at + pos;
@@ -213,7 +213,6 @@ size_t ImageFormat_Dicom::parseCSAEntry(const uint8_t *at, util::PropertyMap &ma
 			pos += 3 * sizeof( int32_t ); //whatever
 
 			if ( !len )continue;
-
 			if( (
 			        std::string( "MrPhoenixProtocol" ) != name  && std::string( "MrEvaProtocol" ) != name && std::string( "MrProtocol" ) != name
 			    ) || checkDialect(dialects, "withExtProtocols") ) {
@@ -238,6 +237,8 @@ size_t ImageFormat_Dicom::parseCSAEntry(const uint8_t *at, util::PropertyMap &ma
 			           ( len + sizeof( int32_t ) - 1 ) / sizeof( int32_t )
 			       ) *
 			       sizeof( int32_t );//increment pos by len aligned to sizeof(int32_t)*/
+			if(pos >= data_len)
+				throwGenericError(std::string("CSA Parser went beyond the element length ") + std::to_string(pos) + ">=" + std::to_string(data_len));
 		}
 
 		try {

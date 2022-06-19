@@ -1,7 +1,5 @@
 #include <isis/core/io_application.hpp>
-#include <isis/core/io_factory.hpp>
 #include <isis/math/transform.hpp>
-
 #include <map>
 
 using namespace isis;
@@ -59,13 +57,15 @@ int main( int argc, char **argv )
 	for( data::Image & refImage :  app.images ) {
 		std::vector< data::Chunk > delme = refImage.copyChunksToVector( true );
 		isis::data::Image dummy( delme );
-		boost::numeric::ublas::matrix<float> T = boost::numeric::ublas::identity_matrix<float>( 3, 3 );
+
+		//make an identity matrix
+		auto T = util::identityMatrix<float,3>();
 
 		if( dim > 2 ) {
 			dim = math::mapScannerAxisToImageDimension(refImage, static_cast<data::scannerAxis>( dim - 3 ) );
 		}
 
-		T( dim, dim ) *= -1;
+		T[dim][dim] *= -1;
 		data::Image newImage = refImage;
 
 		if ( app.parameters["flip"].toString() == "image" || app.parameters["flip"].toString() == "both" ) {
