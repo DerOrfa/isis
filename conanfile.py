@@ -31,8 +31,18 @@ class isis(ConanFile):
         "io_zisraw": True,
         "io_sftp": True,
         "io_png": True,
-        "testing": False
+        "testing": False,
+        "fftw:precision": "single",
+        "boost:lzma": True,
+        "boost:zstd": False,
+        "boost:i18n_backend": None
     }
+    boost_without = [
+        "atomic", "chrono","container","context","contract","coroutine","date_time","fiber","filesystem", "graph",
+        "graph_parallel","json","locale","log","math","mpi","nowide","program_options","python", "serialization",
+        "stacktrace","thread","timer","type_erasure","wave"
+    ]
+    default_options.update({"boost:without_{}".format(_name): True for _name in boost_without})
 
     url = "https://github.com/DerOrfa/isis"
 
@@ -55,9 +65,6 @@ class isis(ConanFile):
             self.exports_sources.append("tests/*")
         if self.options.io_sftp:
             self.options['libssh2'].with_zlib = False #prevent imported zlib from conflicting with png
-
-        self.options['fftw'].precision = "single"
-        self.options['boost'].lzma = True
 
     def requirements(self):
         if self.options.with_cli:    self.requires("muparser/[~=2]", "private")
