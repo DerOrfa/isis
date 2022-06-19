@@ -8,14 +8,11 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
+#include <boost/iostreams/filter/lzma.hpp>
 #include <boost/iostreams/copy.hpp>
 
 #include <isis/core/fileptr.hpp>
 #include <boost/iostreams/categories.hpp>  // tags
-
-#ifdef HAVE_LZMA
-#include "imageFormat_compressed_lzma.hpp"
-#endif //HAVE_LZMA
 
 namespace isis::image_io
 {
@@ -78,10 +75,8 @@ public:
 			if( format == "gz" )in->push( boost::iostreams::gzip_decompressor() );
 			else if( format == "bz2" )in->push( boost::iostreams::bzip2_decompressor() );
 			else if( format == "Z" )in->push( boost::iostreams::zlib_decompressor() );
-#ifdef HAVE_LZMA
 			else if( format == "xz" )in->push( boost::iostreams::lzma_decompressor() );
-#endif
-			else { // ok, no idea what going on, cry for mammy
+			else { // ok, no idea what's going on, cry for mammy
 				throwGenericError( "Cannot determine the compression format" );
 			}
 		}
@@ -154,10 +149,7 @@ public:
 		if( suffix == ".gz" )out.push( boost::iostreams::gzip_compressor() );
 		else if( suffix == ".bz2" )out.push( boost::iostreams::bzip2_compressor() );
 		else if( suffix == ".Z" )out.push( boost::iostreams::zlib_compressor() );
-
-#ifdef HAVE_LZMA
 		else if( suffix == ".xz" )out.push( boost::iostreams::lzma_compressor() );
-#endif
 
 		// write it
 		out.push( output );

@@ -175,17 +175,6 @@ if(ISIS_IOPLUGIN_COMP)
 
 	add_library(isisImageFormat_comp_proxy SHARED imageFormat_compressed.cpp)
 	target_include_directories(isisImageFormat_comp_proxy PRIVATE ${BZIP2_INCLUDE_DIR})
-
-	if(ISIS_IOPLUGIN_COMP_LZMA)
-		find_library(LIB_LZMA "lzma")
-		find_path(INCPATH_LZMA "lzma.h")
-
-		target_link_libraries(isisImageFormat_comp_proxy ${LIB_LZMA})
-		target_sources(isisImageFormat_comp_proxy PRIVATE imageFormat_compressed_lzma.cpp)
-		target_compile_definitions(isisImageFormat_comp_proxy PRIVATE "HAVE_LZMA")
-		target_include_directories(isisImageFormat_comp_proxy PRIVATE ${INCPATH_LZMA})
-	endif(ISIS_IOPLUGIN_COMP_LZMA)
-
 	target_link_libraries(isisImageFormat_comp_proxy isis_core ZLIB::ZLIB ${BZIP2_LIBRARIES} Boost::iostreams)
 	set(TARGETS ${TARGETS} isisImageFormat_comp_proxy)
 endif()
