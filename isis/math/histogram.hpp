@@ -40,7 +40,7 @@ template<typename IType> auto histogram(IType begin,IType end) requires (std::is
 	constexpr size_t max = std::numeric_limits<value_type>::max();
 	std::array<size_t,max-min> ret;
 	ret.fill(0);
-	for(auto it=begin;++it;it!=end)
+	for(auto it=begin;it!=end;++it)
 		ret[(*it)-min]++;
 	return ret;
 }

@@ -43,7 +43,9 @@ string( REGEX MATCH "^[0-9]+" ISIS_CORE_VERSION_SO ${ISIS_CORE_VERSION_API})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED yes)
-list(APPEND CMAKE_CXX_FLAGS "-fconcepts")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	list(APPEND CMAKE_CXX_FLAGS "-fconcepts")
+endif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 if(NOT WIN32)
 ############################################################
