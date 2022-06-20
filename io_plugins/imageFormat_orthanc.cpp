@@ -27,7 +27,6 @@
 #include <ace/Log_Record.h>
 
 #include <isis/core/io_interface.h>
-#include <functional>
 #include <iostream>
 #include <memory>
 
@@ -181,7 +180,7 @@ public:
 				request=std::string("/instances/")+value["ID"].asString()+"/file";
 			} else {
 				LOG(Runtime,error) << "Unknown orthanc object type " << value["Type"].asString();
-				return std::list<data::Chunk>();
+				return {};
 			}
 			auto got=m_session.get(request.c_str());
 			return std::visit(*this,got);
@@ -221,13 +220,13 @@ public:
 		
 		return std::visit(_internal::visitor(session,feedback), result);
 	}
-	std::string getName() const override{return "orthanc database access";};
+	[[nodiscard]] std::string getName() const override{return "orthanc database access";};
 	void write(const data::Image & image, const std::string & filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback) override{
 		throwGenericError("not implemented");
 	}
-	ImageFormat_orthanc(){}
+	ImageFormat_orthanc()= default;
 protected:
-	std::list<util::istring> suffixes(isis::image_io::FileFormat::io_modes modes) const override{return {".orthanc"};}
+	[[nodiscard]] std::list<util::istring> suffixes(isis::image_io::FileFormat::io_modes modes) const override{return {".orthanc"};}
 };
 
 }
