@@ -44,7 +44,7 @@ string( REGEX MATCH "^[0-9]+" ISIS_CORE_VERSION_SO ${ISIS_CORE_VERSION_API})
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED yes)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	list(APPEND CMAKE_CXX_FLAGS "-fconcepts")
+	add_compile_options(-fconcepts)
 endif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 if(NOT WIN32)
@@ -88,11 +88,17 @@ endif()
 
 # since ISIS strongly depends on the boost libraries we will configure them
 # globally.
+if(USE_CONAN)
+	set(BOOST_NAME boost)
+else(USE_CONAN)
+	set(BOOST_NAME Boost)
+endif(USE_CONAN)
+
 if(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS iostreams unit_test_framework)
-else()
+else(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS iostreams)
-endif()
+endif(BUILD_TESTING)
 
 ############################################################
 # Macro to generate manpages for CLI programs
