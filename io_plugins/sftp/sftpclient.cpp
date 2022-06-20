@@ -118,7 +118,7 @@ std::list<std::string> SftpClient::get_listing(const std::string &remotePath)
 	LIBSSH2_SFTP_ATTRIBUTES attr;
 	int err;
 	if (handle) {
-		while (err = libssh2_sftp_readdir(handle, filename_buffer, 2048, &attr)) {
+		while ((err = libssh2_sftp_readdir(handle, filename_buffer, 2048, &attr))) {
 			ok_or_throw(err);
 			if (filename_buffer[0] == '.')continue; //skip hidden
 			ret.push_back(remotePath + "/" + filename_buffer);

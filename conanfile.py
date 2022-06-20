@@ -81,10 +81,8 @@ class isis(ConanFile):
         self.python_path = path.join("lib", "python3", "dist-packages")
         tc = CMakeToolchain(self)
 
-        for var in ["ISIS_RUNTIME_LOG"]:
+        for var in ["ISIS_RUNTIME_LOG", "ISIS_USE_FFTW"]:
             tc.variables[var] = True
-
-
 
         #io plugins
         tc.variables["ISIS_IOPLUGIN_ZISRAW"] = bool(self.options.io_zisraw)
@@ -132,6 +130,3 @@ class isis(ConanFile):
             self.env_info.PYTHONPATH.append(path.join(self.package_folder, "lib", "python3", "dist-packages"))
         if (self.options.with_cli):
             self.env_info.path.append(path.join(self.package_folder, "bin"))
-
-        # self.cpp_info.includedirs=
-        # self.cpp_info.libs = ["hello"]
