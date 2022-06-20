@@ -1,8 +1,9 @@
 option(USE_SYSTEM_PYBIND "Use the system's pybind11 (instead of downloading it)" OFF)
-find_package(Python COMPONENTS Interpreter Development)
+set(PYBIND11_FINDPYTHON)
 
 if(USE_SYSTEM_PYBIND)
     find_package(pybind11 CONFIG REQUIRED)
+    include(pybind11Common)#conan doesn't load this automatically so we do it
     message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIRS}")
 else(USE_SYSTEM_PYBIND)
     include(FetchContent)
@@ -19,9 +20,9 @@ else(USE_SYSTEM_PYBIND)
     endif()
 endif(USE_SYSTEM_PYBIND)
 
-Python_add_library(pyisis isis_python.cpp logging.cpp utils.cpp)
-target_link_libraries(pyisis PRIVATE pybind11::module isis_core)
-set_target_properties(pyisis PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON POSITION_INDEPENDENT_CODE ON)
+#watch out, this will fail if pybind::* came from conan and the conan build type doesnt fit that of cmake (Debug/Release)
+pybind11_add_module(pyisis isis_python.cpp logging.cpp utils.cpp)
+target_link_libraries(pyisis PRIVATE isis_core)
 
 set(PYTHON_MODULE_PATH ${Python_SITELIB} CACHE PATH "Installation path for platform independent modules")
 set(PYTHON_MODULE_PATH_ARCH ${Python_SITEARCH} CACHE PATH "Installation path for platform dependent modules")
