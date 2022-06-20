@@ -15,9 +15,7 @@
 #include <string.h>
 #include <cmath>
 
-namespace isis
-{
-namespace test
+namespace isis::test
 {
 
 using util::fvector4;
@@ -130,54 +128,4 @@ BOOST_AUTO_TEST_CASE( matrix_vector_dot_test )
 // 	);
 }
 
-BOOST_AUTO_TEST_CASE( matrix_from_boost_to_boost )
-{
-	using namespace boost::numeric::ublas;
-	const size_t m = 10;
-	const size_t n = 7;
-	matrix<float> boost_matrix = matrix<float>( m, n );
-	unsigned short index = 0;
-
-	for ( unsigned short i = 0; i < m; i++ ) {
-		for ( unsigned short j = 0; j < n; j++ ) {
-			boost_matrix( i, j ) = index++;
-		}
-	}
-
-	isis::util::Matrix<float, n, m> isis_matrix= math::fromBoostMatrix<float,n,m>(boost_matrix);
-
-	const matrix<float> dummy= math::toBoostMatrix(isis_matrix);
-	for ( unsigned short i = 0; i < m; i++ ) {
-		for ( unsigned short j = 0; j < n; j++ ) {
-			BOOST_CHECK_EQUAL( boost_matrix( i, j ), isis_matrix[i][j] );
-			BOOST_CHECK_EQUAL( boost_matrix( i, j ), dummy(i,j) );
-		}
-	}
-}
-
-BOOST_AUTO_TEST_CASE( matrix_inverse )
-{
-	auto identity_matrix = isis::util::identityMatrix<float, 3>();
-	isis::util::Matrix3x3<float> initial_matrix{
-		0,1,0,
-		1,0,0,
-		0,0,1
-	};
-	bool ok;
-	isis::util::Matrix<float, 3, 3> inverse = math::inverseMatrix(initial_matrix, ok );
-	BOOST_CHECK( ok );
-	isis::util::Matrix<float, 3, 3> result = math::fromBoostMatrix<float,3,3>(
-			boost::numeric::ublas::prod( math::toBoostMatrix(inverse), math::toBoostMatrix(initial_matrix))
-	);
-
-	for( unsigned short i = 0; i < 3; i++ ) {
-		for( unsigned short j = 0; j < 3; j++ ) {
-			BOOST_CHECK_EQUAL( result[i][j], identity_matrix[i][j] );
-		}
-	}
-
-
-}
-
-}
 }

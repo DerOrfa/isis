@@ -33,7 +33,7 @@ bool transformCoords( util::PropertyMap& propertyObject, const util::vector4< si
 	Eigen::Matrix3f transform;
 	for( int r = 0; r < 3; r++ ) {
 		for( int c = 0; c < 3; c++ ) {
-			transform(r, c) = transform_in[r][c]; //rowVec is the first column in the translation matric
+			transform(r, c) = transform_in[r][c]; //rowVec is the first column in the translation matrix
 		}
 	}
 
@@ -41,11 +41,11 @@ bool transformCoords( util::PropertyMap& propertyObject, const util::vector4< si
 	// data::Chunk or a data::Image object. Hence it should contain the
 	// properties rowVec, columnVec, sliceVec and indexOrigin.
 	// get row, column and slice vector from property map
-	util::fvector3 &row = propertyObject.refValueAs<util::fvector3>( "rowVec" );
-	util::fvector3 &column = propertyObject.refValueAs<util::fvector3>( "columnVec" );
-	util::fvector3 &slice = propertyObject.refValueAs<util::fvector3>( "sliceVec" );
+	auto &row = propertyObject.refValueAs<util::fvector3>( "rowVec" );
+	auto &column = propertyObject.refValueAs<util::fvector3>( "columnVec" );
+	auto &slice = propertyObject.refValueAs<util::fvector3>( "sliceVec" );
 	// reference index origin from property map
-	util::fvector3 &indexorig = propertyObject.refValueAs<util::fvector3>( "indexOrigin" );
+	auto &indexorig = propertyObject.refValueAs<util::fvector3>( "indexOrigin" );
 	Eigen::Vector3f origin_out;
 	//check if we have a property "voxelGap" to prevent isis from throwing a warning "blabla"
 	util::fvector3 scaling;
@@ -61,9 +61,9 @@ bool transformCoords( util::PropertyMap& propertyObject, const util::vector4< si
 	Eigen::Matrix3f R_in;
 
 	for( int r = 0; r < 3; r++ ) {
-		R_in( r, 0 ) = row[r]; //rowVec is the first column in the translation matric
-		R_in( r, 1 ) = column[r]; //columnVec is the second column in the translation matric
-		R_in( r, 2 ) = slice[r]; //sliceVec is the third column in the translation matric
+		R_in( r, 0 ) = row[r]; //rowVec is the first column in the translation matrix
+		R_in( r, 1 ) = column[r]; //columnVec is the second column in the translation matrix
+		R_in( r, 2 ) = slice[r]; //sliceVec is the third column in the translation matrix
 	}
 
 	Eigen::Matrix3f R_out;
@@ -87,7 +87,6 @@ bool transformCoords( util::PropertyMap& propertyObject, const util::vector4< si
 	}
 
 	//the center of the transformation is the image center (eg. spm transformation)
-	//@todo test me
 	if( transformCenterIsImageCenter ) {
 		Eigen::Matrix3f R_in_inverse;
 		bool check=false;
@@ -104,7 +103,7 @@ bool transformCoords( util::PropertyMap& propertyObject, const util::vector4< si
 		Eigen::Vector3f boostScaling;
 
 		for ( unsigned short i = 0; i < 3; i++ ) {
-			physicalSize( i ) = size[i] * scaling[i];
+			physicalSize( i ) = static_cast<float>(size[i]) * scaling[i];
 			boostScaling( i ) = scaling[i];
 		}
 
@@ -112,18 +111,22 @@ bool transformCoords( util::PropertyMap& propertyObject, const util::vector4< si
 		Eigen::Vector3f half_image( 3 );
 
 		for ( unsigned short i = 0; i < 3; i++ ) {
-			half_image( i ) = ( physicalSize( i )  - boostScaling( i ) ) * 0.5;
+			half_image( i ) = ( physicalSize( i )  - boostScaling( i ) ) * 0.5f;
 		}
-
 		Eigen::Vector3f center_image = R_in*half_image + origin_in ;
+
 		//now translate this center to the center of the physical space and get the new image origin
 		Eigen::Vector3f io_translated = origin_in - center_image;
+
 		//now multiply this translated origin with the inverse of the orientation matrix of the image
 		Eigen::Vector3f io_ortho = R_in_inverse * io_translated;
+
 		//now transform this matrix with the actual transformation matrix
-		Eigen::Vector3f transformed_io_ortho = transform * io_ortho;
+		Eigen::Vector3f transformed_io_ortho = io_ortho.transpose() * transform;
+
 		//now transform ths point back with the orientation matrix of the image
 		Eigen::Vector3f transformed_io = R_in * transformed_io_ortho;
+
 		//and finally we have to retranslate this origin to get the image to our old position in physical space
 		origin_out = transformed_io + center_image;
 
@@ -180,13 +183,17 @@ data::dimensions mapScannerAxisToImageDimension(const data::Image &img, data::sc
 #pragma message("test me")
 	Eigen::Matrix4f latchedOrientation;
 	Eigen::Vector4f mapping;
-	latchedOrientation( getBiggestVecElemAbs(img.getValueAs<util::fvector3>("rowVec")), 0 ) = 1;
-	latchedOrientation( getBiggestVecElemAbs(img.getValueAs<util::fvector3>("columnVec")), 1 ) = 1;
-	latchedOrientation( getBiggestVecElemAbs(img.getValueAs<util::fvector3>("sliceVec")), 2 ) = 1;
+	auto rowLatch = getBiggestVecElemAbs(img.getValueAs<util::fvector3>("rowVec"));
+	auto columnLatch = getBiggestVecElemAbs(img.getValueAs<util::fvector3>("columnVec"));
+	auto sliceLatch = getBiggestVecElemAbs(img.getValueAs<util::fvector3>("sliceVec"));
+
+	latchedOrientation( static_cast<int>(rowLatch), 0 ) = 1;
+	latchedOrientation( static_cast<int>(columnLatch), 1 ) = 1;
+	latchedOrientation( static_cast<int>(sliceLatch), 2 ) = 1;
 	latchedOrientation( 3, 3 ) = 1;
 
-	for( size_t i = 0; i < 4; i++ ) {
-		mapping( i ) = i;
+	for( int i = 0; i < 4; i++ ) {
+		mapping( i ) = static_cast<float>(i);
 	}
 
 	return static_cast<data::dimensions>( (latchedOrientation * mapping)( scannerAxes ) );

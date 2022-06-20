@@ -14,12 +14,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: apt-get
-      run: sudo apt-get install cmake libboost-iostreams-dev libboost-system-dev libboost-test-dev libjsoncpp-dev libfftw3-dev libclfft-dev libopenjp2-7-dev libssh2-1-dev
+      run: sudo apt-get install cmake libboost-iostreams-dev libboost-system-dev libboost-test-dev libjsoncpp-dev libfftw3-dev libclfft-dev libopenjp2-7-dev libssh2-1-dev libncurses-dev libpython3-dev python3-pybind11 libgsl-dev libmuparser-dev libeigen3-dev
     - name: cmake
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_INSTALL_PREFIX=/tmp -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=on -DISIS_USE_FFTW=on -DISIS_IOPLUGIN_NULL=on -DISIS_IOPLUGIN_SFTP=on
+        cmake .. -DCMAKE_INSTALL_PREFIX=/tmp -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=on -DISIS_USE_FFTW=on -DISIS_USE_GSL=ON -DISIS_IOPLUGIN_NULL=on -DISIS_IOPLUGIN_SFTP=on -DUSE_SYSTEM_PYBIND=ON
     - name: make
       run: |
         cd build
