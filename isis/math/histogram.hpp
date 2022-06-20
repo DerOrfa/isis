@@ -25,7 +25,7 @@
 
 namespace isis::math{
 namespace _internal{
-template<typename IType> using iter_value_t = typename std::iterator_traits<std::remove_cvref_t<IType>>::value_type;
+template<typename IType> using iter_value_t = typename std::iterator_traits<std::remove_cv_t<std::remove_reference_t<IType>>>::value_type;
 }
 
 /// Compute histogram of a given range.
