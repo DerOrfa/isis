@@ -40,7 +40,7 @@ if(TARGET ncurses::ncurses)#if conan got us nice targets
 	set(CURSES_LIBRARIES ncurses::ncurses)
 else(TARGET ncurses::ncurses)#fallback to builtin FindCurses
 	find_package(Curses QUIET)
-	set_source_files_properties( "message.cpp" PROPERTIES INCLUDE_DIRECTORIES ${CURSES_CURSES_H_PATH})
+	include_directories(${CURSES_CURSES_H_PATH})
 endif(TARGET ncurses::ncurses)
 
 if(CURSES_LIBRARIES)

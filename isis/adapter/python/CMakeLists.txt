@@ -3,7 +3,7 @@ set(PYBIND11_FINDPYTHON)
 
 if(USE_SYSTEM_PYBIND)
     find_package(pybind11 CONFIG REQUIRED)
-    include(pybind11Common)#conan doesn't load this automatically so we do it
+    include(pybind11Common OPTIONAL)#conan doesn't load this automatically so we do it
     message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIRS}")
 else(USE_SYSTEM_PYBIND)
     include(FetchContent)
