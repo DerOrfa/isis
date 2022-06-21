@@ -35,9 +35,9 @@ Description: data format plugins for the ISIS framework
  neuro-imaging data formats, like  Nifti, Analyze, DICOM and VISTA. ISIS
  is extensible with plugins to add support for additional data formats.
  .
- This package provides plugins for data in NIfTI, PNG, VISTA format,
- raw-data access, as well as plugins for gzip-compression and tar-archive
- support.
+ This package provides plugins for data in NIfTI, PNG, VISTA and ZISRAW format,
+ as well as plugins for gzip/lzma-compression, tar-archives and access to 
+ orthanc servers.
 
 Package: libisis-ioplugins-dicom
 Section: science
@@ -66,7 +66,7 @@ Description: I/O framework for neuroimaging data
 Package: isis-utils
 Section: science
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libisis-adapter-qt5-0 (<< ${source:Version}.1~)
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: utilities for the ISIS neuroimaging data I/O framework
  This framework aids access of and conversion between various established
  neuro-imaging data formats, like  Nifti, Analyze, DICOM and VISTA. ISIS
@@ -105,3 +105,5 @@ Description: Python bindings for ISIS data I/O framework
  This framework aids access of and conversion between various established
  neuro-imaging data formats, like  Nifti, Analyze, DICOM and VISTA. ISIS
  is extensible with plugins to add support for additional data formats.
+ .
+ This package provides a python module to use isis from within python 3.
