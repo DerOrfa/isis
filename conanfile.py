@@ -41,10 +41,8 @@ class isis(ConanFile):
 	}
 	boost_without = [
 		"atomic", "chrono", "container", "context", "contract", "coroutine", "date_time", "fiber", "filesystem",
-		"graph",
-		"graph_parallel", "json", "locale", "log", "math", "mpi", "nowide", "program_options", "python",
-		"serialization",
-		"stacktrace", "thread", "timer", "type_erasure", "wave"
+		"graph", "graph_parallel", "json", "locale", "log", "math", "mpi", "nowide", "program_options", "python",
+		"serialization", "stacktrace", "thread", "timer", "type_erasure", "wave"
 	]
 	default_options.update({"boost:without_{}".format(_name): True for _name in boost_without})
 
@@ -54,43 +52,48 @@ class isis(ConanFile):
 	exports_sources = ["CMakeLists.txt", "COPYING.txt", "isis/*", "io_plugins/*", "cmake/*", "tools/*"]
 	generators = "CMakeDeps", "CMakeToolchain"
 
-	requires = [
-		"boost/[>1.75]",
-		("jsoncpp/[~=1]", "private"),
-		("fftw/[~=3]", "private"),
-		("openjpeg/[~=2]", "private"),
-		("gsl/[~=2.7]", "private"),
-		("ncurses/[>6.0]", "private"),
-		("eigen/[~=3]", "private")
-	]
+	def require(self, p, shared=False):
+		assert isinstance(p,str)
+		(name,_) = p.split('/')
+		self.requires(p,private=True)
+		if 'shared' in self.options[name]:
+			self.options[name].shared=False
 
 	def config_options(self):
 		if self.options.testing:
 			self.exports_sources.append("tests/*")
 
 	def requirements(self):
+		#make everything statically linked into the exe (or the shared lib) => not needed by the consumer
+		for dep in ["jsoncpp/[~=1]", "fftw/[~=3]", "openjpeg/[~=2]", "gsl/[~=2.7]", "ncurses/[>6.0]", "eigen/[~=3]"]:
+			self.require(dep)
+
 		if self.options.with_cli:
-			self.requires("muparser/[~=2]", "private")
+			self.require("muparser/[~=2]")
 
 		if self.options.with_qt5:
-			self.requires("qt/[~=5]")
+			self.require("qt/[~=5]")
 			self.options['qt'].openssl = False
 			self.options['qt'].with_mysql = False
 			self.options['qt'].with_sqlite3 = False
 			self.options['qt'].with_odbc = False
 
 		if self.options.with_python:
-			self.requires("pybind11/[>2.9.0]", "private")
+			self.require("pybind11/[>2.9.0]")#pybind is header only
 
 		if self.options.io_zisraw:
-			self.requires("jxrlib/cci.20170615", "private")
+			self.require("jxrlib/cci.20170615")
 
 		if self.options.io_sftp:
-			self.requires("libssh2/[~=1]", "private")
+			self.require("libssh2/[~=1]")
 			self.options['libssh2'].with_zlib = False  # prevent imported zlib from conflicting with png
 
 		if self.options.io_png:
-			self.requires("libpng/[>1.2]", "private")
+			self.require("libpng/[>1.2]")
+
+		#if we're shared make boost statically linked into the lib => not needed by the dev-consumer
+		self.require("boost/[>1.75]",not self.options.shared)
+
 
 	def generate(self):
 		self.python_path = path.join("lib", "python3", "dist-packages")
