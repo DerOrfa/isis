@@ -19,6 +19,7 @@ class isis(ConanFile):
 		"with_cli": [True, False],
 		"with_qt5": [True, False],
 		"with_python": [True, False],
+        "with_gsl": [True, False],
 		"io_zisraw": [True, False],
 		"io_sftp": [True, False],
 		"io_png": [True, False],
@@ -81,6 +82,9 @@ class isis(ConanFile):
 		if self.options.with_python:
 			self.require("pybind11/[>2.9.0]")#pybind is header only
 
+		if self.options.with_gsl:
+			self.require("gsl/[~=2.7]")
+
 		if self.options.io_zisraw:
 			self.require("jxrlib/cci.20170615")
 
@@ -117,6 +121,7 @@ class isis(ConanFile):
 		# other
 		tc.variables["BUILD_TESTING"] = bool(self.options.testing)
 		tc.variables["ISIS_QT5"] = bool(self.options.with_qt5)
+		tc.variables["ISIS_USE_GSL"] =     bool(self.options.with_gsl)
 		tc.variables["ISIS_BUILD_TOOLS"] = bool(self.options.with_cli)
 		tc.variables["ISIS_CALC"] = bool(self.options.with_cli)
 		tc.variables["ISIS_DEBUG_LOG"] = bool(self.options.debug_log)
