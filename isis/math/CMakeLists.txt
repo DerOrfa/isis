@@ -31,9 +31,15 @@ if(ISIS_USE_GSL)
 endif()
 
 if(ISIS_USE_FFTW)
-	if(USE_CONAN) # conan creates a FindFFTW3.cmake for us
-		find_package(FFTW3f REQUIRED)
+	find_package(FFTW3f QUIET)
+	find_package(FFTW3 QUIET)
+
+	if(TARGET FFTW3::fftw3f)
 		list(APPEND _DEPENDS FFTW3::fftw3f)
+		add_definitions("-DHAVE_FFTWf")
+	elseif(TARGET FFTW3::fftw3) # conan creates a FindFFTW3.cmake for us
+			list(APPEND _DEPENDS FFTW3::fftw3)
+			add_definitions("-DHAVE_FFTW")
 	elseif(PKG_CONFIG_FOUND)
 		pkg_search_module(FFTW REQUIRED fftw3)
 		pkg_search_module(FFTWf REQUIRED fftw3f)
@@ -41,13 +47,12 @@ if(ISIS_USE_FFTW)
 		list(APPEND _DEPENDS ${FFTW_LDFLAGS} ${FFTWf_LDFLAGS} ${FFTW_LIBRARIES} ${FFTWf_LIBRARIES})
 		message(STATUS "fftw libraries: ${FFTW_LIBRARIES} ${FFTWf_LIBRARIES}")
 		add_definitions("-DHAVE_FFTW")
+		add_definitions("-DHAVE_FFTWf")
 	else()
-		message(FATAL_ERROR "Implement fftw lookup")
+		message(FATAL_ERROR "fftw not found")
 	endif()
 
 	list(APPEND _CPP_GLOB "details/fftw.cpp")
-
-	add_definitions("-DHAVE_FFTWf")
 endif()
 
 

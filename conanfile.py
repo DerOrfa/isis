@@ -33,8 +33,18 @@ class isis(ConanFile):
         "io_zisraw": True,
         "io_sftp": True,
         "io_png": True,
-        "testing": False
+        "testing": False,
+        "fftw:precision": "single",
+        "boost:lzma": True,
+        "boost:zstd": False,
+        "boost:i18n_backend": None
     }
+    boost_without = [
+        "atomic", "chrono","container","context","contract","coroutine","date_time","fiber","filesystem", "graph",
+        "graph_parallel","json","locale","log","math","mpi","nowide","program_options","python", "serialization",
+        "stacktrace","thread","timer","type_erasure","wave"
+    ]
+    default_options.update({"boost:without_{}".format(_name): True for _name in boost_without})
 
     url = "https://github.com/DerOrfa/isis"
 
@@ -57,9 +67,6 @@ class isis(ConanFile):
         if self.options.io_sftp:
             self.options['libssh2'].with_zlib = False #prevent imported zlib from conflicting with png
 
-        self.options['fftw'].precision = "single"
-        self.options['boost'].lzma = True
-
     def requirements(self):
         if self.options.with_cli:    self.requires("muparser/[~=2]", "private")
         if self.options.with_qt5:    self.requires("qt/[~=5]")
@@ -76,10 +83,8 @@ class isis(ConanFile):
         self.python_path = path.join("lib", "python3", "dist-packages")
         tc = CMakeToolchain(self)
 
-        for var in ["ISIS_RUNTIME_LOG"]:
+        for var in ["ISIS_RUNTIME_LOG", "ISIS_USE_FFTW"]:
             tc.variables[var] = True
-
-
 
         #io plugins
         tc.variables["ISIS_IOPLUGIN_ZISRAW"] = bool(self.options.io_zisraw)
@@ -128,6 +133,3 @@ class isis(ConanFile):
             self.env_info.PYTHONPATH.append(path.join(self.package_folder, "lib", "python3", "dist-packages"))
         if (self.options.with_cli):
             self.env_info.path.append(path.join(self.package_folder, "bin"))
-
-        # self.cpp_info.includedirs=
-        # self.cpp_info.libs = ["hello"]
