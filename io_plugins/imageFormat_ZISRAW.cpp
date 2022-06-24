@@ -447,7 +447,7 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 						ret.back().setValueAs<util::fvector3>("voxelSize",voxel_size);
 						ret.back().setValueAs("pyramidLevel",(uint64_t)i);
 						ret.back().setValueAs("sequenceNumber",(uint64_t)i);
-						ret.back().setValueAs("acquisitionNumber",z.first);
+						ret.back().setValueAs("acquisitionNumber",(uint64_t)z.first);
 
 						util::fvector3 origin{
 							voxel_size[0] * bounds["X"].min,

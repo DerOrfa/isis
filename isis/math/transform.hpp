@@ -22,8 +22,6 @@
 #include "../core/image.hpp"
 #include "../core/matrix.hpp"
 #include "common.hpp"
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/lu.hpp>
 
 namespace isis::math
 {
@@ -38,15 +36,15 @@ template<typename T, size_t N> T getBiggestVecElemAbs(std::array<T,N> arr){
  * Transforms the image coordinate system into an other system by multiplying
  * the orientation matrix with a user defined transformation matrix. Additionally,
  * the index origin will be transformed into the new coordinate system. This
- * function only changes the
+ * function only changes the geometry, not the data.
  *
  * <B>IMPORTANT!</B>: If you call this function with a matrix other than the
- * identidy matrix, it's not guaranteed that the image is still in ISIS space
+ * identity matrix, it's not guaranteed that the image is still in ISIS space
  * according to the DICOM conventions. Maybe some ISIS algorithms that
  * depend on correct image orientations won't work as expected. Use this method
  * with caution!
  */
-bool transformCoords(isis::data::Chunk& chk, boost::numeric::ublas::matrix<float> transform_matrix, bool transformCenterIsImageCenter = false );
+bool transformCoords(isis::data::Chunk& chk, util::Matrix3x3<float> transform_matrix, bool transformCenterIsImageCenter = false );
 /**
  * Transforms the image coordinate system into an other system by multiplying
  * the orientation matrix with a user defined transformation matrix. Additionally,
@@ -65,7 +63,7 @@ bool transformCoords(isis::data::Chunk& chk, boost::numeric::ublas::matrix<float
  *  initial position. For example this is the way SPM flips its images when converting from DICOM to nifti.
  * \return returns if the transformation was successfuly
  */
-bool transformCoords(isis::data::Image& img, boost::numeric::ublas::matrix< float > transform_matrix, bool transformCenterIsImageCenter = false );
+bool transformCoords(isis::data::Image& img, util::Matrix3x3<float> transform_matrix, bool transformCenterIsImageCenter = false );
 
 /** Maps the given scanner Axis to the dimension with the minimal angle.
 *  This is done by latching the orientation of the image by setting the biggest absolute
@@ -81,57 +79,6 @@ bool transformCoords(isis::data::Image& img, boost::numeric::ublas::matrix< floa
 */
 
 data::dimensions mapScannerAxisToImageDimension ( const data::Image& img, data::scannerAxis scannerAxes );
-
-template<typename TYPE,size_t COLS,size_t ROWS>
-boost::numeric::ublas::matrix<TYPE> toBoostMatrix(const util::Matrix<TYPE,COLS,ROWS> &mat)
-{
-	boost::numeric::ublas::matrix<TYPE> ret( ROWS, COLS );
-	auto row_it=ret.begin1();
-	for(size_t r = 0; r<ROWS; ++r,++row_it)
-		std::copy(std::begin(mat[r]),std::end(mat[r]),std::begin(row_it));
-	return ret;
-}
-
-template<typename TYPE,size_t COLS,size_t ROWS>
-util::Matrix<TYPE,COLS,ROWS> fromBoostMatrix( const boost::numeric::ublas::matrix<TYPE> &boost_matrix )
-{
-	util::Matrix<TYPE,COLS,ROWS> ret;
-	if( boost_matrix.size1() == ROWS && boost_matrix.size2() == COLS ) {
-		auto row_it=boost_matrix.begin1();
-		for(size_t r = 0; r<ROWS; ++r,++row_it)
-			std::copy(std::begin(row_it),std::end(row_it),std::begin(ret[r]));
-	} else {
-		LOG( Runtime, error ) << "The size of the boost matrix ("
-								<< boost_matrix.size1() << ", " << boost_matrix.size2()
-								<< ") does not coincide with the size of the isis matrix (" << ROWS << ", " << COLS << ").";
-		throw( std::logic_error( "Size mismatch" ) );
-	}
-	return ret;
-};
-
-
-template<typename TYPE, size_t SIZE> util::Matrix<TYPE, SIZE, SIZE> 
-inverseMatrix(const util::Matrix<TYPE,SIZE,SIZE> &mat, bool &invertible )
-{
-	using namespace boost::numeric::ublas;
-	util::Matrix<TYPE, SIZE, SIZE> ret;
-	matrix<TYPE> boost_matrix_in = toBoostMatrix(mat);
-	matrix<TYPE> boost_matrix_inverse( SIZE, SIZE );
-	permutation_matrix<TYPE> pm( boost_matrix_in.size1() );
-	//check if det is 0 -> singular
-	invertible = lu_factorize( boost_matrix_in, pm ) == 0;
-
-	if( invertible ) {
-		boost_matrix_inverse.assign( identity_matrix<TYPE>( boost_matrix_in.size1() ) ) ;
-		lu_substitute( boost_matrix_in, pm, boost_matrix_inverse );
-		return fromBoostMatrix<TYPE, SIZE, SIZE>( boost_matrix_inverse );
-	} else {
-		LOG( Runtime, error ) << "Matrix is singular. Returning initial matrix.";
-		return mat;
-	}
-}
-
-
 
 }
 

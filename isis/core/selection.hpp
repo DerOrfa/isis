@@ -22,6 +22,7 @@
 #include "istring.hpp"
 #include <cassert>
 #include <limits>
+#include <optional>
 
 namespace isis::util
 {
@@ -50,7 +51,7 @@ class Selection
 			&& op(m_set.value(), ref.m_set.value())
 		;
 	}
-	std::pair<bool,MapType::const_iterator> stringCompareCheck( std::basic_string_view<char,util::_internal::ichar_traits> ref )const;
+	[[nodiscard]] std::pair<bool,MapType::const_iterator> stringCompareCheck( std::basic_string_view<char,util::_internal::ichar_traits> ref )const;
 public:
 	/**
 	 * Default constructor.

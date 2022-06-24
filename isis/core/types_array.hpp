@@ -3,6 +3,12 @@
 #include "types.hpp"
 #include "color.hpp"
 
+#if __GNUC__ < 10
+namespace std::chrono{
+typedef duration<int32_t,ratio<int(3600*24)> > days;
+}
+#endif
+
 namespace isis::data{
 
 typedef std::variant<

@@ -114,19 +114,19 @@ operator*( const util::Matrix<TYPE1, COLS, ROWS> &left, const std::array<TYPE2, 
 
 namespace std{
 	template <typename TYPE, size_t COLS, size_t ROWS> constexpr TYPE* begin(isis::util::Matrix<TYPE,COLS,ROWS> &mat){
-		static_assert(std::is_pod<isis::util::Matrix<TYPE,COLS,ROWS>>::value,"isis::util::Matrix must be POD");
+		static_assert(std::is_standard_layout_v<isis::util::Matrix<TYPE,COLS,ROWS>>,"isis::util::Matrix must be POD");
 		return begin(mat[0]);
 	} 
 	template <typename TYPE, size_t COLS, size_t ROWS> constexpr TYPE* end(isis::util::Matrix<TYPE,COLS,ROWS> &mat){
-		static_assert(std::is_pod<isis::util::Matrix<TYPE,COLS,ROWS>>::value,"isis::util::Matrix must be POD");
+		static_assert(std::is_standard_layout_v<isis::util::Matrix<TYPE,COLS,ROWS>>,"isis::util::Matrix must be POD");
 		return begin(mat)+COLS*ROWS;
 	} 
 	template <typename TYPE, size_t COLS, size_t ROWS> constexpr const TYPE* begin(const isis::util::Matrix<TYPE,COLS,ROWS> &mat){
-		static_assert(std::is_pod<isis::util::Matrix<TYPE,COLS,ROWS>>::value,"isis::util::Matrix must be POD");
+		static_assert(std::is_standard_layout_v<isis::util::Matrix<TYPE,COLS,ROWS>>,"isis::util::Matrix must be POD");
 		return begin(mat[0]);
 	} 
 	template <typename TYPE, size_t COLS, size_t ROWS> constexpr const TYPE* end(const isis::util::Matrix<TYPE,COLS,ROWS> &mat){
-		static_assert(std::is_pod<isis::util::Matrix<TYPE,COLS,ROWS>>::value,"isis::util::Matrix must be POD");
+		static_assert(std::is_standard_layout_v<isis::util::Matrix<TYPE,COLS,ROWS>>,"isis::util::Matrix must be POD");
 		return begin(mat)+COLS*ROWS;
 	} 
 }

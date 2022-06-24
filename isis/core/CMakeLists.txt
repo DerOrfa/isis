@@ -6,18 +6,6 @@ find_path(INC_JSONCPP "json/config.h" PATH_SUFFIXES "jsoncpp" DOC "path where js
 include_directories(${INC_JSONCPP})
 
 ############################################################
-# check for ncurses
-############################################################
-find_package(Curses QUIET)
-if(CURSES_LIBRARIES)
-	include_directories(${CURSES_CURSES_H_PATH})
-	message(STATUS "curses form libraries ${CURSES_LIBRARIES} found. Enable colored logging.")
-else()
-	message(STATUS "curses form library not found. Logging won't be colored.")
-	set(CURSES_LIBRARIES "")
-endif()
-
-############################################################
 # check for liborc
 ############################################################
 set(ISIS_USE_LIBORC OFF CACHE BOOL "use the \"Oil Runtime Compiler\"" )
@@ -46,9 +34,22 @@ endif()
 #see also https://stackoverflow.com/questions/41676311
 set_source_files_properties( "valuearray_minmax.cpp" PROPERTIES COMPILE_FLAGS "-Wno-ignored-attributes")
 
+find_package(ncurses QUIET) #conan based find
+if(TARGET ncurses::ncurses)#if conan got us nice targets
+	set_source_files_properties( "message.cpp" PROPERTIES COMPILE_FLAGS "-DHAVE_CURSES")
+	set(CURSES_LIBRARIES ncurses::ncurses)
+else(TARGET ncurses::ncurses)#fallback to builtin FindCurses
+	find_package(Curses QUIET)
+	include_directories(${CURSES_CURSES_H_PATH})
+endif(TARGET ncurses::ncurses)
+
 if(CURSES_LIBRARIES)
-set_source_files_properties( "message.cpp" PROPERTIES COMPILE_FLAGS "-DHAVE_CURSES")
-endif()
+	message(STATUS "curses libraries ${CURSES_LIBRARIES} found. Enable colored logging.")
+	set_source_files_properties( "message.cpp" PROPERTIES COMPILE_FLAGS "-DHAVE_CURSES")
+else(CURSES_LIBRARIES)
+	message(STATUS "curses form library not found. Logging won't be colored.")
+	set(CURSES_LIBRARIES "")
+endif(CURSES_LIBRARIES)
 
 #add the core library
 add_lib(isis_core

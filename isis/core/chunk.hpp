@@ -117,11 +117,8 @@ public:
 		},static_cast<ArrayTypes&>(*this));
 	}
 
-	/// \returns the number of cheap-copy-chunks using the same memory as this
-	size_t useCount()const;
-
 	/// Creates a new empty Chunk of different size and without properties, but of the same datatype as this.
-	Chunk cloneToNew( size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1 )const;
+	[[nodiscard]] Chunk cloneToNew( size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1 )const;
 
 	/// Creates a new empty Chunk without properties but of specified type and specified size.
 	static Chunk createByID( size_t ID, size_t nrOfColumns, size_t nrOfRows = 1, size_t nrOfSlices = 1, size_t nrOfTimesteps = 1, bool fakeValid = false );
@@ -146,13 +143,22 @@ public:
 	}
 	/**
 	 * Create a new Chunk of the requested type and copy all voxel data of the chunk into it.
-	 * If neccessary a conversion into the requested type is done using the given scale.
+	 * If necessary a conversion into the requested type is done using the given scale.
 	 * \param ID the ID of the requested type (type of the source is used if not given)
 	 * \param scaling the scaling to be used when converting the data (will be determined automatically if not given)
 	 * \return a new deep copied Chunk of the same size
 	 */
-	Chunk copyByID( size_t ID, const scaling_pair &scaling = scaling_pair() )const;
-	template<typename T> TypedChunk<T> as(const scaling_pair &scaling = scaling_pair())const;
+	[[nodiscard]] Chunk copyByID( size_t ID, const scaling_pair &scaling = scaling_pair() )const;
+
+
+	/**
+	 * Create a new typed Copy of the Chunk..
+	 * If necessary a conversion into the requested type is done using the given scale.
+	 * Otherwise a cheap copy is done.
+	 * \param scaling the scaling to be used when converting the data (will be determined automatically if not given)
+	 * \return a typed copy of the Chunk
+	 */
+	template<typename T> [[nodiscard]] TypedChunk<T> as(const scaling_pair &scaling = scaling_pair())const;
 
 	/**
 	 * Copy data from a (smaller) chunk and insert it as a tile at a specified position.
@@ -174,7 +180,7 @@ public:
 	 */
 	void copyTileTo(Chunk &dst, std::array<size_t,4> pos, bool allow_capping=false);
 
-	size_t getBytesPerVoxel()const;
+	[[nodiscard]] size_t getBytesPerVoxel()const;
 
 	/**
 	 * Get a string describing the shape of the chunk.

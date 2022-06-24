@@ -254,7 +254,7 @@ std::list<Chunk> Chunk::autoSplice ( dimensions atDim )const
 				<< acquisitionNumber.size() << "). This splice is most likely going to fail.";
 			auto op = [dimsize=orgsize[dim], cnt=0](const util::Value &v)mutable->util::Value{
 				const auto iv = v.as<uint32_t>();
-				return util::Value(iv * dimsize + (cnt++ % dimsize));
+				return {uint64_t(iv * dimsize + (cnt++ % dimsize))};
 			};
 			LOG(Debug,verbose_info) << "Stretching acquisitionNumber " << acquisitionNumber << " by " << orgsize[dim];
 			acquisitionNumber.explode(orgsize[dim],op);
@@ -292,11 +292,6 @@ std::list<Chunk> Chunk::spliceAt (dimensions atDim, util::PropertyMap &&propSour
 	}
 	propSource.splice(ret.begin(),ret.end(),false);//copy/spliceAt properties into spliced chunks / this will empty propSource
 	return ret;
-}
-
-size_t Chunk::useCount() const
-{
-	return ValueArray::useCount();
 }
 
 void Chunk::flipAlong( const dimensions dim )
