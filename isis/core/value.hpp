@@ -16,6 +16,8 @@ namespace isis::data::_internal{
 }
 template<typename T> concept KnownValueType = isis::util::_internal::variant_index<isis::util::ValueTypes ,std::remove_cv_t<T>>() !=std::variant_npos;
 template<typename T> concept arithmetic = std::is_arithmetic_v<T> ;
+template<typename T1, typename T2> concept three_way_comparable_with = requires (T1 &&v1,T2 &&v2){v1<=>v2;};
+template<typename T> concept three_way_comparable = three_way_comparable_with<T,T>;
 
 namespace isis::util{
 namespace _internal{
@@ -88,10 +90,10 @@ class Value: public ValueTypes{
 	}
 public:
 	std::partial_ordering operator<=>(const Value& rhs)const;
-	template<typename r_type> std::partial_ordering operator<=>(const r_type& rhs)const requires (!std::is_same_v<r_type,Value> && std::three_way_comparable<r_type>) {
+	template<three_way_comparable r_type> std::partial_ordering operator<=>(const r_type& rhs)const requires (!std::is_same_v<r_type,Value>) {
 		auto visitor=[&](auto &&ptr)->std::partial_ordering{
 			typedef std::remove_cvref_t<decltype(ptr)> l_type;
-			if constexpr(std::three_way_comparable_with<l_type,r_type>)
+			if constexpr(three_way_comparable_with<l_type,r_type>)
 				return ptr<=>rhs;
 			else
 				LOG(Runtime,error) << "Cannot compare " << util::typeName<l_type>() << " and " << _internal::typename_with_fallback<r_type>();
@@ -100,7 +102,7 @@ public:
 		return std::visit(visitor,static_cast<const ValueTypes&>(*this));
 	}
 	template<typename r_type> bool operator==(const r_type& v)const{
-		return std::is_eq(*this <=> v);
+		return std::partial_ordering::equivalent == (*this <=> v);
 	};
 	bool operator==(const Value& v)const=default;
 	typedef _internal::ValueConverterMap::mapped_type::mapped_type Converter;
@@ -119,11 +121,8 @@ public:
 	Value &operator=(const Value&)=default;
 	Value &operator=(Value&&)=default;
 
-	template <KnownValueType T>
-	constexpr Value(T &&v):ValueTypes(v){}
-
-	template <KnownValueType T>
-	constexpr Value(const T &v):ValueTypes(v){}
+	constexpr Value(KnownValueType auto &&v):ValueTypes(v){}
+	constexpr Value(const KnownValueType auto &v):ValueTypes(v){}
 	
 	[[nodiscard]] std::string typeName()const;
 	[[nodiscard]] size_t typeID()const;
