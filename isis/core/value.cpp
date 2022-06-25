@@ -43,13 +43,13 @@ Value Value::copyByID(size_t ID) const{
 
 	if ( conv ) {
 		switch ( conv->generate( *this, to ) ) {
-		    case boost::numeric::cPosOverflow:
+		    case cPosOverflow:
 			    LOG( Runtime, error ) << "Positive overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
 			    break;
-		    case boost::numeric::cNegOverflow:
+		    case cNegOverflow:
 			    LOG( Runtime, error ) << "Negative overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
 			    break;
-		    case boost::numeric::cInRange:
+		    case cInRange:
 			    break;
 		}
 
@@ -65,7 +65,7 @@ bool Value::fitsInto(size_t ID) const { //@todo find a better way to do this
 	Value to = createByID(ID);
 
 	if ( conv ) {
-		return ( conv->generate( *this, to ) ==  boost::numeric::cInRange );
+		return ( conv->generate( *this, to ) ==  cInRange );
 	} else {
 		LOG( Runtime, info )
 		    << "I dont know any conversion from "
@@ -79,13 +79,13 @@ bool Value::convert(const Value &from, Value &to) {
 
 	if ( conv ) {
 		switch ( conv->convert( from, to ) ) {
-		    case boost::numeric::cPosOverflow:
+		    case cPosOverflow:
 			    LOG( Runtime, error ) << "Positive overflow when converting " << from.toString( true ) << " to " << to.typeName() << ".";
 			    break;
-		    case boost::numeric::cNegOverflow:
+		    case cNegOverflow:
 			    LOG( Runtime, error ) << "Negative overflow when converting " << from.toString( true ) << " to " << to.typeName() << ".";
 			    break;
-		    case boost::numeric::cInRange:
+		    case cInRange:
 			    return true;
 		}
 	} else {
@@ -158,9 +158,9 @@ std::partial_ordering Value::converted_three_way_compare(const Value &v)const
 
 	if ( conv ) {
 		switch ( conv->convert( v, to ) ){
-		case boost::numeric::cInRange:return this->operator<=>(to);
-		case boost::numeric::cNegOverflow: return std::partial_ordering::greater;//v is so small it can't be represented in my type
-		case boost::numeric::cPosOverflow: return std::partial_ordering::less;//v is so big it can't be represented in my type
+		case cInRange:return this->operator<=>(to);
+		case cNegOverflow: return std::partial_ordering::greater;//v is so small it can't be represented in my type
+		case cPosOverflow: return std::partial_ordering::less;//v is so big it can't be represented in my type
 		}
 	} else {
 		LOG( Runtime, info )

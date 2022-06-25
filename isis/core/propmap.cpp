@@ -145,6 +145,25 @@ struct Extractor {
 	}
 };
 
+PropertyMap readPtree(const boost::property_tree::ptree &tree,bool skip_empty){
+	PropertyMap ret;
+	for(const auto &p:tree){
+		const auto &key=p.first;
+		const auto &entry=p.second;
+		if(entry.empty()){
+			if(!entry.data().empty() || !skip_empty){
+				auto &prop = ret.touchProperty( key.c_str() );
+				assert(prop.isEmpty());
+				prop.push_back(entry.data());
+			}
+		} else {
+			auto &n = ret.touchBranch( key.c_str() );
+			assert(n.isEmpty());
+			n=readPtree(entry, skip_empty);
+		}
+	}
+	return ret;
+}
 
 }
 /// @endcond _internal
@@ -752,35 +771,6 @@ PropertyMap::PathSet PropertyMap::genKeyList(const PropertyMap::leaf_predicate &
 	return genKeyList(key_predicate);
 }
 
-void PropertyMap::readPtree(const boost::property_tree::ptree &tree,bool skip_empty){
-	for(const auto &p:tree){
-		const auto &key=p.first;
-		const auto &entry=p.second;
-		if(entry.empty()){
-			if(!entry.data().empty() || !skip_empty){
-				mapped_type &n = fetchEntry( key.c_str() );
-				if(n.isEmpty()){
-					n=PropertyValue(entry.data());
-				} else if(n.isProperty()){ //OK we got a property map all is good
-					std::get<PropertyValue>(n)=entry.data();
-				} else {
-					LOG(Runtime,warning) << "Will not store " << key << " as PropertyValue as it already exists as branch " << n;
-				}
-			}
-		} else {
-			mapped_type &n = fetchEntry( key.c_str() );
-			if(n.isEmpty()){
-				n=PropertyMap();
-			}
-			if(n.isBranch()){ //OK we got a property map all is good
-				n.branch().readPtree(entry);
-			} else  {
-				LOG(Runtime,warning) << "Will not store " << key << " as branch as it already exists as property " << n;
-			}
-		}
-	}
-}
-
 void PropertyMap::readXML(const uint8_t* streamBegin, const uint8_t* streamEnd, int flags){
 	typedef  boost::iostreams::basic_array_source<std::streambuf::char_type> my_source_type; // must be compatible to std::streambuf
 
@@ -792,7 +782,9 @@ void PropertyMap::readXML(std::basic_istream<char> &stream,int flags){
 	boost::property_tree::ptree pt;
 	boost::property_tree::read_xml(stream,pt,flags);
 // 	boost::property_tree::write_xml(std::cout,pt,boost::property_tree::xml_writer_settings<std::string>(' ',4));std::cout<<std::endl;
-	readPtree(pt,true);
+	PropertyMap parsed=_internal::readPtree(pt,true);
+	auto rejected=transfer(parsed);
+	LOG_IF(!rejected.empty(),Runtime,warning) << "Failed to insert the following entries when parsing XML: " << rejected;
 }
 PropertyMap::Node& PropertyMap::nullnode(){
 	static Node node;

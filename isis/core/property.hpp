@@ -141,7 +141,7 @@ public:
 
 	/**
 	 * Empty constructor.
-	 * Creates an empty property value. So PropertyValue().isEmpty() will allways be true.
+	 * Creates an empty property value. So PropertyValue().isEmpty() will always be true.
 	 */
 	PropertyValue();
 
