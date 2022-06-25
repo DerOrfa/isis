@@ -121,22 +121,13 @@ Value Value::operator+(const duration &rhs) const{return chrono_math<std::plus<>
 Value Value::operator-(const duration &rhs) const{return chrono_math<std::minus<>>(rhs);}
 
 bool Value::gt(const Value &ref )const {
-	auto op = [&](auto ptr){
-		return operatorWrapper(_internal::type_greater<decltype(ptr)>(),ref,false );
-	};
-	return std::visit(op,static_cast<const ValueTypes&>(*this));
+	return std::partial_ordering::greater == converted_three_way_compare(ref);
 }
 bool Value::lt(const Value &ref )const {
-	auto op=[&](auto ptr){
-		return operatorWrapper(_internal::type_less<decltype(ptr)>(),ref,false );
-	};
-	return std::visit(op,static_cast<const ValueTypes&>(*this));
+	return std::partial_ordering::less == converted_three_way_compare(ref);
 }
 bool Value::eq(const Value &ref )const {
-	auto op=[&](auto ptr){
-		return operatorWrapper(_internal::type_eq<decltype(ptr)>(),ref,false );
-	};
-	return std::visit(op,static_cast<const ValueTypes&>(*this));
+	return std::partial_ordering::equivalent == converted_three_way_compare(ref);
 }
 
 
@@ -151,13 +142,31 @@ std::partial_ordering Value::operator<=>(const Value &rhs) const
 {
 	auto visitor=[this](auto &&ptr)->std::partial_ordering{
 		typedef std::remove_cvref_t<decltype(ptr)> r_type;
-		if constexpr(three_way_comparable<r_type>)
+		if constexpr(three_way_comparable_non_value<r_type>)
 			return this->operator<=>(ptr);
 		else
 			LOG(Runtime,error) << "Cannot compare " << util::typeName<r_type>();
 		return std::partial_ordering::unordered;
 	};
 	return std::visit(visitor,static_cast<const ValueTypes&>(rhs));
+}
+std::partial_ordering Value::converted_three_way_compare(const Value &v)const
+{
+	const Converter &conv = v.getConverterTo( typeID() );
+	Value to = createByID(typeID());
+
+	if ( conv ) {
+		switch ( conv->convert( v, to ) ){
+		case boost::numeric::cInRange:return this->operator<=>(to);
+		case boost::numeric::cNegOverflow: return std::partial_ordering::greater;//v is so small it can't be represented in my type
+		case boost::numeric::cPosOverflow: return std::partial_ordering::less;//v is so big it can't be represented in my type
+		}
+	} else {
+		LOG( Runtime, info )
+			<< "I can't compare " << MSubject( toString( true ) ) << " to " << MSubject( v.toString(true) )
+			<< " as " << v.typeName() << " can't be converted into " << typeName();
+		return std::partial_ordering::unordered; // return an empty Reference
+	}
 }
 
 }
