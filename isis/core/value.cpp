@@ -1,4 +1,5 @@
 #include "value.hpp"
+#include "value_converter.hpp"
 
 #include <sstream>
 
@@ -165,8 +166,20 @@ std::partial_ordering Value::converted_three_way_compare(const Value &v)const
 		LOG( Runtime, info )
 			<< "I can't compare " << MSubject( toString( true ) ) << " to " << MSubject( v.toString(true) )
 			<< " as " << v.typeName() << " can't be converted into " << typeName();
-		return std::partial_ordering::unordered; // return an empty Reference
 	}
+	return std::partial_ordering::unordered;
 }
+
+Value::Value(const std::string_view &v): ValueTypes(std::string(v)){}
+Value Value::operator+=(const std::string &rhs){return *this=this->as<std::string>()+rhs;}
+Value Value::operator+(const Value &ref) const{return arithmetic_op<std::plus<>>(ref);}
+Value Value::operator-(const Value &ref) const{return arithmetic_op<std::minus<>>(ref);}
+Value Value::operator*(const Value &ref) const{return arithmetic_op<std::multiplies<>>(ref);}
+Value Value::operator/(const Value &ref) const{return arithmetic_op<std::divides<>>(ref);}
+
+Value Value::operator+=(const Value &ref){return *this=arithmetic_op<std::plus<>>(ref);}
+Value Value::operator-=(const Value &ref){return *this=arithmetic_op<std::minus<>>(ref);}
+Value Value::operator*=(const Value &ref){return *this=arithmetic_op<std::multiplies<>>(ref);}
+Value Value::operator/=(const Value &ref){return *this=arithmetic_op<std::divides<>>(ref);}
 
 }

@@ -7,6 +7,7 @@
 
 #define BOOST_TEST_MODULE ChunkTest
 #include <boost/test/unit_test.hpp>
+#include <boost/numeric/conversion/converter.hpp>
 #include <isis/core/chunk.hpp>
 #include <isis/core/valuearray_typed.hpp>
 

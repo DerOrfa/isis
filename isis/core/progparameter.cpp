@@ -47,7 +47,6 @@ bool ProgParameter::parse( const std::string &prop )
 			ret = true;
 		}
 	} else {
-		static_assert(knownType<std::string>(),"not known");
 		ret = Value::convert(prop, me );
 	}
 

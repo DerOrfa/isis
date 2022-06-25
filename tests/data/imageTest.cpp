@@ -8,6 +8,7 @@
 #define BOOST_TEST_MODULE ImageTest
 #define NOMINMAX 1
 #include <boost/test/unit_test.hpp>
+#include <boost/numeric/conversion/converter.hpp>
 #include <isis/core/image.hpp>
 #include <isis/core/io_factory.hpp>
 #include <isis/math/transform.hpp>

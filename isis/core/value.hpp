@@ -5,7 +5,6 @@
 #include <array>
 
 #include "types_value.hpp"
-#include "value_converter.hpp"
 #include <functional>
 #include <complex>
 #include <compare>
@@ -23,8 +22,9 @@ namespace util
 {
 namespace _internal
 {
-template<typename T>
-std::string_view typename_with_fallback()
+class ValueConverterMap;
+class ValueConverterBase;
+template<typename T> std::string_view typename_with_fallback()
 {
 	if constexpr(KnownValueType<T>)return typeName<T>();
 	else return typeid(T).name();
@@ -41,7 +41,7 @@ class Value: public ValueTypes
 {
 	static const _internal::ValueConverterMap &converters();
 
-	template<class OP> Value arithmetic_op(const arithmetic auto &rhs) const
+	template<class OP> [[nodiscard]] Value arithmetic_op(const arithmetic auto &rhs) const
 	{
 		static const OP op;
 		auto visitor = [&](auto &&ptr) -> Value
@@ -59,7 +59,7 @@ class Value: public ValueTypes
 		};
 		return std::visit(visitor,static_cast<const ValueTypes&>(*this));
 	}
-	template<class OP> Value arithmetic_op(const Value& rhs)const{
+	template<class OP> [[nodiscard]] Value arithmetic_op(const Value& rhs)const{
 		auto visitor=[this](const auto &ptr)->Value{
 			typedef std::remove_cvref_t<decltype(ptr)> r_type;
 			if constexpr(std::is_arithmetic_v<r_type>)
@@ -81,7 +81,7 @@ class Value: public ValueTypes
 		return *this;
 	}
 
-	std::partial_ordering converted_three_way_compare(const Value &v) const;
+	[[nodiscard]] std::partial_ordering converted_three_way_compare(const Value &v) const;
 public:
 	std::partial_ordering operator<=>(const Value &rhs) const;
 	std::partial_ordering operator<=>(const three_way_comparable_non_value auto &rhs) const
@@ -103,7 +103,7 @@ public:
 		return std::partial_ordering::equivalent == (*this <=> v);
 	};
 	bool operator==(const Value& v)const=default;
-	typedef _internal::ValueConverterMap::mapped_type::mapped_type Converter;
+	typedef std::shared_ptr<const isis::util::_internal::ValueConverterBase> Converter;
 
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
 	static constexpr auto NumOfTypes =  std::variant_size_v<ValueTypes>;
@@ -113,7 +113,7 @@ public:
 	Value(Value &&v)=default;
 	Value(const Value &v)=default;
 
-	Value(const std::string_view &v): ValueTypes(std::string(v)){};
+	Value(const std::string_view &v);
 
 	// default assignment
 	Value &operator=(const Value&)=default;
@@ -121,7 +121,7 @@ public:
 
 	constexpr Value(KnownValueType auto &&v):ValueTypes(v){}
 	constexpr Value(const KnownValueType auto &v):ValueTypes(v){}
-	
+
 	[[nodiscard]] std::string typeName()const;
 	[[nodiscard]] size_t typeID()const;
 
@@ -235,20 +235,20 @@ public:
 	template<arithmetic r_type> [[nodiscard]] Value operator/(const r_type& rhs)const{return arithmetic_op<std::divides<>>(rhs);}
 
 	template<arithmetic r_type> Value operator+=(const r_type& rhs){return *this=arithmetic_op<std::plus<>>(rhs);}
-	Value operator+=(const std::string& rhs){return *this=this->as<std::string>()+rhs;}
 	template<arithmetic r_type> Value operator-=(const r_type& rhs){return *this=arithmetic_op<std::minus<>>(rhs);}
 	template<arithmetic r_type> Value operator*=(const r_type& rhs){return *this=arithmetic_op<std::multiplies<>>(rhs);}
 	template<arithmetic r_type> Value operator/=(const r_type& rhs){return *this=arithmetic_op<std::divides<>>(rhs);}
+	Value operator+=(const std::string& rhs);
 
-	[[nodiscard]] Value operator+(const Value &ref )const{return arithmetic_op<std::plus<>>(ref);};
-	[[nodiscard]] Value operator-(const Value &ref )const{return arithmetic_op<std::minus<>>(ref);};
-	[[nodiscard]] Value operator*(const Value &ref )const{return arithmetic_op<std::multiplies<>>(ref);};
-	[[nodiscard]] Value operator/(const Value &ref )const{return arithmetic_op<std::divides<>>(ref);};
+	[[nodiscard]] Value operator+(const Value &ref )const;;
+	[[nodiscard]] Value operator-(const Value &ref )const;;
+	[[nodiscard]] Value operator*(const Value &ref )const;;
+	[[nodiscard]] Value operator/(const Value &ref )const;;
 
-	Value operator+=(const Value &ref ){return *this=arithmetic_op<std::plus<>>(ref);};
-	Value operator-=(const Value &ref ){return *this=arithmetic_op<std::minus<>>(ref);};
-	Value operator*=(const Value &ref ){return *this=arithmetic_op<std::multiplies<>>(ref);};
-	Value operator/=(const Value &ref ){return *this=arithmetic_op<std::divides<>>(ref);};
+	Value operator+=(const Value &ref );;
+	Value operator-=(const Value &ref );;
+	Value operator*=(const Value &ref );;
+	Value operator/=(const Value &ref );;
 
 	// specialisations
 	[[nodiscard]] Value operator+(const std::string& rhs)const;
