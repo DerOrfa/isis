@@ -33,9 +33,12 @@ template<typename T> std::string_view typename_with_fallback()
 
 // three-way comparison that excludes Value to prevent recursion
 class Value;
-template<typename T1, typename T2> concept three_way_comparable_with = requires(T1 &&v1, T2 &&v2){ v1 <=> v2; };
-template<typename T1, typename T2> concept three_way_comparable_with_non_value = (!std::is_same_v<T2, T2>) && three_way_comparable_with<T1, T2>;
+template<typename T1, typename T2> concept three_way_comparable_with = requires(T1 &&v1, T2 &&v2){{ v1 <=> v2 } -> 	std::convertible_to<std::partial_ordering>;};
+template<typename T1, typename T2> concept three_way_comparable_with_non_value = (!std::is_same_v<T2, Value>) && three_way_comparable_with<T1, T2>;
+template<typename T1, typename T2> concept equal_comparable_with = requires(T1 &&v1, T2 &&v2){{ v1 == v2 } -> 	std::convertible_to<bool>;};;
+template<typename T1, typename T2> concept equal_comparable_with_non_value = (!std::is_same_v<T2, Value>) && three_way_comparable_with<T1, T2>;
 template<typename T> concept three_way_comparable_non_value = three_way_comparable_with_non_value<T, T>;
+template<typename T> concept equal_comparable_non_value = equal_comparable_with_non_value<T, T>;
 
 class Value: public ValueTypes
 {
@@ -86,23 +89,28 @@ public:
 	std::partial_ordering operator<=>(const Value &rhs) const;
 	std::partial_ordering operator<=>(const three_way_comparable_non_value auto &rhs) const
 	{
+		typedef std::remove_cvref_t<decltype(rhs)> r_type;
 		auto visitor = [&](auto &&ptr) -> std::partial_ordering
 		{
 			typedef std::remove_cvref_t<decltype(ptr)> l_type;
-			typedef std::remove_cvref_t<decltype(rhs)> r_type;
 			if constexpr(three_way_comparable_with<l_type, r_type>)
 				return ptr <=> rhs;
-			else LOG(Runtime, error) << "Cannot compare " << util::typeName<l_type>() << " and "
-									 << _internal::typename_with_fallback<r_type>();
-			return std::partial_ordering::unordered;
+			else if constexpr(std::is_convertible_v<r_type,l_type> && three_way_comparable_with<l_type, l_type>)
+				return ptr <=> l_type(rhs);
+			else if constexpr(std::is_convertible_v<l_type,r_type>) // we wouldn't be in here if three_way_comparable_with<r_type> wasn't true
+				return r_type(ptr) <=> rhs;
+			else
+				return std::partial_ordering::unordered;
 		};
-		return std::visit(visitor, static_cast<const ValueTypes &>(*this));
+		auto result = std::visit(visitor, static_cast<const ValueTypes &>(*this));
+		LOG_IF(result==std::partial_ordering::unordered,Runtime, error)
+			<< "Cannot compare " << toString(true) << " and "
+			<< rhs << "(" << _internal::typename_with_fallback<r_type>() << ")";
+
+		return result;
 	}
-	bool operator==(const three_way_comparable_non_value auto &v) const
-	{
-		return std::partial_ordering::equivalent == (*this <=> v);
-	};
 	bool operator==(const Value& v)const=default;
+
 	typedef std::shared_ptr<const isis::util::_internal::ValueConverterBase> Converter;
 
 	template<int I> using TypeByIndex = typename std::variant_alternative<I, ValueTypes>::type;
