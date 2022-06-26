@@ -31,15 +31,6 @@ template<typename T> std::string_view typename_with_fallback()
 }
 }
 
-// three-way comparison that excludes Value to prevent recursion
-class Value;
-template<typename T1, typename T2> concept three_way_comparable_with = requires(T1 &&v1, T2 &&v2){{ v1 <=> v2 } -> 	std::convertible_to<std::partial_ordering>;};
-template<typename T1, typename T2> concept three_way_comparable_with_non_value = (!std::is_same_v<T2, Value>) && three_way_comparable_with<T1, T2>;
-template<typename T1, typename T2> concept equal_comparable_with = requires(T1 &&v1, T2 &&v2){{ v1 == v2 } -> 	std::convertible_to<bool>;};;
-template<typename T1, typename T2> concept equal_comparable_with_non_value = (!std::is_same_v<T2, Value>) && three_way_comparable_with<T1, T2>;
-template<typename T> concept three_way_comparable_non_value = three_way_comparable_with_non_value<T, T>;
-template<typename T> concept equal_comparable_non_value = equal_comparable_with_non_value<T, T>;
-
 class Value: public ValueTypes
 {
 	static const _internal::ValueConverterMap &converters();
@@ -67,7 +58,8 @@ class Value: public ValueTypes
 			typedef std::remove_cvref_t<decltype(ptr)> r_type;
 			if constexpr(std::is_arithmetic_v<r_type>)
 				return this->arithmetic_op<OP>(ptr);
-			else LOG(Runtime, error) << util::typeName<r_type>() << " cannot be used for arithmetics";
+			else
+				LOG(Runtime, error) << util::typeName<r_type>() << " cannot be used for arithmetics";
 			return *this;
 		};
 		return std::visit(visitor,static_cast<const ValueTypes&>(rhs));
@@ -85,31 +77,11 @@ class Value: public ValueTypes
 	}
 
 	[[nodiscard]] std::partial_ordering converted_three_way_compare(const Value &v) const;
+	[[nodiscard]] bool converted_equal_compare(const Value &v) const;
 public:
 	std::partial_ordering operator<=>(const Value &rhs) const;
-	std::partial_ordering operator<=>(const three_way_comparable_non_value auto &rhs) const
-	{
-		typedef std::remove_cvref_t<decltype(rhs)> r_type;
-		auto visitor = [&](auto &&ptr) -> std::partial_ordering
-		{
-			typedef std::remove_cvref_t<decltype(ptr)> l_type;
-			if constexpr(three_way_comparable_with<l_type, r_type>)
-				return ptr <=> rhs;
-			else if constexpr(std::is_convertible_v<r_type,l_type> && three_way_comparable_with<l_type, l_type>)
-				return ptr <=> l_type(rhs);
-			else if constexpr(std::is_convertible_v<l_type,r_type>) // we wouldn't be in here if three_way_comparable_with<r_type> wasn't true
-				return r_type(ptr) <=> rhs;
-			else
-				return std::partial_ordering::unordered;
-		};
-		auto result = std::visit(visitor, static_cast<const ValueTypes &>(*this));
-		LOG_IF(result==std::partial_ordering::unordered,Runtime, error)
-			<< "Cannot compare " << toString(true) << " and "
-			<< rhs << "(" << _internal::typename_with_fallback<r_type>() << ")";
-
-		return result;
-	}
-	bool operator==(const Value& v)const=default;
+	bool operator==(const Value& v)const;
+	// it is actually better to have an explicit '==' operator as it's potentially faster and more often a valid operation
 
 	typedef std::shared_ptr<const isis::util::_internal::ValueConverterBase> Converter;
 

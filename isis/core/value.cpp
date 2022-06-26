@@ -4,6 +4,76 @@
 #include <sstream>
 
 namespace isis::util{
+namespace _internal{
+
+// three-way comparison that excludes Value to prevent recursion
+template<typename T> concept non_value = (!std::is_same_v<T, Value>);
+template<typename T1, typename T2> concept three_way_comparable_with = requires(T1 &&v1, T2 &&v2){{ v1 <=> v2 } -> 	std::convertible_to<std::partial_ordering>;};
+template<typename T1, typename T2> concept three_way_comparable_with_non_value = non_value<T1> && non_value<T2> && three_way_comparable_with<T1, T2>;
+template<typename T1, typename T2> concept equal_comparable_with = requires(T1 &&v1, T2 &&v2){{ v1 == v2 } -> 	std::convertible_to<bool>;};;
+template<typename T1, typename T2> concept equal_comparable_with_non_value = non_value<T1> && non_value<T2> && equal_comparable_with<T1, T2>;
+template<typename T> concept three_way_comparable_non_value = three_way_comparable_with_non_value<T, T>;
+template<typename T> concept equal_comparable_non_value = equal_comparable_with_non_value<T, T>;
+std::partial_ordering static_three_way_compare(const Value &lhs, const three_way_comparable_non_value auto &rhs)
+{
+	typedef std::remove_cvref_t<decltype(rhs)> r_type;
+	auto visitor = [&](auto &&ptr) -> std::partial_ordering
+	{
+		typedef std::remove_cvref_t<decltype(ptr)> l_type;
+		//@todo std::compare_partial_order_fallback once it's widely available
+		if constexpr(three_way_comparable_with<l_type, r_type>)
+			return ptr <=> rhs;
+		else if constexpr(std::is_convertible_v<r_type,l_type> && three_way_comparable_with<l_type, l_type>)
+			return ptr <=> l_type(rhs);
+		else if constexpr(std::is_convertible_v<l_type,r_type>) // we wouldn't be in here if three_way_comparable_with<r_type> wasn't true
+			return r_type(ptr) <=> rhs;
+		else
+			return std::partial_ordering::unordered;
+	};
+	auto result = std::visit(visitor, static_cast<const ValueTypes &>(lhs));
+	LOG_IF(result==std::partial_ordering::unordered,Runtime, error)
+		<< "Cannot compare " << lhs.toString(true) << " and "
+		<< rhs << "(" << _internal::typename_with_fallback<r_type>() << ")";
+
+	return result;
+}
+bool static_equal_compare(const Value &lhs, const equal_comparable_non_value auto &rhs)
+{
+	typedef std::remove_cvref_t<decltype(rhs)> r_type;
+	auto visitor = [&](auto &&ptr) -> bool
+	{
+		typedef std::remove_cvref_t<decltype(ptr)> l_type;
+		if constexpr(equal_comparable_with<l_type, r_type>)
+			return ptr == rhs;
+		else{
+			LOG(Runtime, error)
+				<< "Cannot equal compare " << lhs.toString(true) << " and "
+				<< rhs << "(" << _internal::typename_with_fallback<r_type>() << ")";
+				return false;
+		}
+	};
+	return std::visit(visitor, static_cast<const ValueTypes &>(lhs));
+}
+template<class OP> std::partial_ordering converted_compare(OP &&op,const Value &lhs, const Value &rhs)
+{
+	const auto &conv = rhs.getConverterTo( lhs.typeID() );
+	Value to = Value::createByID(lhs.typeID());
+
+	if ( conv ) {
+		switch ( conv->convert( rhs, to ) ){
+			case cInRange:return op(lhs,to);
+			case cNegOverflow: return std::partial_ordering::greater;//v is so small it can't be represented in my type
+			case cPosOverflow: return std::partial_ordering::less;//v is so big it can't be represented in my type
+		}
+	} else {
+		LOG( Runtime, info )
+			<< "I can't compare " << MSubject( lhs.toString( true ) ) << " to " << MSubject( rhs.toString(true) )
+			<< " as " << rhs.typeName() << " can't be converted into " << lhs.typeName();
+	}
+	return std::partial_ordering::unordered;
+}
+
+}
 
 std::string Value::toString(bool with_typename)const{
 	std::stringstream o;
@@ -128,7 +198,7 @@ bool Value::lt(const Value &ref )const {
 	return std::partial_ordering::less == converted_three_way_compare(ref);
 }
 bool Value::eq(const Value &ref )const {
-	return std::partial_ordering::equivalent == converted_three_way_compare(ref);
+	return converted_equal_compare(ref);
 }
 
 
@@ -143,31 +213,45 @@ std::partial_ordering Value::operator<=>(const Value &rhs) const
 {
 	auto visitor=[this](auto &&ptr)->std::partial_ordering{
 		typedef std::remove_cvref_t<decltype(ptr)> r_type;
-		if constexpr(three_way_comparable_non_value<r_type>)
-			return this->operator<=>(ptr);
+		if constexpr(_internal::three_way_comparable_non_value<r_type>)
+			return _internal::static_three_way_compare(*this,ptr);
 		else
 			LOG(Runtime,error) << "Cannot compare " << util::typeName<r_type>();
 		return std::partial_ordering::unordered;
 	};
 	return std::visit(visitor,static_cast<const ValueTypes&>(rhs));
 }
+bool Value::operator==(const Value &rhs) const
+{
+	auto visitor=[this](auto &&ptr)->bool{
+		typedef std::remove_cvref_t<decltype(ptr)> r_type;
+		if constexpr(_internal::equal_comparable_non_value<r_type>)
+			return _internal::static_equal_compare(*this,ptr);
+		else
+			LOG(Runtime,error) << "Cannot equal compare " << util::typeName<r_type>();
+		return false;
+	};
+	return std::visit(visitor,static_cast<const ValueTypes&>(rhs));
+}
+
 std::partial_ordering Value::converted_three_way_compare(const Value &v)const
 {
-	const Converter &conv = v.getConverterTo( typeID() );
-	Value to = createByID(typeID());
-
-	if ( conv ) {
-		switch ( conv->convert( v, to ) ){
-		case cInRange:return this->operator<=>(to);
-		case cNegOverflow: return std::partial_ordering::greater;//v is so small it can't be represented in my type
-		case cPosOverflow: return std::partial_ordering::less;//v is so big it can't be represented in my type
-		}
-	} else {
-		LOG( Runtime, info )
-			<< "I can't compare " << MSubject( toString( true ) ) << " to " << MSubject( v.toString(true) )
-			<< " as " << v.typeName() << " can't be converted into " << typeName();
-	}
-	return std::partial_ordering::unordered;
+	return _internal::converted_compare(
+		[](const Value &lhs,const Value &rhs){ assert(lhs.typeID()==rhs.typeID());return lhs<=>rhs;},
+		*this,v
+	);
+}
+bool Value::converted_equal_compare(const Value &v)const
+{
+	auto equal = [](const Value &lhs,const Value &rhs)->std::partial_ordering
+	{
+		assert(lhs.typeID()==rhs.typeID()); // if both are the same type we can refer to std::variant<>::operator==
+		if(static_cast<const ValueTypes&>(lhs)==static_cast<const ValueTypes&>(rhs))
+			return std::partial_ordering::equivalent;
+		else
+			return std::partial_ordering::unordered;
+	};
+	return _internal::converted_compare(equal,*this,v)==std::partial_ordering::equivalent;
 }
 
 Value::Value(const std::string_view &v): ValueTypes(std::string(v)){}
