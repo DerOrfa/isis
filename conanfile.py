@@ -118,6 +118,7 @@ class isis(ConanFile):
 
 		# other
 		tc.variables["BUILD_TESTING"] = bool(self.options.testing)
+		tc.variables["BOOST_IS_SHARED"] = bool(self.options['boost'].shared)
 		tc.variables["ISIS_QT5"] = bool(self.options.with_qt5)
 		tc.variables["ISIS_BUILD_TOOLS"] = bool(self.options.with_cli)
 		tc.variables["ISIS_CALC"] = bool(self.options.with_cli)
