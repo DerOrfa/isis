@@ -94,6 +94,17 @@ namespace isis
 		std::transform( std::begin(s), std::end(s), std::begin(s), std::negate<TYPE>() );
 		return s;
 	}
+	template<typename T1, typename T2, size_t size> auto operator<=>(const std::array<T1,size> &lhs, const std::array<T2,size> &rhs) requires (!std::same_as<T1, T2>)
+	{
+		auto comp= lhs[0] <=> rhs[0];
+		for(size_t i=1;comp==0 && i<size;++i)
+			comp = lhs[i]<=>rhs[i];
+		return comp;
+	}
+	template<typename T1, typename T2, size_t size> auto operator==(const std::array<T1,size> &lhs, const std::array<T2,size> &rhs) requires (!std::same_as<T1, T2>)
+	{
+		return (lhs<=>rhs) == 0;
+	}
 
 
 namespace util
