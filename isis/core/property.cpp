@@ -205,28 +205,31 @@ short unsigned int PropertyValue::getTypeID() const{
 }
 
 PropertyValue PropertyValue::plus( const PropertyValue& ref ) const{
-	PropertyValue ret;
-	auto ret_it= std::inserter(ret.container,ret.container.begin());
-	std::transform(container.begin(),container.end(),ref.container.begin(),ret_it,std::plus<>{});
-	return ret;
+	return operator_impl<std::plus<>>(ref);
 }
+PropertyValue PropertyValue::plus( const Value& ref ) const{
+	return operator_impl<std::plus<>>(ref);
+}
+
 PropertyValue PropertyValue::minus( const PropertyValue& ref ) const{
-	PropertyValue ret;
-	auto ret_it= std::inserter(ret.container,ret.container.begin());
-	std::transform(container.begin(),container.end(),ref.container.begin(),ret_it,std::minus<>{});
-	return ret;
+	return operator_impl<std::minus<>>(ref);
 }
+PropertyValue PropertyValue::minus( const Value& ref ) const{
+	return operator_impl<std::minus<>>(ref);
+}
+
 PropertyValue PropertyValue::multiply( const PropertyValue& ref ) const{
-	PropertyValue ret;
-	auto ret_it= std::inserter(ret.container,ret.container.begin());
-	std::transform(container.begin(),container.end(),ref.container.begin(),ret_it,std::multiplies<>{});
-	return ret;
+	return operator_impl<std::multiplies<>>(ref);
 }
+PropertyValue PropertyValue::multiply( const Value& ref ) const{
+	return operator_impl<std::multiplies<>>(ref);
+}
+
 PropertyValue PropertyValue::divide( const PropertyValue& ref ) const{
-	PropertyValue ret;
-	auto ret_it= std::inserter(ret.container,ret.container.begin());
-	std::transform(container.begin(),container.end(),ref.container.begin(),ret_it,std::divides<>{});
-	return ret;
+	return operator_impl<std::divides<>>(ref);
+}
+PropertyValue PropertyValue::divide( const Value& ref ) const{
+	return operator_impl<std::divides<>>(ref);
 }
 
 //@todo maybe use std::transform_reduce
@@ -259,9 +262,14 @@ bool PropertyValue::lt( const PropertyValue& ref ) const{
 }
 
 PropertyValue& PropertyValue::operator +=( const Value &second ){front()+=second;return *this;}
-PropertyValue& PropertyValue::operator -=( const Value &second ){ front()-=second;return *this;}
+PropertyValue& PropertyValue::operator -=( const Value &second ){front()-=second;return *this;}
 PropertyValue& PropertyValue::operator *=( const Value &second ){front()*=second;return *this;}
 PropertyValue& PropertyValue::operator /=( const Value &second ){front()/=second;return *this;}
+
+PropertyValue PropertyValue::operator+(const Value &second) const{return front()+second;}
+PropertyValue PropertyValue::operator-(const Value &second) const{return front()-second;}
+PropertyValue PropertyValue::operator*(const Value &second) const{return front()*second;}
+PropertyValue PropertyValue::operator/(const Value &second) const{return front()/second;}
 
 bool PropertyValue::operator<(const isis::util::PropertyValue& y) const{return lt(y);}
 std::ostream &operator<<(std::ostream &out, const PropertyValue &s){

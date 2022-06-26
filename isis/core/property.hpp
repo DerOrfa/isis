@@ -27,8 +27,35 @@ namespace isis::util
  */
 class PropertyValue
 {
+private:
 	bool m_needed;
 	std::list<Value> container;
+	template<typename OP> PropertyValue operator_impl(const PropertyValue &rhs)const{
+		PropertyValue ret;
+		auto end=container.begin();
+		if(rhs.size()<size()){
+			LOG(Runtime,warning)
+				<< "The PropertyValue at the left is loger than the one on the right. Will run operation "
+				<< typeid(OP).name() << " only " << rhs.size() << " times";
+			std::advance(end,rhs.size());
+		} else
+			end=container.end();
+
+		LOG_IF(rhs.size()>size(),Runtime,warning)
+			<< "The PropertyValue at the left is shorter than the one on the right. Will run operation "
+			<< typeid(OP).name() << " only " << size() << " times";
+
+		auto ret_it= std::inserter(ret.container,ret.container.begin());
+		std::transform(container.begin(),container.end(),rhs.container.begin(),ret_it,OP{});
+		return ret;
+	}
+	template<typename OP> PropertyValue operator_impl(const Value &rhs)const{
+		PropertyValue ret;
+		auto ret_it= std::inserter(ret.container,ret.container.begin());
+		std::transform(container.begin(),container.end(),ret_it,std::bind(OP{},std::placeholders::_1,rhs));
+		return ret;
+	}
+
 public:
 	typedef decltype(container)::iterator iterator;
 	typedef decltype(container)::const_iterator const_iterator;
@@ -204,11 +231,6 @@ public:
 	 * \note The needed flag won't be affected by that.
 	 * \note To prevent accidential use this can only be used explicetly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
 	 */
-	template<KnownValueType T> PropertyValue& operator=( const T &ref){
-	    container.clear();
-	    container.emplace_back(Value(ref));
-	    return *this;
-    }
 	PropertyValue& operator=( const Value &ref){
 	    container.clear();
 	    push_back(ref);
@@ -301,53 +323,40 @@ public:
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue plus( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue plus( const Value &ref )const;
 	/**
 	 * \returns a PropertyValue with the results of \link Value::operator- \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue minus( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue minus( const Value &ref )const;
 	/**
 	 * \returns a PropertyValue with the results of \link Value::operator* \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue multiply( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue multiply( const Value &ref )const;
 	/**
 	 * \returns a PropertyValue with the results of \link Value::operator/ \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue divide( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue divide( const Value &ref )const;
 
 	////////////////////////////////////////////////////////////////////////////
 	// operators on "normal" values
 	////////////////////////////////////////////////////////////////////////////
-	/**
-	 * Equality to a basic value.
-	 * Properties equal to basic values if:
-	 * - the property contains exactly one value
-	 * - \link Value::eq \endlink is true for that value
-	 * \warning This is using the more fuzzy Value::eq. So the type won't be compared and rounding might be done (which will send a warning to Debug).
-	 * \returns front().eq(second) if the property contains exactly one value, false otherwise
-	 */
-	template<KnownValueType T> bool operator ==( const T &second )const{return size()==1 && front().eq(second);}
-	/**
-	 * Unequality to a basic value.
-	 * Properties are unequal to basic values if:
-	 * - the property contains exactly one value
-	 * - \link Value::eq \endlink is false for that value
-	 * \warning This is using the more fuzzy Value::eq. So the type won't be compared and rounding might be done (which will send a warning to Debug).
-	 * \returns !front().eq(second) if the property contains exactly one value, false otherwise
-	 */
-	template<KnownValueType T> bool operator !=( const T &second )const{return size()==1 && !front().eq(second);}
 
 	PropertyValue& operator +=( const Value &second );
 	PropertyValue& operator -=( const Value &second );
 	PropertyValue& operator *=( const Value &second );
 	PropertyValue& operator /=( const Value &second );
 
-	PropertyValue operator+( const Value &second )const {PropertyValue lhs(*this); return lhs+=second;}
-	PropertyValue operator-( const Value &second )const {PropertyValue lhs(*this); return lhs-=second;}
-	PropertyValue operator*( const Value &second )const {PropertyValue lhs(*this); return lhs*=second;}
-	PropertyValue operator/( const Value &second )const {PropertyValue lhs(*this); return lhs/=second;}
+	// @todo document different behaviour from named operations (especially that it might change type
+	PropertyValue operator+( const Value &second )const;
+	PropertyValue operator-( const Value &second )const;
+	PropertyValue operator*( const Value &second )const;
+	PropertyValue operator/( const Value &second )const;
 
 	/// streaming output for PropertyValue
 	friend std::ostream& operator<<( std::ostream & out, const isis::util::PropertyValue &s );
