@@ -78,6 +78,7 @@ class isis(ConanFile):
 			self.options['qt'].with_sqlite3 = False
 			self.options['qt'].with_odbc = False
 			self.options['qt'].with_pq = False
+			self.options['qt'].qtwayland = bool(self.settings.os == "Linux")
 
 		if self.options.with_python:
 			self.require("pybind11/[>2.9.0]")#pybind is header only
@@ -141,11 +142,10 @@ class isis(ConanFile):
 
 	def package_info(self):
 		self.env_info.ISIS_PLUGIN_PATH = path.join(self.package_folder, "lib", "isis", "plugins")
-		if(self.options.shared):
-			if (platform.system() == "Darwin"):
-				self.env_info.DYLD_LIBRARY_PATH.append(path.join(self.package_folder, "lib"))
-			elif (platform.system() == "Linux"):
-				self.env_info.LD_LIBRARY_PATH.append(path.join(self.package_folder, "lib"))
+		if (platform.system() == "Darwin"):
+			self.env_info.DYLD_LIBRARY_PATH.append(path.join(self.package_folder, "lib"))
+		elif (platform.system() == "Linux"):
+			self.env_info.LD_LIBRARY_PATH.append(path.join(self.package_folder, "lib"))
 
 		if (self.options.with_python):
 			self.env_info.PYTHONPATH.append(path.join(self.package_folder, "lib", "python3", "dist-packages"))
