@@ -107,6 +107,7 @@ class isis(ConanFile):
 		tc.variables["ISIS_IOPLUGIN_ZISRAW"] = bool(self.options.io_zisraw)
 		tc.variables["ISIS_IOPLUGIN_SFTP"] = bool(self.options.io_sftp)
 		tc.variables["ISIS_IOPLUGIN_PNG"] = bool(self.options.io_png)
+		tc.variables["ISIS_IOPLUGIN_NULL"] = bool(self.options.testing)
 
 		# python adapter
 		tc.variables["ISIS_PYTHON"] = bool(self.options.with_python)
