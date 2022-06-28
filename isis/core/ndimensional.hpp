@@ -73,8 +73,8 @@ public:
 	 * \param coord array to put the computed coordinates in (d[0] will be most iterating element / lowest dimension)
 	 * \param index the linear index to compute the coordinates from
 	 */
-	std::array<size_t,DIMS> getCoordsFromLinIndex( const size_t index )const {
-		return _index2dim( index, DIMS - 1, getVolume() / m_dim[DIMS - 1] );
+	util::vector<size_t,DIMS> getCoordsFromLinIndex( const size_t index )const {
+		return util::vector<size_t,DIMS>::fromArray(_index2dim( index, DIMS - 1, getVolume() / m_dim[DIMS - 1] ));
 	}
 	/**
 	 * Check if index fits into the dimensional size of the object.
@@ -106,8 +106,8 @@ public:
 	}
 
 	/// generates a FixedVector\<DIMS\> representing the size
-	std::array<size_t, DIMS> getSizeAsVector()const {
-		return std::array<size_t, DIMS>( m_dim );
+	util::vector<size_t,DIMS> getSizeAsVector()const {
+		return util::vector<size_t,DIMS>::fromArray(m_dim);
 	}
 
 	/**
@@ -127,10 +127,10 @@ public:
 
 		return ret;
 	}
-	std::array<float, DIMS> getFoV( const std::array<float, DIMS> &voxelSize, const std::array<float, DIMS> &voxelGap )const {
+	util::vector<float, DIMS> getFoV( const util::vector<float, DIMS> &voxelSize, const util::vector<float, DIMS> &voxelGap )const {
 		LOG_IF( getVolume() == 0, DataLog, warning ) << "Calculating FoV of empty data";
-		std::array<size_t, DIMS> voxels = getSizeAsVector();
-		std::array<size_t, DIMS> gaps = voxels;
+		util::vector<size_t, DIMS> voxels = getSizeAsVector();
+		util::vector<size_t, DIMS> gaps = voxels;
 		for(size_t &v:gaps)
 			--v;
 

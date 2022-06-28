@@ -1,7 +1,7 @@
 import platform
 
 from conan import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
+from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
 from os import path
 
 
@@ -53,18 +53,18 @@ class isis(ConanFile):
 	generators = "CMakeDeps", "CMakeToolchain"
 
 	def require(self, p, shared=False):
-		assert isinstance(p,str)
-		(name,_) = p.split('/')
-		self.requires(p,private=True)
+		assert isinstance(p, str)
+		(name, _) = p.split('/')
+		self.requires(p, private=True)
 		if 'shared' in self.options[name]:
-			self.options[name].shared=False
+			self.options[name].shared = False
 
 	def config_options(self):
 		if self.options.testing:
 			self.exports_sources.append("tests/*")
 
 	def requirements(self):
-		#make everything statically linked into the exe (or the shared lib) => not needed by the consumer
+		# make everything statically linked into the exe (or the shared lib) => not needed by the consumer
 		for dep in ["jsoncpp/[~=1]", "fftw/[~=3]", "openjpeg/[~=2]", "gsl/[~=2.7]", "ncurses/[>6.0]", "eigen/[~=3]"]:
 			self.require(dep)
 
@@ -81,7 +81,7 @@ class isis(ConanFile):
 			self.options['qt'].qtwayland = bool(self.settings.os == "Linux")
 
 		if self.options.with_python:
-			self.require("pybind11/[>2.9.0]")#pybind is header only
+			self.require("pybind11/[>2.9.0]")  # pybind is header only
 
 		if self.options.io_zisraw:
 			self.require("jxrlib/cci.20170615")
@@ -93,9 +93,8 @@ class isis(ConanFile):
 		if self.options.io_png:
 			self.require("libpng/[>1.2]")
 
-		#if we're shared make boost statically linked into the lib => not needed by the dev-consumer
-		self.require("boost/[>1.75]",not self.options.shared)
-
+		# if we're shared make boost statically linked into the lib => not needed by the dev-consumer
+		self.require("boost/[>1.75]", not self.options.shared)
 
 	def generate(self):
 		self.python_path = path.join("lib", "python3", "dist-packages")
@@ -142,12 +141,12 @@ class isis(ConanFile):
 
 	def package_info(self):
 		self.env_info.ISIS_PLUGIN_PATH = path.join(self.package_folder, "lib", "isis", "plugins")
-		if (platform.system() == "Darwin"):
+		if platform.system() == "Darwin":
 			self.env_info.DYLD_LIBRARY_PATH.append(path.join(self.package_folder, "lib"))
-		elif (platform.system() == "Linux"):
+		elif platform.system() == "Linux":
 			self.env_info.LD_LIBRARY_PATH.append(path.join(self.package_folder, "lib"))
 
-		if (self.options.with_python):
+		if self.options.with_python:
 			self.env_info.PYTHONPATH.append(path.join(self.package_folder, "lib", "python3", "dist-packages"))
-		if (self.options.with_cli):
+		if self.options.with_cli:
 			self.env_info.path.append(path.join(self.package_folder, "bin"))
