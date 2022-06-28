@@ -24,183 +24,168 @@
 #include <type_traits>
 
 #include <array>
+#include <span>
 
 template<typename T> concept scalar = std::is_scalar_v<T>;
 
-namespace isis
+namespace isis::util
 {
-	/// @cond _internal
-	namespace _internal
+	template<scalar T1,size_t N> struct vector;
+
+	template<scalar T, size_t N> class vector : public std::array<T,N>
 	{
-	struct VectorClass{};//empty base class to recognize vectors
-	/// Generic operations
-	template<typename OP,typename TYPE1, typename TYPE2, typename TYPE3, size_t N>
-	void binaryVecOp(const std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs, std::array<TYPE3,N> &dst){
-		std::transform( std::begin(lhs), std::end(lhs), std::begin(rhs), std::begin(dst), OP() );
-	}
-	template<typename OP,typename TYPE1, typename TYPE2, typename TYPE3, size_t N>
-	void binaryOp ( const std::array<TYPE1,N> &lhs, const TYPE2 &rhs, std::array<TYPE3,N> &dst ){
-		const OP op = OP();
-		auto src=std::begin(lhs);
-		for (TYPE3 &x :dst)
-			x = op( *(src++), rhs);
-	}
-	}
-	/// @endcond _internal
-
-	// operations with other vectors
-	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
-	operator+=(std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) { _internal::binaryVecOp<std::plus<TYPE1>>(lhs,rhs,lhs);return lhs;}
-	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
-	operator-=(std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) { _internal::binaryVecOp<std::minus<TYPE1>>(lhs,rhs,lhs);return lhs;}
-	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
-	operator*=(std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) { _internal::binaryVecOp<std::multiplies<TYPE1>>(lhs,rhs,lhs);return lhs;}
-	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
-	operator/=(std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) { _internal::binaryVecOp<std::divides<TYPE1>>(lhs,rhs,lhs);return lhs;}
-
-	template<scalar TYPE1, scalar TYPE2, size_t N> auto
-	operator+(const std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) -> std::array<decltype(TYPE1()+TYPE2()),N>
-	{ std::array<decltype(TYPE1()+TYPE2()),N> ret;_internal::binaryVecOp<std::plus<decltype(TYPE1()+TYPE2())>>(lhs,rhs,ret);return ret;}
-
-	template<scalar TYPE1, scalar TYPE2, size_t N> auto
-	operator-(const std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) -> std::array<decltype(TYPE1()-TYPE2()),N>
-	{ std::array<decltype(TYPE1()-TYPE2()),N> ret;_internal::binaryVecOp<std::minus<decltype(TYPE1()-TYPE2())>>(lhs,rhs,ret);return ret;}
-
-	template<scalar TYPE1, scalar TYPE2, size_t N> auto
-	operator*(const std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) -> std::array<decltype(TYPE1()*TYPE2()),N>
-	{ std::array<decltype(TYPE1()*TYPE2()),N> ret;_internal::binaryVecOp<std::multiplies<decltype(TYPE1()*TYPE2())>>(lhs,rhs,ret);return ret;}
-
-	template<scalar TYPE1, scalar TYPE2, size_t N> auto
-	operator/(const std::array<TYPE1,N> &lhs, const std::array<TYPE2,N> &rhs ) -> std::array<decltype(TYPE1()/TYPE2()),N>
-	{ std::array<decltype(TYPE1()/TYPE2()),N> ret;_internal::binaryVecOp<std::divides<decltype(TYPE1()/TYPE2())>>(lhs,rhs,ret);return ret;}
-
-	// operations with scalars
-	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
-	operator*=(std::array<TYPE1,N> &lhs, const TYPE2 &rhs ) {_internal::binaryOp<std::multiplies<TYPE1>>( lhs, rhs, lhs );return lhs;}
-	template<scalar TYPE1, scalar TYPE2, size_t N> std::array<TYPE1,N>&
-	operator/=(std::array<TYPE1,N> &lhs, const TYPE2 &rhs ) {_internal::binaryOp<std::divides<TYPE1>>( lhs, rhs, lhs );return lhs;}
-
-	template<scalar TYPE1, scalar TYPE2, size_t N> auto
-	operator*(const std::array<TYPE1,N> &lhs, const TYPE2 &rhs)  -> std::array<decltype(TYPE1()*TYPE2()),N>
-	{std::array<decltype(TYPE1()*TYPE2()),N> ret;_internal::binaryOp<std::multiplies<decltype(TYPE1()*TYPE2())>>( lhs, rhs, ret );return ret;}
-
-	template<scalar TYPE1, scalar TYPE2, size_t N> auto
-	operator/(const std::array<TYPE1,N> &lhs, const TYPE2 &rhs )  -> std::array<decltype(TYPE1()/TYPE2()),N>
-	{std::array<decltype(TYPE1()/TYPE2()),N> ret;_internal::binaryOp<std::divides<decltype(TYPE1()/TYPE2())>>( lhs, rhs, ret );return ret;}
-
-	template<typename TYPE, size_t N>
-	std::array<TYPE, N> operator-( std::array<TYPE, N> s )
-	{
-		std::transform( std::begin(s), std::end(s), std::begin(s), std::negate<TYPE>() );
-		return s;
-	}
-	template<typename T1, typename T2, size_t size> auto operator<=>(const std::array<T1,size> &lhs, const std::array<T2,size> &rhs) requires (!std::same_as<T1, T2>)
-	{
-		auto comp= lhs[0] <=> rhs[0];
-		for(size_t i=1;comp==0 && i<size;++i)
-			comp = lhs[i]<=>rhs[i];
-		return comp;
-	}
-	template<typename T1, typename T2, size_t size> auto operator==(const std::array<T1,size> &lhs, const std::array<T2,size> &rhs) requires (!std::same_as<T1, T2>)
-	{
-		return (lhs<=>rhs) == 0;
-	}
-
-
-namespace util
-{
-	/**
-	 * Get the inner product.
-	 * \returns \f$ \overrightarrow{this} \cdot \overrightarrow{src}  = \sum_{i=0}^{SIZE-1} {this_i * src_i} \f$
-	 */
-	template<typename TYPE1, typename TYPE2, size_t N> auto dot( const std::array<TYPE1,N> &first, const std::array<TYPE2,N> &second) -> decltype(TYPE1()*TYPE2())
-	{return std::inner_product( std::begin(first), std::end(first), std::begin(second), decltype(TYPE1()*TYPE2())() );}
-	/**
-	 * Get the inner product with itself (aka squared length).
-	 * \returns \f$ \overrightarrow{this} \cdot \overrightarrow{this} = \sum_{i=0}^{SIZE-1} this_i^2 \f$
-	 */
-	template<typename TYPE1, size_t N> TYPE1 sqlen( const std::array<TYPE1,N> &first){return dot( first,first );}
-	/**
-	 * Get the the length of the vector.
-	 * \returns \f$ \sqrt{\sum_{i=0}^{SIZE-1} this_i^2} \f$
-	 */
-	template<typename TYPE1, size_t N> TYPE1 len(const std::array<TYPE1,N> &first){return std::sqrt( sqlen(first) );}
-	/**
-	 * Normalize the vector (make len()==1).
-	 * Applies scalar division with the result of len() to this.
-	 *
-	 * Equivalent to:
-	 * \f[ \overrightarrow{this} = \overrightarrow{this} * {1 \over {\sqrt{\sum_{i=0}^{SIZE-1} this_i^2}}}  \f]
-	 *
-	 * If len() is equal to zero std::invalid_argument will be thrown, and this wont be changed.
-	 * \returns the changed *this
-	 */
-	template<typename TYPE, size_t N> void normalize(std::array<TYPE,N> &first) {
-		const TYPE d = len(first);
-
-		if ( d == 0 )throw( std::invalid_argument( "Trying to normalize a vector of length 0" ) );
-		else first /= d;
-	}
-
-	/**
-	 * Fuzzy comparison for vectors.
-	 * Does util::fuzzyEqual for the associated elements of the two vectors.
-	 * @param other the "other" vector to compare to
-	 * @param scale scaling factor forwarded to util::fuzzyEqual
-	 * \returns true if util::fuzzyEqual for all elements
-	 */
-	template<typename TYPE1, typename TYPE2, size_t N>
-	bool fuzzyEqualV( const std::array<TYPE1,N> &first, const std::array<TYPE2,N> &second, unsigned short scale = 10 ){
-		auto b = std::begin(second);
-
-		for ( TYPE1 a : first ) {
-			if ( ! util::fuzzyEqual( a, *(b++), scale ) )
-				return false;
+		template<typename OP,scalar T2>	auto binaryVecOp(const std::array<T2,N> &rhs)const{
+			typedef decltype(OP{}(T(),T2())) return_type;
+			vector<return_type,N> ret;
+			std::transform( this->begin(), this->end(), rhs.begin(), ret.begin(), OP{} );
+			return ret;
+		}
+		template<typename OP,typename T2> auto binaryOp ( const T2 &rhs)const{
+			typedef decltype(OP{}(T(),T2())) return_type;
+			vector<return_type,N> ret;
+			const OP op = OP{};
+			auto src= this->begin();
+			for (auto &x:ret)
+				x = op( *(src++), rhs);
+			return ret;
 		}
 
-		return true;
-	}
+	public:
+		/**
+		 * Get the inner product.
+		 * \returns \f$ \overrightarrow{this} \cdot \overrightarrow{src}  = \sum_{i=0}^{SIZE-1} {this_i * src_i} \f$
+		 */
+		template<scalar T2> auto dot(const std::array<T2, N> &second)const
+		{
+			constexpr decltype(T()*T2()) init(0);
+			return std::inner_product(this->begin(), this->end(), second.begin(), init);
+		}
+		/**
+		 * Get the inner product with itself (aka squared length).
+		 * \returns \f$ \overrightarrow{this} \cdot \overrightarrow{this} = \sum_{i=0}^{SIZE-1} this_i^2 \f$
+		 */
+		auto sqlen()const { return dot(*this); }
+		/**
+		 * Get the the length of the vector.
+		 * \returns \f$ \sqrt{\sum_{i=0}^{SIZE-1} this_i^2} \f$
+		 */
+		auto len()const { return std::sqrt(sqlen()); }
+		/**
+		 * Normalize the vector (make len()==1).
+		 * Applies scalar division with the result of len() to this.
+		 *
+		 * Equivalent to:
+		 * \f[ \overrightarrow{this} = \overrightarrow{this} * {1 \over {\sqrt{\sum_{i=0}^{SIZE-1} this_i^2}}}  \f]
+		 *
+		 * If len() is equal to zero std::invalid_argument will be thrown, and this wont be changed.
+		 * \returns the changed *this
+		 */
+		void normalize()
+		{
+			const auto d = len();
 
-	/**
-	 * Compute the product of all elements.
-	 * \returns \f[ \prod_{i=0}^{SIZE-1} this_i \f]
-	 */
-	template<typename TYPE, size_t N>
-	TYPE product(const std::array<TYPE,N> &first){
-		TYPE ret=1;
-		for(const TYPE &t:first)
-			ret*=t;
-		return ret;
-	}
-
-	/**
-	 * Compute the sum of all elements.
-	 * \returns \f[ \sum_{i=0}^{SIZE-1} this_i \f]
-	 */
-	template<typename TYPE, size_t N>
-	TYPE sum(const std::array<TYPE,N> &first) {
-		return std::accumulate(std::begin(first),std::end(first),TYPE());
-	}
-
-
-	template<typename TYPE1, typename TYPE2, size_t N>
-	bool lexical_less_reverse( const std::array<TYPE1,N> &first, const std::array<TYPE2,N> &second){
-		auto they = std::end(second);
-		auto me = std::end(first);
-
-		while ( me != std::begin(first) ) {
-			--me;
-			--they;
-
-			if ( *they < *me ) return false;
-			else if ( *me < *they ) return true;
+			if (d == 0)throw (std::invalid_argument("Trying to normalize a vector of length 0"));
+			else *this /= d;
 		}
 
-		return false;
-	}
+		/**
+		 * Fuzzy comparison for vectors.
+		 * Does util::fuzzyEqual for the associated elements of the two vectors.
+		 * @param other the "other" vector to compare to
+		 * @param scale scaling factor forwarded to util::fuzzyEqual
+		 * \returns true if util::fuzzyEqual for all elements
+		 */
+		template<scalar T2> bool fuzzyEqual(const std::array<T2, N> &second, unsigned short scale = 10)const
+		{
+			auto b = std::begin(second);
 
-template<typename TYPE> using vector3 = std::array<TYPE, 3>;
-template<typename TYPE> using vector4 = std::array<TYPE, 4>;
+			for (auto a: *this) {
+				if (!util::fuzzyEqual(a, *(b++), scale))
+					return false;
+			}
+
+			return true;
+		}
+
+		/**
+		 * Compute the product of all elements.
+		 * \returns \f[ \prod_{i=0}^{SIZE-1} this_i \f]
+		 */
+		T product()const
+		{
+			T ret = 1;
+			for (const auto &t: *this)
+				ret *= t;
+			return ret;
+		}
+
+		/**
+		 * Compute the sum of all elements.
+		 * \returns \f[ \sum_{i=0}^{SIZE-1} this_i \f]
+		 */
+		auto sum()const
+		{
+			return std::accumulate(this->begin(), this->end(), 0);
+		}
+
+		// @todo document me
+		// @todo test me
+		template<typename T2> bool lexical_less_reverse(const std::array<T2, N> &second)const
+		{
+			auto[me, they] = std::mismatch(this->rbegin(),this->rend(),second.rbegin());
+			return me!=this->rend() && (*me < *they);
+		}
+
+		// operations with other vectors
+		template<scalar T2> auto operator+(const std::array<T2,N> &rhs )const{ return this->binaryVecOp<std::plus<>>(rhs);}
+		template<scalar T2> auto operator-(const std::array<T2,N> &rhs )const{ return this->binaryVecOp<std::minus<>>(rhs);}
+		template<scalar T2> auto operator*(const std::array<T2,N> &rhs )const{ return this->binaryVecOp<std::multiplies<>>(rhs);}
+		template<scalar T2> auto operator/(const std::array<T2,N> &rhs )const{ return this->binaryVecOp<std::divides<>>(rhs);}
+
+		vector<T,N>& operator+=(const std::array<T,N> &rhs ){ return *this = *this + rhs;}
+		vector<T,N>& operator-=(const std::array<T,N> &rhs ){ return *this = *this - rhs;}
+		vector<T,N>& operator*=(const std::array<T,N> &rhs ){ return *this = *this * rhs;}
+		vector<T,N>& operator/=(const std::array<T,N> &rhs ){ return *this = *this / rhs;}
+
+		template<typename T2> auto operator<=>(const std::array<T2,N> &rhs)const requires (!std::same_as<T, T2>)
+		{
+			auto[me,they] = std::mismatch(this->begin(),this->end(),rhs.begin());
+			if(me != this->end())
+				return *me <=> *they;
+			else
+				return 0;
+		}
+		template<typename T2> auto operator==(const std::array<T2,N> &rhs)const requires (!std::same_as<T, T2>)
+		{
+			return (*this <=> rhs) == 0;
+		}
+
+		// auto because the result type is not necessarily T
+		auto operator+(const scalar auto &rhs)const {return this->binaryOp<std::plus<>>(rhs); }
+		auto operator-(const scalar auto &rhs)const {return this->binaryOp<std::minus<>>(rhs); }
+		auto operator*(const scalar auto &rhs)const {return this->binaryOp<std::multiplies<>>(rhs); }
+		auto operator/(const scalar auto &rhs)const {return this->binaryOp<std::divides<>>(rhs); }
+
+		auto operator+=(const T &rhs) {return *this = *this + rhs; }//frontload the need having the same type to assign
+		auto operator-=(const T &rhs) {return *this = *this - rhs; }
+		auto operator*=(const T &rhs) {return *this = *this * rhs; }
+		auto operator/=(const T &rhs) {return *this = *this / rhs; }
+
+		auto operator-()
+		{
+			auto ret=*this;
+			std::transform( std::begin(ret), std::end(ret), std::begin(ret), std::negate<>{} );
+			return ret;
+		}
+		template<typename T2> static vector<T,N> fromArray(const std::array<T2,N> &arr)requires std::convertible_to<T2,T>{
+			vector<T,N> ret;
+			std::copy(arr.begin(),arr.end(),ret.begin());
+			return ret;
+		}
+	};
+
+template<scalar TYPE> using vector3 = vector<TYPE, 3>;
+template<scalar TYPE> using vector4 = vector<TYPE, 4>;
 
 typedef vector4<float> fvector4;
 typedef vector4<double> dvector4;
@@ -210,13 +195,12 @@ typedef vector3<double> dvector3;
 typedef vector3<int32_t> ivector3;
 
 }
-}
 
 /// @cond _internal
 namespace std
 {
 
-template<typename charT, typename traits, typename TYPE, size_t SIZE> basic_ostream<charT, traits>&
+template<typename charT, typename traits, scalar TYPE, size_t SIZE> basic_ostream<charT, traits>&
 operator<<( basic_ostream<charT, traits> &out, const std::array<TYPE, SIZE>& s )
 {
 	isis::util::listToOStream( std::begin(s), std::end(s), out, "|", "<", ">" );

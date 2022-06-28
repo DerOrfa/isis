@@ -488,7 +488,7 @@ public:
 	 * \returns a MemChunk containing the voxeldata and the properties of the Image
 	 */
 	template<typename T> MemChunk<T> copyAsMemChunk() const {
-		const util::vector4<size_t> size = getSizeAsVector();
+		const auto size = getSizeAsVector();
 		data::MemChunk<T> ret ( size[0], size[1], size[2], size[3] );
 		copyToMem<T> ( &ret.template voxel<T>( 0, 0 ), ret.getVolume() );
 		static_cast<util::PropertyMap &>( ret ) = static_cast<const util::PropertyMap &>( getChunkAt( 0 ) );
