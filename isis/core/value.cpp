@@ -14,19 +14,22 @@ template<typename T1, typename T2> concept equal_comparable_with = requires(T1 &
 template<typename T1, typename T2> concept equal_comparable_with_non_value = non_value<T1> && non_value<T2> && equal_comparable_with<T1, T2>;
 template<typename T> concept three_way_comparable_non_value = three_way_comparable_with_non_value<T, T>;
 template<typename T> concept equal_comparable_non_value = equal_comparable_with_non_value<T, T>;
+template<typename OP, typename T1, typename T2=T1> concept op_available = requires(const std::remove_cvref_t<T1> &v1, const std::remove_cvref_t<T2> &v2){OP{}(v1,v2);};
+template<typename OP, typename T1, typename T2=T1> concept op_available_non_value = non_value<T1> && non_value<T2> && op_available<OP,T1,T2>;
+
 std::partial_ordering static_three_way_compare(const Value &lhs, const three_way_comparable_non_value auto &rhs)
 {
 	typedef std::remove_cvref_t<decltype(rhs)> r_type;
-	auto visitor = [&](auto &&ptr) -> std::partial_ordering
+	auto visitor = [&rhs](const auto &lhs) -> std::partial_ordering
 	{
-		typedef std::remove_cvref_t<decltype(ptr)> l_type;
+		typedef std::remove_cvref_t<decltype(lhs)> l_type;
 		//@todo std::compare_partial_order_fallback once it's widely available
 		if constexpr(three_way_comparable_with<l_type, r_type>)
-			return ptr <=> rhs;
+			return lhs <=> rhs;
 		else if constexpr(std::is_convertible_v<r_type,l_type> && three_way_comparable_with<l_type, l_type>)
-			return ptr <=> l_type(rhs);
+			return lhs <=> l_type(rhs);
 		else if constexpr(std::is_convertible_v<l_type,r_type>) // we wouldn't be in here if three_way_comparable_with<r_type> wasn't true
-			return r_type(ptr) <=> rhs;
+			return r_type(lhs) <=> rhs;
 		else
 			return std::partial_ordering::unordered;
 	};
@@ -72,6 +75,43 @@ template<class OP> std::partial_ordering converted_compare(OP &&op,const Value &
 	}
 	return std::partial_ordering::unordered;
 }
+template<class OP> [[nodiscard]] Value inner_arithmetic_op(const Value &l_value,const auto &rhs)
+{
+	static const OP op;
+	auto visitor = [&rhs](const auto &lhs) -> Value
+	{
+		typedef std::remove_cvref_t<decltype(lhs)> l_type;
+		typedef std::remove_cvref_t<decltype(rhs)> r_type;
+
+		if constexpr(op_available_non_value<OP,l_type,r_type>) {
+			auto result = op(lhs, rhs);
+			if constexpr(KnownValueType<decltype(result)>)
+				return result;
+			else
+				LOG(Runtime,error)
+					<< "The result of the operation " << typeid(op).name() << " on "
+					<< util::typeName<l_type>() << " and " << typename_with_fallback<r_type>()
+					<< "(" << typename_with_fallback<decltype(result)>() << ") cannot be represented as Value. It will be ignored.";
+		} else
+			LOG(Runtime,error)
+				<< "Invalid operation " << typeid(op).name() << " on " << util::typeName<l_type>()
+				<< " and " << typename_with_fallback<r_type>();
+		return lhs;
+	};
+	return std::visit(visitor,static_cast<const ValueTypes&>(l_value));
+}
+template<class OP> [[nodiscard]] Value arithmetic_op(const Value &l_value,const Value& r_value)
+{
+	auto visitor=[l_value](const auto &r_value)->Value{
+		typedef std::remove_cvref_t<decltype(r_value)> r_type;
+		if constexpr(op_available_non_value<OP,r_type>)
+			return inner_arithmetic_op<OP>(l_value,r_value);
+		else
+			LOG(Runtime, error) << util::typeName<r_type>() << " cannot be used for arithmetics (the operation was: " << typeid(OP).name() <<  ")";
+		return l_value;
+	};
+	return std::visit(visitor,static_cast<const ValueTypes&>(r_value));
+}
 
 }
 
@@ -114,10 +154,10 @@ Value Value::copyByID(size_t ID) const{
 	if ( conv ) {
 		switch ( conv->generate( *this, to ) ) {
 		    case cPosOverflow:
-			    LOG( Runtime, error ) << "Positive overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
+			    LOG( Runtime, error ) << "Positive overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap().at(ID) ) << ".";
 			    break;
 		    case cNegOverflow:
-			    LOG( Runtime, error ) << "Negative overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] ) << ".";
+			    LOG( Runtime, error ) << "Negative overflow when converting " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap().at(ID) ) << ".";
 			    break;
 		    case cInRange:
 			    break;
@@ -125,7 +165,7 @@ Value Value::copyByID(size_t ID) const{
 
 		return to; // return the generated Value-Object
 	} else {
-		LOG( Runtime, error ) << "I don't know any conversion from " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] );
+		LOG( Runtime, error ) << "I don't know any conversion from " << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap().at(ID) );
 		return createByID(ID); // return an empty Reference
 	}
 }
@@ -139,7 +179,7 @@ bool Value::fitsInto(size_t ID) const { //@todo find a better way to do this
 	} else {
 		LOG( Runtime, info )
 		    << "I dont know any conversion from "
-		    << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap()[ID] );
+		    << MSubject( toString( true ) ) << " to " << MSubject( getTypeMap().at(ID) );
 		return false; // return an empty Reference
 	}
 }
@@ -186,10 +226,6 @@ bool Value::isInteger() const
 }
 
 bool Value::isValid() const{return !ValueTypes::valueless_by_exception();}
-
-Value Value::operator+(const std::string &rhs) const{return this->as<std::string>()+rhs;}
-Value Value::operator+(const duration &rhs) const{return chrono_math<std::plus<>>(rhs);}
-Value Value::operator-(const duration &rhs) const{return chrono_math<std::minus<>>(rhs);}
 
 bool Value::gt(const Value &ref )const {
 	return std::partial_ordering::greater == converted_three_way_compare(ref);
@@ -255,15 +291,14 @@ bool Value::converted_equal_compare(const Value &v)const
 }
 
 Value::Value(const std::string_view &v): ValueTypes(std::string(v)){}
-Value Value::operator+=(const std::string &rhs){return *this=this->as<std::string>()+rhs;}
-Value Value::operator+(const Value &ref) const{return arithmetic_op<std::plus<>>(ref);}
-Value Value::operator-(const Value &ref) const{return arithmetic_op<std::minus<>>(ref);}
-Value Value::operator*(const Value &ref) const{return arithmetic_op<std::multiplies<>>(ref);}
-Value Value::operator/(const Value &ref) const{return arithmetic_op<std::divides<>>(ref);}
+Value Value::operator+(const Value &ref) const{return _internal::arithmetic_op<std::plus<>>(*this,ref);}
+Value Value::operator-(const Value &ref) const{return _internal::arithmetic_op<std::minus<>>(*this,ref);}
+Value Value::operator*(const Value &ref) const{return _internal::arithmetic_op<std::multiplies<>>(*this,ref);}
+Value Value::operator/(const Value &ref) const{return _internal::arithmetic_op<std::divides<>>(*this,ref);}
 
-Value Value::operator+=(const Value &ref){return *this=arithmetic_op<std::plus<>>(ref);}
-Value Value::operator-=(const Value &ref){return *this=arithmetic_op<std::minus<>>(ref);}
-Value Value::operator*=(const Value &ref){return *this=arithmetic_op<std::multiplies<>>(ref);}
-Value Value::operator/=(const Value &ref){return *this=arithmetic_op<std::divides<>>(ref);}
+Value Value::operator+=(const Value &ref){return *this=_internal::arithmetic_op<std::plus<>>(*this,ref);}
+Value Value::operator-=(const Value &ref){return *this=_internal::arithmetic_op<std::minus<>>(*this,ref);}
+Value Value::operator*=(const Value &ref){return *this=_internal::arithmetic_op<std::multiplies<>>(*this,ref);}
+Value Value::operator/=(const Value &ref){return *this=_internal::arithmetic_op<std::divides<>>(*this,ref);}
 
 }

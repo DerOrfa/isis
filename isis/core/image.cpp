@@ -848,7 +848,7 @@ size_t Image::getMajorTypeID() const
 }
 std::string Image::getMajorTypeName() const
 {
-	return util::getTypeMap()[getMajorTypeID()];
+	return util::getTypeMap().at(getMajorTypeID());
 }
 
 bool Image::convertToType( short unsigned int ID, scaling_pair scaling )

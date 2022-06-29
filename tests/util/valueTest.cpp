@@ -73,8 +73,8 @@ BOOST_AUTO_TEST_CASE( arit_lhs_test )
 {
 	lhs_type_test();
 	BOOST_CHECK_EQUAL(Value("10"s)+5,"10"s);//invalid operation, should be ignored
-	BOOST_CHECK_EQUAL(Value("10"s)+"5","105"s); // concatenating strings is allowed
-	// Value("10"s)-"5"; // should not compile
+	BOOST_CHECK_EQUAL(Value("10"s)+"5"s,"105"s); // concatenating strings is allowed
+	BOOST_CHECK_EQUAL(Value("10"s)-"5"s,"10"s);//invalid operation, should be ignored
 	//@todo test chrono
 }
 

@@ -423,7 +423,7 @@ public:
 	 * \note If the datatype is a vector the minimum/maximum across all elements is computed
 	 * \returns a pair of T storing the minimum and maximum values of the image.
 	 */
-	template<KnownValueType T> std::pair<T, T> getMinMaxAs() const {
+	template<util::KnownValueType T> std::pair<T, T> getMinMaxAs() const {
 		auto minmax = getMinMax();
 		return std::make_pair ( minmax.first.as<T>(), minmax.second.as<T>() );
 	}

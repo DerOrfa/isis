@@ -9,7 +9,7 @@
 // Copyright: See COPYING file that comes with this distribution
 //
 //
-
+#pragma once
 #include "common.hpp"
 #include <algorithm>
 #include <ostream>

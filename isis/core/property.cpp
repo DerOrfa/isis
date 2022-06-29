@@ -121,7 +121,7 @@ bool PropertyValue::transform(uint16_t dstID)
 	}
 
 	if(!err.isEmpty()){
-		LOG( Debug, error ) << "Interpretation of " << err << " as " << util::getTypeMap()[dstID] << " failed. Keeping old type.";
+		LOG( Debug, error ) << "Interpretation of " << err << " as " << util::getTypeMap().at(dstID) << " failed. Keeping old type.";
 		return false;
 	} else {
 		container.swap(ret.container);

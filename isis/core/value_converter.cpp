@@ -775,17 +775,19 @@ template<typename DST> struct MakeConvVisitor{
 };
 
 template<int I=0> constexpr void makeInnerConv(const ValueTypes &src,ConverterMap &m_map){
-    MakeConvVisitor<Value::TypeByIndex<I>> vis;
-	m_map[src.index()][I]= std::visit(vis,src);
-    makeInnerConv<I+1>(src, m_map);
+	if constexpr (I<util::Value::NumOfTypes) {
+		MakeConvVisitor<Value::TypeByIndex<I>> vis;
+		m_map[src.index()][I] = std::visit(vis, src);
+		makeInnerConv<I + 1>(src, m_map);
+	}
 }
-template<> constexpr void makeInnerConv<util::Value::NumOfTypes>(const ValueTypes &src,ConverterMap &){}
 
 template<int I=0> constexpr void makeOuterConv(ConverterMap &m_map){
-    makeInnerConv(ValueTypes{Value::TypeByIndex<I>()}, m_map);
-	makeOuterConv<I+1>(m_map);
+	if constexpr (I<util::Value::NumOfTypes) {
+		makeInnerConv(ValueTypes{Value::TypeByIndex<I>()}, m_map);
+		makeOuterConv<I + 1>(m_map);
+	}
 }
-template<> constexpr void makeOuterConv<util::Value::NumOfTypes>(ConverterMap &){}
 
 ValueConverterMap::ValueConverterMap()
 {

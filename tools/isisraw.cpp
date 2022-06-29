@@ -104,7 +104,7 @@ int main( int argc, char *argv[] )
 			const size_t imgsize = img.getVolume() * repnsize;
 			const std::string filename = *( iOut++ );
 
-			LOG( RawLog, notice ) << "Writing " << imgsize / ( 1024.*1024. ) << " MBytes from an " << img.getSizeAsString() << "-image as " << util::getTypeMap()[sRepn] << " to " << filename;
+			LOG( RawLog, notice ) << "Writing " << imgsize / ( 1024.*1024. ) << " MBytes from an " << img.getSizeAsString() << "-image as " << util::getTypeMap().at(sRepn) << " to " << filename;
 			data::FilePtr f( filename, imgsize + offset, true );
 			data::ValueArray dat = f.atByID(sRepn, offset ); //if repn is unset use the type of the image
 			img.copyToValueArray( dat );
