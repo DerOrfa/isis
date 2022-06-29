@@ -202,7 +202,7 @@ std::string FileFormat::makeFilename( const util::PropertyMap &props, const std:
 		
 		if(formatting!=none){ 
 			format=fwhat[0].str();
-			smatch.erase(fwhat[0].first,fwhat[0].second); // remove it
+			smatch.erase(fwhat[0].first-smatch.begin(),fwhat[0].second-fwhat[0].first); // remove it
 		}
 		
 		util::PropertyMap::key_type prop( smatch.c_str() ); // use remaining string to look for property
