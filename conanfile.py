@@ -36,6 +36,7 @@ class isis(ConanFile):
 		"testing": False,
 		"cmake:with_openssl": False,  # in case people got cmake from conan, we need to avoid openssl
 		"fftw:precision": "single",
+		"fftw:threads": True,
 		"boost:lzma": True,
 		"boost:zstd": False
 	}
@@ -100,7 +101,7 @@ class isis(ConanFile):
 		self.python_path = path.join("lib", "python3", "dist-packages")
 		tc = CMakeToolchain(self)
 
-		for var in ["ISIS_RUNTIME_LOG", "ISIS_USE_FFTW"]:
+		for var in ["ISIS_RUNTIME_LOG", "ISIS_USE_FFTW", "ISIS_USE_GSL"]:
 			tc.variables[var] = True
 
 		# io plugins
