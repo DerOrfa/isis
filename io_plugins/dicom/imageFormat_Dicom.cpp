@@ -506,7 +506,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<uti
 		const auto org = object.getValueAs<util::fvector3>( "indexOrigin" );
 		const auto comp = dicomTree.getValueAs<util::fvector3>( util::istring( unknownTagName ) + "(0019,1015)" );
 
-		if ( util::fuzzyEqualV(comp, org ) )
+		if ( comp.fuzzyEqual( org ) )
 			dicomTree.remove( util::istring( unknownTagName ) + "(0019,1015)" );
 		else
 			LOG( Debug, warning )

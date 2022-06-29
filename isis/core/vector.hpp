@@ -10,12 +10,6 @@
 //
 //
 
-#pragma once
-
-#ifdef _MSC_VER
-#pragma warning(disable:4290)
-#endif
-
 #include "common.hpp"
 #include <algorithm>
 #include <ostream>
@@ -30,8 +24,6 @@ template<typename T> concept scalar = std::is_scalar_v<T>;
 
 namespace isis::util
 {
-	template<scalar T1,size_t N> struct vector;
-
 	template<scalar T, size_t N> class vector : public std::array<T,N>
 	{
 		template<typename OP,scalar T2>	auto binaryVecOp(const std::array<T2,N> &rhs)const{
@@ -153,7 +145,7 @@ namespace isis::util
 			if(me != this->end())
 				return *me <=> *they;
 			else
-				return 0;
+				return std::partial_ordering::equivalent;
 		}
 		template<typename T2> auto operator==(const std::array<T2,N> &rhs)const requires (!std::same_as<T, T2>)
 		{
@@ -183,18 +175,22 @@ namespace isis::util
 			return ret;
 		}
 	};
+	template<typename T, size_t N> vector<T,N> vectorFromArray(const std::array<T,N> &src)
+	{
+		return vector<T,N>::fromArray(src);
+	}
 
-template<scalar TYPE> using vector3 = vector<TYPE, 3>;
-template<scalar TYPE> using vector4 = vector<TYPE, 4>;
+	template<scalar TYPE> using vector3 = vector<TYPE, 3>;
+	template<scalar TYPE> using vector4 = vector<TYPE, 4>;
 
-typedef vector4<float> fvector4;
-typedef vector4<double> dvector4;
-typedef vector4<int32_t> ivector4;
-typedef vector3<float> fvector3;
-typedef vector3<double> dvector3;
-typedef vector3<int32_t> ivector3;
-
+	typedef vector4<float> fvector4;
+	typedef vector4<double> dvector4;
+	typedef vector4<int32_t> ivector4;
+	typedef vector3<float> fvector3;
+	typedef vector3<double> dvector3;
+	typedef vector3<int32_t> ivector3;
 }
+
 
 /// @cond _internal
 namespace std

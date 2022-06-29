@@ -488,7 +488,7 @@ void ImageFormat_NiftiSa::storeHeader( const util::PropertyMap &props, _internal
 	for( int i = 0; i < 3; i++ ) {
 		//vector length of the i'th column (thats ok with vector4, because fourth element is allways 0)
 		assert(nifti2image[i][3]==0); //just to be sure
-		head->pixdim[i + 1] = util::len(nifti2image[i]); 
+		head->pixdim[i + 1] = util::vectorFromArray(nifti2image[i]).len();
 	}
 
 
@@ -585,7 +585,7 @@ void ImageFormat_NiftiSa::parseHeader( const std::shared_ptr< isis::image_io::_i
 		util::fvector3 buffer;auto pixdim3=pixdim.begin();std::advance(pixdim3,3);
 		std::copy(pixdim.begin(),pixdim3,std::begin(buffer));
 
-		if(util::fuzzyEqualV(props.getValueAs<util::fvector3>("voxelSize"),buffer)){ //all good we can get rid of pixdim[0..2]
+		if(props.getValueAs<util::fvector3>("voxelSize").fuzzyEqual(buffer)){ //all good we can get rid of pixdim[0..2]
 			std::fill(pixdim.begin(),pixdim3,0);
 		} else { //something is wrong, let's keep it
 			LOG(Runtime,warning)
@@ -762,10 +762,10 @@ std::list< data::Chunk > ImageFormat_NiftiSa::load(
 	data::ValueArray data_src;
 
 	if( header->datatype == NIFTI_TYPE_BINARY ) { // image is binary encoded - needs special decoding
-		data_src = bitRead( source.at<uint8_t>( header->vox_offset ), util::product(size) );
+		data_src = bitRead( source.at<uint8_t>( header->vox_offset ), size.product() );
 	} else if( checkDialect(dialects, "fsl") && header->datatype == NIFTI_TYPE_UINT8 && size[data::timeDim] == 3 ) { //if its fsl-three-volume-color copy the volumes
 		LOG( Runtime, notice ) << "The image has 3 timesteps and its type is UINT8, assuming it is an fsl color image.";
-		const size_t volume = util::product(size) / 3;
+		const size_t volume = size.product() / 3;
 		data::TypedArray<util::color24> buff( volume );
 		const data::TypedArray<uint8_t> src = source.at<uint8_t>( header->vox_offset, volume * 3 );
 		LOG( Runtime, info ) << "Mapping nifti image as FSL RBG set of 3*" << volume << " elements";
@@ -780,9 +780,9 @@ std::list< data::Chunk > ImageFormat_NiftiSa::load(
 		size[data::timeDim] = 1;
 	} else if( checkDialect(dialects, "fsl") && header->datatype == NIFTI_TYPE_FLOAT32 && size[data::timeDim] == 3 ) { //if its fsl-three-volume-vector copy the volumes
 		LOG( Runtime, notice ) << "The image has 3 timesteps and its type is FLOAT32, assuming it is an fsl vector image.";
-		const size_t volume = util::product(size) / 3;
+		const size_t volume = size.product() / 3;
 		data::TypedArray<util::fvector3> buff( volume );
-		const data::TypedArray<float> src = source.at<float>( header->vox_offset, util::product(size), swap_endian );
+		const data::TypedArray<float> src = source.at<float>( header->vox_offset, size.product(), swap_endian );
 
 		for( size_t v = 0; v < volume; v++ ) {
 			buff[v][0] = src[v];
@@ -796,7 +796,7 @@ std::list< data::Chunk > ImageFormat_NiftiSa::load(
 		unsigned int type = nifti_type2isis_type[header->datatype];
 
 		if( type ) {
-			data_src = source.atByID( type, header->vox_offset, util::product(size), swap_endian );
+			data_src = source.atByID( type, header->vox_offset, size.product(), swap_endian );
 
 			if( swap_endian ) {
 				LOG( Runtime, info ) << "Opened nifti image as endianess swapped " << data_src.typeName() << " of " << data_src.getLength()
@@ -980,11 +980,11 @@ void ImageFormat_NiftiSa::write( const data::Image &img, const std::string &file
 				};
 
 				// the bvalue is the length of the gradient direction,
-				bvalFile << util::len(gradient) << " ";
+				bvalFile << gradient.len() << " ";
 
-				if( util::sqlen(gradient) > 0 ) {
-					util::normalize(gradient);// the direction itself must be normalized
-					bvecList.push_back( M * gradient ); // .. transformed into slice space and stored
+				if( gradient.len() > 0 ) {
+					gradient.normalize();// the direction itself must be normalized
+					bvecList.push_back( util::dvector3::fromArray(M * gradient) ); // .. transformed into slice space and stored
 				} else {
 					bvecList.push_back( {0, 0, 0} );
 				}
@@ -1084,7 +1084,7 @@ util::Matrix4x4<double> ImageFormat_NiftiSa::getNiftiMatrix( const util::Propert
 
 	for( int i = 0; i < 3; i++ ) {
 		mat_rows[i] = props.getValueAs<util::dvector4>( row_names[i] );
-		util::normalize(mat_rows[i]);
+		mat_rows[i].normalize();
 	}
 
 	util::Matrix4x4<double> image2isis = util::transpose(
@@ -1137,9 +1137,9 @@ void ImageFormat_NiftiSa::useSForm( util::PropertyMap &props )
 	} * image2isis;
 
 	const util::dvector3 voxelSize{ // get voxel sizes by transforming othogonal vectors of one voxel from image to isis
-		util::len(image2isis * util::dvector4{1, 0, 0, 0}),
-		util::len(image2isis * util::dvector4{0, 1, 0, 0}),
-		util::len(image2isis * util::dvector4{0, 0, 1, 0})
+		util::dvector4::fromArray(image2isis * util::dvector4{1, 0, 0, 0}).len(),
+		util::dvector4::fromArray(image2isis * util::dvector4{0, 1, 0, 0}).len(),
+		util::dvector4::fromArray(image2isis * util::dvector4{0, 0, 1, 0}).len()
 	};
 
 	props.setValueAs( "voxelSize", voxelSize );
@@ -1183,10 +1183,10 @@ void ImageFormat_NiftiSa::useQForm( util::PropertyMap &props )
 
 	double &a = quaternion[0], &b = quaternion[1], &c = quaternion[2], &d = quaternion[3];
 
-	if( 1 - util::sqlen(quaternion) < 1.e-7 ) { //if the quaternion is to "long"
-		util::normalize(quaternion);      //normalize it and leave the angle as 0
+	if( 1 - quaternion.sqlen() < 1.e-7 ) { //if the quaternion is to "long"
+		quaternion.normalize();      //normalize it and leave the angle as 0
 	} else {
-		a = sqrt( 1 - util::sqlen(quaternion) );                 /* angle = 2*arccos(a) */
+		a = sqrt( 1 - quaternion.sqlen() );                 /* angle = 2*arccos(a) */
 	}
 
 	LOG( Debug, info ) << "Using qform (" << props.queryProperty( "nifti/qform_code" )
@@ -1233,7 +1233,7 @@ void ImageFormat_NiftiSa::useQForm( util::PropertyMap &props )
 	props.remove( "nifti/qfac" );
 
 	// indexOrigin //////////////////////////////////////////////////////////////////////////////////
-	const util::fvector4 origin = nifti2isis * props.getValueAs<util::fvector4>( "nifti/qoffset" );
+	const  auto origin = util::fvector4::fromArray(nifti2isis * props.getValueAs<util::fvector4>( "nifti/qoffset" ));
 	props.setValueAs( "indexOrigin", util::fvector3{origin[0], origin[1], origin[2]} );
 	LOG( Debug, info ) << "Computed indexOrigin=" << props.queryProperty( "indexOrigin" ) << " from qform";
 	props.remove( "nifti/qoffset" );
@@ -1255,9 +1255,9 @@ bool ImageFormat_NiftiSa::storeQForm( const util::PropertyMap &props, _internal:
 	util::fvector3 col[3];
 
 	for( int i = 0; i < 3; i++ ) {
-		const util::dvector4 buff = nifti2image[i];
-		std::copy(buff.begin(), buff.begin() + 3, std::begin(col[i]) ); //nth column in image2nifti
-		util::normalize(col[i]); // normalize the columns
+		auto buff = util::dvector4::fromArray(nifti2image[i]);
+		buff.normalize(); // normalize the buffer
+		std::copy(buff.begin(), buff.begin() + 3, std::begin(col[i]) ); //put it back into the nth column in image2nifti
 	}
 
 	// compute the determinant to determine if the transformation is proper

@@ -67,7 +67,7 @@ int main( int argc, char *argv[] )
 		util::ivector4 dims = app.parameters["rawdims"];
 		data::ValueArray dat;
 
-		if( util::product(dims) == 0 ) {
+		if( dims.product() == 0 ) {
 			data::ValueArray dat = src.atByID(rrepn, offset, 0, app.parameters["byteswap"] );
 
 			const size_t sidelength = sqrt( dat.getLength() );
@@ -81,7 +81,7 @@ int main( int argc, char *argv[] )
 				exit( -1 );
 			}
 		} else {
-			dat = src.atByID( rrepn, offset, util::product(dims), app.parameters["byteswap"] );
+			dat = src.atByID( rrepn, offset, dims.product(), app.parameters["byteswap"] );
 		}
 
 		LOG( RawLog, notice ) << "Reading " <<  dat.getLength()*dat.bytesPerElem() / ( 1024.*1024. ) << " MBytes from " << infiles.front();
@@ -95,7 +95,7 @@ int main( int argc, char *argv[] )
 		app.autoload( true ); //load "normal" images
 
 		const std::list< std::string > fnames = FakedRawFormat().makeUniqueFilenames( app.images, app.parameters["out"] );
-		std::list< std::string >::const_iterator iOut = fnames.begin();
+		auto iOut = fnames.begin();
 		const util::Selection wrepn = app.parameters["repn"];
 
 		for( const data::Image & img :  app.images ) {
