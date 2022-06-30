@@ -302,3 +302,11 @@ Value Value::operator*=(const Value &ref){return *this=_internal::arithmetic_op<
 Value Value::operator/=(const Value &ref){return *this=_internal::arithmetic_op<std::divides<>>(*this,ref);}
 
 }
+std::partial_ordering std::operator<=>(const isis::util::duration &lhs, const isis::util::duration &rhs)
+{
+	return lhs.count() <=> rhs.count();
+}
+std::partial_ordering std::operator<=>(const isis::util::timestamp &lhs, const isis::util::timestamp &rhs)
+{
+	return lhs.time_since_epoch() <=> rhs.time_since_epoch();
+}

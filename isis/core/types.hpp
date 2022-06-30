@@ -17,9 +17,9 @@ namespace isis::util{
 typedef std::list<int32_t> ilist;
 typedef std::list<double> dlist;
 typedef std::list<std::string> slist;
-typedef std::chrono::time_point<std::chrono::system_clock,std::chrono::milliseconds> timestamp;
-typedef std::chrono::time_point<std::chrono::system_clock,std::chrono::days> date;
-typedef timestamp::duration duration; // @todo float duration might be nice
+typedef std::chrono::system_clock::duration duration; // @todo float duration might be nice
+typedef std::chrono::sys_time<duration> timestamp;
+typedef std::chrono::sys_days date;
 
 
 /// @cond _internal

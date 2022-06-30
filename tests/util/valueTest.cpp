@@ -44,15 +44,15 @@ template<std::size_t index = 0> void lhs_type_test() {
 		std::is_same_v<util::duration, v_type> || std::is_same_v<std::string,v_type>
 	)) {
 		Value v(v_type(10));
-		BOOST_TEST( v+5 == 10+5, v.toString(true) + "+5 should be 15");
-		BOOST_TEST( v-5 == 10-5, v.toString(true) + "-5 should be 5");
-		BOOST_TEST( v*5 == 10*5, v.toString(true) + "*5 should be 50");
-		BOOST_TEST( v/5 == 10/5, v.toString(true) + "/5 should be 2");
 		BOOST_CHECK_GE(v,5); //10>=5
 		BOOST_CHECK_GE(v,10); //10>=10
 		BOOST_CHECK_LE(v,10); //10>=10
 		BOOST_CHECK_GT(v,5); //10>5
 		BOOST_CHECK_LT(v,15); //10<15
+		BOOST_CHECK_EQUAL( v+5, 10+5);
+		BOOST_CHECK_EQUAL( v-5, 10-5);
+		BOOST_CHECK_EQUAL( v*5, 10*5);
+		BOOST_CHECK_EQUAL( v/5, 10/5);
 	}
 	if constexpr(index < std::variant_size_v<util::ValueTypes>-1)
 		lhs_type_test<index+1>();
@@ -75,7 +75,13 @@ BOOST_AUTO_TEST_CASE( arit_lhs_test )
 	BOOST_CHECK_EQUAL(Value("10"s)+5,"10"s);//invalid operation, should be ignored
 	BOOST_CHECK_EQUAL(Value("10"s)+"5"s,"105"s); // concatenating strings is allowed
 	BOOST_CHECK_EQUAL(Value("10"s)-"5"s,"10"s);//invalid operation, should be ignored
-	//@todo test chrono
+
+	BOOST_CHECK_EQUAL(Value(std::complex<float>(5))+5.f,10.f);
+
+	const util::timestamp now=std::chrono::system_clock::now();
+	const util::timestamp tomorrow=now+std::chrono::days(1);
+	BOOST_CHECK_GT(Value(now)+util::duration(std::chrono::days(1)),now); //not implemented on apple-clang
+	BOOST_CHECK_EQUAL(Value(now)+util::duration(std::chrono::days(1)),tomorrow);
 }
 
 // TestCase toString()
@@ -83,8 +89,8 @@ BOOST_AUTO_TEST_CASE( type_toString_test )
 {
 	// create some test dummies
 	Value tInt(42 );
-	Value tFloat((float)3.1415 );
-	Value tString(std::string("Hello World" ) );
+	Value tFloat(3.1415f );
+	Value tString("Hello World"s );
 
 	BOOST_CHECK_EQUAL( tInt.toString(), "42" );
 	BOOST_CHECK_EQUAL( tFloat.toString(), "3.1415" );
@@ -96,9 +102,8 @@ BOOST_AUTO_TEST_CASE( test_type_is )
 {
 	// see if Values are created as the expected types
 	BOOST_CHECK(Value(42 ).is<int32_t>() );
-	BOOST_CHECK(Value((float)3.1415 ).is<float>());
-	BOOST_CHECK(Value(std::string("Hello World" ) ).is<std::string>());
-	BOOST_CHECK(Value("Hello char World"s ).is<std::string>());
+	BOOST_CHECK(Value(3.1415f).is<float>());
+	BOOST_CHECK(Value("Hello World"s ).is<std::string>());
 }
 
 // TestCase operators()
@@ -163,7 +168,7 @@ BOOST_AUTO_TEST_CASE( type_comparison_test )
 	BOOST_CHECK(!a.gt(other));
 	BOOST_CHECK(!a.eq(other));
 	BOOST_CHECK(!a.lt(other));
-	
+
 	BOOST_CHECK(Value("a"s).eq(a));
 	BOOST_CHECK(Value(" "s).lt(a));
 	BOOST_CHECK(Value("bb"s).gt(a));

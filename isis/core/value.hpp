@@ -185,3 +185,16 @@ public:
 };
 
 }
+//@todo remove once c++20 is fully supported
+#include <cstring>
+namespace std{
+template<class Tr,class Alc>
+partial_ordering operator<=>(const basic_string<char,Tr,Alc> &lhs, const  basic_string<char,Tr,Alc> &rhs){
+	auto result=strcmp(lhs.data(),rhs.data());
+	if(result==0)return partial_ordering::equivalent;
+	else if(result<0)return partial_ordering::less;
+	else return partial_ordering::greater;
+}
+partial_ordering operator<=>(const isis::util::timestamp &lhs, const  isis::util::timestamp &rhs);
+partial_ordering operator<=>(const isis::util::duration &lhs, const  isis::util::duration &rhs);
+}
