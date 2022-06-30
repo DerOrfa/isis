@@ -137,12 +137,10 @@ public:
 	
 	template<typename VIS> decltype(auto) visit(VIS&& visitor)
 	{
-		LOG_IF(m_length==0,Debug,error) << "Running visit on an empty array is probably not a good idea.";
 		return std::visit(std::forward<VIS>(visitor),static_cast<ArrayTypes&>(*this));
 	}
 	template<typename VIS> decltype(auto) visit(VIS&& visitor)const
 	{
-		LOG_IF(m_length==0,Debug,error) << "Running visit on an empty array is probably not a good idea.";
 		return std::visit(std::forward<VIS>(visitor),static_cast<const ArrayTypes&>(*this));
 	}
 

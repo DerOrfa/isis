@@ -13,9 +13,7 @@
 #include <string>
 #include <iterator>
 
-namespace isis
-{
-namespace test
+namespace isis::test
 {
 
 using util::PropertyMap;
@@ -444,5 +442,4 @@ BOOST_AUTO_TEST_CASE( deduplicate_test )
 	}
 }
 
-}
 }
