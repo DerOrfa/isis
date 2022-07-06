@@ -291,7 +291,7 @@ void ImageFormat_NiftiSa::guessSliceOrdering( const data::Image img, char &slice
 			util::duration duration= first.as<util::timestamp>() - second.as<util::timestamp>();  
 			if(slice_code == NIFTI_SLICE_ALT_INC || slice_code == NIFTI_SLICE_ALT_DEC) //@todo test me
 				duration /=  img.getSizeAsVector()[data::sliceDim] / 2;
-			slice_duration=std::fabs(std::chrono::milliseconds(duration).count());
+			slice_duration=std::fabs(std::chrono::duration_cast<std::chrono::milliseconds>(duration).count());
 		}
 	}
 

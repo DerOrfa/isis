@@ -95,7 +95,7 @@ isis::util::date& std::operator-=(isis::util::date& x, const isis::util::duratio
 }
 std::ostream &std::operator<<(std::ostream &out, const isis::util::duration &s)
 {
-	return out<<s.count()<<"ms";
+	return out<<std::chrono::duration_cast<std::chrono::milliseconds>(s).count()<<"ms";
 }
 std::ostream &std::operator<<(std::ostream &out, const isis::util::date &s)
 {
@@ -113,12 +113,12 @@ std::ostream &std::operator<<(std::ostream &out, const isis::util::timestamp &s)
 	}
 	// and maybe with milliseconds
 
-	chrono::milliseconds msec = s.time_since_epoch()-sec;
+	auto msec = std::chrono::duration_cast<chrono::milliseconds>(s.time_since_epoch()-sec);
 	assert(msec.count()<1000);
 	if(msec.count()){
 		if(msec.count()<0)
 			msec+=chrono::seconds(1);
-		out << "+" << std::to_string(msec.count()) << "ms";
+		out << "+" << msec;
 	}
 	return out;
 }
