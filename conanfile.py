@@ -7,7 +7,7 @@ from os import path
 
 class isis(ConanFile):
 	name = "isis"
-	version = "0.8.0"
+	version = "0.9.0-dev"
 	license = "GPL-3.0-or-later"
 	description = "The ISIS project aims to provide a framework to access a large variety of image processing libraries written in different programming languages and environments."
 
@@ -18,7 +18,7 @@ class isis(ConanFile):
 		"debug_log": [True, False],
 		"with_cli": [True, False],
 		"with_qt5": [True, False],
-		"with_python": [True, False],
+		"with_python": [None, "system", "3.7", "3.8", "3.9", "3.10"],
 		"io_zisraw": [True, False],
 		"io_sftp": [True, False],
 		"io_png": [True, False],
@@ -28,7 +28,7 @@ class isis(ConanFile):
 		"shared": True,
 		"with_qt5": False,
 		"with_cli": True,
-		"with_python": True,
+		"with_python": "system",
 		"debug_log": False,
 		"io_zisraw": True,
 		"io_sftp": True,
@@ -60,14 +60,27 @@ class isis(ConanFile):
 		if 'shared' in self.options[name]:
 			self.options[name].shared = False
 
+
+	def build_requirements(self):
+		if self.options.with_python:
+			if self.options.with_python != "system": #assume the given value is the conan-package version for python
+				self.tool_requires(f'cpython/[~={self.options.with_python}]')
+
 	def config_options(self):
 		if self.options.testing:
 			self.exports_sources.append("tests/*")
 
 	def requirements(self):
 		# make everything statically linked into the exe (or the shared lib) => not needed by the consumer
-		for dep in ["jsoncpp/[~=1]", "fftw/[~=3]", "openjpeg/[~=2]", "gsl/[~=2.7]", "ncurses/[>6.0]", "eigen/[~=3]"]:
+		for dep in ["jsoncpp/[~=1]", "fftw/[~=3]", "openjpeg/[~=2]", "gsl/[~=2.7]", "ncurses/[~=6.2]", "eigen/[~=3]"]:
 			self.require(dep)
+
+		if self.options.with_python and self.options.with_python != "system": #assume the given value is the conan-package version for python
+			self.requires("zlib/1.2.11", override=True)#make everybody else shut up about their zlib
+			self.requires("openssl/1.1.1l", override=True)#make everybody else shut up about their openssl
+			if self.options.with_qt5:
+				self.requires('expat/2.4.1', override=True)
+				self.requires('libffi/3.2.1', override=True)
 
 		if self.options.with_cli:
 			self.require("muparser/[~=2]")
