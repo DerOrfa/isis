@@ -35,7 +35,7 @@
 namespace isis
 {
 
-namespace image_io
+namespace io
 {
 
 // unfortunately VBit is not clearly defined - so adapt to what the system thinks it is
@@ -157,7 +157,7 @@ throw( std::runtime_error & )
 			break;
 			// default error
 		default:
-			LOG( image_io::Runtime, error )
+			LOG( io::Runtime, error )
 					<< "Can't map image type " << image.getChunk( 0 ).getTypeName() << "(" << image.getChunk( 0 ).getTypeID() << ") to vista type. Aborting" ;
 			return;
 		}
@@ -243,12 +243,12 @@ std::list<data::Chunk> ImageFormat_Vista::load( const std::string &filename, con
 	}
 
 	// enable "info" log level
-	// image_io::enable_log<util::DefaultMsgPrint>( info );
+	// io::enable_log<util::DefaultMsgPrint>( info );
 	if( myDialect == "onlyfirst" ) {
 		nimages = 1;
 	}
 
-	LOG( image_io::Runtime, info ) << "found " << nimages << " images.";
+	LOG( io::Runtime, info ) << "found " << nimages << " images.";
 	/*****************************************
 	 * Save vista file history if available
 	 *****************************************/
@@ -650,7 +650,7 @@ std::list<data::Chunk> ImageFormat_Vista::load( const std::string &filename, con
 	// first image found will be saved in a float MemChunk and added to the output.
 	else if( myDialect == "map" ) {
 		// print a warning message when there are more than one image.
-		LOG_IF( nimages >= 1, image_io::Runtime, warning )
+		LOG_IF( nimages >= 1, io::Runtime, warning )
 				<< "Multiple images found. Will use the first VFloat image I can find.";
 
 		// have a look for the first float image -> destroy the other images
@@ -1034,11 +1034,11 @@ util::fvector3 ImageFormat_Vista::calculateIndexOrigin( isis::data::Chunk &chunk
 	return iOrig;
 }
 
-}//namespace image_io
+}//namespace io
 }//namespace isis
 
-isis::image_io::FileFormat *
+isis::io::FileFormat *
 factory()
 {
-	return new isis::image_io::ImageFormat_Vista();
+	return new isis::io::ImageFormat_Vista();
 }

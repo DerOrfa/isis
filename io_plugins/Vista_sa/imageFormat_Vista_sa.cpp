@@ -28,7 +28,7 @@
 namespace isis
 {
 
-namespace image_io
+namespace io
 {
 	
 namespace _internal
@@ -338,8 +338,8 @@ void ImageFormat_VistaSa::write( const std::list<data::Image> &images, const std
 
 }
 
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
 // 	isis::util::DefaultMsgPrint::stopBelow(isis::warning);
-	return new isis::image_io::ImageFormat_VistaSa();
+	return new isis::io::ImageFormat_VistaSa();
 }

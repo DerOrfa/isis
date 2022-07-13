@@ -4,7 +4,7 @@
 
 namespace isis
 {
-namespace image_io
+namespace io
 {
 namespace _internal{
 template<typename T> void setval(std::shared_ptr<T> ptr,uint32_t s, uint32_t t, uint32_t ypselon){
@@ -199,7 +199,7 @@ public:
 };
 }
 }
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_Null();
+	return new isis::io::ImageFormat_Null();
 }

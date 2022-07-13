@@ -1,7 +1,7 @@
 #include <isis/core/io_interface.h>
 
 namespace isis{
-namespace image_io{
+namespace io{
 
 class ImageFormat_TiffSa: public FileFormat
 {
@@ -16,7 +16,7 @@ public:
 	std::list<util::istring> dialects() const override;
 	void write(const data::Image & image, const std::string & filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback) override;
 protected:
-	util::istring suffixes(isis::image_io::FileFormat::io_modes modes) const override;
+	util::istring suffixes(isis::io::FileFormat::io_modes modes) const override;
 };
 
 }}

@@ -7,7 +7,7 @@
 #include <map>
 #include <isis/core/propmap.hpp>
 
-namespace isis::image_io{
+namespace isis::io{
 std::pair<std::string, util::PropertyMap::PropPath> &tag(uint32_t id);
 std::optional<std::pair<std::string, util::PropertyMap::PropPath>> query_tag(uint32_t id);
 bool known_tag(uint32_t id);

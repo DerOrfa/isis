@@ -1,7 +1,7 @@
 #include "imageFormat_DicomDictionary.hpp"
 #include "isis/core/singletons.hpp"
 
-namespace isis::image_io{
+namespace isis::io{
 namespace _internal{
 struct dictionary{
 	std::map<uint32_t,std::pair<std::string,util::PropertyMap::PropPath>> dict;

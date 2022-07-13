@@ -25,15 +25,13 @@
 #include "image.hpp"
 #include <variant>
 
-namespace isis
-{
-namespace data
+namespace isis::data
 {
 
 class IOFactory
 {
 public:
-	typedef std::shared_ptr< image_io::FileFormat> FileFormatPtr;
+	typedef std::shared_ptr<io::FileFormat> FileFormatPtr;
 	typedef std::list<FileFormatPtr> FileFormatList;
 	typedef std::variant<std::filesystem::path,std::streambuf*,ByteArray> load_source;
 	friend class util::Singletons;
@@ -135,7 +133,6 @@ private:
 	IOFactory &operator =( IOFactory & ); //don't do that
 };
 
-}
 }
 
 

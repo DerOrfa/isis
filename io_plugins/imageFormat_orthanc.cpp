@@ -33,7 +33,7 @@
 #include <isis/core/io_factory.hpp>
 #include <isis/core/bytearray.hpp>
 
-namespace isis::image_io
+namespace isis::io
 {
 namespace _internal
 {
@@ -226,15 +226,15 @@ public:
 	}
 	ImageFormat_orthanc()= default;
 protected:
-	[[nodiscard]] std::list<util::istring> suffixes(isis::image_io::FileFormat::io_modes modes) const override{return {".orthanc"};}
+	[[nodiscard]] std::list<util::istring> suffixes(isis::io::FileFormat::io_modes modes) const override{return {".orthanc"};}
 };
 
 }
 
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	isis::image_io::_internal::AceISISLog::enable();
-	return new isis::image_io::ImageFormat_orthanc();
+	isis::io::_internal::AceISISLog::enable();
+	return new isis::io::ImageFormat_orthanc();
 }
 
 

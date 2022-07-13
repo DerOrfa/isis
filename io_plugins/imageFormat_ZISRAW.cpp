@@ -5,7 +5,7 @@
 #include "imageFormat_ZISRAW_jxr.h"
 #include <fstream>
 
-namespace isis::image_io{
+namespace isis::io{
 
 namespace _internal{
 
@@ -484,7 +484,7 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 }
 }
 
-const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelTypeMap={
+const std::map<uint32_t,uint16_t> isis::io::ImageFormat_ZISRAW::PixelTypeMap={
 	 {0,isis::util::typeID<uint8_t>()} //Gray8
 	,{1,isis::util::typeID<uint16_t>()} //Gray16
 	,{2,isis::util::typeID<float>()} //Gray32Float
@@ -494,7 +494,7 @@ const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelTypeM
 	,{11,isis::util::typeID<std::complex<double>>()} //Bgr192ComplexFloat
 	,{12,isis::util::typeID<int32_t>()} //Gray32
 };
-const std::map<std::string,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelTypeMapStr={
+const std::map<std::string,uint16_t> isis::io::ImageFormat_ZISRAW::PixelTypeMapStr={
 	 {"Gray8",isis::util::typeID<uint8_t>()} //Gray8
 	,{"Gray16",isis::util::typeID<uint16_t>()} //Gray16
 	,{"Gray32Float",isis::util::typeID<float>()} //Gray32Float
@@ -504,7 +504,7 @@ const std::map<std::string,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelTy
 	,{"Bgr192ComplexFloat",isis::util::typeID<std::complex<double>>()} //Bgr192ComplexFloat
 	,{"Gray32",isis::util::typeID<int32_t>()} //Gray32
 };
-const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelSizeMap={
+const std::map<uint32_t,uint16_t> isis::io::ImageFormat_ZISRAW::PixelSizeMap={
 	 {0,sizeof(uint8_t)} //Gray8
 	,{1,sizeof(uint16_t)} //Gray16
 	,{2,sizeof(float)} //Gray32Float
@@ -515,7 +515,7 @@ const std::map<uint32_t,uint16_t> isis::image_io::ImageFormat_ZISRAW::PixelSizeM
 	,{12,sizeof(int32_t)} //Gray32
 };
 
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
 	isis_types.color.c24bit=isis::util::typeID<isis::util::color24>();
 	isis_types.color.c48bit=isis::util::typeID<isis::util::color48>();
@@ -523,5 +523,5 @@ isis::image_io::FileFormat *factory()
 	isis_types.scalar.u16bit=isis::util::typeID<uint16_t>();
 	isis_types.scalar.u32bit=isis::util::typeID<uint32_t>();
 	isis_types.scalar.float32bit=isis::util::typeID<float>();
-	return new isis::image_io::ImageFormat_ZISRAW();
+	return new isis::io::ImageFormat_ZISRAW();
 }

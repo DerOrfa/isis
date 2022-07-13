@@ -9,7 +9,7 @@ struct RawDebug {static constexpr char name[]="RawDebug"; static constexpr bool 
 using namespace isis;
 
 // add a faked file format class, so we can generate unique filenames
-class FakedRawFormat: public image_io::FileFormat
+class FakedRawFormat: public io::FileFormat
 {
 	std::string getName()const override {return "";};
 	std::list< data::Chunk > load( const std::filesystem::path &, std::list<util::istring> /*formatstack*/, std::list<util::istring> /*dialects*/, std::shared_ptr<util::ProgressFeedback> /*feedback*/ ) override  {return std::list< data::Chunk>();}

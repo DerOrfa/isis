@@ -9,7 +9,7 @@
 
 namespace isis
 {
-namespace image_io
+namespace io
 {
 
 class ImageFormat_FListProxy: public FileFormat
@@ -62,7 +62,7 @@ public:
 };
 }
 }
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_FListProxy();
+	return new isis::io::ImageFormat_FListProxy();
 }

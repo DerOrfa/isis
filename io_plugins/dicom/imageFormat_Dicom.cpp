@@ -4,7 +4,7 @@
 
 #include <boost/iostreams/copy.hpp>
 
-namespace isis::image_io
+namespace isis::io
 {
 namespace _internal
 {
@@ -820,7 +820,7 @@ ImageFormat_Dicom::ImageFormat_Dicom()
 
 }
 
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_Dicom;
+	return new isis::io::ImageFormat_Dicom;
 }

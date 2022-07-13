@@ -23,7 +23,7 @@
 #include "istring.hpp"
 #include "progressfeedback.hpp"
 
-namespace isis::image_io
+namespace isis::io
 {
 	/**
 	 * Check if a given property exists in the given PropMap.
@@ -177,9 +177,9 @@ extern "C" {
 
 #if defined(__STDC__) || defined(__cplusplus)
 #ifdef WIN32
-	extern __declspec( dllexport ) isis::image_io::FileFormat *factory();
+	extern __declspec( dllexport ) isis::io::FileFormat *factory();
 #else
-	extern isis::image_io::FileFormat *factory();
+	extern isis::io::FileFormat *factory();
 #endif
 #else
 #ifdef WIN32

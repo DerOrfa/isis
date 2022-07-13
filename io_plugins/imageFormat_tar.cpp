@@ -8,7 +8,7 @@
 
 #include <isis/core/fileptr.hpp>
 
-namespace isis::image_io
+namespace isis::io
 {
 
 class ImageFormat_Tar: public FileFormat{
@@ -144,7 +144,7 @@ public:
 };
 
 }
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_Tar();
+	return new isis::io::ImageFormat_Tar();
 }

@@ -53,7 +53,7 @@ extern "C"
 #include <atomic>
 #include <iomanip>
 
-namespace isis::image_io
+namespace isis::io
 {
 namespace _internal{
 struct ssh_session_deleter{void operator()(LIBSSH2_SESSION *p){libssh2_session_free(p);}};

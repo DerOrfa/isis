@@ -9,7 +9,7 @@
 // http://www.awaresystems.be/imaging/tiff/bigtiff.html
 
 namespace isis{
-namespace image_io{
+namespace io{
 	
 namespace _internal {
 	
@@ -398,7 +398,7 @@ namespace _internal {
 	};
 }
 
-util::istring ImageFormat_TiffSa::suffixes(isis::image_io::FileFormat::io_modes /*modes*/) const{return ".tiff .tif .scn";}
+util::istring ImageFormat_TiffSa::suffixes(isis::io::FileFormat::io_modes /*modes*/) const{return ".tiff .tif .scn";}
 
 std::list< data::Chunk > ImageFormat_TiffSa::load(
 	data::ByteArray source, 
@@ -445,7 +445,7 @@ void ImageFormat_TiffSa::write(const data::Image &/*image*/, const std::string &
 
 }}
 
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_TiffSa();
+	return new isis::io::ImageFormat_TiffSa();
 }

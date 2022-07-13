@@ -15,7 +15,7 @@
 #include <isis/core/fileptr.hpp>
 #include <boost/iostreams/categories.hpp>  // tags
 
-namespace isis::image_io
+namespace isis::io
 {
 namespace _internal
 {
@@ -161,7 +161,7 @@ public:
 	}
 };
 }
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_Compressed();
+	return new isis::io::ImageFormat_Compressed();
 }

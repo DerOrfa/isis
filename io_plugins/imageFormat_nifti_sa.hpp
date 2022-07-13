@@ -64,7 +64,7 @@
 
 namespace isis
 {
-namespace image_io
+namespace io
 {
 namespace _internal
 {
@@ -177,13 +177,13 @@ class ImageFormat_NiftiSa: public FileFormat
 		return util::typeID<NEW_T>();
 	}
 	static void guessSliceOrdering( const data::Image img, char &slice_code, float &slice_duration );
-	   void parseSliceOrdering( const std::shared_ptr< isis::image_io::_internal::nifti_1_header >& head, isis::data::Chunk& current );
+	   void parseSliceOrdering(const std::shared_ptr< isis::io::_internal::nifti_1_header >& head, isis::data::Chunk& current );
 
 	static bool parseDescripForSPM( util::PropertyMap &props, const char desc[] );
 	static void storeDescripForSPM( const isis::util::PropertyMap &props, char desc[] );
 	static void storeHeader( const util::PropertyMap &props, _internal::nifti_1_header *head );
 	static float determinant( const util::Matrix3x3<float> &m );
-	void parseHeader( const std::shared_ptr< isis::image_io::_internal::nifti_1_header >& head, isis::data::Chunk &props, data::scaling_pair &scl );
+	void parseHeader(const std::shared_ptr< isis::io::_internal::nifti_1_header >& head, isis::data::Chunk &props, data::scaling_pair &scl );
 	std::unique_ptr<_internal::WriteOp> getWriteOp( const data::Image &src, std::list<util::istring> dialects );
 	data::TypedArray<bool> bitRead( isis::data::TypedArray< uint8_t > src, size_t length );
 	bool checkSwapEndian ( std::shared_ptr<_internal::nifti_1_header > header );

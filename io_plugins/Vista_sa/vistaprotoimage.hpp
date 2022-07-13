@@ -24,7 +24,7 @@
 #include <isis/core/progressfeedback.hpp>
 
 
-namespace isis::image_io::_internal{
+namespace isis::io::_internal{
 
 class WriterSpec{
 protected:

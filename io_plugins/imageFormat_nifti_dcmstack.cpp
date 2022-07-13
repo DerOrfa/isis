@@ -27,7 +27,7 @@
 
 namespace isis
 {
-namespace image_io
+namespace io
 {
 
 namespace _internal

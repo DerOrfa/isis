@@ -37,7 +37,7 @@
 namespace isis
 {
 
-namespace image_io
+namespace io
 {
 
 class ImageFormat_Vista: public FileFormat
@@ -505,6 +505,6 @@ private:
 };
 
 }
-}//namespace image_io isis
+}//namespace io isis
 
 

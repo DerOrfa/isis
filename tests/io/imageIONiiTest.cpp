@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 	BOOST_REQUIRE_GE( images.size(), 1 );
 
 //	data::enableLog<util::DefaultMsgPrint>(info);
-//	image_io::enableLog<util::DefaultMsgPrint>( info );
+//	io::enableLog<util::DefaultMsgPrint>( info );
 	for( data::Image & null :  images ) {
 
 		// adapt additional/non supported properties

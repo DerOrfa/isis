@@ -179,7 +179,7 @@ void enableLog(LogLevel level)
 }
 
 }//util
-namespace image_io
+namespace io
 {
 typedef ImageIoLog Runtime;
 
@@ -191,7 +191,7 @@ void enableLog(LogLevel level)
 	ENABLE_LOG(Runtime, HANDLE, level);
 	ENABLE_LOG(Debug, HANDLE, level);
 }
-} //namespace image_io
+} //namespace io
 
 namespace data
 {
@@ -225,8 +225,8 @@ void enableLog(LogLevel level)
 }
 
 /**
- * Set logging level for the namespaces util,data and image_io.
- * This logging level will be used for every LOG(Debug,...) and LOG(Runtime,...) within the image_io namespace.
+ * Set logging level for the namespaces util,data and io.
+ * This logging level will be used for every LOG(Debug,...) and LOG(Runtime,...) within the io namespace.
  * This is affected by by the _ENABLE_LOG and _ENABLE_DEBUG settings of the current compile and won't have an
  * effect on the Debug or Runtime logging if the corresponding define is set to "0".
  * So if you compile with "-D_ENABLE_DEBUG=0" against a library which (for example) was comiled with "-D_ENABLE_DEBUG=1",

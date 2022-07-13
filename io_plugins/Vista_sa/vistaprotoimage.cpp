@@ -22,7 +22,7 @@
 #include <isis/core/io_interface.h>
 #include <fstream>
 
-namespace isis::image_io::_internal
+namespace isis::io::_internal
 {
 	
 template<typename T> data::ValueArray reader(data::ByteArray data, size_t offset, size_t size )

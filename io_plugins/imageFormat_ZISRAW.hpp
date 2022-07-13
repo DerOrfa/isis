@@ -6,7 +6,7 @@
 #include <memory>
 #include <future>
 
-namespace isis::image_io{
+namespace isis::io{
 	
 namespace _internal {
 	struct DimensionEntry{

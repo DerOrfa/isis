@@ -7,7 +7,7 @@
 #include <regex>
 
 
-namespace isis::image_io
+namespace isis::io
 {
 namespace _internal
 {
@@ -297,7 +297,7 @@ void ImageFormat_NiftiSa::guessSliceOrdering( const data::Image img, char &slice
 
 }
 
-void ImageFormat_NiftiSa::parseSliceOrdering( const std::shared_ptr< isis::image_io::_internal::nifti_1_header >& head, data::Chunk &current )
+void ImageFormat_NiftiSa::parseSliceOrdering(const std::shared_ptr< isis::io::_internal::nifti_1_header >& head, data::Chunk &current )
 {
 	
 // 	The following table indicates the slice timing pattern, relative to	time=0 for the first slice acquired, for some sample cases.  
@@ -506,7 +506,7 @@ void ImageFormat_NiftiSa::storeHeader( const util::PropertyMap &props, _internal
 
 	strcpy( head->magic, "n+1" );
 }
-void ImageFormat_NiftiSa::parseHeader( const std::shared_ptr< isis::image_io::_internal::nifti_1_header >& head, data::Chunk &props, data::scaling_pair &scl)
+void ImageFormat_NiftiSa::parseHeader(const std::shared_ptr< isis::io::_internal::nifti_1_header >& head, data::Chunk &props, data::scaling_pair &scl)
 {
 	unsigned short dims = head->dim[0];
 	double time_fac = 1;
@@ -659,7 +659,7 @@ isis::data::TypedArray< bool > ImageFormat_NiftiSa::bitRead( data::TypedArray<ui
 	return ret;
 }
 
-bool ImageFormat_NiftiSa::checkSwapEndian ( std::shared_ptr< isis::image_io::_internal::nifti_1_header > header )
+bool ImageFormat_NiftiSa::checkSwapEndian ( std::shared_ptr< isis::io::_internal::nifti_1_header > header )
 {
 #define DO_SWAP(VAR) VAR=data::endianSwap(VAR)
 #define DO_SWAPA(VAR,SIZE) data::endianSwapArray(VAR,VAR+SIZE,VAR);
@@ -1396,7 +1396,7 @@ const std::map<uint8_t, std::string> ImageFormat_NiftiSa::formCodes{
 }
 
 
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_NiftiSa();
+	return new isis::io::ImageFormat_NiftiSa();
 }

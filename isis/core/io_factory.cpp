@@ -134,12 +134,12 @@ unsigned int IOFactory::findPlugins( const std::string &path )
 
 			if ( handle ) {
 #ifdef WIN32
-				image_io::FileFormat* ( *factory_func )() = ( image_io::FileFormat * ( * )() )GetProcAddress( handle, "factory" );
+				io::FileFormat* ( *factory_func )() = ( io::FileFormat * ( * )() )GetProcAddress( handle, "factory" );
 #else
-				image_io::FileFormat* ( *factory_func )() = ( image_io::FileFormat * ( * )() )dlsym( handle, "factory" );
+				io::FileFormat* ( *factory_func )() = ( io::FileFormat * ( * )() )dlsym(handle, "factory" );
 #endif
 
-				auto deleter = [handle, pluginName]( image_io::FileFormat *format ) {
+				auto deleter = [handle, pluginName](io::FileFormat *format ) {
 					delete format;
 #ifdef WIN32
 					if( !FreeLibrary( ( HINSTANCE )handle ) )
@@ -293,7 +293,7 @@ std::list< Image > IOFactory::chunkListToImageList( std::list<Chunk> &src, util:
 	size_t errcnt=0;
 	for(auto i=src.begin();i!=src.end();){
 		if(!i->isValid()){
-			LOG(image_io::Runtime, error ) << "Rejecting invalid chunk. Missing properties: " << i->getMissing();
+			LOG(io::Runtime, error ) << "Rejecting invalid chunk. Missing properties: " << i->getMissing();
 			errcnt++;
 			if(rejected)
 				rejected->push_back(i->getValueAs<std::string>("source")); 

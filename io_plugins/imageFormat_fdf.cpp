@@ -3,7 +3,7 @@
 
 namespace isis
 {
-namespace image_io
+namespace io
 {
 
 class ImageFormat_fdf: public FileFormat
@@ -156,8 +156,8 @@ public:
 };
 }
 }
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_fdf();
+	return new isis::io::ImageFormat_fdf();
 }
 

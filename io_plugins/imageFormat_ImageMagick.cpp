@@ -5,7 +5,7 @@
 
 namespace isis
 {
-namespace image_io
+namespace io
 {
 
 class ImageFormat_ImageMagic: public FileFormat
@@ -206,9 +206,9 @@ public:
 };
 }
 }
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_ImageMagic();
+	return new isis::io::ImageFormat_ImageMagic();
 }
 
 

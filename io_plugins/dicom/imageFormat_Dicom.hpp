@@ -24,7 +24,7 @@
 #include <functional>
 #include "imageFormat_DicomDictionary.hpp"
 
-namespace isis::image_io
+namespace isis::io
 {
 namespace _internal{
 util::istring id2Name( const uint16_t group, const uint16_t element );

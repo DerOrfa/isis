@@ -16,7 +16,7 @@
 
 namespace isis
 {
-namespace image_io
+namespace io
 {
 API_EXCLUDE_BEGIN;
 /// @cond _internal

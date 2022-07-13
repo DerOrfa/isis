@@ -23,7 +23,7 @@
 namespace isis
 {
 
-namespace image_io
+namespace io
 {
 
 class ImageFormat_VistaSa: public FileFormat

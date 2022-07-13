@@ -16,7 +16,7 @@ BOOST_AUTO_TEST_SUITE ( imageIOVista_NullTests )
 
 BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 {
-	image_io::enableLog<util::DefaultMsgPrint>(warning);
+	io::enableLog<util::DefaultMsgPrint>(warning);
 	std::list<data::Image> images = data::IOFactory::load( "nix.null" );
 	BOOST_REQUIRE( images.size() >= 1 );
 	for( data::Image & null :  images ) {

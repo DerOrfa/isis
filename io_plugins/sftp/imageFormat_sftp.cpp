@@ -9,7 +9,7 @@
 #include <isis/core/fileptr.hpp>
 
 
-namespace isis::image_io
+namespace isis::io
 {
 
 class ImageFormat_Sftp: public FileFormat{
@@ -51,7 +51,7 @@ public:
 };
 
 }
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_Sftp();
+	return new isis::io::ImageFormat_Sftp();
 }

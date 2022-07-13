@@ -8,7 +8,7 @@
 #include <future>
 #include <memory>
 
-namespace isis::image_io
+namespace isis::io
 {
 
 class ImageFormat_png: public FileFormat
@@ -544,7 +544,7 @@ public:
 	}
 };
 }
-isis::image_io::FileFormat *factory()
+isis::io::FileFormat *factory()
 {
-	return new isis::image_io::ImageFormat_png();
+	return new isis::io::ImageFormat_png();
 }

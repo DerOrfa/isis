@@ -23,7 +23,7 @@
 #include <isis/core/io_factory.hpp>
 #include <netdb.h>
 
-namespace isis::image_io
+namespace isis::io
 {
 
 SftpClient::streambuf::streambuf(LIBSSH2_SFTP_HANDLE *fptr, size_t buff_sz)
@@ -169,7 +169,7 @@ bool SftpClient::open(std::string host, std::string username, std::string keyfil
 	sin.sin_port = htons(22);
 	sin.sin_addr.s_addr = inet_addr(addr);
 	if (connect(_sock, (struct sockaddr *) (&sin), sizeof(struct sockaddr_in)) != 0)
-		image_io::FileFormat::throwSystemError(errno);
+		io::FileFormat::throwSystemError(errno);
 
 	ok_or_throw(libssh2_session_handshake(session.get(), _sock));
 
