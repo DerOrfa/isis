@@ -275,6 +275,48 @@ bool PropertyValue::operator<(const isis::util::PropertyValue& y) const{return l
 std::ostream &operator<<(std::ostream &out, const PropertyValue &s){
 	return out<<s.toString(false);//should be false as this will be used implicitly in a lot of cases
 }
+template<typename OP>
+PropertyValue PropertyValue::operator_impl(const PropertyValue &rhs) const
+{
+	PropertyValue ret;
+	auto end=container.begin();
+	if(rhs.size()<size()){
+		LOG(Runtime,warning)
+			<< "The PropertyValue at the left is loger than the one on the right. Will run operation "
+			<< typeid(OP).name() << " only " << rhs.size() << " times";
+		std::advance(end,rhs.size());
+	} else
+		end=container.end();
+
+	LOG_IF(rhs.size()>size(),Runtime,warning)
+		<< "The PropertyValue at the left is shorter than the one on the right. Will run operation "
+		<< typeid(OP).name() << " only " << size() << " times";
+
+	auto ret_it= std::inserter(ret.container,ret.container.begin());
+	std::transform(container.begin(),container.end(),rhs.container.begin(),ret_it,OP{});
+	return ret;
+}
+template<typename OP>
+PropertyValue PropertyValue::operator_impl(const Value &rhs) const
+{
+PropertyValue ret;
+auto ret_it= std::inserter(ret.container,ret.container.begin());
+std::transform(container.begin(),container.end(),ret_it,std::bind(OP{},std::placeholders::_1,rhs));
+return ret;
+}
+void PropertyValue::resize(size_t size, const Value &insert)
+{
+	const auto mysize=container.size();
+	if(size-mysize>1){
+		LOG(Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
+	}
+	if(mysize<size){ // grow
+		container.insert(container.end(), size-mysize, insert);
+	} else if(mysize>size){ // shrink
+		auto erasestart=std::next(container.begin(),size);
+		erase(erasestart,container.end());
+	}
+}
 
 }
 /// @endcond _internal
