@@ -44,7 +44,7 @@ PropertyValue &PropertyValue::operator=(const PropertyValue& other){
 	container=other.container;
 	return *this;
 }
-PropertyValue &PropertyValue::operator=(PropertyValue&& other){
+PropertyValue &PropertyValue::operator=(PropertyValue&& other) noexcept{
 	container.swap(other.container);
 	return *this;
 }
@@ -62,7 +62,7 @@ PropertyValue PropertyValue::copyByID( short unsigned int ID ) const
 std::string PropertyValue::toString( bool labeled )const
 {
 	if(container.empty()){
-		return std::string("\u2205");//utf8 for empty set
+		return {"\u2205"};//utf8 for empty set
 	} else if(size()==1)
 		return front().toString(labeled);
 	else{
@@ -127,7 +127,6 @@ bool PropertyValue::transform(uint16_t dstID)
 		container.swap(ret.container);
 		return true;
 	}
-	return container.size();
 }
 
 
@@ -177,7 +176,7 @@ std::vector< PropertyValue > PropertyValue::splice( const size_t len )
 	assert(isEmpty());
 	return ret;
 }
-size_t PropertyValue::explode(size_t factor, std::function<Value(const Value &)> op)
+size_t PropertyValue::explode(size_t factor, const std::function<Value(const Value &)>& op)
 {
 	for(auto e=container.begin();e!=container.end();){
 		for(size_t i=0;i<factor;i++){
@@ -247,7 +246,7 @@ bool PropertyValue::gt( const PropertyValue& ref ) const{
 	if(ref.isEmpty() || ref.size()!=size())
 		return false;
 	auto mine_it=container.begin();
-	for(auto other:ref.container)
+	for(const auto& other:ref.container)
 		ret&=(mine_it++)->gt(other);
 	return ret;
 }
@@ -256,7 +255,7 @@ bool PropertyValue::lt( const PropertyValue& ref ) const{
 	if(ref.isEmpty() || ref.size()!=size())
 		return false;
 	auto mine_it=container.begin();
-	for(auto other:ref.container)
+	for(const auto& other:ref.container)
 		ret&=(mine_it++)->lt(other);
 	return ret;
 }
@@ -304,18 +303,20 @@ auto ret_it= std::inserter(ret.container,ret.container.begin());
 std::transform(container.begin(),container.end(),ret_it,std::bind(OP{},std::placeholders::_1,rhs));
 return ret;
 }
-void PropertyValue::resize(size_t size, const Value &insert)
+void PropertyValue::resize(size_t size, const Value& insert)
 {
 	const auto mysize=container.size();
-	if(size-mysize>1){
-		LOG(Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
-	}
+	LOG_IF(size-mysize>1,Debug, warning ) << "Growing a Property. You should avoid this, as it is expensive.";
 	if(mysize<size){ // grow
 		container.insert(container.end(), size-mysize, insert);
 	} else if(mysize>size){ // shrink
 		auto erasestart=std::next(container.begin(),size);
 		erase(erasestart,container.end());
 	}
+}
+std::string PropertyValue::toString() const
+{
+	return toString(false);
 }
 
 }

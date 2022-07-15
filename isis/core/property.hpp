@@ -30,8 +30,8 @@ class PropertyValue
 private:
 	bool m_needed;
 	std::list<Value> container;
-	template<typename OP> PropertyValue operator_impl(const PropertyValue &rhs)const;
-	template<typename OP> PropertyValue operator_impl(const Value &rhs)const;
+	template<typename OP> [[nodiscard]] PropertyValue operator_impl(const PropertyValue &rhs)const;
+	template<typename OP> [[nodiscard]] PropertyValue operator_impl(const Value &rhs)const;
 public:
 	typedef decltype(container)::iterator iterator;
 	typedef decltype(container)::const_iterator const_iterator;
@@ -61,18 +61,7 @@ public:
 	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 	iterator erase( iterator first, iterator last );
 
-	void resize(size_t size, const Value& insert={}){
-		const auto mysize=container.size();
-		if(size-mysize>1){
-			LOG(Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
-		}
-		if(mysize<size){ // grow
-			container.insert(container.end(), size-mysize, insert);
-		} else if(mysize>size){ // shrink
-			auto erasestart=std::next(container.begin(),size);
-			erase(erasestart,container.end());
-		}
-	}
+	void resize(size_t size, const Value& insert={});
 
 	/**
 	 * Increase the size of the property by replacing every entry by factor results of op(original_value).
@@ -81,7 +70,7 @@ public:
 	 * @param op functor to compute the new entries from the old one
 	 * @return new length of the property
 	 */
-	size_t explode(size_t factor, std::function<Value(const Value &)> op);
+	size_t explode(size_t factor, const std::function<Value(const Value &)>& op);
 
 // 	void reserve(size_t size);
 // 	void resize( size_t size, const Value& clone );
@@ -110,7 +99,7 @@ public:
 	 * \param len the requested size of the "splinters"
 	 * \returns a vector of (mostly) equally sized PropertyValues.
 	 */
-	[[nodiscard]] std::vector<PropertyValue> splice(const size_t len);
+	[[nodiscard]] std::vector<PropertyValue> splice(size_t len);
 
 	/// Amount of values in this PropertyValue
 	[[nodiscard]] size_t size()const;
@@ -158,7 +147,7 @@ public:
 	 * \note the needed state wont change, regardless of what it is in other
 	 */
 	PropertyValue &operator=(const PropertyValue &other);
-	PropertyValue &operator=(PropertyValue &&other);
+	PropertyValue &operator=(PropertyValue &&other) noexcept ;
 
 	/// accessor to mark as (not) needed
 	bool &needed();
@@ -215,7 +204,9 @@ public:
 	[[nodiscard]] PropertyValue copyByID( unsigned short ID ) const;
 
 	/// \returns the value(s) represented as text.
-	[[nodiscard]] virtual std::string toString( bool labeled = false)const;
+	[[nodiscard]] virtual std::string toString( bool labeled)const;
+	/// \returns toString(false).
+	[[nodiscard]] std::string toString()const;
 
 	/// \returns true if, and only if no value is stored
 	[[nodiscard]] bool isEmpty()const;
