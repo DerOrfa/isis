@@ -30,32 +30,8 @@ class PropertyValue
 private:
 	bool m_needed;
 	std::list<Value> container;
-	template<typename OP> PropertyValue operator_impl(const PropertyValue &rhs)const{
-		PropertyValue ret;
-		auto end=container.begin();
-		if(rhs.size()<size()){
-			LOG(Runtime,warning)
-				<< "The PropertyValue at the left is loger than the one on the right. Will run operation "
-				<< typeid(OP).name() << " only " << rhs.size() << " times";
-			std::advance(end,rhs.size());
-		} else
-			end=container.end();
-
-		LOG_IF(rhs.size()>size(),Runtime,warning)
-			<< "The PropertyValue at the left is shorter than the one on the right. Will run operation "
-			<< typeid(OP).name() << " only " << size() << " times";
-
-		auto ret_it= std::inserter(ret.container,ret.container.begin());
-		std::transform(container.begin(),container.end(),rhs.container.begin(),ret_it,OP{});
-		return ret;
-	}
-	template<typename OP> PropertyValue operator_impl(const Value &rhs)const{
-		PropertyValue ret;
-		auto ret_it= std::inserter(ret.container,ret.container.begin());
-		std::transform(container.begin(),container.end(),ret_it,std::bind(OP{},std::placeholders::_1,rhs));
-		return ret;
-	}
-
+	template<typename OP> PropertyValue operator_impl(const PropertyValue &rhs)const;
+	template<typename OP> PropertyValue operator_impl(const Value &rhs)const;
 public:
 	typedef decltype(container)::iterator iterator;
 	typedef decltype(container)::const_iterator const_iterator;
@@ -139,11 +115,6 @@ public:
 	/// Amount of values in this PropertyValue
 	[[nodiscard]] size_t size()const;
 
-	/// Copy a list of ValueReference into the PropertyValue.
-	template<typename ITER> void copy(ITER first,ITER last){
-		while(first!=last)
-			push_back(**(++first));
-	}
 	/**
 	 * Transfer properties from one PropertyValue into another.
 	 * The transferred data will be inserted at idx.
@@ -229,7 +200,7 @@ public:
 	/**
 	 * (re)set property to one specific value of a specific type
 	 * \note The needed flag won't be affected by that.
-	 * \note To prevent accidential use this can only be used explicetly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
+	 * \note To prevent accidental use this can only be used explicitly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
 	 */
 	PropertyValue& operator=( const Value &ref){
 	    container.clear();
