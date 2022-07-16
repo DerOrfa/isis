@@ -10,7 +10,7 @@ int main( int argc, char *argv[] )
 	data::IOApplication app( "isis data dumper", true, false );
 	// ********* Parameters *********
 	app.parameters["chunks"] = false;
-	app.parameters["chunks"].needed() = false;
+	app.parameters["chunks"].setNeeded(false);
 	app.parameters["chunks"].setDescription( "print detailed data about the subsections (chunks) for each image" );
 
 	app.addExample( "-in file.nii", "Print all metadata of the image in a nifti file." );

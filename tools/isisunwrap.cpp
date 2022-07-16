@@ -8,7 +8,7 @@ int main( int argc, char **argv )
 	
 	app.parameters["dim"]=util::Selection({"row", "column", "slice", "time"},"time");
 // 	app.parameters["pos"]=0;
-// 	app.parameters["pos"].needed()=false;
+// 	app.parameters["pos"].setNeeded(false);
 
 	app.init( argc, argv ); // will exit if there is a problem
 	

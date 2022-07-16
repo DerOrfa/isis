@@ -28,7 +28,7 @@ namespace isis::util
 class PropertyValue
 {
 private:
-	bool m_needed;
+	bool m_needed=false;
 	std::list<Value> container;
 	template<typename OP> [[nodiscard]] PropertyValue operator_impl(const PropertyValue &rhs)const;
 	template<typename OP> [[nodiscard]] PropertyValue operator_impl(const Value &rhs)const;
@@ -39,26 +39,19 @@ public:
 	typedef decltype(container)::const_reference const_reference;
 	typedef decltype(container)::value_type value_type;
 	/// Create a property and store the given single value object.
-	PropertyValue(const Value &ref, bool _needed = false ): m_needed(_needed ) {container.push_back(ref);}
+	PropertyValue(const Value &ref, bool _needed = false ): m_needed(_needed ), container(1,ref) {}
 	/// Create a property and store the given single value object.
 	PropertyValue(Value &&ref, bool _needed = false ): m_needed(_needed ){container.emplace_back(ref);}
 
 	////////////////////////////////////////////////////////////////////////////
 	// List operations
 	////////////////////////////////////////////////////////////////////////////
-	void push_back(const Value& ref);
-	void push_back(Value&& ref);
+	PropertyValue::iterator push_back(Value&& ref);
 
-	iterator insert(iterator at,const Value& ref);
-
-	template<KnownValueType T> iterator insert(iterator at,const T& ref){
-		LOG_IF(!isEmpty() && getTypeID()!=typeID<T>(),Debug,error) << "Inserting inconsistent type " << MSubject(Value(ref).toString(true)) << " in " << MSubject(*this);
-		return container.emplace(at, ref);
-	}
+	iterator insert(iterator at,Value&& ref);
+	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 
 	iterator erase( size_t at );
-
-	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 	iterator erase( iterator first, iterator last );
 
 	void resize(size_t size, const Value& insert={});
@@ -124,13 +117,13 @@ public:
 
 	/// Transform all contained properties into type T
 	bool transform( uint16_t dstID );
-	template<typename T> bool transform(){return transform(typeID<T>());}
+	template<KnownValueType T> bool transform(){return transform(typeID<T>());}
 
 	/**
 	 * Empty constructor.
 	 * Creates an empty property value. So PropertyValue().isEmpty() will always be true.
 	 */
-	PropertyValue();
+	PropertyValue()=default;
 
 	/**
 	 * Copy operator.
@@ -146,11 +139,11 @@ public:
 	 * \param other the source to copy from
 	 * \note the needed state wont change, regardless of what it is in other
 	 */
-	PropertyValue &operator=(const PropertyValue &other);
-	PropertyValue &operator=(PropertyValue &&other) noexcept ;
+	PropertyValue &operator=(const PropertyValue &other)=default;
+	PropertyValue &operator=(PropertyValue &&other)=default;
 
-	/// accessor to mark as (not) needed
-	bool &needed();
+	/// mark as (not) needed
+	void setNeeded(bool needed=true);
 	/// returns true if PropertyValue is marked as needed, false otherwise
 	[[nodiscard]] bool isNeeded ()const;
 
@@ -191,11 +184,7 @@ public:
 	 * \note The needed flag won't be affected by that.
 	 * \note To prevent accidental use this can only be used explicitly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
 	 */
-	PropertyValue& operator=( const Value &ref){
-	    container.clear();
-	    push_back(ref);
-	    return *this;
-    }
+	PropertyValue& operator=(Value &&ref);
 
 	/**
 	 * creates a copy of the stored values using a type referenced by its ID
@@ -221,9 +210,9 @@ public:
 	 * \note Uses only the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
-	template<class T> T as()const {return front().as<T>();}
+	template<KnownValueType T> T as()const {return front().as<T>();}
 
-	template<class T> T& castAs() {return std::get<T>(front());}
+	template<KnownValueType T> T& castAs() {return std::get<T>(front());}
 
 	/**
 	 * \copybrief Value::is
@@ -231,7 +220,7 @@ public:
 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
-	template<class T> [[nodiscard]] bool is()const {return container.front().is<T>();}
+	template<KnownValueType T> [[nodiscard]] bool is()const {return container.front().is<T>();}
 
 	/**
 	 * \copybrief Value::getTypeName
@@ -255,7 +244,7 @@ public:
 	 * \note Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
-	template<typename T> const T &castTo() const{return std::get<T>(front());}
+	template<KnownValueType T> const T &castTo() const{return std::get<T>(front());}
 
 	/**
 	 * \returns true if \link Value::fitsInto \endlink is true for all values

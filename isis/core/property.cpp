@@ -16,7 +16,7 @@
 namespace isis::util
 {
 
-bool &PropertyValue::needed() { return m_needed;}
+void PropertyValue::setNeeded(bool needed) {m_needed=needed;}
 bool PropertyValue::isNeeded()const { return m_needed;}
 
 
@@ -37,18 +37,12 @@ bool PropertyValue::operator!=( const Value& second ) const
 {
 	return size()==1 && front()!=second;
 }
-
-
-PropertyValue::PropertyValue ( ) : m_needed( false ) {}
-PropertyValue &PropertyValue::operator=(const PropertyValue& other){
-	container=other.container;
+PropertyValue &PropertyValue::operator=(Value&& ref)
+{
+	container.clear();
+	push_back(std::forward<Value>(ref));
 	return *this;
 }
-PropertyValue &PropertyValue::operator=(PropertyValue&& other) noexcept{
-	container.swap(other.container);
-	return *this;
-}
-
 
 PropertyValue PropertyValue::copyByID( short unsigned int ID ) const
 {
@@ -77,12 +71,11 @@ bool PropertyValue::isEmpty() const{return container.empty();}
 const Value &PropertyValue::operator()() const{return front();}
 Value &PropertyValue::operator()(){return front();}
 
-void PropertyValue::push_back( const Value& ref ){insert(end(), ref);}
-void PropertyValue::push_back( Value&& ref ){insert(end(), ref);}
+PropertyValue::iterator PropertyValue::push_back( Value&& ref ){return insert(end(), std::forward<Value>(ref));}
 
-PropertyValue::iterator PropertyValue::insert( iterator at, const Value& ref ){
+PropertyValue::iterator PropertyValue::insert( iterator at, Value&& ref ){
 	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
-	return container.insert(at,ref );
+	return container.insert(at,std::forward<Value>(ref) );
 }
 
 void PropertyValue::transfer(isis::util::PropertyValue::iterator at, PropertyValue& ref)
@@ -303,20 +296,18 @@ auto ret_it= std::inserter(ret.container,ret.container.begin());
 std::transform(container.begin(),container.end(),ret_it,std::bind(OP{},std::placeholders::_1,rhs));
 return ret;
 }
-void PropertyValue::resize(size_t size, const Value& insert)
+void PropertyValue::resize(size_t size, const Value &insert)
 {
 	const auto mysize=container.size();
-	LOG_IF(size-mysize>1,Debug, warning ) << "Growing a Property. You should avoid this, as it is expensive.";
+	if(size-mysize>1){
+		LOG(Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
+	}
 	if(mysize<size){ // grow
 		container.insert(container.end(), size-mysize, insert);
 	} else if(mysize>size){ // shrink
 		auto erasestart=std::next(container.begin(),size);
 		erase(erasestart,container.end());
 	}
-}
-std::string PropertyValue::toString() const
-{
-	return toString(false);
 }
 
 }

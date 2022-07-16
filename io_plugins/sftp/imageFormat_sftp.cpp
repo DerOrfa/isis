@@ -20,7 +20,7 @@ public:
 	void write( const data::Image &image, const std::string &filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )override {
 		throwGenericError( "Not implemented (yet)" );
 	}
-	std::list<data::Chunk>	load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ){
+	std::list<data::Chunk>	load( const std::filesystem::path &filename, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )override{
 		static const std::regex accepted_url("sftp:\\/\\/(\\w+)@(\\w+)(\\/.*)",std::regex::ECMAScript|std::regex::optimize);
 		std::list<data::Chunk> ret;
 

@@ -37,7 +37,7 @@ IOApplication::IOApplication( std::string_view name, bool have_input, bool have_
 		addOutput();
 
 	parameters["help-io"] = false;
-	parameters["help-io"].needed() = false;
+	parameters["help-io"].setNeeded(false);
 	parameters["help-io"].setDescription( "List all loaded IO plugins and their supported formats, exit after that" );
 }
 
@@ -87,15 +87,15 @@ void IOApplication::addInput ( util::ParameterMap &parameters, const std::string
 {
 	parameters[std::string( "in" ) + suffix] = util::slist();
 	parameters[std::string( "in" ) + suffix].setDescription( std::string( "input file(s) or directory(s)" ) + desc );
-	parameters[std::string( "in" ) + suffix].needed() = needed;
+	parameters[std::string( "in" ) + suffix].setNeeded(needed);
 
 	parameters[std::string( "rf" ) + suffix] = util::slist();
-	parameters[std::string( "rf" ) + suffix].needed() = false;
+	parameters[std::string( "rf" ) + suffix].setNeeded(false);
 	parameters[std::string( "rf" ) + suffix].hidden() = true;
 
 	parameters[std::string( "rf" ) + suffix].setDescription( std::string( "Override automatic detection of file suffix for reading" + desc + " with given value" ) );
 	parameters[std::string( "rdialect" ) + suffix] = util::slist();
-	parameters[std::string( "rdialect" ) + suffix].needed() = false;
+	parameters[std::string( "rdialect" ) + suffix].setNeeded(false);
 	parameters[std::string( "rdialect" ) + suffix].setDescription(
 		std::string( "choose dialect(s) for reading" ) + desc + ". The available dialects depend on the capabilities of the used IO plugin" );
 }
@@ -109,25 +109,25 @@ void IOApplication::addOutput( util::ParameterMap &parameters, const std::string
 {
 	parameters[std::string( "out" ) + suffix] = std::string();
 	parameters[std::string( "out" ) + suffix].setDescription( "output filename" + desc );
-	parameters[std::string( "out" ) + suffix].needed() = needed;
+	parameters[std::string( "out" ) + suffix].setNeeded(needed);
 
 	parameters[std::string( "wf" ) + suffix] = util::slist();
-	parameters[std::string( "wf" ) + suffix].needed() = false;
+	parameters[std::string( "wf" ) + suffix].setNeeded(false);
 	parameters[std::string( "wf" ) + suffix].setDescription( "Override automatic detection of file suffix for writing" + desc + " with given value" );
 	parameters[std::string( "wf" ) + suffix].hidden() = true;
 
 	parameters[std::string( "wdialect" ) + suffix] = util::slist();
-	parameters[std::string( "wdialect" ) + suffix].needed() = false;
+	parameters[std::string( "wdialect" ) + suffix].setNeeded(false);
 	parameters[std::string( "wdialect" ) + suffix].setDescription( "Choose dialect(s) for writing" + desc + ". Use \"--help-io\" for a list of the plugins and their supported dialects" );
 
 	parameters[std::string( "repn" ) + suffix] = util::Selection( util::getTypeMap( true ) );
-	parameters[std::string( "repn" ) + suffix].needed() = false;
+	parameters[std::string( "repn" ) + suffix].setNeeded(false);
 	parameters[std::string( "repn" ) + suffix].setDescription(
 		"Representation in which the data" + desc + " shall be written" );
 
 	if( parameters.find( "np" ) == parameters.end() ) {
 		parameters["np"] = false;
-		parameters["np"].needed() = false;
+		parameters["np"].setNeeded(false);
 		parameters["np"].setDescription( "suppress progress bar" );
 		parameters["np"].hidden() = true;
 	}
