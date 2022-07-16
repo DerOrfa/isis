@@ -193,9 +193,7 @@ public:
 	[[nodiscard]] PropertyValue copyByID( unsigned short ID ) const;
 
 	/// \returns the value(s) represented as text.
-	[[nodiscard]] virtual std::string toString( bool labeled)const;
-	/// \returns toString(false).
-	[[nodiscard]] std::string toString()const;
+	[[nodiscard]] std::string toString( bool labeled=false)const;
 
 	/// \returns true if, and only if no value is stored
 	[[nodiscard]] bool isEmpty()const;
