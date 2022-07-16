@@ -47,8 +47,10 @@ public:
 	// List operations
 	////////////////////////////////////////////////////////////////////////////
 	PropertyValue::iterator push_back(Value&& ref);
+	PropertyValue::iterator push_back(const Value& ref);
 
 	iterator insert(iterator at,Value&& ref);
+	iterator insert(iterator at,const Value& ref);
 	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 
 	iterator erase( size_t at );
@@ -185,6 +187,7 @@ public:
 	 * \note To prevent accidental use this can only be used explicitly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
 	 */
 	PropertyValue& operator=(Value &&ref);
+	PropertyValue& operator=(const Value &ref);
 
 	/**
 	 * creates a copy of the stored values using a type referenced by its ID

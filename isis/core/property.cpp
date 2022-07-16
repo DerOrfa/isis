@@ -43,6 +43,12 @@ PropertyValue &PropertyValue::operator=(Value&& ref)
 	push_back(std::forward<Value>(ref));
 	return *this;
 }
+PropertyValue &PropertyValue::operator=(const Value& ref)
+{
+	container.clear();
+	push_back(ref);
+	return *this;
+}
 
 PropertyValue PropertyValue::copyByID( short unsigned int ID ) const
 {
@@ -72,10 +78,15 @@ const Value &PropertyValue::operator()() const{return front();}
 Value &PropertyValue::operator()(){return front();}
 
 PropertyValue::iterator PropertyValue::push_back( Value&& ref ){return insert(end(), std::forward<Value>(ref));}
+PropertyValue::iterator PropertyValue::push_back(const Value& ref ){return insert(end(), ref);}
 
 PropertyValue::iterator PropertyValue::insert( iterator at, Value&& ref ){
 	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
 	return container.insert(at,std::forward<Value>(ref) );
+}
+PropertyValue::iterator PropertyValue::insert( iterator at, const Value& ref ){
+	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
+	return container.insert(at,ref);
 }
 
 void PropertyValue::transfer(isis::util::PropertyValue::iterator at, PropertyValue& ref)
