@@ -29,27 +29,27 @@ int main( int argc, char *argv[] )
 	app.addOutput( app.parameters );
 
 	app.parameters["byteswap"] = false;
-	app.parameters["byteswap"].needed() = false;
+	app.parameters["byteswap"].setNeeded(false);
 	app.parameters["byteswap"].setDescription( "swap byte endianess when reading raw data (ignored when read_repn is not given)" );
 
 	app.parameters["offset"] = uint64_t();
-	app.parameters["offset"].needed() = false;
+	app.parameters["offset"].setNeeded(false);
 	app.parameters["offset"].setDescription( "offset in bytes where to start inside the raw file" );
 
 	app.parameters["read_repn"] = app.parameters["repn"]; // steal the supported data types from repn
-	app.parameters["read_repn"].needed() = false;
+	app.parameters["read_repn"].setNeeded(false);
 	app.parameters["read_repn"].setDescription( "data type of the raw file (if given, mode for reading raw is assumed)" );
 
 	app.parameters["rawdims"] = util::ivector4( {0, 1, 1, 1} );
-	app.parameters["rawdims"].needed() = false;
+	app.parameters["rawdims"].setNeeded(false);
 	app.parameters["rawdims"].setDescription( "the dimensions of the raw image, at least number of columns must be given (ignored when read_repn is not given)" );
 
 	app.parameters["voxel"] = util::fvector3( {1, 1, 1} );
-	app.parameters["voxel"].needed() = false;
+	app.parameters["voxel"].setNeeded(false);
 	app.parameters["voxel"].setDescription( "the size of the voxels in each direction" );
 
 	app.parameters["origin"] = util::fvector3( );
-	app.parameters["origin"].needed() = false;
+	app.parameters["origin"].setNeeded(false);
 	app.parameters["origin"].setDescription( "the position of the first voxel in isis space" );
 
 	app.addExample( "-in my_file.nii -out /tmp/raw.file -repn u8bit", "Write the image data of a nifti file in a u8bit raw file" );

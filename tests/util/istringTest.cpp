@@ -15,6 +15,10 @@ BOOST_AUTO_TEST_CASE( istring_test )
 	BOOST_CHECK( util::istring( "HaLLo there1" ) != util::istring( "Hallo thERe" ) );
 	BOOST_CHECK_EQUAL( util::istring( "Hallo thERe" ).find( "there" ), 6 );
 
+	BOOST_CHECK_EQUAL( util::istring( "123" ).find( "23" ), 1 );
+	BOOST_CHECK_LT( util::istring( "123" ), "124" );
+	BOOST_CHECK_GT( util::istring( "123" ), "120" );
+
 	int buffer;
 	BOOST_REQUIRE(util::stringTo(util::istring( "1234" ),buffer));
 	BOOST_CHECK_EQUAL(buffer , 1234 );

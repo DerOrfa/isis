@@ -21,7 +21,7 @@ PYBIND11_MODULE(pyisis, m)
 python::setup_logging();
 m.add_object("_cleanup", py::capsule([]() {python::free_logging(verbose_info);}));
 
-m.def("setLoglevel", [](const char *level,const char *module)->void{
+m.def("setLogLevel", [](const char *level,const char *module)->void{
 	static const std::map<LogLevel,std::string> severity_map={
 		{error,"error"},
 		{warning,"warning"},

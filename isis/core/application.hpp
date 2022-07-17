@@ -81,7 +81,7 @@ public:
 	 *
 	 * \param name name of the application.
 	 * \param cfg the default path of the config file. If empty, no config file will be loaded
-	 * \note set \code parameters["cfg"].needed()=true \endcode to prevent the program from running without given config file
+	 * \note set \code parameters["cfg"].setNeeded(true) \endcode to prevent the program from running without given config file
 	 */
 	explicit Application( std::string_view name, std::string_view cfg="" );
 

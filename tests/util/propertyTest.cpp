@@ -26,8 +26,8 @@ BOOST_AUTO_TEST_CASE( property_init_test )
 	PropertyValue propA(std::string( "Property01" ), false);
 	BOOST_CHECK_EQUAL( propA.toString(), "Property01" );
 	//  default: not needed
-	BOOST_CHECK( !propA.needed() );
-	BOOST_CHECK( !propZero.needed() );
+	BOOST_CHECK( !propA.isNeeded() );
+	BOOST_CHECK( !propZero.isNeeded() );
 }
 
 BOOST_AUTO_TEST_CASE( property_copy_test )

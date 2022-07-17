@@ -572,7 +572,7 @@ PropertyMap::PathSet PropertyMap::getMissing()const {return genKeyList(invalidP)
 
 void PropertyMap::addNeeded( const PropPath &path )
 {
-	touchProperty( path ).needed() = true;
+	touchProperty( path ).setNeeded(true);
 }
 
 

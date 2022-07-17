@@ -489,12 +489,13 @@ void Image::copyToValueArray(ValueArray &dst, scaling_pair scaling ) const
 		std::vector<ValueArray > targets;
 
 		if( lookup.size() > 1 ) { //if there are more than 1 chunks
-			//spliceAt target to have the same parts as the image
+			//splice target to have the same parts as the image
 			targets = dst.splice( lookup.front()->getVolume() );
 		} else {
 			//just put that ValueArray into the list
 			targets.push_back( dst );
 		}
+		assert(targets.size()==lookup.size());
 
 		auto target = targets.begin();
 		for( const std::shared_ptr<Chunk> &ref :  lookup ) { // copy chunks into the parts
@@ -822,11 +823,11 @@ size_t Image::getMajorTypeID() const
 	case util::typeID<util::ivector3>():
 	case util::typeID<util::ivector4>():
 		LOG( Debug, info ) << "Using flat typeID for " << getChunk( 0 ).typeName() << " because I cannot use min/max";
-		return getChunk( 0 ).getTypeID();
+		return getChunk(lookup.size()/2).getTypeID();
 		break;
 	default:
 		auto minmax = getMinMax();
-		LOG( Debug, info ) << "Determining  datatype of image with the value range " << minmax;
+		LOG( Debug, info ) << "Determining datatype of image with the value range " << minmax;
 
 		if( minmax.first.typeID() == minmax.second.typeID() ) { // ok min and max are the same type - trivial case
 			return minmax.first.typeID();

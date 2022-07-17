@@ -190,11 +190,10 @@ public:
 namespace std{
 template<class Tr,class Alc> // need to specialize at least a bit to prevent conflict with theoretically existing implementation
 partial_ordering operator<=>(const basic_string<char,Tr,Alc> &lhs, const  basic_string<char,Tr,Alc> &rhs){
-	const partial_ordering result = lhs.length()<=>rhs.length();
-	if (result==0)
-		return Tr::compare(lhs.data(),rhs.data(),lhs.length())<=>0;//comparing -1,0,1 to 0 will result in less(-1),equivalent(0) or greater(1)
-	else
-		return result;
+	auto result=lhs.compare(rhs);
+	if(result<0)return partial_ordering::less;
+	else if(result>0)return partial_ordering::greater;
+	else return partial_ordering::equivalent;
 }
 partial_ordering operator<=>(const isis::util::timestamp &lhs, const  isis::util::timestamp &rhs);
 partial_ordering operator<=>(const isis::util::duration &lhs, const  isis::util::duration &rhs);

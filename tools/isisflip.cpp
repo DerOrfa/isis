@@ -42,13 +42,13 @@ int main( int argc, char **argv )
 	along.set( "x" );
 	flip.set( "both" );
 	app.parameters["along"] = along;
-	app.parameters["along"].needed() = true;
+	app.parameters["along"].setNeeded(true);
 	app.parameters["along"].setDescription( "Flip along the specified axis" );
 	app.parameters["flip"] = flip;
-	app.parameters["flip"].needed() = true;
+	app.parameters["flip"].setNeeded(true);
 	app.parameters["flip"].setDescription( "What has to be flipped" );
 	app.parameters["center"] = false;
-	app.parameters["center"].needed() = false;
+	app.parameters["center"].setNeeded(false);
 	app.parameters["center"].setDescription( "If activated the center of the image will be translated to the of the scanner space and after flipping back to its initial position" );
 	app.init( argc, argv );
 	std::list<data::Image> finImageList;
