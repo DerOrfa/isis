@@ -35,6 +35,14 @@ option(ISIS_IOPLUGIN_SFTP "Enable proxy plugin for sftp" OFF)
 # the plugins ...
 ############################################################
 
+add_library(ioprotocol_FileDirectory SHARED ioprotocol_FileDirectory.cpp)
+target_link_libraries(ioprotocol_FileDirectory isis_core)
+set(TARGETS ${TARGETS} ioprotocol_FileDirectory)
+
+add_library(ioprotocol_FormatAdaptor SHARED ioprotocol_FormatAdaptor.cpp)
+target_link_libraries(ioprotocol_FormatAdaptor isis_core)
+set(TARGETS ${TARGETS} ioprotocol_FormatAdaptor)
+
 ############################################################
 # fdf plugin
 ############################################################

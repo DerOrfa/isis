@@ -3,20 +3,28 @@
 //
 
 #pragma once
-#ifdef __clang__
-	#include <experimental/coroutine>
+
+#if __has_include ( <coroutine> )
+#include <coroutine>
+using std::coroutine_handle;
+using std::suspend_never;
+using std::suspend_always;
+#elif __has_include ( <experimental/coroutine> )
+#include <experimental/coroutine>
 	using std::experimental::coroutine_handle;
 	using std::experimental::suspend_never;
 	using std::experimental::suspend_always;
 #else
-	#include <coroutine>
-	using std::coroutine_handle;
-	using std::suspend_never;
-	using std::suspend_always;
+	static_assert(false,"this needs coroutine support");
 #endif
+
+
 #include "bytearray.hpp"
+#include "chunk.hpp"
 #include "common.hpp"
-#include "types.hpp"
+#include <fstream>
+#include <future>
+#include <any>
 
 namespace isis::io
 {
@@ -35,7 +43,7 @@ template<typename T> struct Generator {
 		void unhandled_exception() { exception_ = std::current_exception(); } // saving exception
 
 		template<class From> suspend_always yield_value(From &&from) {
-			value_ = std::move(from); // caching the result in promise
+			value_ = std::forward<From>(from); // caching the result in promise
 			return {};
 		}
 		void return_void() {}
@@ -54,24 +62,46 @@ template<typename T> struct Generator {
 		return ret;
 	}
 };
-
-
 class IoProtocol
 {
 public:
-	typedef std::variant<std::filebuf, data::ByteArray> io_object;
-	typedef std::tuple<std::string,io_object> load_result;
-	virtual Generator<load_result> load(std::string path) = 0;
-	virtual util::slist prefixes() = 0;
-	virtual util::slist suffixes() = 0;
-
+	template<class T, typename... ARGS> static std::any* init(const ARGS&... args) requires std::is_base_of_v<IoProtocol,T>
+	{
+		return new std::any(T(args...));
+	}
+	typedef std::variant<std::unique_ptr<std::streambuf>, data::ByteArray, data::Chunk> io_object;
+	typedef std::tuple<std::string,std::future<io_object>> load_result;
 };
 
-class DirectoryProtocol : public IoProtocol{
-	static const size_t mapping_size = 1024*1024*10;
+io::Generator<IoProtocol::load_result>
+protocol_load( const std::string &path, const std::list<util::istring>& formatstack = {}, const std::list<util::istring>& dialects = {}, util::slist* rejected=nullptr);
+io::Generator<IoProtocol::load_result>
+protocol_load(io::Generator<IoProtocol::load_result> &&outer_generator, const std::list<util::istring>& formatstack = {}, const std::list<util::istring>& dialects = {}, util::slist* rejected=nullptr);
+
+
+class PrimaryIoProtocol: public IoProtocol
+{
 public:
-	util::slist prefixes() override;
-	util::slist suffixes() override;
-	Generator<load_result> load(std::string path) override;
+	virtual Generator<load_result> load(std::string path, const std::list<util::istring> &dialects) = 0;
+	virtual util::slist prefixes() = 0;
+	virtual ~PrimaryIoProtocol() = default;
 };
+class SecondaryIoProtocol: public IoProtocol
+{
+public:
+	virtual Generator<load_result> load(std::future<io_object> obj, const std::list<util::istring> &dialects) = 0;
+	virtual util::slist suffixes() = 0;
+	virtual ~SecondaryIoProtocol() = default;
+};
+
+}
+
+extern "C" {
+#ifdef WIN32
+extern __declspec( dllexport ) void *init();
+extern __declspec( dllexport ) const char *name();
+#else
+extern void *init();
+extern const char *name();
+#endif
 }

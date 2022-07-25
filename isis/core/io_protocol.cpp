@@ -3,27 +3,30 @@
 //
 
 #include "io_protocol.hpp"
+
+#include <memory>
 #include "fileptr.hpp"
-#include <fstream>
+#include "io_pluginhandler.hpp"
 
 namespace isis::io{
-
-util::slist DirectoryProtocol::prefixes(){return {"file:"};}
-util::slist DirectoryProtocol::suffixes(){return {};}
-
-Generator<IoProtocol::load_result> DirectoryProtocol::load(std::string path)
+Generator<IoProtocol::load_result>
+protocol_load( const std::string &path, const std::list<util::istring>& formatstack, const std::list<util::istring>& dialects, util::slist* rejected)
 {
-	for(auto f=std::filesystem::directory_iterator( path );f!=std::filesystem::directory_iterator();++f)
-	{
-		if(f->is_directory())continue;
-		if(f->file_size()>mapping_size) {
-			data::FilePtr memory(f->path());
-			co_yield load_result{f->path().native(),memory};
-		} else {
-			std::filebuf stream;
-			stream.open(f->path(),std::ios_base::binary|std::ios_base::in);
-			co_yield load_result{f->path().native(),std::move(stream)};
-		}
+	std::unique_ptr<io::PrimaryIoProtocol> protocol;//(new io::DirectoryProtocol);
+	return protocol_load(protocol->load(path,dialects),formatstack,dialects,rejected);
+}
+Generator<IoProtocol::load_result>
+protocol_load(Generator<IoProtocol::load_result> &&outer_generator, const std::list<util::istring> &formatstack, const std::list<util::istring> &dialects, util::slist *rejected)
+{
+	while (outer_generator) {
+		auto [name, future] = outer_generator();
+		std::unique_ptr<io::SecondaryIoProtocol> inner_protocol;
+		auto inner_generator = formatstack.size()>1 ?
+			protocol_load(inner_protocol->load(std::move(future),dialects),formatstack,dialects,rejected):
+			inner_protocol->load(std::move(future),dialects);//terminate recursion
+
+		while (inner_generator)
+			co_yield inner_generator();
 	}
 }
 }
