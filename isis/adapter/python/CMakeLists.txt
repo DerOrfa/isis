@@ -1,7 +1,7 @@
 option(USE_SYSTEM_PYBIND "Use the system's pybind11 (instead of downloading it)" OFF)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
 
 if(USE_SYSTEM_PYBIND)
-    find_package(Python COMPONENTS Interpreter Development REQUIRED)
     find_package(pybind11 CONFIG REQUIRED)
     include(pybind11Common OPTIONAL)#conan doesn't load this automatically so we do it
     message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIRS}")
