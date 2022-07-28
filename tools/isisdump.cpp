@@ -37,7 +37,7 @@ int main( int argc, char *argv[] )
 				std::cout
 						<< "======Image #" << std::setw( imageDigits )  << count1 << std::setw( 0 )
 						<< "==Chunk #" << std::setw( chunkDigits )  << ++count2 << std::setw( 0 ) << " "
-						<< c.getSizeAsString() << c.typeName() << "======Metadata======" << std::endl;
+						<< c.getSizeAsString() << "(" << c.typeName() << ")" << "======Metadata======" << std::endl;
 				c.print( std::cout, true );
 			}
 		}

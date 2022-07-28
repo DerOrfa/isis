@@ -623,7 +623,7 @@ void ImageFormat_NiftiSa::parseHeader( const std::shared_ptr< isis::image_io::_i
 	if( ( head->scl_slope !=0 && head->scl_slope != 1) || head->scl_inter != 0)
 		scl=data::scaling_pair(head->scl_slope,head->scl_inter);
 
-	if( head->intent_code  ) {
+	if( head->intent_code && head->intent_code!= 1007) {
 		props.setValueAs( "nifti/intent_code", head->intent_code ); // use it the usual way
 		LOG( Runtime, warning ) << "Ignoring intent_code " << props.queryProperty( "nifti/intent_code" );
 	}
@@ -745,9 +745,8 @@ std::list< data::Chunk > ImageFormat_NiftiSa::load(
 	util::vector4<size_t> size;
 	uint8_t tDims = 0;
 
-	for( uint_fast8_t i = 1; i < 5; i++ ) {
+	for( uint_fast8_t i = 1; i < 8; i++ ) {
 		if( header->dim[i] <= 0 ) {
-			LOG( Runtime, warning ) << "Resetting invalid dim[" << i << "] to 1";
 			header->dim[i] = 1;
 		}
 
@@ -794,8 +793,21 @@ std::list< data::Chunk > ImageFormat_NiftiSa::load(
 		size[data::timeDim] = 1;
 	} else {
 		unsigned int type = nifti_type2isis_type[header->datatype];
+		unsigned short bitpix_scale = 1;
+		if(header->dim[5]>1 && header->dim[5] < 5) {
+			if (util::Value::createByID(type).fitsInto(util::typeID<float>())) { //util::fvector3/4
+				type = header->dim[5] < 4 ? util::typeID<util::fvector3>() : util::typeID<util::fvector4>();
+				bitpix_scale = header->dim[5];
+			} else if (util::Value::createByID(type).fitsInto(util::typeID<double>())) { //util::dvector3/4
+				type = header->dim[5] < 4 ? util::typeID<util::dvector3>() : util::typeID<util::dvector4>();
+				bitpix_scale = header->dim[5];
+			} else
+				LOG(Runtime,error) << "Can't fit the datatype " << util::Value::createByID(type) << " into vectors (for 5th dimension), will only load the first volume";
+		} else if(header->dim[5]>=5){
+			LOG(Runtime,error) << "Can't fit the 5th dimension of size " << header->dim[5] << " into vectors, will only load the first volume";
+		}
 
-		if( type ) {
+			if( type ) {
 			data_src = source.atByID( type, header->vox_offset, size.product(), swap_endian );
 
 			if( swap_endian ) {
@@ -806,7 +818,7 @@ std::list< data::Chunk > ImageFormat_NiftiSa::load(
 				                     << " elements (" << std::to_string(data_src.bytesPerElem()*data_src.getLength()*( 1. / 0x100000 ))+"M" <<")";
 			}
 
-			LOG_IF( ( size_t )header->bitpix != data_src.bytesPerElem() * 8, Runtime, warning )
+			LOG_IF( ( size_t )header->bitpix != data_src.bytesPerElem() * 8 / bitpix_scale, Runtime, warning )
 					<< "nifti field bitpix does not fit the bytesize of the given datatype (" << data_src.typeName() + "/" + std::to_string(header->bitpix) <<  ")";
 
 		} else {
