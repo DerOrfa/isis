@@ -24,7 +24,7 @@ namespace isis::util
 
 ProgParameter::ProgParameter()
 {
-	needed() = true;
+	setNeeded(true);
 }
 
 bool ProgParameter::isHidden() const
@@ -47,14 +47,13 @@ bool ProgParameter::parse( const std::string &prop )
 			ret = true;
 		}
 	} else {
-		static_assert(knownType<std::string>(),"not known");
 		ret = Value::convert(prop, me );
 	}
 
 	LOG_IF( ret, Debug, info ) << "Parsed " << MSubject( prop ) << " as " << me.toString( true );
 
 	if( ret ) {
-		needed()= false;//remove needed flag, because the value is set (aka "not needed anymore")
+		setNeeded(false);//remove needed flag, because the value is set (aka "not needed anymore")
 		m_parsed = true; 
 	}
 
@@ -75,7 +74,7 @@ bool ProgParameter::parse_list( const slist& theList )
 	}
 
 	if( ret ) {
-		needed()= false;//remove needed flag, because the value is set (aka "not needed anymore")
+		setNeeded(false);//remove needed flag, because the value is set (aka "not needed anymore")
 		m_parsed = true; 
 	}
 	

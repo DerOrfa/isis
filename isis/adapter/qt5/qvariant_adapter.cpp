@@ -8,6 +8,12 @@
 
 namespace isis::qt5::_internal{
 /// Value => Variant
+template<class D> auto msec_since_epoch(const std::chrono::sys_time<D> &value)
+{
+	const auto msec=std::chrono::time_point_cast<std::chrono::milliseconds>(value);
+	return msec.time_since_epoch().count();
+}
+
 template<typename T> QVariant makeQVariant_impl(const T &value){
 	return QVariant(value);
 }
@@ -48,16 +54,15 @@ template<typename T> QVariant makeQVariant_impl(const std::complex<T> &value){
 	//@todo implement me
 	return QVariant("IMPLEMENT_ME");
 }
-template<> QVariant makeQVariant_impl(const std::chrono::time_point<std::chrono::system_clock,std::chrono::milliseconds> &value){
-	return QDateTime::fromMSecsSinceEpoch(value.time_since_epoch().count());
+template<> QVariant makeQVariant_impl(const util::timestamp &value){
+	return QDateTime::fromMSecsSinceEpoch(msec_since_epoch(value));
 }
 template<> QVariant makeQVariant_impl(const util::date &value){
-	const util::timestamp msec=std::chrono::time_point_cast<std::chrono::milliseconds>(value);
-	return QDateTime::fromMSecsSinceEpoch(msec.time_since_epoch().count()).date();
+	return QDateTime::fromMSecsSinceEpoch(msec_since_epoch(value)).date();
 }
-template<> QVariant makeQVariant_impl(const util::duration &value){
-	//@todo implement me
-	return QVariant("IMPLEMENT_ME");
+template <class Rep, class Period>  QVariant makeQVariant_impl(const std::chrono::duration<Rep,Period> &value){
+	const auto msec=std::chrono::duration_cast<std::chrono::milliseconds>(value);
+	return QTime::fromMSecsSinceStartOfDay(msec.count());
 }
 }
 

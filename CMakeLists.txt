@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.15.0)
 # set isis version number
 ############################################################
 set(ISIS_VERSION_MAJOR "0")
-set(ISIS_VERSION_MINOR "8")
+set(ISIS_VERSION_MINOR "9")
 set(ISIS_VERSION_PATCH "0")
 
 set(ISIS_VERSION
@@ -41,8 +41,11 @@ add_definitions(-D_ISIS_VERSION_PATCH=${ISIS_VERSION_PATCH})
 set(ISIS_CORE_VERSION_API "4.0.0")
 string( REGEX MATCH "^[0-9]+" ISIS_CORE_VERSION_SO ${ISIS_CORE_VERSION_API})
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED yes)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	add_compile_options(-fconcepts)
+endif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 if(NOT WIN32)
 ############################################################
@@ -56,14 +59,6 @@ endif()
 ############################################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
-
-############################################################
-# conan based dependency resolution
-############################################################
-option(USE_CONAN "Use conan for dependencies" OFF)
-if(USE_CONAN)
-	include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
-endif()
 
 ############################################################
 # Logging options are global for all components in the tree
@@ -93,11 +88,17 @@ endif()
 
 # since ISIS strongly depends on the boost libraries we will configure them
 # globally.
+if(USE_CONAN)
+	set(BOOST_NAME boost)
+else(USE_CONAN)
+	set(BOOST_NAME Boost)
+endif(USE_CONAN)
+
 if(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS iostreams unit_test_framework)
-else()
+else(BUILD_TESTING)
 	find_package(Boost REQUIRED COMPONENTS iostreams)
-endif()
+endif(BUILD_TESTING)
 
 ############################################################
 # Macro to generate manpages for CLI programs
@@ -195,7 +196,9 @@ endif()
 add_subdirectory(isis)
 
 # configure tests
-add_subdirectory(tests)
+if(BUILD_TESTING)
+	add_subdirectory(tests)
+endif(BUILD_TESTING)
 
 # build the ISIS tools.
 if(ISIS_BUILD_TOOLS)

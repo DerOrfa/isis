@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE( loadsaveNullImage )
 			for( const char * fuzz :  fuzzies ) {
 				const auto niiVec = niiChunks[i].getValueAs<util::fvector3>( fuzz );
 				const auto nullVec = nullChunks[i].getValueAs<util::fvector3>( fuzz );
-				BOOST_REQUIRE( util::fuzzyEqualV( niiVec, nullVec ) );
+				BOOST_REQUIRE(  niiVec.fuzzyEqual( nullVec ) );
 				niiChunks[i].remove( fuzz );
 				nullChunks[i].remove( fuzz );
 			}

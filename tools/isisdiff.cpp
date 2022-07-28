@@ -151,19 +151,19 @@ int main( int argc, char *argv[] )
 {
 	util::Application app( "isis data diff" );
 	app.parameters["ignore"] = util::slist();
-	app.parameters["ignore"].needed() = false;
+	app.parameters["ignore"].setNeeded(false);
 	app.parameters["ignore"].setDescription( "List of properties which should be ignored when comparing" );
 
 	app.parameters["skipwith"] = skips;
-	app.parameters["skipwith"].needed() = false;
+	app.parameters["skipwith"].setNeeded(false);
 	app.parameters["skipwith"].setDescription( "List of property=value sets which should should make the program skip the according image" );
 
 	app.parameters["selectwith"] = props;
-	app.parameters["selectwith"].needed() = false;
+	app.parameters["selectwith"].setNeeded(false);
 	app.parameters["selectwith"].setDescription( "List of properties which should be used to select images for comparison" );
 	
 	app.parameters["np"] = false;
-	app.parameters["np"].needed() = false;
+	app.parameters["np"].setNeeded(false);
 	app.parameters["np"].setDescription( "suppress progress bar" );
 	app.parameters["np"].hidden() = true;
 

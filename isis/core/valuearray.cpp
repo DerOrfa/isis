@@ -107,7 +107,7 @@ scaling_pair ValueArray::getScalingTo(unsigned short typeID, const std::pair<uti
 		return conv->getScaling( minmax.first, minmax.second );
 	} else {
 		LOG( Runtime, error )
-		<< "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true )[typeID];
+		<< "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true ).at(typeID);
 		return {};//return invalid scaling
 	}
 }
@@ -121,7 +121,8 @@ void ValueArray::endianSwap() {
 	if(bytesPerElem()>1){
 		std::visit([len](auto ptr){
 			data::endianSwapArray( ptr.get(), ptr.get()+len, ptr.get() );
-			},static_cast<const ArrayTypes&>(*this));
+		},
+		static_cast<const ArrayTypes&>(*this));
 	}
 
 }
@@ -129,7 +130,7 @@ void ValueArray::endianSwap() {
 std::pair<isis::util::Value, isis::util::Value> ValueArray::getMinMax() const{
 	if ( getLength() == 0 ) {
 		LOG( Debug, error ) << "Skipping computation of min/max on an empty ValueArray";
-		return std::pair<util::Value, util::Value>();
+		return {};
 	} else {
 		_internal::getMinMaxVisitor visitor(getLength());
 		std::visit(visitor,static_cast<const ArrayTypes&>(*this));
@@ -156,7 +157,7 @@ ValueArray ValueArray::copyByID(size_t ID, const scaling_pair &scaling) const
 	if( conv ) {
 		return conv->generate( *this, getScaling( scaling, ID ) );
 	} else {
-		LOG( Runtime, error ) << "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true )[ID];
+		LOG( Runtime, error ) << "I don't know any conversion from " << typeName() << " to " << util::getTypeMap( true ).at(ID);
 		return {}; // return an invalid array
 	}
 }
@@ -217,17 +218,21 @@ ValueArray ValueArray::convertByID(unsigned short ID, scaling_pair scaling) cons
 
 ValueArray ValueArray::createByID(unsigned short ID, std::size_t len)
 {
-	auto f1 = converters().find( ID );
-	_internal::ValueArrayConverterMap::mapped_type::const_iterator f2;
 	ValueArray ret;
-	// try to get a converter to convert the requested type into itself - they're there for all known types
-	if( f1 != converters().end() && ( f2 = f1->second.find( ID ) ) != f1->second.end() ) {
-		const ValueArrayConverterBase &conv = *( f2->second );
-		ret=conv.create( len );
-		LOG_IF(!ret.isValid(),Runtime,error) << "The created array is not valid, this is not going to end well..";
-	} else {
-		LOG( Debug, error ) << "There is no known array creator for " << util::getTypeMap()[ID];
-	}
+	if(ID<std::variant_size_v<util::ValueTypes>) {
+		auto f1 = converters().find(ID);
+		_internal::ValueArrayConverterMap::mapped_type::const_iterator f2;
+		// try to get a converter to convert the requested type into itself - they're there for all known types
+		if (f1 != converters().end() && (f2 = f1->second.find(ID)) != f1->second.end()) {
+			const ValueArrayConverterBase &conv = *(f2->second);
+			ret = conv.create(len);
+			LOG_IF(!ret.isValid(), Runtime, error) << "The created array is not valid, this is not going to end well..";
+		}
+		else {
+			LOG(Debug, error) << "There is no known array creator for " << util::getTypeMap().at(ID);
+		}
+	} else
+		LOG(Debug,error) << "Invalid type id "<< ID <<" when creating an array";
 	return ret;
 }
 
@@ -277,9 +282,9 @@ std::size_t ValueArray::compare(std::size_t start, std::size_t end, const ValueA
 const ValueArray::Converter & ValueArray::getConverterFromTo(unsigned short fromID, unsigned short toID)
 {
 	const auto f1 = converters().find( fromID );
-	LOG_IF( f1 == converters().end(), Debug, error ) << "There is no known conversion from " << util::getTypeMap()[fromID];
+	LOG_IF( f1 == converters().end(), Debug, error ) << "There is no known conversion from " << util::getTypeMap().at(fromID);
 	const auto f2 = f1->second.find( toID );
-	LOG_IF( f2 == f1->second.end(), Debug, error ) << "There is no known conversion from " << util::getTypeMap()[fromID] << " to " << util::getTypeMap()[toID];
+	LOG_IF( f2 == f1->second.end(), Debug, error ) << "There is no known conversion from " << util::getTypeMap().at(fromID) << " to " << util::getTypeMap().at(toID);
 	return f2->second;
 }
 

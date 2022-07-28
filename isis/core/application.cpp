@@ -45,20 +45,20 @@ Application::Application( std::string_view name, std::string_view cfg): m_name( 
 
 	parameters["help"] = false;
 	parameters["help"].setDescription( "Print help" );
-	parameters["help"].needed() = false;
+	parameters["help"].setNeeded(false);
 
 	parameters["locale"] = std::string("C");
 	parameters["locale"].setDescription( "locale to use for parsing/printing (use empty string to enforce use of system locale)");
-	parameters["locale"].needed() = false;
+	parameters["locale"].setNeeded(false);
 
 	if(cfg.length()){
 		parameters["cfg"]=std::string(cfg);
 		parameters["cfg"].setDescription("File to read configuration from");
-		parameters["cfg"].needed()=false;
+		parameters["cfg"].setNeeded(false);
 	}
 
 	parameters["np"] = false;
-	parameters["np"].needed() = false;
+	parameters["np"].setNeeded(false);
 	parameters["np"].setDescription( "suppress progress bar" );
 	parameters["np"].hidden() = true;
 }
@@ -85,7 +85,7 @@ void Application::addLoggingParameter( const std::string& name )
 			parameters["d"s + name].setDescription( "Log level for the \"" + name + "\" module(s)" );
 
 		parameters["d"s + name].hidden() = true;
-		parameters["d"s + name].needed() = false;
+		parameters["d"s + name].setNeeded(false);
 	}
 }
 void Application::removeLogging( const std::string& name )
@@ -116,7 +116,7 @@ bool Application::addConfigFile(const std::string& filename)
 							continue;
 						}
 					}
-					dst.needed()=false; //param has got its default from the configuration, so its not needed anymore
+					dst.setNeeded(false); //param has got its default from the configuration, so its not needed anymore
 					param->remove(p);
 				}
 			}

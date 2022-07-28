@@ -82,19 +82,19 @@ int main( int argc, char **argv )
 
 	data::IOApplication app( "isistransform", true, true );
 	app.parameters["swapdim"] = util::slist{};
-	app.parameters["swapdim"].needed()=false;
+	app.parameters["swapdim"].setNeeded(false);
 
 	app.parameters["resample"]=util::ivector4{-1,-1,-1,-1};
-	app.parameters["resample"].needed()=false;
+	app.parameters["resample"].setNeeded(false);
 
 	app.parameters["rotate"]=util::slist{"x","y", "90"};
-	app.parameters["rotate"].needed()=false;
+	app.parameters["rotate"].setNeeded(false);
 
 	app.parameters["translate"]=util::fvector3();
-	app.parameters["translate"].needed()=false;
+	app.parameters["translate"].setNeeded(false);
 	
 	app.parameters["pix_center"]=false;
-	app.parameters["pix_center"].needed()=false;
+	app.parameters["pix_center"].setNeeded(false);
 	
 	app.addLogging<TransformLog>("");
 	app.addLogging<TransformDebug>("");

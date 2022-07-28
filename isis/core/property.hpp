@@ -27,8 +27,11 @@ namespace isis::util
  */
 class PropertyValue
 {
-	bool m_needed;
+private:
+	bool m_needed=false;
 	std::list<Value> container;
+	template<typename OP> [[nodiscard]] PropertyValue operator_impl(const PropertyValue &rhs)const;
+	template<typename OP> [[nodiscard]] PropertyValue operator_impl(const Value &rhs)const;
 public:
 	typedef decltype(container)::iterator iterator;
 	typedef decltype(container)::const_iterator const_iterator;
@@ -36,40 +39,24 @@ public:
 	typedef decltype(container)::const_reference const_reference;
 	typedef decltype(container)::value_type value_type;
 	/// Create a property and store the given single value object.
-	PropertyValue(const Value &ref, bool _needed = false ): m_needed(_needed ) {container.push_back(ref);}
+	PropertyValue(const Value &ref, bool _needed = false ): m_needed(_needed ), container(1,ref) {}
 	/// Create a property and store the given single value object.
-	PropertyValue(Value &&ref, bool _needed = false ): m_needed(_needed ){container.push_back(ref);}
+	PropertyValue(Value &&ref, bool _needed = false ): m_needed(_needed ){container.emplace_back(ref);}
 
 	////////////////////////////////////////////////////////////////////////////
 	// List operations
 	////////////////////////////////////////////////////////////////////////////
-	void push_back(const Value& ref);
-	void push_back(Value&& ref);
+	PropertyValue::iterator push_back(Value&& ref);
+	PropertyValue::iterator push_back(const Value& ref);
 
+	iterator insert(iterator at,Value&& ref);
 	iterator insert(iterator at,const Value& ref);
-
-	template<typename T> typename std::enable_if_t<knownType<T>(), iterator > insert(iterator at,const T& ref){
-		LOG_IF(!isEmpty() && getTypeID()!=typeID<T>(),Debug,error) << "Inserting inconsistent type " << MSubject(Value(ref).toString(true)) << " in " << MSubject(*this);
-		return container.emplace(at, ref);
-	}
+	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 
 	iterator erase( size_t at );
-
-	template<typename InputIterator> void insert( iterator position, InputIterator first, InputIterator last ){container.insert(position,first,last);}
 	iterator erase( iterator first, iterator last );
 
-	void resize(size_t size, const Value& insert={}){
-		const auto mysize=container.size();
-		if(size-mysize>1){
-			LOG(Debug, warning ) << "Resizing a Property. You should avoid this, as it is expensive.";
-		}
-		if(mysize<size){ // grow
-			container.insert(container.end(), size-mysize, insert);
-		} else if(mysize>size){ // shrink
-			auto erasestart=std::next(container.begin(),size);
-			erase(erasestart,container.end());
-		}
-	}
+	void resize(size_t size, const Value& insert={});
 
 	/**
 	 * Increase the size of the property by replacing every entry by factor results of op(original_value).
@@ -78,7 +65,7 @@ public:
 	 * @param op functor to compute the new entries from the old one
 	 * @return new length of the property
 	 */
-	size_t explode(size_t factor, std::function<Value(const Value &)> op);
+	size_t explode(size_t factor, const std::function<Value(const Value &)>& op);
 
 // 	void reserve(size_t size);
 // 	void resize( size_t size, const Value& clone );
@@ -107,16 +94,11 @@ public:
 	 * \param len the requested size of the "splinters"
 	 * \returns a vector of (mostly) equally sized PropertyValues.
 	 */
-	[[nodiscard]] std::vector<PropertyValue> splice(const size_t len);
+	[[nodiscard]] std::vector<PropertyValue> splice(size_t len);
 
 	/// Amount of values in this PropertyValue
 	[[nodiscard]] size_t size()const;
 
-	/// Copy a list of ValueReference into the PropertyValue.
-	template<typename ITER> void copy(ITER first,ITER last){
-		while(first!=last)
-			push_back(**(++first));
-	}
 	/**
 	 * Transfer properties from one PropertyValue into another.
 	 * The transferred data will be inserted at idx.
@@ -137,13 +119,13 @@ public:
 
 	/// Transform all contained properties into type T
 	bool transform( uint16_t dstID );
-	template<typename T> bool transform(){return transform(typeID<T>());}
+	template<KnownValueType T> bool transform(){return transform(typeID<T>());}
 
 	/**
 	 * Empty constructor.
-	 * Creates an empty property value. So PropertyValue().isEmpty() will allways be true.
+	 * Creates an empty property value. So PropertyValue().isEmpty() will always be true.
 	 */
-	PropertyValue();
+	PropertyValue()=default;
 
 	/**
 	 * Copy operator.
@@ -159,11 +141,11 @@ public:
 	 * \param other the source to copy from
 	 * \note the needed state wont change, regardless of what it is in other
 	 */
-	PropertyValue &operator=(const PropertyValue &other);
-	PropertyValue &operator=(PropertyValue &&other);
+	PropertyValue &operator=(const PropertyValue &other)=default;
+	PropertyValue &operator=(PropertyValue &&other)=default;
 
-	/// accessor to mark as (not) needed
-	bool &needed();
+	/// mark as (not) needed
+	void setNeeded(bool needed=true);
 	/// returns true if PropertyValue is marked as needed, false otherwise
 	[[nodiscard]] bool isNeeded ()const;
 
@@ -202,18 +184,10 @@ public:
 	/**
 	 * (re)set property to one specific value of a specific type
 	 * \note The needed flag won't be affected by that.
-	 * \note To prevent accidential use this can only be used explicetly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
+	 * \note To prevent accidental use this can only be used explicitly. \code util::PropertyValue propA; propA=5; \endcode is valid. But \code util::PropertyValue propA=5; \endcode is not,
 	 */
-	template<typename T> typename std::enable_if_t<knownType<T>(),PropertyValue&> operator=( const T &ref){
-	    container.clear();
-	    container.emplace_back(Value(ref));
-	    return *this;
-    }
-	PropertyValue& operator=( const Value &ref){
-	    container.clear();
-	    push_back(ref);
-	    return *this;
-    }
+	PropertyValue& operator=(Value &&ref);
+	PropertyValue& operator=(const Value &ref);
 
 	/**
 	 * creates a copy of the stored values using a type referenced by its ID
@@ -222,7 +196,7 @@ public:
 	[[nodiscard]] PropertyValue copyByID( unsigned short ID ) const;
 
 	/// \returns the value(s) represented as text.
-	[[nodiscard]] virtual std::string toString( bool labeled = false)const;
+	[[nodiscard]] std::string toString( bool labeled=false)const;
 
 	/// \returns true if, and only if no value is stored
 	[[nodiscard]] bool isEmpty()const;
@@ -237,9 +211,9 @@ public:
 	 * \note Uses only the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
-	template<class T> T as()const {return front().as<T>();}
+	template<KnownValueType T> T as()const {return front().as<T>();}
 
-	template<class T> T& castAs() {return std::get<T>(front());}
+	template<KnownValueType T> T& castAs() {return std::get<T>(front());}
 
 	/**
 	 * \copybrief Value::is
@@ -247,7 +221,7 @@ public:
 	 * \note Applies only on the first value. Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
-	template<class T> [[nodiscard]] bool is()const {return container.front().is<T>();}
+	template<KnownValueType T> [[nodiscard]] bool is()const {return container.front().is<T>();}
 
 	/**
 	 * \copybrief Value::getTypeName
@@ -271,7 +245,7 @@ public:
 	 * \note Other Values are ignored (use the []-operator to access them).
 	 * \note An exception is thrown if the PropertyValue is empty.
 	 */
-	template<typename T> const T &castTo() const{return std::get<T>(front());}
+	template<KnownValueType T> const T &castTo() const{return std::get<T>(front());}
 
 	/**
 	 * \returns true if \link Value::fitsInto \endlink is true for all values
@@ -297,74 +271,44 @@ public:
 	[[nodiscard]] bool eq( const PropertyValue &ref )const;
 
 	/**
-	 * \returns a PropertyValue with the results of \link Value::plus \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::operator+ \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue plus( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue plus( const Value &ref )const;
 	/**
-	 * \returns a PropertyValue with the results of \link Value::minus \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::operator- \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue minus( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue minus( const Value &ref )const;
 	/**
-	 * \returns a PropertyValue with the results of \link Value::multiply \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::operator* \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue multiply( const PropertyValue &ref )const;
+	[[nodiscard]] PropertyValue multiply( const Value &ref )const;
 	/**
-	 * \returns a PropertyValue with the results of \link Value::divide \endlink done on all value pairs from this and the target
+	 * \returns a PropertyValue with the results of \link Value::operator/ \endlink done on all value pairs from this and the target
 	 * \copydetails PropertyValue::gt
 	 */
 	[[nodiscard]] PropertyValue divide( const PropertyValue &ref )const;
-
-	/**
-	 * \copydetails PropertyValue::gt
-	 */
-	PropertyValue& add( const PropertyValue &ref );
-	/**
-	 * \copydetails PropertyValue::gt
-	 */
-	PropertyValue& subtract(const PropertyValue &ref );
-	/**
-	 * \copydetails PropertyValue::gt
-	 */
-	PropertyValue& multiply_me( const PropertyValue &ref );
-	/**
-	 * \copydetails PropertyValue::gt
-	 */
-	PropertyValue& divide_me( const PropertyValue &ref );
+	[[nodiscard]] PropertyValue divide( const Value &ref )const;
 
 	////////////////////////////////////////////////////////////////////////////
 	// operators on "normal" values
 	////////////////////////////////////////////////////////////////////////////
-	/**
-	 * Equality to a basic value.
-	 * Properties equal to basic values if:
-	 * - the property contains exactly one value
-	 * - \link Value::eq \endlink is true for that value
-	 * \warning This is using the more fuzzy Value::eq. So the type won't be compared and rounding might be done (which will send a warning to Debug).
-	 * \returns front().eq(second) if the property contains exactly one value, false otherwise
-	 */
-	template<typename T> typename std::enable_if<knownType<T>(),bool>::type operator ==( const T &second )const{return size()==1 && front().eq(second);}
-	/**
-	 * Unequality to a basic value.
-	 * Properties are unequal to basic values if:
-	 * - the property contains exactly one value
-	 * - \link Value::eq \endlink is false for that value
-	 * \warning This is using the more fuzzy Value::eq. So the type won't be compared and rounding might be done (which will send a warning to Debug).
-	 * \returns !front().eq(second) if the property contains exactly one value, false otherwise
-	 */
-	template<typename T> typename std::enable_if<knownType<T>(),bool>::type operator !=( const T &second )const{return size()==1 && !front().eq(second);}
 
 	PropertyValue& operator +=( const Value &second );
 	PropertyValue& operator -=( const Value &second );
 	PropertyValue& operator *=( const Value &second );
 	PropertyValue& operator /=( const Value &second );
 
-	PropertyValue operator+( const Value &second )const {PropertyValue lhs(*this); return lhs+=second;}
-	PropertyValue operator-( const Value &second )const {PropertyValue lhs(*this); return lhs-=second;}
-	PropertyValue operator*( const Value &second )const {PropertyValue lhs(*this); return lhs*=second;}
-	PropertyValue operator/( const Value &second )const {PropertyValue lhs(*this); return lhs/=second;}
+	// @todo document different behaviour from named operations (especially that it might change type
+	PropertyValue operator+( const Value &second )const;
+	PropertyValue operator-( const Value &second )const;
+	PropertyValue operator*( const Value &second )const;
+	PropertyValue operator/( const Value &second )const;
 
 	/// streaming output for PropertyValue
 	friend std::ostream& operator<<( std::ostream & out, const isis::util::PropertyValue &s );

@@ -1,7 +1,5 @@
 #include <isis/core/io_application.hpp>
-#include <isis/core/io_factory.hpp>
 #include <isis/math/transform.hpp>
-
 #include <map>
 
 using namespace isis;
@@ -44,13 +42,13 @@ int main( int argc, char **argv )
 	along.set( "x" );
 	flip.set( "both" );
 	app.parameters["along"] = along;
-	app.parameters["along"].needed() = true;
+	app.parameters["along"].setNeeded(true);
 	app.parameters["along"].setDescription( "Flip along the specified axis" );
 	app.parameters["flip"] = flip;
-	app.parameters["flip"].needed() = true;
+	app.parameters["flip"].setNeeded(true);
 	app.parameters["flip"].setDescription( "What has to be flipped" );
 	app.parameters["center"] = false;
-	app.parameters["center"].needed() = false;
+	app.parameters["center"].setNeeded(false);
 	app.parameters["center"].setDescription( "If activated the center of the image will be translated to the of the scanner space and after flipping back to its initial position" );
 	app.init( argc, argv );
 	std::list<data::Image> finImageList;
@@ -59,13 +57,15 @@ int main( int argc, char **argv )
 	for( data::Image & refImage :  app.images ) {
 		std::vector< data::Chunk > delme = refImage.copyChunksToVector( true );
 		isis::data::Image dummy( delme );
-		boost::numeric::ublas::matrix<float> T = boost::numeric::ublas::identity_matrix<float>( 3, 3 );
+
+		//make an identity matrix
+		auto T = util::identityMatrix<float,3>();
 
 		if( dim > 2 ) {
 			dim = math::mapScannerAxisToImageDimension(refImage, static_cast<data::scannerAxis>( dim - 3 ) );
 		}
 
-		T( dim, dim ) *= -1;
+		T[dim][dim] *= -1;
 		data::Image newImage = refImage;
 
 		if ( app.parameters["flip"].toString() == "image" || app.parameters["flip"].toString() == "both" ) {

@@ -17,7 +17,6 @@ macro( build_lib name type source_glob header_glob header_infix deps private_dep
 	#build the library as -shared or as -static
 	add_library( ${name}-${type} ${type} ${SRC_FILES})
 	target_link_libraries( ${name}-${type} PUBLIC ${ext_deps} PRIVATE ${private_deps})
-	target_compile_features(${name}-${type} PUBLIC  cxx_std_17)
 	target_include_directories(${name}-${type} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>) #its the same for all
 	set_target_properties( ${name}-${type} PROPERTIES 
 		SOVERSION ${soversion} VERSION ${version} 

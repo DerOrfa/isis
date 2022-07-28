@@ -82,7 +82,7 @@ struct getMinMaxVisitor {
 	}
 	//specialization for complex
 	template<typename T> std::enable_if_t<std::is_arithmetic_v<T>> operator()( const std::shared_ptr<std::complex<T> > &ref ) {
-		//use compute min/max of magnitute / phase
+		//use compute min/max of magnitude / phase
 		auto any_nan= [](const std::complex<T> &v){return std::isnan(v.real()) || std::isnan(v.imag());};
 		const auto start=std::find_if_not(ref.get(),ref.get()+length,any_nan);
 		if(start==ref.get()+length){

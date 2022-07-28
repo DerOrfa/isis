@@ -5,7 +5,7 @@
 namespace isis{
 namespace util{
 
-#define setName(type,name) template<> std::string _internal::name_visitor::operator()<type>(const type&)const{return name;}
+#define setName(type,name) template<> const char* _internal::name_visitor::operator()<type>(const type&)const{return name;}
 
 setName( bool, "boolean" );
 
@@ -53,33 +53,37 @@ setName( date, "date" );
 #undef setName
 
 namespace _internal{
-template<std::size_t index = std::variant_size_v<ValueTypes>-1> void insert_types(std::map<size_t, std::string> &map,bool arrayTypesOnly) {
-	typedef util::Value::TypeByIndex<index> v_type;
-	if(
-		!arrayTypesOnly || 
-		_internal::variant_index<data::ArrayTypes,std::remove_cv_t<std::shared_ptr<v_type>>>()!=std::variant_npos
-	) //if either we don't want "arrayTypesOnly" or v_type is an array type
-		map[index]=util::typeName<v_type>(); //notice we always use the values type list to map type ids to type names
-	insert_types<index-1>(map,arrayTypesOnly);
+template<KnownValueType TYPE> constexpr auto namer(){
+	return std::make_pair(typeID<TYPE>(),util::typeName<TYPE>());
 }
-template<> void insert_types<0>(std::map<size_t, std::string> &map,bool arrayTypesOnly){
-	typedef util::Value::TypeByIndex<0> v_type;
-	if(
-		!arrayTypesOnly || 
-		_internal::variant_index<data::ArrayTypes,std::remove_cv_t<std::shared_ptr<v_type>>>()!=std::variant_npos
-	) //if either we don't want "arrayTypesOnly" or v_type is an array type
-		map[0]=util::typeName<v_type>(); //notice we always use the values type list to map type ids to type names
+template<typename TYPE> constexpr auto namer() requires KnownValueType<typename TYPE::element_type>{
+	return namer<typename TYPE::element_type>();
 }
+template<typename _First, typename... _Rest>
+std::map<size_t, std::string> map_types(std::variant<_First, _Rest...>*)
+{
+	std::map<size_t, std::string> ret;
+	ret.insert(namer<_First>());
+	if constexpr(sizeof...(_Rest)) {
+		ret.merge(map_types(static_cast<std::variant<_Rest...>*>(nullptr)));
+	}
+	return ret;
 }
 
 }
+
+const std::map<size_t, std::string> &getTypeMap(bool arrayTypesOnly){
+	if(arrayTypesOnly){
+		static const auto ret = _internal::map_types(static_cast<data::ArrayTypes*>(nullptr));
+		return ret;
+	} else {
+		static const auto ret = _internal::map_types(static_cast<util::ValueTypes*>(nullptr));
+		return ret;
+	}
+}
+}
 }
 
-std::map<size_t, std::string> isis::util::getTypeMap(bool arrayTypesOnly){
-	std::map<size_t, std::string> types;
-	_internal::insert_types(types,arrayTypesOnly);
-	return types;
-}
 
 isis::util::date& std::operator+=(isis::util::date& x, const isis::util::duration& y)
 {
@@ -91,7 +95,7 @@ isis::util::date& std::operator-=(isis::util::date& x, const isis::util::duratio
 }
 std::ostream &std::operator<<(std::ostream &out, const isis::util::duration &s)
 {
-	return out<<s.count()<<"ms";
+	return out<<std::chrono::duration_cast<std::chrono::milliseconds>(s).count()<<"ms";
 }
 std::ostream &std::operator<<(std::ostream &out, const isis::util::date &s)
 {
@@ -109,12 +113,12 @@ std::ostream &std::operator<<(std::ostream &out, const isis::util::timestamp &s)
 	}
 	// and maybe with milliseconds
 
-	chrono::milliseconds msec = s.time_since_epoch()-sec;
+	auto msec = std::chrono::duration_cast<chrono::milliseconds>(s.time_since_epoch()-sec);
 	assert(msec.count()<1000);
 	if(msec.count()){
 		if(msec.count()<0)
 			msec+=chrono::seconds(1);
-		out << "+" << std::to_string(msec.count()) << "ms";
+		out << "+" << msec;
 	}
 	return out;
 }

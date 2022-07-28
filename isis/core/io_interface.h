@@ -23,33 +23,31 @@
 #include "istring.hpp"
 #include "progressfeedback.hpp"
 
-namespace isis
-{
-namespace image_io
+namespace isis::image_io
 {
 	/**
 	 * Check if a given property exists in the given PropMap.
 	 * If the property doesn't exist a message will be sent to Log using the given loglevel.
-	 * \returns the property's exact path if it exists, boost::none otherwise
+	 * \returns true is the property exists, false otherwise
 	 */
 	bool hasOrTell( const util::PropertyMap::key_type &name, const util::PropertyMap &object, LogLevel level );
 
 	/**
 	 * \copydoc hasOrTell( const util::PropertyMap::key_type &name, const util::PropertyMap &object, LogLevel level )
-	 * \returns the property if it exists, boost::none otherwise
+	 * \returns std::optional containing the property if one was found
 	 */
 	std::optional<util::PropertyValue> extractOrTell( const util::PropertyMap::key_type &name, util::PropertyMap &object, LogLevel level );
 
 	/**
 	 * Check if one of the given properties exists in the given PropMap.
 	 * If no property exists, a message will be sent to Log using the given loglevel.
-	 * \returns the first found property's exact path, boost::none otherwise
+	 * \returns the first found property's exact path, empty string otherwise
 	 */
 	util::PropertyMap::key_type hasOrTell( const std::initializer_list<util::PropertyMap::key_type> names, const util::PropertyMap &object, LogLevel level );
 
 	/**
 	 * \copydoc hasOrTell( const std::initializer_list<util::PropertyMap::key_type> names, const util::PropertyMap &object, LogLevel level )
-	 * \returns the first found property, boost::none otherwise
+	 * \returns the first found property, empty string otherwise
 	 */
 	std::optional<util::PropertyValue> extractOrTell( const std::initializer_list<util::PropertyMap::key_type> names, util::PropertyMap &object, LogLevel level );
 	
@@ -165,9 +163,8 @@ public:
 	 */
 	virtual void write( const std::list<data::Image> &images, const std::string &filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback );
 
-	virtual ~FileFormat() {}
+	virtual ~FileFormat() = default;
 };
-}
 }
 #else
 typedef struct FileFormat FileFormat;

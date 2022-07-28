@@ -79,11 +79,10 @@ bool, int, double
 	}
 
 
-	template<typename T> std::enable_if_t<std::is_arithmetic<T>::value, py::buffer_info>
-	make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape){
+	template<typename T> py::buffer_info make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape)requires std::is_arithmetic_v<T>{
 		auto [shape_v, strides_v] = make_shape(shape,sizeof(T));
 		return py::buffer_info(
-			const_cast<T*>(ptr.get()),//its ok to drop the const here, we mark the buffer as readonly
+			const_cast<T*>(ptr.get()),//it's ok to drop the const here, we mark the buffer as readonly
 			shape_v,strides_v,
 			true);
 	}
@@ -105,8 +104,18 @@ bool, int, double
 			shape_v, strides_v,
 			true);
 	}
-	template<typename T> std::enable_if_t<!std::is_arithmetic_v<T>, py::buffer_info>
-	make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape){
+	template<typename T, size_t VSIZE>
+	py::buffer_info make_buffer_impl(const std::shared_ptr<util::vector<T,VSIZE>> &ptr,const data::NDimensional<4> &shape){
+		auto [shape_v, strides_v] = make_shape(shape,sizeof(T));
+		strides_v.push_back(shape_v.back()*strides_v.back());
+		shape_v.push_back(VSIZE);
+		return py::buffer_info(
+			const_cast<T*>(ptr->data()),//It's ok to drop the const here, we mark the buffer as readonly
+			shape_v, strides_v,
+			true);
+	}
+	template<typename T>
+	py::buffer_info make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape)requires (!std::is_arithmetic_v<T>){
 		LOG(Runtime,error) << "Sorry nothing but scalar pixel types or color supported (for now)";
 		return {};
 	}
@@ -130,11 +139,11 @@ py::array make_array(data::Image &img)
 		//we have to merge
 		LOG(Debug,info) << "merging " << img.copyChunksToVector(false).size() << " chunks into one image";
 		data::ValueArray whole_image=img.copyAsValueArray();
-		LOG(Runtime,info) << "created " << whole_image.bytesPerElem()*whole_image.getLength()/1024/1024 << "MB buffer from multi chunk image";
+		LOG(Runtime,info) << "created " << util::MSubject(std::to_string(whole_image.bytesPerElem()*whole_image.getLength()/1024/1024)+"MB") << " buffer from multi chunk image";
 
-		return py::array(whole_image.visit(
-			[&img](auto ptr)->py::buffer_info{return _internal::make_buffer_impl(ptr,img);}
-		),_internal::make_capsule(whole_image.getRawAddress()));
+		auto info = whole_image.visit([&img](auto ptr){return _internal::make_buffer_impl(ptr,img);});
+		std::cout << static_cast<uint16_t *>(info.ptr)[1] << std::endl;
+		return py::array(info,_internal::make_capsule(whole_image.getRawAddress()));
 	}
 }
 
@@ -232,7 +241,7 @@ py::dict getMetaDataFromImage(const data::Image &img, bool merge_chunk_data) {
 	return ret;
 }
 
-data::Image makeImage(py::buffer b, py::dict metadata)
+data::Chunk makeChunk(py::buffer b, const py::dict& metadata)
 {
 	static const TypeMap type_map;
 	/* Request a buffer descriptor from Python */
@@ -270,19 +279,22 @@ data::Image makeImage(py::buffer b, py::dict metadata)
 			else
 				LOG(Runtime,error) << "Ignoring key " << prop.first << " as its not a string";
 		}
-
-		auto missing=chk.getMissing();
-		if(missing.empty())
-			return data::Image(chk);
-		else{
-			LOG(Runtime,error) << "Cannot create image, following properties are missing: " << missing;
-			throw std::runtime_error("Invalid metadata!");
-		}
-
+		return chk;
 	} else
 		throw std::runtime_error("Incompatible data type!");
 
 }
+data::Image makeImage(py::buffer b, const py::dict& metadata){
+	auto chk = makeChunk(b,metadata);
+	auto missing=chk.getMissing();
+	if(missing.empty())
+		return {chk};
+	else{
+		LOG(Runtime,error) << "Cannot create image, following properties are missing: " << missing;
+		throw std::runtime_error("Invalid metadata!");
+	}
+}
+
 TypeMap::TypeMap(){
 	fill();
 	emplace_hint(end(),pybind11::format_descriptor<bool>::format(),util::typeID<bool>());

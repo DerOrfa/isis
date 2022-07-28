@@ -148,7 +148,6 @@ BOOST_AUTO_TEST_CASE( ValueArray_minmax_test ){
 			continue;
 		auto array=data::ValueArray::createByID(t.first, randomizer.length);
 		array.visit(randomizer);
-		std::cout << array.typeName() << std::endl;
 		BOOST_CHECK_EQUAL(array.getMinMax(),array.visit(_internal::Maxer()));
 	}
 }

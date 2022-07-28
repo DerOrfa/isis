@@ -12,9 +12,7 @@
 #include <string>
 #include <iostream>
 
-namespace isis
-{
-namespace test
+namespace isis::test
 {
 	using util::PropertyValue;
 
@@ -28,8 +26,8 @@ BOOST_AUTO_TEST_CASE( property_init_test )
 	PropertyValue propA(std::string( "Property01" ), false);
 	BOOST_CHECK_EQUAL( propA.toString(), "Property01" );
 	//  default: not needed
-	BOOST_CHECK( !propA.needed() );
-	BOOST_CHECK( !propZero.needed() );
+	BOOST_CHECK( !propA.isNeeded() );
+	BOOST_CHECK( !propZero.isNeeded() );
 }
 
 BOOST_AUTO_TEST_CASE( property_copy_test )
@@ -49,11 +47,6 @@ BOOST_AUTO_TEST_CASE( property_compare_test )
 	// trivial case - direct compare
 	BOOST_CHECK_EQUAL( PropertyValue( 5 ), 5 );
 	BOOST_CHECK_NE( PropertyValue( 5.4 ), 5 );
-
-	// rounding case
-	BOOST_CHECK_EQUAL( PropertyValue( 5 ), 5.4 ); //rounded to 5
-	BOOST_CHECK_EQUAL( PropertyValue( 6 ), 5.6 ); //rounded to 6
-	
 
 	// compare PropertyValue
 	BOOST_CHECK_EQUAL( PropertyValue( 5 ), PropertyValue( 5 ));
@@ -93,20 +86,19 @@ BOOST_AUTO_TEST_CASE( property_compare_test )
 
 BOOST_AUTO_TEST_CASE( property_operator_test )
 {
-	PropertyValue fivesint,tensint,twosint;
+	PropertyValue fivesint,tensint,twosint,sixesint;
 	for(size_t i=0;i<5;i++){
 		twosint.push_back(2);
 		fivesint.push_back(5);
+		sixesint.push_back(6);
 		tensint.push_back(10);
 	}
 	
-	PropertyValue onesix=fivesint;
-	onesix[0].apply(6);
-	BOOST_CHECK_EQUAL(fivesint.plus(PropertyValue(1)),onesix); //plus operation with single value
+	BOOST_CHECK_EQUAL(fivesint.plus(1),sixesint); //plus operation with single value
 	BOOST_CHECK_EQUAL(fivesint.plus(fivesint),tensint); //plus operation with list
 
 	BOOST_CHECK_EQUAL(tensint.minus(fivesint),fivesint); //minus operation with list
-	BOOST_CHECK_EQUAL(onesix.minus(PropertyValue(1)),fivesint); //minus operation with single value
+	BOOST_CHECK_EQUAL(sixesint.minus(1),fivesint); //minus operation with single value
 
 	BOOST_CHECK_EQUAL(fivesint.multiply(twosint),tensint);
 	BOOST_CHECK_EQUAL(tensint.divide(twosint),fivesint);
@@ -116,17 +108,17 @@ BOOST_AUTO_TEST_CASE( direct_property_operator_test )
 {
 	BOOST_CHECK_EQUAL(PropertyValue(5)*2,10);
 	BOOST_CHECK_EQUAL(PropertyValue(5)*2+5,15);
-	BOOST_CHECK_EQUAL(PropertyValue(5)*.5,0);// 0.5 will be rounded to 0, thus 5*0=0
+	BOOST_CHECK_EQUAL(PropertyValue(5)*.5,2.5);//operatorX() changes type if necessary
 	
 	BOOST_CHECK_EQUAL(PropertyValue(5)/2,2);
 	BOOST_CHECK_EQUAL(PropertyValue(5)/2+5,7);
+	BOOST_CHECK_EQUAL(PropertyValue(5)/2.f+5,7.5);
 	BOOST_CHECK_EQUAL(PropertyValue(5)/5,1);
 	
 	BOOST_CHECK_EQUAL(PropertyValue(5)+2,7);
-	BOOST_CHECK_EQUAL(PropertyValue(5)+.5,5);// 0.5 will be rounded to 0, thus 5*0=0
 
 	BOOST_CHECK_EQUAL(PropertyValue(5)-2,3);
-	BOOST_CHECK_EQUAL(PropertyValue(5)-.5,5);// 0.5 will be rounded to 0, thus 5*0=0
+	BOOST_CHECK_EQUAL(PropertyValue(5)-.5,4.5);
 	
 }
 
@@ -155,5 +147,4 @@ BOOST_AUTO_TEST_CASE( property_list_splice )
 		
 }
 
-}
 }

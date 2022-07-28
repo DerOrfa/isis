@@ -29,6 +29,7 @@ option(ISIS_IOPLUGIN_COMP "Enable proxy plugin for compressed data (gz, bzip2 an
 option(ISIS_IOPLUGIN_TAR "Enable proxy plugin for reading tar archives" ON)
 option(ISIS_IOPLUGIN_FDF "Enable plugin for reading fdf files" OFF)
 option(ISIS_IOPLUGIN_FLIST "Enable proxy plugin which gets filenames from a file or stdin" ON)
+option(ISIS_IOPLUGIN_SFTP "Enable proxy plugin for sftp" OFF)
 
 ############################################################
 # the plugins ...
@@ -167,25 +168,8 @@ endif()
 # COMP proxy plugin
 ############################################################
 if(ISIS_IOPLUGIN_COMP)
-	option(ISIS_IOPLUGIN_COMP_LZMA "Add support for lzma in the plugin for compressed data (xz)" OFF)
-
-	find_package(BZip2)
-	find_package(ZLIB)
-
 	add_library(isisImageFormat_comp_proxy SHARED imageFormat_compressed.cpp)
-	target_include_directories(isisImageFormat_comp_proxy PRIVATE ${BZIP2_INCLUDE_DIR})
-
-	if(ISIS_IOPLUGIN_COMP_LZMA)
-		find_library(LIB_LZMA "lzma")
-		find_path(INCPATH_LZMA "lzma.h")
-
-		target_link_libraries(isisImageFormat_comp_proxy ${LIB_LZMA})
-		target_sources(isisImageFormat_comp_proxy PRIVATE imageFormat_compressed_lzma.cpp)
-		target_compile_definitions(isisImageFormat_comp_proxy PRIVATE "HAVE_LZMA")
-		target_include_directories(isisImageFormat_comp_proxy PRIVATE ${INCPATH_LZMA})
-	endif(ISIS_IOPLUGIN_COMP_LZMA)
-
-	target_link_libraries(isisImageFormat_comp_proxy isis_core ZLIB::ZLIB ${BZIP2_LIBRARIES} Boost::iostreams)
+	target_link_libraries(isisImageFormat_comp_proxy isis_core Boost::iostreams)
 	set(TARGETS ${TARGETS} isisImageFormat_comp_proxy)
 endif()
 
@@ -227,6 +211,20 @@ if(ISIS_IOPLUGIN_DICOM)
 	endif(OPENJPEG_INCLUDE_DIR AND OPENJPEG_INCLUDE_DIR)
 	set(TARGETS ${TARGETS} isisImageFormat_Dicom)
 endif()
+
+if(ISIS_IOPLUGIN_SFTP)
+	find_package(Libssh2 QUIET)
+	add_library(isisImageFormat_sftp SHARED sftp/imageFormat_sftp.cpp sftp/sftpclient.cpp)
+
+	if(TARGET Libssh2::libssh2)#if find_package(Libssh2) above was successful
+		target_link_libraries(isisImageFormat_sftp isis_core Libssh2::libssh2)
+	else(TARGET Libssh2::libssh2)#ok find_package didn't get us a target, lets try to at least find the library
+		find_library(LIB_SSH ssh2)
+		target_link_libraries(isisImageFormat_sftp isis_core ${LIB_SSH} )
+	endif(TARGET Libssh2::libssh2)
+
+	set(TARGETS ${TARGETS} isisImageFormat_sftp)
+endif(ISIS_IOPLUGIN_SFTP)
 
 ###########################################################################
 # prepare all plugins for installation

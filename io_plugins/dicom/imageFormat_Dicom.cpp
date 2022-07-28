@@ -48,8 +48,12 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 		}
 
 		const std::string vr=token.getVR();
+		const uint32_t len=token.getLength();
+		if(len!=0xFFFFFFFF && (token.getPosition()+len>=start+stream_len)){
+			LOG(Runtime,error) << "The length of the token " << token.getName() << " at " << start+token.getPosition() << " goes behind the length of the stream, aborting ...";
+			FileFormat::throwGenericError("invalid data");
+		}
 		if(vr=="OB" || vr=="OW"){
-			const uint32_t len=token.getLength();
 			if(len==0xFFFFFFFF){ // itemized data of undefined length
 				readDataItems(token,data_elements);
 			} else {
@@ -69,7 +73,6 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 		else if(vr=="SQ")
 		{ // http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_7.5.html
 
-            uint32_t len=token.getLength();
 			const auto name=token.getName();
 
 			//get to first item
@@ -92,7 +95,6 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
                         return false;
                 };
             } else {
-                assert(len<stream_len); //sequence length mus be shorter than the stream its in
                 LOG(Debug,verbose_info) << "Sequence of length " << len << " found (" << name << "), looking for items at " << start_sq;
                 delimiter=[start_sq,len](DicomElement &t){return t.getPosition()>=start_sq+len;};
             }
@@ -504,7 +506,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<uti
 		const auto org = object.getValueAs<util::fvector3>( "indexOrigin" );
 		const auto comp = dicomTree.getValueAs<util::fvector3>( util::istring( unknownTagName ) + "(0019,1015)" );
 
-		if ( util::fuzzyEqualV(comp, org ) )
+		if ( comp.fuzzyEqual( org ) )
 			dicomTree.remove( util::istring( unknownTagName ) + "(0019,1015)" );
 		else
 			LOG( Debug, warning )
@@ -699,7 +701,7 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 	}
 
 	//the "real" dataset
-	LOG(Debug,info)<<"Reading dataset begining at " << 144+meta_info_length;
+	LOG(Debug,info)<<"Reading dataset beginning at " << 144+meta_info_length;
 	_internal::DicomElement dataset_token(source,144+meta_info_length,boost::endian::order::little,implicit_vr);
 
 	util::PropertyMap props=_internal::readStream(dataset_token,source.getLength()-144-meta_info_length,data_elements);

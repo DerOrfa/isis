@@ -13,19 +13,14 @@ API_EXCLUDE_BEGIN;
 namespace _internal
 {
 
-template<typename T> T round_impl( double x, boost::mpl::bool_<true> )
-{
-	const double ret( x < 0 ? x - 0.5 : x + 0.5 );
-	return static_cast<T>( ret );
-}
-template<typename T> T round_impl( double x, boost::mpl::bool_<false> )
-{
-	return static_cast<T>( x ); //@todo find a proper way to round from double to floating point (with range check !!)
-}
 template<typename T> T round( double x )
 {
 	static_assert( std::is_arithmetic<T>::value, "Cannot round non-number" );
-	return round_impl<T>( x, boost::mpl::bool_<std::numeric_limits<T>::is_integer>() ); //we do use overloading intead of (forbidden) partial specialization
+	if constexpr(std::is_integral_v<T>){
+		const double ret( x < 0 ? x - 0.5 : x + 0.5 );
+		return static_cast<T>( ret );
+	} else
+		return static_cast<T>( x ); //@todo find a proper way to round from double to floating point (with range check !!)
 }
 
 template<typename SRC, typename DST> void numeric_convert_impl( const SRC *src, DST *dst, size_t count, double scale, double offset )

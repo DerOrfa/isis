@@ -22,29 +22,35 @@ extern std::map<util::istring,std::function<void(LogLevel)>> setters;
 template<const char *NAME>
 class LoggerProxy : public util::MessageHandlerBase
 {
-public:
-	std::map<LogLevel, py::object> severity_map;
-	py::object log;
-	LoggerProxy(LogLevel level) : util::MessageHandlerBase(level)
-	{
-		auto logging = py::module_::import("logging");
-
-		auto handlers = logging.attr("root").attr("handlers");
+private:
+	py::object log=py::none();
+	void init(){
+		const auto handlers = logging.attr("root").attr("handlers");
 		if(handlers.begin() == handlers.end()){ //logging not set up yet
 			_internal::callMember(logging,"basicConfig");
 		}
+
+		auto mylogger = _internal::callMember(logging,"getLogger",std::string("isis.")+NAME);
+		_internal::callMember(mylogger,"setLevel",severity_map[m_level]);
+		log = mylogger.attr("log");
+	}
+public:
+	std::map<LogLevel, py::object> severity_map;
+	py::module_ logging;
+	LoggerProxy(LogLevel level) : util::MessageHandlerBase(level)
+	{
+		logging = py::module_::import("logging");
 
 		severity_map[error] = logging.attr("ERROR");
 		severity_map[warning] = logging.attr("WARNING");
 		severity_map[notice] = logging.attr("INFO");
 		severity_map[info] = logging.attr("INFO");
 		severity_map[verbose_info] = logging.attr("DEBUG");
-		auto mylogger = _internal::callMember(logging,"getLogger",std::string("isis.")+NAME);
-		_internal::callMember(mylogger,"setLevel",severity_map[level]);
-		log = mylogger.attr("log");
 	}
 	void commit(const util::Message &msg) override
 	{
+		if(log.is_none())
+			init();
 		log(severity_map[msg.m_level], msg.merge(""));
 	}
 

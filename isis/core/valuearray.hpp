@@ -10,7 +10,10 @@
 #include "valuearray_minmax.hpp"
 #include "valuearray_iterator.hpp"
 
+
 namespace isis::data{
+
+template<typename T> concept KnownArrayType = util::_internal::variant_idx<std::shared_ptr<T>>(static_cast<ArrayTypes*>(nullptr))<std::variant_size_v<ArrayTypes>;
 
 struct scaling_pair {
 	scaling_pair()=default;
@@ -70,10 +73,6 @@ class ValueArray: protected ArrayTypes
 
 	static const _internal::ValueArrayConverterMap &converters();
 protected:
-	template<typename T> constexpr static void checkType(){
-		constexpr auto id=util::_internal::variant_index<ArrayTypes,std::shared_ptr<std::remove_cv_t<T>>>();
-		static_assert(id!=std::variant_npos,"invalid array type");
-	}
 	/**
 	* Helper to sanitise scaling.
 	* \retval scaling if !(scaling.first.isEmpty() || scaling.second.isEmpty())
@@ -110,8 +109,7 @@ public:
 	 * \param length the length of the used array (ValueArray does NOT check for length,
 	 * this is just here for child classes which may want to check)
 	 */
-	template<typename T> ValueArray(const std::shared_ptr<T> &ptr, size_t length ): ArrayTypes(ptr ), m_length(length) {
-		checkType<T>();
+	template<KnownArrayType T> ValueArray(const std::shared_ptr<T> &ptr, size_t length ): ArrayTypes(ptr ), m_length(length) {
 		static_assert(!std::is_const<T>::value,"ValueArray type must not be const");
 		assert(beginTyped<T>()==ptr.get());
 	}
@@ -123,7 +121,7 @@ public:
 	 * \param length the length of the used array (ValueArray does NOT check for length,
 	 * this is just here for child classes which may want to check)
 	 */
-	template<typename T, typename DELETER=ValueArray::BasicDeleter>
+	template<KnownArrayType T, typename DELETER=ValueArray::BasicDeleter>
 	ValueArray(T *const ptr, size_t length, const DELETER &deleter=DELETER())	: ValueArray(std::shared_ptr<T>(ptr, deleter), length) {}
 
 	/**
@@ -132,7 +130,7 @@ public:
 	 * If the requested length is 0 no memory will be allocated and the pointer will be "empty".
 	 * \param length amount of elements in the new array
 	 */
-	template<typename T, typename DELETER=ValueArray::BasicDeleter>
+	template<KnownArrayType T, typename DELETER=ValueArray::BasicDeleter>
 	static ValueArray make(size_t length, const DELETER &deleter=DELETER() ){
 		return ValueArray(( T * )calloc(length, sizeof( T ) ), length, deleter );
 	} //@todo maybe make it TypedArray
@@ -148,8 +146,7 @@ public:
 
 
 	/// \return true if the stored type is T
-	template<typename T> [[nodiscard]] bool is()const{
-		checkType<T>();
+	template<KnownArrayType T> [[nodiscard]] bool is()const{
 		return std::holds_alternative<std::shared_ptr<T>>(*this);
 	}
 
@@ -243,8 +240,7 @@ public:
 	 * If the conversion fails, an error will be send to CoreLog and the data of the newly created ValueArray will be undefined.
 	 * \returns a the newly created ValueArray
 	 */
-	template<typename T> [[nodiscard]] ValueArray copyAs(const scaling_pair& scaling = scaling_pair() )const {
-		checkType<T>();
+	template<KnownArrayType T> [[nodiscard]] ValueArray copyAs(const scaling_pair& scaling = scaling_pair() )const {
 		return copyByID( util::typeID<T>(), scaling );;
 	}
 
@@ -275,8 +271,7 @@ public:
 	 * \param scaling the scaling to be used (determined automatically if not given)
 	 * \returns either a cheap copy or a newly created ValueArray
 	 */
-	template<typename T> [[nodiscard]] ValueArray as(const scaling_pair &scaling = scaling_pair() )const {
-		checkType<T>();
+	template<KnownArrayType T> [[nodiscard]] ValueArray as(const scaling_pair &scaling = scaling_pair() )const {
 		return convertByID( util::typeID<T>(), scaling );
 	}
 
@@ -344,8 +339,7 @@ public:
 	* Will send an error if T is not the actual type and _ENABLE_CORE_LOG is true.
 	* \returns a constant reference of the ValueArray.
 	*/
-	template<typename T> const std::shared_ptr<T>& castTo() const {
-		checkType<T>();
+	template<KnownArrayType T> const std::shared_ptr<T>& castTo() const {
 		LOG_IF(!is<T>(),Debug,error) << "Trying to cast " << typeName() << " as " << util::typeName<T>() << " this will crash";
 		return std::get<std::shared_ptr<T>>(*this);
 	}
@@ -355,9 +349,8 @@ public:
 	 * Will send an error if T is not the actual type and _ENABLE_CORE_LOG is true.
 	 * \returns a reference of the std::shared_ptr\<T\>.
 	 */
-	template<typename T> std::shared_ptr<T>& castTo() {
+	template<KnownArrayType T> std::shared_ptr<T>& castTo() {
 		LOG_IF(!is<T>(),Debug,error) << "Trying to cast " << typeName() << " as " << util::typeName<T>() << " this will crash";
-		checkType<T>();
 		return std::get<std::shared_ptr<T>>(*this);
 	}
 

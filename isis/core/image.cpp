@@ -220,7 +220,7 @@ bool Image::reIndex(util::slist* rejected)
 
 	//redo lookup table
 	lookup = set.getLookup();
-	std::array<size_t, dims> structure_size; //storage for the size of the chunk structure
+	util::vector<size_t, dims> structure_size; //storage for the size of the chunk structure
 	structure_size.fill( 1 );
 
 	//get primary attributes from geometrically first chunk - will be usefull
@@ -265,7 +265,7 @@ bool Image::reIndex(util::slist* rejected)
 
 		// check the chunks for at least one dimensional break - use that for the size of that dimension
 		for ( unsigned short i = chunk_dims; i < sortDims; i++ ) { //if there are dimensions left figure out their size
-			structure_size[i] = getChunkStride( util::product(structure_size) ) / util::product(structure_size);
+			structure_size[i] = getChunkStride( structure_size.product() ) / structure_size.product();
 			assert( structure_size[i] != 0 );
 		}
 	}
@@ -275,7 +275,7 @@ bool Image::reIndex(util::slist* rejected)
 		structure_size[sortDims] = timesteps; // fill the dim above the top geometric dim with the timesteps
 	}
 
-	assert( util::product(structure_size) == lookup.size() );
+	assert( structure_size.product() == lookup.size() );
 	//Clean up the properties
 	deduplicateProperties();
 
@@ -295,7 +295,7 @@ bool Image::reIndex(util::slist* rejected)
 		if ( found ) {
 			util::fvector3 &vec = *found;
 
-			if( util::sqlen(vec) == 0 ) {
+			if( vec.sqlen() == 0 ) {
 				util::fvector3  v_one{0,0,0};
 				v_one[oneCnt] = 1;
 				LOG( Runtime, error )
@@ -304,7 +304,7 @@ bool Image::reIndex(util::slist* rejected)
 				vec = v_one;
 			}
 
-			util::normalize(vec);
+			vec.normalize();
 		}
 		oneCnt++;
 	}
@@ -340,14 +340,14 @@ bool Image::reIndex(util::slist* rejected)
 		if ( lastV ) {
 			//check the slice vector
 			util::fvector3 distVecNorm = lastV->as<util::fvector3>() - firstV->as<util::fvector3>();
-			LOG_IF( util::len(distVecNorm) == 0, Runtime, error )
-			        << "The distance between the the first and the last chunk is zero. Thats bad, because I'm going to normalize it.";
-			util::normalize(distVecNorm);
+			LOG_IF( distVecNorm.sqlen() == 0, Runtime, error )
+			        << "The distance between the the first and the last chunk is zero. That's bad, because I'm going to normalize it.";
+			distVecNorm.normalize();
 
 			const auto sliceVec = queryValueAs<util::fvector3>( "sliceVec" );
 
 			if ( sliceVec ) {
-				LOG_IF( ! util::fuzzyEqualV( distVecNorm,*sliceVec ), Runtime, info )
+				LOG_IF( ! distVecNorm.fuzzyEqual(*sliceVec) , Runtime, info )
 				        << "The existing sliceVec " << *sliceVec
 				        << " differs from the distance vector between chunk 0 and " << structure_size[2] - 1
 				        << " " << distVecNorm;
@@ -358,7 +358,7 @@ bool Image::reIndex(util::slist* rejected)
 				setValueAs( "sliceVec", distVecNorm); // this should message if there really is a conflict
 			}
 
-			const float avDist = util::len( lastV->as<util::fvector3>() - firstV->as<util::fvector3>()) / ( structure_size[2] - 1 ); //average dist between the middle of two slices
+			const float avDist = ( lastV->as<util::fvector3>() - firstV->as<util::fvector3>()).len() / ( structure_size[2] - 1 ); //average dist between the middle of two slices
 
 			const float sliceDist = avDist - voxeSize[2]; // the gap between two slices
 
@@ -387,7 +387,7 @@ bool Image::reIndex(util::slist* rejected)
 	auto rrow = queryValueAs<util::fvector3>( "rowVec" ),rcolumn = queryValueAs<util::fvector3>( "columnVec" );
 	if(rrow && rcolumn){
 		const util::fvector3 &row=*rrow,&column=*rcolumn;
-		LOG_IF( util::dot( row, column ) > 0.01f, Runtime, warning ) << "The cosine between the columns and the rows of the image is bigger than 0.01";
+		LOG_IF( row.dot( column ) > 0.01f, Runtime, warning ) << "The cosine between the columns and the rows of the image is bigger than 0.01";
 		const util::fvector3 crossVec = util::fvector3({ //we could use their cross-product as sliceVector
 		                                    row[1] * column[2] - row[2] * column[1],
 		                                    row[2] * column[0] - row[0] * column[2],
@@ -396,7 +396,7 @@ bool Image::reIndex(util::slist* rejected)
 		auto sliceVec = queryValueAs<util::fvector3>( "sliceVec" );
 
 		if ( sliceVec ) {
-			LOG_IF( std::acos( util::dot(crossVec, *sliceVec ) )  > 180 / M_PI, Runtime, warning ) //angle more than one degree
+			LOG_IF( std::acos( crossVec.dot(*sliceVec) )  > 180 / M_PI, Runtime, warning ) //angle more than one degree
 			        << "The existing sliceVec " << util::MSubject( sliceVec ) << " differs from the cross product of the row- and column vector " << util::MSubject( crossVec );
 		} else {
 			// We don't know anything about the slice-direction
@@ -489,12 +489,13 @@ void Image::copyToValueArray(ValueArray &dst, scaling_pair scaling ) const
 		std::vector<ValueArray > targets;
 
 		if( lookup.size() > 1 ) { //if there are more than 1 chunks
-			//spliceAt target to have the same parts as the image
+			//splice target to have the same parts as the image
 			targets = dst.splice( lookup.front()->getVolume() );
 		} else {
 			//just put that ValueArray into the list
 			targets.push_back( dst );
 		}
+		assert(targets.size()==lookup.size());
 
 		auto target = targets.begin();
 		for( const std::shared_ptr<Chunk> &ref :  lookup ) { // copy chunks into the parts
@@ -599,7 +600,7 @@ size_t Image::getChunkStride ( size_t base_stride )
 		const util::fvector3 secondV = chunkAt( base_stride ).getValueAs<util::fvector3>( "indexOrigin" );
 		const util::fvector3 dist1 = secondV - firstV;
 
-		if( util::sqlen(dist1) == 0 ) { //if there is no geometric structure anymore - so asume its flat from here on
+		if( dist1.sqlen() == 0 ) { //if there is no geometric structure anymore - so asume its flat from here on
 			LOG( Debug, info ) << "Distance between 0 and " << util::MSubject( base_stride )
 			                   << " is zero. Assuming there are no dimensional breaks anymore. Returning " << util::MSubject( base_stride );
 			return base_stride;
@@ -610,9 +611,9 @@ size_t Image::getChunkStride ( size_t base_stride )
 				const util::fvector3 distThis = nextV - thisV;
 				LOG( Debug, verbose_info )
 				        << "Distance between chunk " << util::MSubject( i ) << " and " << util::MSubject( i + base_stride )
-				        << " is " << util::len(distThis) << ". Distance between 0 and " << util::MSubject( i + base_stride ) << " is " << util::len(distThis);
+				        << " is " << distThis.len() << ". Distance between 0 and " << util::MSubject( i + base_stride ) << " is " << distThis.len();
 
-				if ( util::sqlen(distFirst) <= util::sqlen(distThis) ) { // the next chunk is nearer to the begin than to this => dimensional break => leave
+				if ( distFirst.sqlen() <= distThis.sqlen() ) { // the next chunk is nearer to the begin than to this => dimensional break => leave
 					LOG( Debug, info )
 					        << "Distance between chunk " << util::MSubject( i + base_stride )
 					        << " and 0 is not bigger than the distance between " << util::MSubject( i + base_stride )
@@ -725,7 +726,7 @@ size_t Image::compare( const isis::data::Image &comp ) const
 	if ( getSizeAsVector() != comp.getSizeAsVector() ) {
 		LOG( Runtime, warning ) << "Size of images differs (" << getSizeAsVector() << "/"
 		                        << comp.getSizeAsVector() << "). Adding difference to the result.";
-		ret += util::product( getSizeAsVector() - comp.getSizeAsVector() );
+		ret += ( getSizeAsVector() - comp.getSizeAsVector() ).product();
 	}
 
 	const util::vector4<size_t> firstVec=chunkPtrAt( 0 )->getSizeAsVector(),secondVec=comp.chunkPtrAt( 0 )->getSizeAsVector();
@@ -735,7 +736,7 @@ size_t Image::compare( const isis::data::Image &comp ) const
 	    std::begin(secondVec),std::begin(minVector),
 	    [](size_t first,size_t second){return std::min(first,second);}
 	);
-	const size_t increment = util::product(minVector);
+	const size_t increment = minVector.product();
 
 	for ( size_t i = 0; i < getVolume(); i += increment ) {
 		const size_t nexti = i + increment - 1;
@@ -760,18 +761,18 @@ Image::orientation Image::getMainOrientation()const
 	LOG_IF( ! isValid() || ! clean, Debug, warning ) << "You should not run this on non clean image. Run reIndex first.";
 	auto row = getValueAs<util::fvector3>( "rowVec" );
 	auto column = getValueAs<util::fvector3>( "columnVec" );
-	util::normalize(row);
-	util::normalize(column);
-	LOG_IF( util::dot(row, column ) > 0.01, Runtime, warning ) << "The cosine between the columns and the rows of the image is bigger than 0.01";
+	row.normalize();
+	column.normalize();
+	LOG_IF( row.dot( column ) > 0.01, Runtime, warning ) << "The cosine between the columns and the rows of the image is bigger than 0.01";
 	const util::fvector3 crossVec = util::fvector3({
 	                                    row[1] * column[2] - row[2] * column[1],
 	                                    row[2] * column[0] - row[0] * column[2],
 	                                    row[0] * column[1] - row[1] * column[0]
 	                                });
 	const util::fvector3 x({1, 0}), y({0, 1}), z({0, 0, 1});
-	double a_axial    = std::acos( util::dot(crossVec, z ) ) / M_PI;
-	double a_sagittal = std::acos( util::dot(crossVec, x ) ) / M_PI;
-	double a_coronal  = std::acos( util::dot(crossVec, y ) ) / M_PI;
+	double a_axial    = std::acos( crossVec.dot( z ) ) / M_PI;
+	double a_sagittal = std::acos( crossVec.dot( x ) ) / M_PI;
+	double a_coronal  = std::acos( crossVec.dot( y ) ) / M_PI;
 	bool a_inverse = false, s_inverse = false, c_inverse = false;
 	LOG( Debug, info ) << "Angles to vectors are " << ( a_sagittal * 180 ) << " to x, " << ( a_coronal * 180 ) << " to y and " << ( a_axial * 180 ) << " to z";
 
@@ -822,11 +823,11 @@ size_t Image::getMajorTypeID() const
 	case util::typeID<util::ivector3>():
 	case util::typeID<util::ivector4>():
 		LOG( Debug, info ) << "Using flat typeID for " << getChunk( 0 ).typeName() << " because I cannot use min/max";
-		return getChunk( 0 ).getTypeID();
+		return getChunk(lookup.size()/2).getTypeID();
 		break;
 	default:
 		auto minmax = getMinMax();
-		LOG( Debug, info ) << "Determining  datatype of image with the value range " << minmax;
+		LOG( Debug, info ) << "Determining datatype of image with the value range " << minmax;
 
 		if( minmax.first.typeID() == minmax.second.typeID() ) { // ok min and max are the same type - trivial case
 			return minmax.first.typeID();
@@ -848,7 +849,7 @@ size_t Image::getMajorTypeID() const
 }
 std::string Image::getMajorTypeName() const
 {
-	return util::getTypeMap()[getMajorTypeID()];
+	return util::getTypeMap().at(getMajorTypeID());
 }
 
 bool Image::convertToType( short unsigned int ID, scaling_pair scaling )
@@ -869,9 +870,9 @@ bool Image::convertToType( short unsigned int ID, scaling_pair scaling )
 	auto windowMax = queryProperty("window/max");
 	auto windowMin = queryProperty("window/min");
 	if(windowMax)
-		(*windowMax) = windowMax->multiply(scaling.scale).add(scaling.offset);
+		(*windowMax) = windowMax->multiply(scaling.scale).plus(scaling.offset);
 	if(windowMin)
-		(*windowMin) = windowMin->multiply(scaling.scale).add(scaling.offset);
+		(*windowMin) = windowMin->multiply(scaling.scale).plus(scaling.offset);
 
 	return retVal;
 }

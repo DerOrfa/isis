@@ -8,16 +8,16 @@
 #define BOOST_TEST_MODULE ImageTest
 #define NOMINMAX 1
 #include <boost/test/unit_test.hpp>
+#include <boost/numeric/conversion/converter.hpp>
 #include <isis/core/image.hpp>
 #include <isis/core/io_factory.hpp>
 #include <isis/math/transform.hpp>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <numbers>
 
-namespace isis
-{
-namespace test
+namespace isis::test
 {
 
 template<typename T> data::Chunk genSlice( size_t columns = 4, size_t rows = 4, size_t at = 0, uint32_t acnum = 0 )
@@ -751,28 +751,30 @@ BOOST_AUTO_TEST_CASE ( typed_image_iterator_for_test )
 BOOST_AUTO_TEST_CASE ( image_voxel_value_test )
 {
 	//  get a voxel from inside and outside the image
-	std::list<data::Chunk> chunks;
+	std::list<data::Chunk> chunks{
+		genSlice<uint8_t>( 3, 3, 0, 0 ),
+		genSlice<uint16_t>( 3, 3, 1, 1 ),
+		genSlice<uint32_t>( 3, 3, 2, 2 ),
+	};
 
-	for( int i = 0; i < 3; i++ )
-		chunks.push_back( genSlice<float>( 3, 3, i, i ) );
-
-	std::list<data::Chunk>::iterator k = chunks.begin();
-	( k++ )->voxel<float>( 0, 0 ) = 42.0;
-	( k++ )->voxel<float>( 1, 1 ) = 42.0;
-	( k++ )->voxel<float>( 2, 2 ) = 42;
+	auto k = chunks.begin();
+	( k++ )->voxel<uint8_t>( 0, 0 ) = 42;
+	( k++ )->voxel<uint16_t>( 1, 1 ) = 42;
+	( k++ )->voxel<uint32_t>( 2, 2 ) = 42;
 
 	data::Image img( chunks );
 	BOOST_REQUIRE( img.isClean() );
 	BOOST_CHECK( img.isValid() );
 
+	auto array = img.copyAsValueArray();
 
 	for ( int i = 0; i < 3; i++ ) {
+		//check if voxels have the value they were set to in the chunks
 		BOOST_CHECK_EQUAL( img.getVoxelValue( i, i, i ).as<int>(), 42 );
+		//check result of copyAsValueArray
+		BOOST_CHECK_EQUAL( (array.begin()+i+i*3+i*9)->as<int>(), 42 );
+		//set values
 		img.setVoxelValue( 23, i, i, i );
-	}
-
-	/// check for setting voxel data
-	for ( int i = 0; i < 3; i++ ) {
 		BOOST_CHECK_EQUAL( img.getVoxelValue( i, i, i ).as<int>(), 23 );
 	}
 }
@@ -1236,8 +1238,8 @@ BOOST_AUTO_TEST_CASE( image_transformCoords_test_spm )
 	BOOST_REQUIRE( img.isClean() );
 	BOOST_REQUIRE( img.isValid() );
 	BOOST_REQUIRE( !img.isEmpty() );
-	boost::numeric::ublas::matrix<float> transformMatrix = boost::numeric::ublas::identity_matrix<float>( 3, 3 );
-	transformMatrix( 1, 1 ) = -1;
+	auto transformMatrix = util::identityMatrix<float,3>();
+	transformMatrix[1][1] = -1;
 	BOOST_REQUIRE( math::transformCoords(img, transformMatrix, true ) );
 	float err = 0.0005;
 
@@ -1252,6 +1254,7 @@ BOOST_AUTO_TEST_CASE( image_transformCoords_test_spm )
 
 BOOST_AUTO_TEST_CASE( image_transformCoords_test_common )
 {
+	static const float fPI=std::numbers::pi_v<float>;
 	data::MemChunk<uint8_t> minChunk( 100, 100, 100, 1 );
 	minChunk.setValueAs<uint32_t>( "acquisitionNumber", 1 );
 	minChunk.setValueAs<uint16_t>( "sequenceNumber", 1 );
@@ -1265,23 +1268,24 @@ BOOST_AUTO_TEST_CASE( image_transformCoords_test_common )
 	BOOST_REQUIRE( img.isClean() );
 	BOOST_REQUIRE( img.isValid() );
 	BOOST_REQUIRE( !img.isEmpty() );
-	boost::numeric::ublas::matrix<float> transform = boost::numeric::ublas::zero_matrix<float>( 3, 3 );
 	//here we are flipping all vectors
-	transform( 2, 0 ) = -1;
-	transform( 1, 1 ) = -1;
-	transform( 0, 2 ) = -1;
-	BOOST_REQUIRE( math::transformCoords(img, transform, true ) );
+	util::Matrix3x3<float> flipping = {
+		 0, 0,-1,
+		 0,-1, 0,
+		-1, 0, 0
+	};
+	BOOST_REQUIRE( math::transformCoords(img, flipping, true ) );
 	BOOST_CHECK_EQUAL( img.getValueAs<util::fvector3>( "indexOrigin" ), util::fvector3( {49.5, 49.5, 49.5} ) );
 	BOOST_CHECK_EQUAL( img.getValueAs<util::fvector3>( "rowVec" ), util::fvector3( {0, 0, -1} ) );
 	BOOST_CHECK_EQUAL( img.getValueAs<util::fvector3>( "columnVec" ), util::fvector3( {0, -1, 0} ) );
 	BOOST_CHECK_EQUAL( img.getValueAs<util::fvector3>( "sliceVec" ), util::fvector3( {-1, 0, 0} ) );
 	//here we rotate
-	transform = boost::numeric::ublas::zero_matrix<float>( 3, 3 );
-	transform( 0, 0 ) = 1;
-	transform( 1, 1 ) = transform( 2, 2 ) = cos( 45 * M_PI / 180 );
-	transform( 1, 2 ) = -sin( 45 * M_PI / 180 );
-	transform( 2, 1 ) = sin( 45 * M_PI / 180 );
-	BOOST_REQUIRE( math::transformCoords(img, transform, true ) );
+	util::Matrix3x3<float> rotate = {
+		1,0,0,
+		0,std::cos( 45 * fPI / 180 ),-std::sin( 45 * fPI / 180 ),
+		0,std::sin( 45 * fPI / 180 ), std::cos( 45 * fPI / 180 )
+	};
+	BOOST_REQUIRE( math::transformCoords(img, rotate, true ) );
 	float err = 0.0005;
 	//what we should get
 	util::fvector3 trueIO = util::fvector3( {0, 70.0036, 49.5} );
@@ -1289,12 +1293,16 @@ BOOST_AUTO_TEST_CASE( image_transformCoords_test_common )
 	util::fvector3 trueColumnVec = util::fvector3( {-sqrtf( 2 ) * 0.5f, -sqrtf( 2 ) * 0.5f, 0} );
 	util::fvector3 trueSliceVec = util::fvector3( {-sqrtf( 2 ) * 0.5f, sqrtf( 2 ) * 0.5f, 0} );
 
+	auto computedIO = img.refValueAs<util::fvector3>( "indexOrigin" );
+	auto computedRowVec = img.refValueAs<util::fvector3>( "rowVec" );
+	auto computedColumnVec = img.refValueAs<util::fvector3>( "columnVec" );
+	auto computedSliceVec = img.refValueAs<util::fvector3>( "sliceVec" );
+
 	for ( size_t i = 0; i < 3; i++ ) {
-		//for some reason util::fuzzycheck does not work as expected - so we do it our own way
-		BOOST_CHECK( fabs( trueIO[i] - img.getValueAs<util::fvector3>( "indexOrigin" )[i] ) < err );
-		BOOST_CHECK( fabs( trueRowVec[i] - img.getValueAs<util::fvector3>( "rowVec" )[i] ) < err );
-		BOOST_CHECK( fabs( trueColumnVec[i] - img.getValueAs<util::fvector3>( "columnVec" )[i] ) < err );
-		BOOST_CHECK( fabs( trueSliceVec[i] - img.getValueAs<util::fvector3>( "sliceVec" )[i] ) < err );
+		BOOST_CHECK_LT( fabs( trueIO[i] - computedIO[i] ), err );
+		BOOST_CHECK_LT( fabs( trueRowVec[i] - computedRowVec[i] ) , err );
+		BOOST_CHECK_LT( fabs( trueColumnVec[i] - computedColumnVec[i] ), err );
+		BOOST_CHECK_LT( fabs( trueSliceVec[i] - computedSliceVec[i] ), err );
 	}
 }
 
@@ -1326,5 +1334,4 @@ BOOST_AUTO_TEST_CASE ( image_swapdim_test )
 }
 
 
-} // END namespace test
 } // END namespace isis
