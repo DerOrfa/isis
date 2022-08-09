@@ -1,4 +1,10 @@
-isis (0.9.0) UNRELEASED; urgency=low
+isis (0.9.0+nmu1) UNRELEASED; urgency=low
+
+  * fix dependencies
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Tue, 09 Aug 2022 14:45:44 +0200
+
+isis (0.9.0) stable; urgency=low
 
   * switch to c++20
   * reimplement value arithmetics using c++20
