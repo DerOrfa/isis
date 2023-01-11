@@ -271,7 +271,7 @@ bool ImageFormat_Dicom::parseCSAValue( const std::string &val, const util::Prope
 		map.setValueAs( name, std::stoi( val ));
 	} else if ( vr == "UL" ) {
 		util::stringTo( val, map.refValueAsOr( name, uint32_t()) );
-	} else if ( vr == "CS" or vr == "LO" or vr == "SH" or vr == "UN" or vr == "ST" or vr == "UT" ) {
+	} else if ( vr == "CS" or vr == "LO" or vr == "SH" or vr == "UN" or vr == "ST" or vr == "UT" or vr == "LT") {
 		map.setValueAs( name, val );
 	} else if ( vr == "DS" or vr == "FD" ) {
 		map.setValueAs( name, std::stod( val ));
@@ -279,8 +279,6 @@ bool ImageFormat_Dicom::parseCSAValue( const std::string &val, const util::Prope
 		util::stringTo( val, map.refValueAsOr( name, uint16_t()) );
 	} else if ( vr == "SS" ) {
 		util::stringTo( val, map.refValueAsOr( name, int16_t()) );
-	} else if ( vr == "UT" or vr == "LT" ) {
-		map.setValueAs( name, val);
 	} else {
 		LOG( Runtime, error ) << "Don't know how to parse CSA entry " << std::make_pair( name, val ) << " type is " << util::MSubject( vr );
 		return false;
@@ -339,12 +337,17 @@ namespace _internal{
 			while(end>=start && (*end==' '|| *end==0)) //cut of trailing spaces and zeros
 				--end;
 			std::string ret_s(start,end+1);
-			util::slist ret_list=util::stringToList<std::string>(ret_s,'\\');
-
-			if(ret_list.size()>1)
-				return ret_list;
-			else
+			const std::string VR = e->getVR();
+			if(VR == "LT" or VR == "ST" or VR == "UT") { //"LT", "ST" or "UT" are allowed to contain "\", hence not separator
 				return ret_s;
+			} else {
+				util::slist ret_list=util::stringToList<std::string>(ret_s,'\\');
+
+				if(ret_list.size()>1)
+					return ret_list;
+				else
+					return ret_s;
+			}
 		}
 		return std::optional<util::Value>();
 	}
