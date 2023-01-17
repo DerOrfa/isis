@@ -1,4 +1,13 @@
-isis (0.9.0) UNRELEASED; urgency=low
+isis (0.9.1) unstable; urgency=low
+
+  * when comparing Properties and one side is a list while the other is a 
+    string explicitly compare as string
+  * remove redundant handling of "UT" na d"LT" CSA Values when interpreting 
+    "LT", "ST" and "UT" Values treat them as single string
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Tue, 17 Jan 2023 13:59:35 +0100
+
+isis (0.9.0) unstable; urgency=low
 
   * switch to c++20
   * reimplement value arithmetics using c++20
