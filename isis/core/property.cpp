@@ -22,7 +22,12 @@ bool PropertyValue::isNeeded()const { return m_needed;}
 
 bool PropertyValue::operator== ( const util::PropertyValue &second )const
 {
-	return !isEmpty() && !second.isEmpty() && container==second.container;
+	if(isEmpty() or second.isEmpty())
+		return false;
+	else if(is<slist>() or second.is<slist>()){ // if one side is a list of strings, purely compare as strings
+		return toString() == second.toString();
+	}
+	return container==second.container;
 }
 bool PropertyValue::operator!= ( const util::PropertyValue &second )const
 {
