@@ -186,8 +186,10 @@ class DicomChunk : public data::Chunk
 		}
 
 		// create a chunk of the proper type
-		assert(pixel.getLength()==rows*columns);
-		data::Chunk ret(pixel,columns,rows);
+		auto frames = props.getValueAsOr("NumberOfFrames",1);
+		LOG(Debug,verbose_info) << "red " << pixel.getLength() << " bytes of data in " << props.getValueAsOr("NumberOfFrames",1) << " frames";
+		assert(pixel.getLength()==rows*columns*frames);
+		data::Chunk ret(pixel,columns,rows,frames);
 		return ret;
 	}
 public:
