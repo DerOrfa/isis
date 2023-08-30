@@ -1,5 +1,5 @@
 option(USE_SYSTEM_PYBIND "Use the system's pybind11 (instead of downloading it)" OFF)
-set(PYBIND11_FINDPYTHON)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
 
 if(USE_SYSTEM_PYBIND)
     find_package(pybind11 CONFIG REQUIRED)

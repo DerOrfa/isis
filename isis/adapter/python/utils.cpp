@@ -79,11 +79,10 @@ bool, int, double
 	}
 
 
-	template<typename T> std::enable_if_t<std::is_arithmetic<T>::value, py::buffer_info>
-	make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape){
+	template<typename T> py::buffer_info make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape)requires std::is_arithmetic_v<T>{
 		auto [shape_v, strides_v] = make_shape(shape,sizeof(T));
 		return py::buffer_info(
-			const_cast<T*>(ptr.get()),//its ok to drop the const here, we mark the buffer as readonly
+			const_cast<T*>(ptr.get()),//it's ok to drop the const here, we mark the buffer as readonly
 			shape_v,strides_v,
 			true);
 	}
@@ -105,8 +104,18 @@ bool, int, double
 			shape_v, strides_v,
 			true);
 	}
-	template<typename T> std::enable_if_t<!std::is_arithmetic_v<T>, py::buffer_info>
-	make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape){
+	template<typename T, size_t VSIZE>
+	py::buffer_info make_buffer_impl(const std::shared_ptr<util::vector<T,VSIZE>> &ptr,const data::NDimensional<4> &shape){
+		auto [shape_v, strides_v] = make_shape(shape,sizeof(T));
+		strides_v.push_back(shape_v.back()*strides_v.back());
+		shape_v.push_back(VSIZE);
+		return py::buffer_info(
+			const_cast<T*>(ptr->data()),//It's ok to drop the const here, we mark the buffer as readonly
+			shape_v, strides_v,
+			true);
+	}
+	template<typename T>
+	py::buffer_info make_buffer_impl(const std::shared_ptr<T> &ptr,const data::NDimensional<4> &shape)requires (!std::is_arithmetic_v<T>){
 		LOG(Runtime,error) << "Sorry nothing but scalar pixel types or color supported (for now)";
 		return {};
 	}
@@ -130,11 +139,10 @@ py::array make_array(data::Image &img)
 		//we have to merge
 		LOG(Debug,info) << "merging " << img.copyChunksToVector(false).size() << " chunks into one image";
 		data::ValueArray whole_image=img.copyAsValueArray();
-		LOG(Runtime,info) << "created " << whole_image.bytesPerElem()*whole_image.getLength()/1024/1024 << "MB buffer from multi chunk image";
+		LOG(Runtime,info) << "created " << util::MSubject(std::to_string(whole_image.bytesPerElem()*whole_image.getLength()/1024/1024)+"MB") << " buffer from multi chunk image";
 
-		return py::array(whole_image.visit(
-			[&img](auto ptr)->py::buffer_info{return _internal::make_buffer_impl(ptr,img);}
-		),_internal::make_capsule(whole_image.getRawAddress()));
+		auto info = whole_image.visit([&img](auto ptr){return _internal::make_buffer_impl(ptr,img);});
+		return py::array(info,_internal::make_capsule(whole_image.getRawAddress()));
 	}
 }
 

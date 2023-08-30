@@ -423,7 +423,7 @@ public:
 	 * \note If the datatype is a vector the minimum/maximum across all elements is computed
 	 * \returns a pair of T storing the minimum and maximum values of the image.
 	 */
-	template<KnownValueType T> std::pair<T, T> getMinMaxAs() const {
+	template<util::KnownValueType T> std::pair<T, T> getMinMaxAs() const {
 		auto minmax = getMinMax();
 		return std::make_pair ( minmax.first.as<T>(), minmax.second.as<T>() );
 	}
@@ -488,7 +488,7 @@ public:
 	 * \returns a MemChunk containing the voxeldata and the properties of the Image
 	 */
 	template<typename T> MemChunk<T> copyAsMemChunk() const {
-		const util::vector4<size_t> size = getSizeAsVector();
+		const auto size = getSizeAsVector();
 		data::MemChunk<T> ret ( size[0], size[1], size[2], size[3] );
 		copyToMem<T> ( &ret.template voxel<T>( 0, 0 ), ret.getVolume() );
 		static_cast<util::PropertyMap &>( ret ) = static_cast<const util::PropertyMap &>( getChunkAt( 0 ) );

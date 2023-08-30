@@ -22,7 +22,6 @@
 #include <set>
 #include <algorithm>
 #include <optional>
-#include <boost/property_tree/ptree_fwd.hpp>
 #include <ostream>
 
 namespace isis::util
@@ -109,8 +108,6 @@ protected:
 	/// true when the Property is needed and empty
 	static const leaf_predicate invalidP;
 	static const leaf_predicate emptyP;
-
-	void readPtree(const boost::property_tree::ptree &tree, bool skip_empty=true);
 
 	API_EXCLUDE_BEGIN;
 	/////////////////////////////////////////////////////////////////////////////////////////

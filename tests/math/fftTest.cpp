@@ -9,7 +9,7 @@
 namespace isis::test
 {
 
-BOOST_AUTO_TEST_CASE( sinus_fft_test )
+BOOST_AUTO_TEST_CASE( sinus_fft_test_single )
 {
 	math::enableLog<util::DefaultMsgPrint>(info);
 	int xsize=256,ysize=256,zsize=16;
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE( sinus_fft_test )
 			}
 }
 
-BOOST_AUTO_TEST_CASE( sinus_fftw_test )
+BOOST_AUTO_TEST_CASE( sinus_fft_test_double )
 {
 	math::enableLog<util::DefaultMsgPrint>(info);
 	int xsize=256,ysize=256,zsize=16;

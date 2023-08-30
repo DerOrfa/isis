@@ -169,8 +169,8 @@ public:
 		for( size_t i = 0; i < oldChunks.size(); ++i, ++newCH ) {
 			// check for the orientation separately
 			if(
-			    util::fuzzyEqualV(newCH->getValueAs<util::fvector3>( "columnVec" ), oldChunks[i].getValueAs<util::fvector3>( "columnVec" ) ) == false ||
-			    util::fuzzyEqualV(newCH->getValueAs<util::fvector3>( "rowVec" ), oldChunks[i].getValueAs<util::fvector3>( "rowVec" ) ) == false
+				!newCH->getValueAs<util::fvector3>("columnVec").fuzzyEqual(oldChunks[i].getValueAs<util::fvector3>("columnVec")) ||
+				!newCH->getValueAs<util::fvector3>("rowVec").fuzzyEqual(oldChunks[i].getValueAs<util::fvector3>("rowVec"))
 			) {
 				throwGenericError( "orientation is not equal" );
 			} else {

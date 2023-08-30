@@ -14,22 +14,23 @@ macro( makeTest filename)
 
 	add_executable( ${testname} ${filename} )
 	target_link_libraries( ${testname} isis_core Boost::unit_test_framework )
+	if(BOOST_IS_SHARED)
+		target_compile_definitions(${testname} PRIVATE "BOOST_TEST_DYN_LINK=1")
+	endif()
 	add_test(NAME ${testname} COMMAND ${testname})
 endmacro()
 
 if(BUILD_TESTING)
 	message(STATUS "Unit tests will be built (run with \"make test\")")
-
-	if(USE_CONAN) #conan uses static boost son no need to check
-		message(STATUS "Using conan. I'll assume boost is a static library / won't use \"-DBOOST_TEST_DYN_LINK\"")
-	else(USE_CONAN)
+	if(NOT DEFINED BOOST_IS_SHARED)
 		string(REGEX MATCH "\\.[aA]$" DOT_A ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 		string(REGEX MATCH "\\.[lL][iI][bB]$" DOT_LIB ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
 
 		if(DOT_LIB OR DOT_A)
+			set(BOOST_IS_SHARED OFF)
 			message(STATUS "${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} seems to be a static library wont use \"-DBOOST_TEST_DYN_LINK\"")
 		else()
-			add_definitions("-DBOOST_TEST_DYN_LINK")
+			set(BOOST_IS_SHARED ON)
 			message(STATUS "${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} seems to be a dynamic library adding \"-DBOOST_TEST_DYN_LINK\"")
 		endif()
 	endif()

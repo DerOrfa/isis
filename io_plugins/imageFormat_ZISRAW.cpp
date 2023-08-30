@@ -425,10 +425,10 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 					auto &current_layer = z.second;
 					assert(!current_layer.empty());
 					auto bounds=SubBlock::getBoundaries(current_layer);
-					std::array<size_t, 2> size{bounds["X"].size(),bounds["Y"].size()};
+					util::vector<size_t, 2> size{bounds["X"].size(),bounds["Y"].size()};
 					assert(bounds["Z"].size()==1); // must be just one slice
 
-					const size_t estimated_size=util::product(size)*PixelSizeMap.at(current_layer.front().DirectoryEntry.PixelType)/(1024*1024);
+					const size_t estimated_size=size.product()*PixelSizeMap.at(current_layer.front().DirectoryEntry.PixelType)/(1024*1024);
 					if(checkDialect(dialects,"max16G") && estimated_size> 16*1024){
 						LOG(Runtime,notice) << "Skipping " << size << " image as its resulting in-memory size " << std::to_string(estimated_size)+"MB" << " would exceed the limit of 16G";
 					}else if(checkDialect(dialects,"max8G") && estimated_size> 8*1024){

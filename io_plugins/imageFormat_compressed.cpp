@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <thread>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
@@ -49,11 +50,8 @@ public:
 class ImageFormat_Compressed: public FileFormat
 {
 protected:
-	std::list<util::istring> suffixes( io_modes modes = both )const override {
+	[[nodiscard]] std::list<util::istring> suffixes( io_modes modes = both )const override {
 		std::list<util::istring> formats{"gz","bz2","Z","xz"};
-#ifdef HAVE_LZMA
-		formats.push_back("xz");
-#endif //HAVE_LZMA
 		if( modes != write_only )
 			formats.insert(formats.end(), {"tgz", "tbz", "taz"});
 
@@ -75,14 +73,20 @@ public:
 			if( format == "gz" )in->push( boost::iostreams::gzip_decompressor() );
 			else if( format == "bz2" )in->push( boost::iostreams::bzip2_decompressor() );
 			else if( format == "Z" )in->push( boost::iostreams::zlib_decompressor() );
-			else if( format == "xz" )in->push( boost::iostreams::lzma_decompressor() );
-			else { // ok, no idea what's going on, cry for mammy
+			else if( format == "xz" ){
+				const decltype(boost::iostreams::lzma_params::threads) threads=std::thread::hardware_concurrency();
+				boost::iostreams::lzma_params params{
+					boost::iostreams::lzma::default_compression,
+					std::min<decltype(threads)>(threads?:1, 20) //never use more than 20 threads
+				};
+				in->push( boost::iostreams::lzma_decompressor(params) );
+			} else { // ok, no idea what's going on, cry for mammy
 				throwGenericError( "Cannot determine the compression format" );
 			}
 		}
 		return std::move(in);
 	}
-	std::string getName()const override {return "(de)compression proxy for other formats";}
+	[[nodiscard]] std::string getName()const override {return "(de)compression proxy for other formats";}
 
 	std::list<data::Chunk> load ( std::streambuf *source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> progress ) override {
 		

@@ -384,15 +384,15 @@ public:
 /////////////////////////////////////////////////////////////////////////////
 // vector to vector version - using numeric_convert on each element with a global scaling
 /////////////////////////////////////////////////////////////////////////////
-template<typename SRC, typename DST, int NUM> class VectorArrayConverter : public ValueArrayGenerator<std::array<SRC,NUM>, std::array<DST,NUM> >
+template<typename SRC, typename DST, int NUM> class VectorArrayConverter : public ValueArrayGenerator<util::vector<SRC,NUM>, util::vector<DST,NUM> >
 {
         VectorArrayConverter() {
             if(std::is_same_v<SRC,DST>){
-                LOG(Debug, verbose_info ) << "Creating trivial copy converter for " << util::typeName<std::array<SRC,NUM>>();
+                LOG(Debug, verbose_info ) << "Creating trivial copy converter for " << util::typeName<util::vector<SRC,NUM>>();
             } else {
                 LOG(Debug, verbose_info )
                     << "Creating vector converter from "
-                    << util::typeName<std::array<SRC,NUM>>() << " to " << util::typeName<std::array<DST,NUM>>();
+                    << util::typeName<util::vector<SRC,NUM>>() << " to " << util::typeName<util::vector<DST,NUM>>();
             }
 	};
 public:
@@ -401,8 +401,8 @@ public:
 		return std::shared_ptr<const ValueArrayConverterBase>( ret );
 	}
 	void convert(const ValueArray &src, ValueArray &dst, const scaling_pair &scaling )const final{
-		const SRC *sp = &src.castTo<std::array<SRC,NUM> >()->operator[](0);
-		DST *dp = &dst.castTo<std::array<DST,NUM> >()->operator[](0);
+		const SRC *sp = &src.castTo<util::vector<SRC,NUM> >()->operator[](0);
+		DST *dp = &dst.castTo<util::vector<DST,NUM> >()->operator[](0);
 		NumConvImpl<SRC, DST, std::is_same_v<SRC,DST>>::convert( sp, dp, scaling, getConvertSize( src, dst ) * NUM );
 	}
 	[[nodiscard]] scaling_pair getScaling(const util::Value &min, const util::Value &max )const final{

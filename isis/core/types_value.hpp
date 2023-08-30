@@ -24,50 +24,13 @@ typedef std::variant<
  * @return std::variant_npos otherwise
  */
 template<typename T> static constexpr size_t typeID(){
-	return _internal::variant_index<ValueTypes,std::remove_cv_t<T>>();
+	auto idx = _internal::variant_idx<T>(static_cast<ValueTypes*>(nullptr));
+	return idx<std::variant_size_v<ValueTypes>?idx:std::variant_npos;
 }
-/**
- * Check if T is a known type.
- * @tparam T the type to be checked
- * @return true if T is a known type
- * @return false otherwise
- */
-template<typename T> static constexpr bool knownType(){
-	const auto id=typeID<T>();
-	return id!=std::variant_npos;
+template<typename T> static const char* typeName() requires (typeID<T>()!=std::variant_npos){
+	return _internal::name_visitor().operator()(T());
 }
 
-/**
- * Templated pseudo struct to check if a type supports an operation at compile time.
- * The compile-time flags are:
- * - \c \b lt can compare less-than
- * - \c \b gt can compare greater-than
- * - \c \b mult multiplication is applicable
- * - \c \b div division is applicable
- * - \c \b plus addition is applicable
- * - \c \b minus substraction is applicable
- * - \c \b negate negation is applicable
- */
-template<typename T> struct has_op:
-	_internal::ordered<knownType<T>()>,
-	_internal::additive<knownType<T>()>,
-	_internal::multiplicative<knownType<T>()>
-	{};
-
-/// @cond _internal
-template<> struct has_op<Selection>:_internal::ordered<true>,_internal::additive<false>,_internal::multiplicative<false>{};
-template<> struct has_op<std::string>:_internal::ordered<true>,_internal::multiplicative<false>{static const bool plus=true,minus=false;};
-
-// cannot multiply time
-template<> struct has_op<date>:_internal::ordered<true>,_internal::additive<true>,_internal::multiplicative<false>{};
-template<> struct has_op<timestamp>:_internal::ordered<true>,_internal::additive<true>,_internal::multiplicative<false>{};
-
-
-// multidim is not ordered
-template<typename T> struct has_op<std::list<T> >:_internal::ordered<true>,_internal::additive<false>,_internal::multiplicative<false>{};
-template<typename T> struct has_op<color<T> >:_internal::ordered<false>,_internal::additive<false>,_internal::multiplicative<false>{};
-template<typename T> struct has_op<std::complex<T> >:_internal::ordered<false>,_internal::additive<true>,_internal::multiplicative<true>{};
-/// @endcond
 }
 
 // define +/- operations for timestamp and date

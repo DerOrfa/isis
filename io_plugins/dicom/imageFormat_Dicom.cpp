@@ -186,8 +186,10 @@ class DicomChunk : public data::Chunk
 		}
 
 		// create a chunk of the proper type
-		assert(pixel.getLength()==rows*columns);
-		data::Chunk ret(pixel,columns,rows);
+		auto frames = props.getValueAsOr("NumberOfFrames",1);
+		LOG(Debug,verbose_info) << "red " << pixel.getLength() << " bytes of data in " << props.getValueAsOr("NumberOfFrames",1) << " frames";
+		assert(pixel.getLength()==rows*columns*frames);
+		data::Chunk ret(pixel,columns,rows,frames);
 		return ret;
 	}
 public:
@@ -506,7 +508,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<uti
 		const auto org = object.getValueAs<util::fvector3>( "indexOrigin" );
 		const auto comp = dicomTree.getValueAs<util::fvector3>( util::istring( unknownTagName ) + "(0019,1015)" );
 
-		if ( util::fuzzyEqualV(comp, org ) )
+		if ( comp.fuzzyEqual( org ) )
 			dicomTree.remove( util::istring( unknownTagName ) + "(0019,1015)" );
 		else
 			LOG( Debug, warning )

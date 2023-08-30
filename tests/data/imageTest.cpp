@@ -8,6 +8,7 @@
 #define BOOST_TEST_MODULE ImageTest
 #define NOMINMAX 1
 #include <boost/test/unit_test.hpp>
+#include <boost/numeric/conversion/converter.hpp>
 #include <isis/core/image.hpp>
 #include <isis/core/io_factory.hpp>
 #include <isis/math/transform.hpp>
@@ -750,28 +751,30 @@ BOOST_AUTO_TEST_CASE ( typed_image_iterator_for_test )
 BOOST_AUTO_TEST_CASE ( image_voxel_value_test )
 {
 	//  get a voxel from inside and outside the image
-	std::list<data::Chunk> chunks;
+	std::list<data::Chunk> chunks{
+		genSlice<uint8_t>( 3, 3, 0, 0 ),
+		genSlice<uint16_t>( 3, 3, 1, 1 ),
+		genSlice<uint32_t>( 3, 3, 2, 2 ),
+	};
 
-	for( int i = 0; i < 3; i++ )
-		chunks.push_back( genSlice<float>( 3, 3, i, i ) );
-
-	std::list<data::Chunk>::iterator k = chunks.begin();
-	( k++ )->voxel<float>( 0, 0 ) = 42.0;
-	( k++ )->voxel<float>( 1, 1 ) = 42.0;
-	( k++ )->voxel<float>( 2, 2 ) = 42;
+	auto k = chunks.begin();
+	( k++ )->voxel<uint8_t>( 0, 0 ) = 42;
+	( k++ )->voxel<uint16_t>( 1, 1 ) = 42;
+	( k++ )->voxel<uint32_t>( 2, 2 ) = 42;
 
 	data::Image img( chunks );
 	BOOST_REQUIRE( img.isClean() );
 	BOOST_CHECK( img.isValid() );
 
+	auto array = img.copyAsValueArray();
 
 	for ( int i = 0; i < 3; i++ ) {
+		//check if voxels have the value they were set to in the chunks
 		BOOST_CHECK_EQUAL( img.getVoxelValue( i, i, i ).as<int>(), 42 );
+		//check result of copyAsValueArray
+		BOOST_CHECK_EQUAL( (array.begin()+i+i*3+i*9)->as<int>(), 42 );
+		//set values
 		img.setVoxelValue( 23, i, i, i );
-	}
-
-	/// check for setting voxel data
-	for ( int i = 0; i < 3; i++ ) {
 		BOOST_CHECK_EQUAL( img.getVoxelValue( i, i, i ).as<int>(), 23 );
 	}
 }

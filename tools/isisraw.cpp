@@ -29,27 +29,27 @@ int main( int argc, char *argv[] )
 	app.addOutput( app.parameters );
 
 	app.parameters["byteswap"] = false;
-	app.parameters["byteswap"].needed() = false;
+	app.parameters["byteswap"].setNeeded(false);
 	app.parameters["byteswap"].setDescription( "swap byte endianess when reading raw data (ignored when read_repn is not given)" );
 
 	app.parameters["offset"] = uint64_t();
-	app.parameters["offset"].needed() = false;
+	app.parameters["offset"].setNeeded(false);
 	app.parameters["offset"].setDescription( "offset in bytes where to start inside the raw file" );
 
 	app.parameters["read_repn"] = app.parameters["repn"]; // steal the supported data types from repn
-	app.parameters["read_repn"].needed() = false;
+	app.parameters["read_repn"].setNeeded(false);
 	app.parameters["read_repn"].setDescription( "data type of the raw file (if given, mode for reading raw is assumed)" );
 
 	app.parameters["rawdims"] = util::ivector4( {0, 1, 1, 1} );
-	app.parameters["rawdims"].needed() = false;
+	app.parameters["rawdims"].setNeeded(false);
 	app.parameters["rawdims"].setDescription( "the dimensions of the raw image, at least number of columns must be given (ignored when read_repn is not given)" );
 
 	app.parameters["voxel"] = util::fvector3( {1, 1, 1} );
-	app.parameters["voxel"].needed() = false;
+	app.parameters["voxel"].setNeeded(false);
 	app.parameters["voxel"].setDescription( "the size of the voxels in each direction" );
 
 	app.parameters["origin"] = util::fvector3( );
-	app.parameters["origin"].needed() = false;
+	app.parameters["origin"].setNeeded(false);
 	app.parameters["origin"].setDescription( "the position of the first voxel in isis space" );
 
 	app.addExample( "-in my_file.nii -out /tmp/raw.file -repn u8bit", "Write the image data of a nifti file in a u8bit raw file" );
@@ -67,7 +67,7 @@ int main( int argc, char *argv[] )
 		util::ivector4 dims = app.parameters["rawdims"];
 		data::ValueArray dat;
 
-		if( util::product(dims) == 0 ) {
+		if( dims.product() == 0 ) {
 			data::ValueArray dat = src.atByID(rrepn, offset, 0, app.parameters["byteswap"] );
 
 			const size_t sidelength = sqrt( dat.getLength() );
@@ -81,7 +81,7 @@ int main( int argc, char *argv[] )
 				exit( -1 );
 			}
 		} else {
-			dat = src.atByID( rrepn, offset, util::product(dims), app.parameters["byteswap"] );
+			dat = src.atByID( rrepn, offset, dims.product(), app.parameters["byteswap"] );
 		}
 
 		LOG( RawLog, notice ) << "Reading " <<  dat.getLength()*dat.bytesPerElem() / ( 1024.*1024. ) << " MBytes from " << infiles.front();
@@ -95,7 +95,7 @@ int main( int argc, char *argv[] )
 		app.autoload( true ); //load "normal" images
 
 		const std::list< std::string > fnames = FakedRawFormat().makeUniqueFilenames( app.images, app.parameters["out"] );
-		std::list< std::string >::const_iterator iOut = fnames.begin();
+		auto iOut = fnames.begin();
 		const util::Selection wrepn = app.parameters["repn"];
 
 		for( const data::Image & img :  app.images ) {
@@ -104,7 +104,7 @@ int main( int argc, char *argv[] )
 			const size_t imgsize = img.getVolume() * repnsize;
 			const std::string filename = *( iOut++ );
 
-			LOG( RawLog, notice ) << "Writing " << imgsize / ( 1024.*1024. ) << " MBytes from an " << img.getSizeAsString() << "-image as " << util::getTypeMap()[sRepn] << " to " << filename;
+			LOG( RawLog, notice ) << "Writing " << imgsize / ( 1024.*1024. ) << " MBytes from an " << img.getSizeAsString() << "-image as " << util::getTypeMap().at(sRepn) << " to " << filename;
 			data::FilePtr f( filename, imgsize + offset, true );
 			data::ValueArray dat = f.atByID(sRepn, offset ); //if repn is unset use the type of the image
 			img.copyToValueArray( dat );

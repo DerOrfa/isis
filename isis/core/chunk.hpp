@@ -60,7 +60,7 @@ public:
 	}
 	template<typename TYPE> TYPE &voxel( const std::array<size_t,4> &pos) {
 		LOG_IF( ! isInRange( pos ), Debug, isis::error )
-		        << "Index " << util::vector4<size_t>( pos ) << " is out of range (" << getSizeAsString() << ")";
+		        << "Index " << pos << " is out of range (" << getSizeAsString() << ")";
 		return at<TYPE>(getLinearIndex( pos ));
 	}
 
@@ -76,7 +76,7 @@ public:
 	}
 	template<typename TYPE> const TYPE &voxel( const std::array<size_t,4> &pos )const {
 		LOG_IF(!isInRange( pos ), Debug, isis::error )
-		    << "Index " << util::vector4<size_t>( pos ) << " is out of range (" << getSizeAsString() << ")";
+		    << "Index " << pos << " is out of range (" << getSizeAsString() << ")";
 
 		return at<TYPE>(getLinearIndex( pos ));
 	}
@@ -98,7 +98,7 @@ public:
 	{
 		std::visit([&](auto ptr){
 			auto vox_ptr = ptr.get();
-			const util::vector4<size_t> imagesize = getSizeAsVector();
+			const auto imagesize = getSizeAsVector();
 			util::vector4<size_t> pos;
 
 			for( pos[timeDim] = 0; pos[timeDim] < imagesize[timeDim]; pos[timeDim]++ )
