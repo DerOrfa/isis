@@ -50,7 +50,7 @@ struct tag_id_visitor
 bool DicomElement::extendedLength()const{
 	if(implicit_vr)return false;//there is no extendedLength on implicit vr
 	const std::string vr=getVR();
-	// those vr have a additional 32bit length after a 0x0000 where the length normaly is supposed to be
+	// those vr have an additional 32bit length after a 0x0000 where the length normally is supposed to be
 	return vr=="OB" || vr=="OW" || vr== "OF" || vr== "SQ" || vr== "UT" || vr== "UN";
 }
 uint_fast8_t DicomElement::tagLength()const{ //the actual length of the tag itself
@@ -58,7 +58,7 @@ uint_fast8_t DicomElement::tagLength()const{ //the actual length of the tag itse
 }
 size_t DicomElement::getLength()const{
 	if(getID32()==0xFFFEE000){
-		return source.at<uint16_t>(position+4,1,endian_swap())[0];
+		return source.at<uint32_t>(position+4,1,endian_swap())[0];
 	} else if(extendedLength()){
 		assert(std::visit(tag_length_visitor(),tag)==0);
 		return source.at<uint32_t>(position+8,1,endian_swap())[0];
@@ -144,7 +144,7 @@ std::optional<util::Value> DicomElement::getValue(std::string vr){
 		LOG_IF(!ret,Runtime,verbose_info) << "Failed to parse " << vr << "-tag " << getName() << " "  << getIDString() << " at position " << position;
 	} else {
 		LOG_IF(vr.empty(),Debug,error) << "Could not find an interpreter for the VR " << vr << " of " << getName() << "/" << getIDString() << " at " << position ;
-		LOG_IF(!vr.empty(),Debug,error) << "Ignoring entry " << getName() << "/" << getIDString() << " at " << position << " because of empty VR";
+		LOG_IF(!vr.empty(),Debug,error) << "Ignoring entry " << getName() << "/" << getIDString() << " at " << position << " because of invalid VR";
 	}
 
 	return ret;
@@ -322,6 +322,13 @@ namespace _internal{
 		T *v=(T*)e->data();
 		return e->endian_swap() ? data::endianSwap(*v):*v;
     }
+	util::Value tag_generate(const DicomElement *e){
+		assert(e->getLength()==4);
+		auto numbers=list_generate<uint16_t, int32_t>(e).as<util::ilist>();
+		std::ostringstream buffer;
+		buffer << std::hex << "(" << numbers.front() << "," << numbers.back() << ")";
+		return buffer.str();
+	}
     std::optional<util::Value> string_generate(const DicomElement *e){
 		//@todo http://dicom.nema.org/Dicom/2013/output/chtml/part05/sect_6.2.html#note_6.1-2-1
 		if(e->getLength()){
@@ -442,6 +449,7 @@ namespace _internal{
 	    {"TM",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?std::make_optional(prop->copyByID(util::typeID<util::timestamp>())):prop;},nullptr,0}},
 	    {"DT",{[](const _internal::DicomElement *e){auto prop=string_generate(e); return prop?std::make_optional(prop->copyByID(util::typeID<util::timestamp>())):prop;},nullptr,0}},
 	    {"AS",{parse_AS,nullptr,0}},
+		{"AT",{tag_generate, nullptr,2*sizeof(uint16_t)}},
 	    //fallback for unknown
 	    {"--",{bytes_as_strings,nullptr,0}}
 	};

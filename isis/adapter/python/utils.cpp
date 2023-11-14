@@ -142,7 +142,6 @@ py::array make_array(data::Image &img)
 		LOG(Runtime,info) << "created " << util::MSubject(std::to_string(whole_image.bytesPerElem()*whole_image.getLength()/1024/1024)+"MB") << " buffer from multi chunk image";
 
 		auto info = whole_image.visit([&img](auto ptr){return _internal::make_buffer_impl(ptr,img);});
-		std::cout << static_cast<uint16_t *>(info.ptr)[1] << std::endl;
 		return py::array(info,_internal::make_capsule(whole_image.getRawAddress()));
 	}
 }
