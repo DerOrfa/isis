@@ -36,29 +36,8 @@ template<typename T> static const char* typeName() requires (typeID<T>()!=std::v
 // define +/- operations for timestamp and date
 /// @cond _internal
 namespace std{
-	template<> struct plus<isis::util::date>:binary_function<isis::util::date,isis::util::duration,isis::util::date>{
-		isis::util::date operator() (const isis::util::date& x, const isis::util::duration& y) const {return x+chrono::duration_cast<chrono::days>(y);}
-	};
-	template<> struct minus<isis::util::date>:binary_function<isis::util::date,isis::util::duration,isis::util::date>{
-		isis::util::date operator() (const isis::util::date& x, const isis::util::duration& y) const {return x-chrono::duration_cast<chrono::days>(y);}
-	};
 	isis::util::date &operator+=(isis::util::date &x,const isis::util::duration &y);
 	isis::util::date &operator-=(isis::util::date &x,const isis::util::duration &y);
-	
-	template<> struct plus<isis::util::timestamp>:binary_function<isis::util::timestamp,isis::util::duration,isis::util::timestamp>{
-		isis::util::timestamp operator() (const isis::util::timestamp& x, const isis::util::duration& y) const {return x+y;}
-	};
-	template<> struct minus<isis::util::timestamp>:binary_function<isis::util::timestamp,isis::util::duration,isis::util::timestamp>{
-		isis::util::timestamp operator() (const isis::util::timestamp& x, const isis::util::duration& y) const {return x-y;}
-	};
-
-	//duration can actually be multiplied, but only with its own "ticks"
-	template<> struct multiplies<isis::util::duration>:binary_function<isis::util::duration,isis::util::duration::rep,isis::util::duration>{
-		isis::util::duration operator() (const isis::util::duration& x, const isis::util::duration::rep& y) const {return x*y;}
-	};
-	template<> struct divides<isis::util::duration>:binary_function<isis::util::duration,isis::util::duration::rep,isis::util::duration>{
-		isis::util::duration operator() (const isis::util::duration& x, const isis::util::duration::rep& y) const {return x/y;}
-	};
 
 	/// streaming output for duration and timestamp
 	ostream& operator<<( ostream &out, const isis::util::duration &s );
