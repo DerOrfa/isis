@@ -42,20 +42,6 @@ IOFactory::IOFactory()
 	const char *env_path = getenv( "ISIS_PLUGIN_PATH" );
 	const char *env_home = getenv( "HOME" );
 
-	if( env_path ) {
-		findPlugins( std::filesystem::path( env_path ).native() );
-	}
-
-	if( env_home ) {
-		const std::filesystem::path home = std::filesystem::path( env_home ) / "isis" / "plugins";
-
-		if( std::filesystem::exists( home ) ) {
-			findPlugins( home.native() );
-		} else {
-			LOG( Runtime, info ) << home << " does not exist. Won't check for plugins there";
-		}
-	}
-
 #ifdef WIN32
 	TCHAR lpExeName[2048];
 	DWORD lExeName = GetModuleFileName( NULL, lpExeName, 2048 );
@@ -79,6 +65,19 @@ IOFactory::IOFactory()
 #else
 	findPlugins( std::string( PLUGIN_PATH ) );
 #endif
+	if( env_path ) {
+		findPlugins( std::filesystem::path( env_path ).native() );
+	}
+
+	if( env_home ) {
+		const std::filesystem::path home = std::filesystem::path( env_home ) / "isis" / "plugins";
+
+		if( std::filesystem::exists( home ) ) {
+			findPlugins( home.native() );
+		} else {
+			LOG( Runtime, info ) << home << " does not exist. Won't check for plugins there";
+		}
+	}
 }
 
 bool IOFactory::registerFileFormat( const FileFormatPtr& plugin, bool front ){
