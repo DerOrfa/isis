@@ -278,7 +278,7 @@ std::list<util::istring> ImageFormat_Dicom::suffixes(io_modes modes )const
 		return {".ima",".dcm"};
 }
 std::string ImageFormat_Dicom::getName()const {return "Dicom";}
-std::list<util::istring> ImageFormat_Dicom::dialects()const {return {"siemens","withExtProtocols","nocsa","keepmosaic","forcemosaic"};}
+std::list<util::istring> ImageFormat_Dicom::dialects()const {return {"siemens","withExtProtocols","nocsa","keepmosaic","forcemosaic", "skope"};}
 
 
 void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<util::istring>& dialects )
@@ -785,10 +785,27 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 			} else {
 				ret.push_back( readMosaic( chunk ) );
 			}
-		} else if(checkDialect(dialects, "forcemosaic") )
+		} else if(checkDialect(dialects, "forcemosaic") ) {
 			ret.push_back( readMosaic( chunk ) );
-		else
+		} else {
+			if (checkDialect(dialects,"skope")) { // skope stores diffusion coefficients as frames
+				LOG( Runtime, info ) << "Splitting " << chunk.getDimSize(data::sliceDim) << " Skope-Frames";
+				auto stepsize= std::chrono::milliseconds(chunk.getValueAs<uint16_t>( "repetitionTime"));
+				auto start = chunk.getValueAs<util::timestamp>( "acquisitionTime");
+				// reshape the chunk so we have the frames as "Time"-Slices
+				util::PropertyMap props = chunk;//keep metadata
+				chunk=data::Chunk(chunk, //form new chunk with 3rd and 4th dim swapped
+					chunk.getDimSize(data::rowDim),
+					chunk.getDimSize(data::columnDim),
+					chunk.getDimSize(data::timeDim),
+					chunk.getDimSize(data::sliceDim));
+				(util::PropertyMap&)chunk = props; // put metadata back
+				// Store acquisitionTime as per-frame timestamps. Downstream sorting will do the rest.
+				for(uint32_t i=0;i<chunk.getDimSize(data::timeDim);i++)
+					chunk.setValue("acquisitionTime",start+stepsize*i,i);
+			}
 			ret.push_back( chunk );
+		}
 
 		if( ret.back().hasProperty( "SiemensNumberOfImagesInMosaic" ) ) { // if its still there image was no mosaic, so I guess it should be used according to the standard
 			ret.back().rename( "SiemensNumberOfImagesInMosaic", "SliceOrientation" );

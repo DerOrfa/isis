@@ -5,9 +5,8 @@
 #include <boost/endian/buffers.hpp>
 #include <isis/core/common.hpp>
 
-namespace isis
-{
-namespace image_io
+
+namespace isis::image_io
 {
 
 namespace _internal
@@ -455,4 +454,4 @@ namespace _internal{
 	};
 }
 }
-}
+
