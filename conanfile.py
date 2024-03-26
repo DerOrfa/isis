@@ -4,11 +4,11 @@ from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake
 from os import path
 
-#conan build . -o with_curses=False -o io_sftp=False --build=missing --output-folder=build
+#conan build . -o io_sftp=False --build=missing --output-folder=build
 
 class isis(ConanFile):
 	name = "isis"
-	version = "0.9.0-dev"
+	version = "0.9.1-dev"
 	license = "GPL-3.0-or-later"
 	description = "The ISIS project aims to provide a framework to access a large variety of image processing libraries written in different programming languages and environments."
 
@@ -18,9 +18,9 @@ class isis(ConanFile):
 		"shared": [True, False],
 		"debug_log": [True, False],
 		"with_cli": [True, False],
-		"with_curses":  [True, False],
 		"with_qt5": [True, False],
 		"with_python": [None, "system", "3.7", "3.8", "3.9", "3.10"],
+		"with_gsl": [True, False],
 		"io_zisraw": [True, False],
 		"io_sftp": [True, False],
 		"io_png": [True, False],
@@ -30,7 +30,6 @@ class isis(ConanFile):
 		"shared": True,
 		"with_qt5": False,
 		"with_cli": True,
-		"with_curses": True,
 		"with_python": None,
 		"debug_log": False,
 		"io_zisraw": True,
@@ -70,16 +69,6 @@ class isis(ConanFile):
 		for dep in ["jsoncpp/[~1]", "fftw/[~3]", "openjpeg/[~2]", "eigen/[~3]"]:
 			self.requires(dep)
 
-		if self.options.with_curses:
-			self.requires("ncurses/[~6]")
-
-		# if self.options.with_python and self.options.with_python != "system": #assume the given value is the conan-package version for python
-		# 	self.requires("zlib/1.2.11", override=True)#make everybody else shut up about their zlib
-		# 	self.requires("openssl/1.1.1l", override=True)#make everybody else shut up about their openssl
-		# 	if self.options.with_qt5:
-		# 		self.requires('expat/2.4.1', override=True)
-		# 		self.requires('libffi/3.2.1', override=True)
-
 		if self.options.with_cli:
 			self.requires("muparser/[~2]")
 
@@ -94,6 +83,9 @@ class isis(ConanFile):
 
 		if self.options.with_python:
 			self.requires("pybind11/[>2.9.0]", libs=False)  # pybind is header only
+
+		if self.options.with_gsl:
+			self.require("gsl/[~=2.7]")
 
 		if self.options.io_zisraw:
 			self.requires("jxrlib/cci.20170615")
@@ -132,6 +124,7 @@ class isis(ConanFile):
 		tc.variables["BUILD_TESTING"] = bool(self.options.testing)
 		# tc.variables["BOOST_IS_SHARED"] = bool(self.options['boost'].shared)
 		tc.variables["ISIS_QT5"] = bool(self.options.with_qt5)
+		tc.variables["ISIS_USE_GSL"] =     bool(self.options.with_gsl)
 		tc.variables["ISIS_BUILD_TOOLS"] = bool(self.options.with_cli)
 		tc.variables["ISIS_CALC"] = bool(self.options.with_cli)
 		tc.variables["ISIS_DEBUG_LOG"] = bool(self.options.debug_log)
