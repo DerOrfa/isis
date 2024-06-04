@@ -118,13 +118,20 @@ util::PropertyMap readStream(DicomElement &token,size_t stream_len,std::multimap
 
 util::PropertyMap readSequence(DicomElement &token,std::multimap<uint32_t,data::ValueArray> &data_elements, const std::function<bool(DicomElement &token)>& delimiter){
     util::PropertyMap ret;
-    //load items (which themself again are made of tags)
+    //load items (which themselves again are made of tags)
+    //merge all into one buffer to generate lists out of repeating entries
     while(!delimiter(token) && !token.eof()){
         assert(token.getID32()==0xFFFEE000);//must be an item-tag
         const size_t item_len=token.getLength();
         token.next(token.getPosition()+8);
-        util::PropertyMap buffer=readStream(token,item_len,data_elements);
-        ret.transfer(buffer);
+        auto buffer=readStream(token,item_len,data_elements).getFlatMap();
+        for(auto [path,source]:buffer)
+        {
+	        auto &dest= ret.touchProperty(path);
+			for(auto val:source){
+				dest.push_back(val);
+			}
+        }
     }
     return ret;
 }
@@ -675,7 +682,6 @@ std::list<data::Chunk> ImageFormat_Dicom::load ( std::streambuf *source, std::li
 
 std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback )
 {
-	std::list< data::Chunk > ret;
 	const char prefix[4]={'D','I','C','M'};
 	if(memcmp(&source[128],prefix,4)!=0)
 		throwGenericError("Prefix \"DICM\" not found");
@@ -750,20 +756,16 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 		throwGenericError("No image data found");
 	} else {
 		LOG_IF(img_data.size()>1,Runtime,error) << "There is more than one image in the source, will only use the first";
-		data::Chunk chunk(_internal::DicomChunk(img_data.front(),transferSyntax,props));
-
 		//we got a chunk from the file
-		sanitise( chunk, dialects );
-		const auto iType = chunk.queryValueAs<util::slist>( util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/" + "ImageType");
-
+		std::list<data::Chunk> chunks = {data::Chunk(_internal::DicomChunk(img_data.front(),transferSyntax,props))};
 
 		//handle philips scaling
 		data::scaling_pair philps_scale(1,0);
-		auto ri = chunk.queryValueAs<float>("DICOM/Philips private sequence/Philips private sequence/RescaleIntercept");
-		auto rs = chunk.queryValueAs<float>("DICOM/Philips private sequence/Philips private sequence/RescaleSlope");
+		auto ri = chunks.front().queryValueAs<float>("DICOM/Philips private sequence/Philips private sequence/RescaleIntercept");
+		auto rs = chunks.front().queryValueAs<float>("DICOM/Philips private sequence/Philips private sequence/RescaleSlope");
 
-		auto si = chunk.queryValueAs<float>("DICOM/UnknownTag/(2005,100d)");
-		auto ss = chunk.queryValueAs<float>("DICOM/UnknownTag/(2005,100e)"); //default 1
+		auto si = chunks.front().queryValueAs<float>("DICOM/UnknownTag/(2005,100d)");
+		auto ss = chunks.front().queryValueAs<float>("DICOM/UnknownTag/(2005,100e)"); //default 1
 
 		if(ss){
 			if(si){
@@ -776,45 +778,58 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 
 		if(philps_scale.isRelevant()) {
 			LOG(Runtime, info) << "Applying Philips scaling of " << philps_scale << " on data";
-			chunk.convertToType(util::typeID<float>(), philps_scale);
+			chunks.front().convertToType(util::typeID<float>(), philps_scale);
 		}
 
+		// check for multislice-data (with differing geometries)
+		const auto iType = chunks.front().queryValueAs<util::slist>( util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/" + "ImageType");
 		//handle siemens mosaic data
 		if ( iType && std::find( iType->begin(), iType->end(), "MOSAIC" ) != iType->end() ) { // if we have an image type and its a mosaic
 			if( checkDialect(dialects, "keepmosaic") ) {
 				LOG( Runtime, info ) << "This seems to be an mosaic image, but dialect \"keepmosaic\" was selected";
-				ret.push_back( chunk );
 			} else {
-				ret.push_back( readMosaic( chunk ) );
+				chunks.front() = readMosaic( chunks.front() );
+				if( chunks.front().hasProperty( "SiemensNumberOfImagesInMosaic" ) ) { // if its still there image was no mosaic, so I guess it should be used according to the standard
+					chunks.front().rename( "SiemensNumberOfImagesInMosaic", "SliceOrientation" );
+				}
+
 			}
 		} else if(checkDialect(dialects, "forcemosaic") ) {
-			ret.push_back( readMosaic( chunk ) );
-		} else {
-			if (checkDialect(dialects,"skope")) { // skope stores diffusion coefficients as frames
-				LOG( Runtime, info ) << "Splitting " << chunk.getDimSize(data::sliceDim) << " Skope-Frames";
-				auto stepsize= std::chrono::milliseconds(chunk.getValueAs<uint16_t>( "repetitionTime"));
-				auto start = chunk.getValueAs<util::timestamp>( "acquisitionTime");
+			chunks.front() = readMosaic( chunks.front() );
+		}
+
+		// if the chunk has multiple geometries wi have to splice it down to 2D slices before sanitising (new siemens format)
+		auto pos = chunks.front().queryProperty("DICOM/PerFrameFunctionalGroupsSequence/PlaneOrientationSequence/ImageOrientationPatient");
+		auto orientation = chunks.front().queryProperty("DICOM/PerFrameFunctionalGroupsSequence/PlaneOrientationSequence/ImageOrientationPatient");
+
+		if((pos && pos->size()>1) || (orientation && orientation->size()>1))
+		{
+			LOG(Debug,info) << "Chunk has multiple geometries, going to splice it down to 2D slices";
+			chunks=chunks.front().spliceAt(data::sliceDim);
+		}
+
+		for(auto &c:chunks){
+			sanitise( c, dialects );
+			// skope stores diffusion coefficients as frames
+			if (checkDialect(dialects,"skope")) {
+				LOG( Runtime, info ) << "Splitting " << c.getDimSize(data::sliceDim) << " Skope-Frames";
+				auto stepsize= std::chrono::milliseconds(c.getValueAs<uint16_t>( "repetitionTime"));
+				auto start = c.getValueAs<util::timestamp>( "acquisitionTime");
 				// reshape the chunk so we have the frames as "Time"-Slices
-				util::PropertyMap props = chunk;//keep metadata
-				chunk=data::Chunk(chunk, //form new chunk with 3rd and 4th dim swapped
-					chunk.getDimSize(data::rowDim),
-					chunk.getDimSize(data::columnDim),
-					chunk.getDimSize(data::timeDim),
-					chunk.getDimSize(data::sliceDim));
-				(util::PropertyMap&)chunk = props; // put metadata back
+				util::PropertyMap props = c;//keep metadata
+				chunks.front()=data::Chunk(c, //form new chunk with 3rd and 4th dim swapped
+				                           c.getDimSize(data::rowDim),
+				                           c.getDimSize(data::columnDim),
+				                           c.getDimSize(data::timeDim),
+				                           c.getDimSize(data::sliceDim));
+				(util::PropertyMap&)c = props; // put metadata back
 				// Store acquisitionTime as per-frame timestamps. Downstream sorting will do the rest.
-				for(uint32_t i=0;i<chunk.getDimSize(data::timeDim);i++)
-					chunk.setValue("acquisitionTime",start+stepsize*i,i);
+				for(uint32_t i=0;i<c.getDimSize(data::timeDim);i++)
+					c.setValue("acquisitionTime",start+stepsize*i,i);
 			}
-			ret.push_back( chunk );
 		}
-
-		if( ret.back().hasProperty( "SiemensNumberOfImagesInMosaic" ) ) { // if its still there image was no mosaic, so I guess it should be used according to the standard
-			ret.back().rename( "SiemensNumberOfImagesInMosaic", "SliceOrientation" );
-		}
+		return chunks;
 	}
-
-	return ret;
 }
 
 void ImageFormat_Dicom::write( const data::Image &/*image*/, const std::string &/*filename*/, std::list<util::istring> /*dialects*/, std::shared_ptr<util::ProgressFeedback> /*feedback*/ )
