@@ -1,5 +1,5 @@
 #include "common.hpp"
-#include <string>
+#include <cstring>
 
 namespace isis::util
 {
