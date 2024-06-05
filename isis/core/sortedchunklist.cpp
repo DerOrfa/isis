@@ -23,11 +23,7 @@
 #include "sortedchunklist.hpp"
 
 /// @cond _internal
-namespace isis
-{
-namespace data
-{
-namespace _internal
+namespace isis::data::_internal
 {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -413,6 +409,6 @@ std::string SortedChunkList::identify(bool withpath, bool withdate, getproplist 
 
 
 }
-}
-}
+
+
 /// @endcond _internal

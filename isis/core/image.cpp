@@ -223,10 +223,10 @@ bool Image::reIndex(util::slist* rejected)
 	util::vector<size_t, dims> structure_size; //storage for the size of the chunk structure
 	structure_size.fill( 1 );
 
-	//get primary attributes from geometrically first chunk - will be usefull
+	//get primary attributes from geometrically first chunk - will be useful
 	const Chunk &first = chunkAt( 0 );
 
-	//start indexing at eigther the chunk-size or the givem minIndexingDim (whichever is bigger)
+	//start indexing at either the chunk-size or the give minIndexingDim (whichever is bigger)
 	const unsigned short chunk_dims = std::max<unsigned short>( first.getRelevantDims(), minIndexingDim );
 	chunkVolume = first.getVolume();
 

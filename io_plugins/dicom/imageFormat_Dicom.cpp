@@ -830,6 +830,7 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 		}
 		return chunks;
 	}
+	return {};
 }
 
 void ImageFormat_Dicom::write( const data::Image &/*image*/, const std::string &/*filename*/, std::list<util::istring> /*dialects*/, std::shared_ptr<util::ProgressFeedback> /*feedback*/ )

@@ -742,7 +742,7 @@ template<typename ITER> struct PropertyMap::Splicer {
 
 		if( val.size() % blocks ) { // just copy all which cannot be properly spliced to the destination
 			if(val.size() > 1){
-				LOG_IF( val.size() > 1, Runtime, warning ) << "Not splicing non scalar property " << MSubject( name ) << " because its length "
+				LOG_IF( val.size() > 1, Runtime, verbose_info ) << "Not splicing non scalar property " << MSubject( name ) << " because its length "
 				<< MSubject( val.size() ) << " doesn't fit the amount of targets(" << MSubject( blocks ) << ")"; //tell the user if its no scalar
 			}
 			PropertyValue &first_prop = _internal::un_shared_ptr(*first).touchProperty( name );

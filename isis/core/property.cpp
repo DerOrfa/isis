@@ -86,11 +86,35 @@ PropertyValue::iterator PropertyValue::push_back( Value&& ref ){return insert(en
 PropertyValue::iterator PropertyValue::push_back(const Value& ref ){return insert(end(), ref);}
 
 PropertyValue::iterator PropertyValue::insert( iterator at, Value&& ref ){
-	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
-	return container.insert(at,std::forward<Value>(ref) );
+	if(!isEmpty() && getTypeID()!=ref.typeID())
+	{
+		LOG(Debug,info)
+			<< "Inserting value of inconsistent type " << MSubject(ref.toString(true))
+			<< " into " << MSubject(*this) << " trying to convert";
+		if(ref.fitsInto(this->getTypeID())) // ok, we can make the new data fit...
+			ref = ref.copyByID(this->getTypeID());
+		else if(this->fitsInto(ref.typeID())) // we can fit the old data fit the new one, not great, not terrible ...
+			this->container = this->copyByID(ref.typeID()).container;
+		else {
+			LOG(Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
+		}
+	}
+	return container.insert(at,std::forward<Value>(ref));
 }
 PropertyValue::iterator PropertyValue::insert( iterator at, const Value& ref ){
-	LOG_IF(!isEmpty() && getTypeID()!=ref.typeID(),Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
+	if(!isEmpty() && getTypeID()!=ref.typeID())
+	{
+		LOG(Debug,info)
+			<< "Inserting value of inconsistent type " << MSubject(ref.toString(true))
+			<< " into " << MSubject(*this) << " trying to convert";
+		if(ref.fitsInto(this->getTypeID())) // ok, we can make the new data fit...
+			return container.insert(at,ref.copyByID(this->getTypeID()));
+		else if(this->fitsInto(ref.typeID())) // we can fit the old data fit the new one, not great, not terrible ...
+			this->container = this->copyByID(ref.typeID()).container;
+		else {
+			LOG(Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
+		}
+	}
 	return container.insert(at,ref);
 }
 
