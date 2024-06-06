@@ -200,6 +200,7 @@ if(ISIS_IOPLUGIN_DICOM)
 	add_library(isisImageFormat_Dicom SHARED dicom/imageFormat_Dicom.cpp dicom/imageFormat_DicomParser.cpp dicom/imageFormat_DicomDictionary.cpp)
 	
 	if(OPENJPEG_FOUND)
+		target_include_directories(isisImageFormat_Dicom PRIVATE "/usr/include/openjpeg-2.4")
 		target_compile_definitions(isisImageFormat_Dicom PRIVATE "HAVE_OPENJPEG")
 		target_sources(isisImageFormat_Dicom PRIVATE dicom/imageFormat_DicomJ2k.cpp)
 		target_link_libraries(isisImageFormat_Dicom PRIVATE isis_core openjp2)
