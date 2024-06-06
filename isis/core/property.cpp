@@ -82,6 +82,23 @@ bool PropertyValue::isEmpty() const{return container.empty();}
 const Value &PropertyValue::operator()() const{return front();}
 Value &PropertyValue::operator()(){return front();}
 
+void PropertyValue::push_back( PropertyValue&& ref ){
+	if(!isEmpty() && getTypeID()!=ref.getTypeID())
+	{
+		LOG(Debug,info)
+			<< "Inserting values of inconsistent type " << MSubject(ref.toString(true))
+			<< " into " << MSubject(*this) << " trying to convert";
+		if(ref.fitsInto(this->getTypeID())) // ok, we can make the new data fit...
+			ref = ref.copyByID(this->getTypeID());
+		else if(this->fitsInto(ref.getTypeID())) // we can fit the old data fit the new one, not great, not terrible ...
+			container = this->copyByID(ref.getTypeID()).container;
+		else {
+			LOG(Debug,error) << "Inserting value of inconsistent type " << MSubject(ref.toString(true)) << " into " << MSubject(*this);
+		}
+	}
+	container.splice(container.end(),ref.container);
+}
+
 PropertyValue::iterator PropertyValue::push_back( Value&& ref ){return insert(end(), std::forward<Value>(ref));}
 PropertyValue::iterator PropertyValue::push_back(const Value& ref ){return insert(end(), ref);}
 

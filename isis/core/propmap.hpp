@@ -31,7 +31,7 @@ namespace _internal
 {
 struct MapStrAdapter;
 struct JoinTreeVisitor;
-struct SwapVisitor;
+struct PushTreeVisitor;
 struct FlatMapMaker;
 struct TreeInvalidCheck;
 struct Extractor;
@@ -59,6 +59,7 @@ public:
 /// @cond _internal
 	friend struct _internal::MapStrAdapter;
 	friend struct _internal::JoinTreeVisitor;
+	friend struct _internal::PushTreeVisitor;
 	friend struct _internal::FlatMapMaker;
 	friend struct _internal::TreeInvalidCheck;
 	friend struct _internal::Extractor;
@@ -125,6 +126,8 @@ API_EXCLUDE_END;
     /////////////////////////////////////////////////////////////////////////////////////////
     /// internal recursion-function for join
     void joinTree( PropertyMap& other, bool overwrite, bool delsource, const PropPath& prefix, PathSet& rejects );
+	/// internal recursion-function for push_back
+	void pushTree( PropertyMap&& other, const PropPath& prefix, PathSet& rejects );
 	/// internal recursion-function for diff
 	void diffTree( const container_type &other, DiffMap &ret, const PropPath &prefix ) const;
 
@@ -426,6 +429,13 @@ public:
 	 * \returns a list of the rejected properties that couldn't be inserted, for success this should be empty
 	 */
 	PathSet join( const PropertyMap& other, bool overwrite = false );
+	/**
+	 * Same as join but values are always appended.
+	 * This will invalidate the source.
+	 * \param other the other tree to join with
+	 * \returns a list of the rejected properties that couldn't be inserted, for success this should be empty
+	 */
+	PathSet push_back( PropertyMap&& other );
 
 	/**
 	 * Transfer all Properties from another PropertyMap.

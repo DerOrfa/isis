@@ -75,6 +75,24 @@ struct JoinTreeVisitor {
 		return false;
 	}
 };
+struct PushTreeVisitor {
+	PropertyMap::PathSet &rejects;
+	const PropertyMap::PropPath &prefix, &name;
+	PushTreeVisitor(PropertyMap::PathSet &_rejects, const PropertyMap::PropPath &_prefix, const PropertyMap::PropPath &_name )
+			: rejects( _rejects ), prefix( _prefix ), name( _name ) {}
+	bool operator()( PropertyValue &first, PropertyValue &&second )const { // if both are Values
+		first.push_back(std::forward<PropertyValue>(second));
+		return true;
+	}
+	bool operator()( PropertyMap &thisMap, PropertyMap &&otherMap )const { // recurse if both are subtree
+		thisMap.pushTree( std::forward<PropertyMap>(otherMap), prefix / name, rejects );
+		return rejects.empty();
+	}
+	template<typename T1, typename T2> bool operator()( T1 &first, const T2 &second )const {// reject any other case
+		rejects.insert( rejects.end(), prefix / name );
+		return false;
+	}
+};
 struct FlatMapMaker {
 	PropertyMap::FlatMap &out;
 	const PropertyMap::PropPath &name;
@@ -480,6 +498,13 @@ PropertyMap::PathSet PropertyMap::join( const PropertyMap &other, bool overwrite
 	LOG_IF(!rejects.empty(),Debug,info) << "The properties " << MSubject(rejects) << " where rejected during the join";
 	return rejects;
 }
+PropertyMap::PathSet PropertyMap::push_back(isis::util::PropertyMap &&other)
+{
+	PathSet rejects;
+	pushTree( std::forward<PropertyMap>(other), {}, rejects );
+	LOG_IF(!rejects.empty(),Debug,info) << "The properties " << MSubject(rejects) << " where rejected during the push";
+	return rejects;
+}
 PropertyMap::PathSet PropertyMap::transfer(PropertyMap& other, int overwrite)
 {
 	PathSet rejects;
@@ -525,6 +550,28 @@ void PropertyMap::joinTree( PropertyMap &other, bool overwrite, bool delsource, 
 				LOG_IF( !inserted.second, Debug, warning ) << "Failed to insert property " << MSubject( *inserted.first );
 				otherIt++;
 			}
+		}
+	}
+}
+
+void PropertyMap::pushTree( PropertyMap&& other, const PropPath& prefix, PathSet& rejects )
+{
+	auto thisIt = container.begin();
+
+	for ( auto otherIt = other.container.begin(); otherIt != other.container.end(); ) { //iterate through the elements of other
+		if ( continousFind( thisIt, container.end(), *otherIt, container.value_comp() ) ) { // if the element is already here
+			if(std::visit(
+					_internal::PushTreeVisitor( rejects, prefix, thisIt->first ),
+					thisIt->second.variant(),
+					std::move(otherIt->second.variant())
+			)) {// if the push was complete
+				other.container.erase(otherIt++); // remove the entry from the source
+			} else {
+				otherIt++;
+			}
+		} else { // ok we don't have that - just insert it
+			otherIt->second.swap(container[otherIt->first]); //swap it with the empty (because newly created) entry in the destination
+			other.container.erase(otherIt++);//remove now empty entry
 		}
 	}
 }

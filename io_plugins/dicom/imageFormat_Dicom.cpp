@@ -124,14 +124,7 @@ util::PropertyMap readSequence(DicomElement &token,std::multimap<uint32_t,data::
         assert(token.getID32()==0xFFFEE000);//must be an item-tag
         const size_t item_len=token.getLength();
         token.next(token.getPosition()+8);
-        auto buffer=readStream(token,item_len,data_elements).getFlatMap();
-        for(auto [path,source]:buffer)
-        {
-	        auto &dest= ret.touchProperty(path);
-			for(auto val:source){
-				dest.push_back(val);
-			}
-        }
+        ret.push_back(readStream(token,item_len,data_elements));
     }
     return ret;
 }
