@@ -1,9 +1,7 @@
 ############################################################
 # find jsoncpp
 ############################################################
-find_library(LIB_JSONCPP jsoncpp)
-find_path(INC_JSONCPP "json/config.h" PATH_SUFFIXES "jsoncpp" DOC "path where json/config.h can be found")
-include_directories(${INC_JSONCPP})
+find_package(jsoncpp)
 
 ############################################################
 # check for liborc
@@ -55,7 +53,7 @@ endif(CURSES_LIBRARIES)
 add_lib(isis_core
 	"*.cpp" "*.hpp;*.h" "isis/core"
 	"Boost::headers" #deps
-	"${LIBORC_LIB};${CURSES_LIBRARIES};${CMAKE_DL_LIBS};${LIB_JSONCPP};Threads::Threads;$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>" #private deps
+	"${LIBORC_LIB};${CURSES_LIBRARIES};${CMAKE_DL_LIBS};jsoncpp_lib;Threads::Threads;$<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>" #private deps
 	${ISIS_CORE_VERSION_SO} ${ISIS_CORE_VERSION_API}
 )
 
