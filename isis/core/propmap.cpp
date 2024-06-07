@@ -818,6 +818,13 @@ PropertyMap::PathSet PropertyMap::genKeyList(const PropertyMap::leaf_predicate &
 	return genKeyList(key_predicate);
 }
 
+PropertyMap::PathSet PropertyMap::walkLeaves(PropertyMap::key_predicate &predicate) const
+{
+	PathSet k;
+	std::for_each( container.begin(), container.end(), WalkTree( k, predicate ) );
+	return k;
+}
+
 void PropertyMap::readXML(const uint8_t* streamBegin, const uint8_t* streamEnd, int flags){
 	typedef  boost::iostreams::basic_array_source<std::streambuf::char_type> my_source_type; // must be compatible to std::streambuf
 

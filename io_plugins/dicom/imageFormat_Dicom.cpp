@@ -791,14 +791,19 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 			chunks.front() = readMosaic( chunks.front() );
 		}
 
-		// if the chunk has multiple geometries wi have to splice it down to 2D slices before sanitising (new siemens format)
-		auto pos = chunks.front().queryProperty("DICOM/PerFrameFunctionalGroupsSequence/PlaneOrientationSequence/ImageOrientationPatient");
-		auto orientation = chunks.front().queryProperty("DICOM/PerFrameFunctionalGroupsSequence/PlaneOrientationSequence/ImageOrientationPatient");
-
-		if((pos && pos->size()>1) || (orientation && orientation->size()>1))
-		{
-			LOG(Debug,info) << "Chunk has multiple geometries, going to splice it down to 2D slices";
-			chunks=chunks.front().spliceAt(data::sliceDim);
+		util::PropertyMap *frames = chunks.front().queryBranch("DICOM/PerFrameFunctionalGroupsSequence");
+		if(frames){
+			size_t framecount = 0;
+			std::function<bool(const util::PropertyMap::PropPath &path, const util::PropertyValue &val)> walker = [&framecount](const util::PropertyMap::PropPath &path, const util::PropertyValue &val)->bool{
+				if(framecount<val.size())framecount=val.size();
+				return false;
+			};
+			frames->walkLeaves(walker);
+			if(framecount>1)
+			{
+				LOG(Debug,info) << "Chunk has multiple frames with at least some distinct attributes, going to splice it down to 2D slices";
+				chunks=chunks.front().spliceAt(data::sliceDim);
+			}
 		}
 
 		for(auto &c:chunks){
@@ -808,7 +813,7 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 				LOG( Runtime, info ) << "Splitting " << c.getDimSize(data::sliceDim) << " Skope-Frames";
 				auto stepsize= std::chrono::milliseconds(c.getValueAs<uint16_t>( "repetitionTime"));
 				auto start = c.getValueAs<util::timestamp>( "acquisitionTime");
-				// reshape the chunk so we have the frames as "Time"-Slices
+				// reshape the chunk, so we have the frames as "Time"-Slices
 				util::PropertyMap props = c;//keep metadata
 				chunks.front()=data::Chunk(c, //form new chunk with 3rd and 4th dim swapped
 				                           c.getDimSize(data::rowDim),
