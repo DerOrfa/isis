@@ -57,9 +57,10 @@ endif()
 # orthanc plugin
 ############################################################
 if(ISIS_IOPLUGIN_ORTHANC)
+	find_package(jsoncpp)
 	add_library(isisImageFormat_orthanc SHARED imageFormat_orthanc.cpp )
 	set_target_properties(isisImageFormat_orthanc PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${INC_JSONCPP}")
-	target_link_libraries(isisImageFormat_orthanc isis_core ACE ACE_INet jsoncpp Threads::Threads)
+	target_link_libraries(isisImageFormat_orthanc isis_core ACE ACE_INet jsoncpp_lib Threads::Threads)
 	set(TARGETS ${TARGETS} isisImageFormat_orthanc)
 endif()
 
