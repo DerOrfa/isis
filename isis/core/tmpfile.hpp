@@ -40,8 +40,8 @@ public:
 	 * \param suffix string to be appended to the filename
 	 * \note This uses std::filesystem::unique_path and thus may block until sufficient entropy develops. (see http://www.boost.org/doc/libs/1_49_0/libs/filesystem/v3/doc/reference.html#unique_path)
 	 */
-	TmpFile( std::string prefix = "", std::string suffix = "" );
-	///Will delete the temporary file if its still there.
+	TmpFile( std::string suffix = "" );
+	///Will delete the temporary file if It's still there.
 	~TmpFile();
 	TmpFile( TmpFile & )=delete;
 	TmpFile &operator=( TmpFile & )=delete;

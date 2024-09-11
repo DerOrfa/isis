@@ -133,7 +133,7 @@ public:
 		}
 
 		// create the intermediate file
-		util::TmpFile tmpFile( "", formats.front()->makeBasename( proxyBase.first ).second );
+		util::TmpFile tmpFile(formats.front()->makeBasename( proxyBase.first ).second );
 
 		if( !data::IOFactory::write( image, tmpFile.native(), formatstack, dialects ) ) {throwGenericError( tmpFile.native() + " failed to write" );}
 

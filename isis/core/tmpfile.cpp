@@ -33,8 +33,7 @@ namespace isis::util
 
 using namespace std::filesystem;
   
-TmpFile::TmpFile( std::string prefix, std::string sufix ): 
-  path(temp_directory_path() / path(prefix+std::tmpnam(nullptr)+sufix))
+TmpFile::TmpFile( std::string sufix ) : path(std::tmpnam(nullptr)+sufix)
 {
 	LOG( Debug, info ) << "Creating temporary file " << native();
 	std::ofstream( *this ).exceptions( std::ios::failbit | std::ios::badbit );
