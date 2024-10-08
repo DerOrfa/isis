@@ -338,13 +338,13 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 		image_info.type_id = PixelTypeMapStr.at(image_props.get<std::string>("PixelType"));
 
 		auto scaling = meta.get_child_optional("Scaling.Items");
-		if(scaling){
+		if(scaling) {
 			std::map<std::string,float> scale_map;
 			for(auto s:*scaling){
 				scale_map[s.second.get<std::string>("<xmlattr>.Id")]=s.second.get<float>("Value");
 			}
 			image_info.pixel_size={scale_map["X"],scale_map["Y"],scale_map["Z"]};
-		} else{
+		} else {
 			float flat_scaling = meta.get<float>("Scaling.Items.Distance.Value",1./1000);
 			image_info.pixel_size = {flat_scaling,flat_scaling,1};
 		}
@@ -370,8 +370,7 @@ std::list<data::Chunk> ImageFormat_ZISRAW::load(
 			pyramids.emplace_back();
 			pyramids.back().tiles.resize(1);
 		}
-		
-	} else 
+	} else
 		throwGenericError("could not find metadata");
 	
 	for(const auto &p:pyramids)
