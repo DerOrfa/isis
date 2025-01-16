@@ -409,23 +409,6 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<uti
 		object.setValueAs( "columnVec", util::fvector3( {0, 1, 0} ) );
 	}
 
-	auto origin = extractOrTell({"PerFrameFunctionalGroupsSequence/PlanePositionSequence/ImagePositionPatient","ImagePositionPatient"},dicomTree,info);
-	if ( origin ) {
-		object.setValueAs( "indexOrigin", origin->as<util::fvector3>( ) );
-	} else {
-		auto CSA_SliceNumber = object.queryValueAs<int32_t>( prefix + "SIEMENS CSA HEADER/ProtocolSliceNumber" );
-		auto CSA_SliceRes =object.queryValueAs<float>("DICOM/CSASeriesHeaderInfo/SliceResolution");
-
-		if( CSA_SliceNumber && CSA_SliceRes ){
-			util::fvector3 orig {0,0,float(*CSA_SliceNumber) / *CSA_SliceRes	};
-			LOG(Runtime, info) << "Synthesize missing indexOrigin from SIEMENS CSA HEADER/ProtocolSliceNumber as " << orig;
-			object.setValueAs("indexOrigin", orig);
-		} else {
-			object.setValueAs( "indexOrigin", util::fvector3() );
-			LOG( Runtime, warning ) << "Making up indexOrigin, because the image lacks this information";
-		}
-	}
-
 	transformOrTell<uint32_t>( prefix + "InstanceNumber", "acquisitionNumber", object, error );
 
 	if( dicomTree.hasProperty( "AcquisitionNumber" )){
@@ -558,6 +541,30 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<uti
 	}
 }
 
+void ImageFormat_Dicom::santitse_origin(util::PropertyMap &object) {
+	util::PropertyMap &dicomTree = object.touchBranch( dicomTagTreeName );
+	const auto origin = extractOrTell({
+		"PerFrameFunctionalGroupsSequence/PlanePositionSequence/ImagePositionPatient",
+		"ImagePositionPatient",
+		"UnknownTag/(0019,1015)"
+	}, dicomTree,info);
+	if ( origin ) {
+		object.setValueAs( "indexOrigin", origin->as<util::fvector3>( ) );
+	} else {
+		auto CSA_SliceNumber = dicomTree.queryValueAs<int32_t>( "SIEMENS CSA HEADER/ProtocolSliceNumber" );
+		auto CSA_SliceRes = dicomTree.queryValueAs<float>("CSASeriesHeaderInfo/SliceResolution");
+
+		if( CSA_SliceNumber && CSA_SliceRes ){
+			util::fvector3 orig {0,0,float(*CSA_SliceNumber) / *CSA_SliceRes };
+			LOG(Runtime, info) << "Synthesize missing indexOrigin from SIEMENS CSA HEADER/ProtocolSliceNumber as " << orig;
+			object.setValueAs("indexOrigin", orig);
+		} else {
+			object.setValueAs( "indexOrigin", util::fvector3() );
+			LOG( Runtime, warning ) << "Making up indexOrigin, because the image lacks this information";
+		}
+	}
+}
+
 data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 {
 	// prepare some needed parameters
@@ -592,7 +599,7 @@ data::Chunk ImageFormat_Dicom::readMosaic( data::Chunk source )
 	const auto rowVec = source.getValueAs<util::fvector3>( "rowVec" );
 	const auto columnVec = source.getValueAs<util::fvector3>( "columnVec" );
 	//remove the additional mosaic offset
-	//eg. if there is a 10x10 Mosaic, subtract the half size of 9 Images from the offset
+	//e.g. if there is a 10x10 Mosaic, subtract the half size of 9 Images from the offset
 	const util::fvector3 fovCorr = ( voxelSize + voxelGap ) * size * ( matrixSize - 1 ) / 2; // @todo this will not include the voxelGap between the slices
 	auto &origin = source.refValueAs<util::fvector3>( "indexOrigin" );
 	origin = origin + ( rowVec * fovCorr[0] ) + ( columnVec * fovCorr[1] );
@@ -773,6 +780,9 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 			LOG(Runtime, info) << "Applying Philips scaling of " << philps_scale << " on data";
 			chunks.front().convertToType(util::typeID<float>(), philps_scale);
 		}
+
+		// sanitise indexOrigin before maybe doing MOSAIC decomposition
+		santitse_origin(chunks.front());
 
 		// check for multislice-data (with differing geometries)
 		const auto iType = chunks.front().queryValueAs<util::slist>( util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/" + "ImageType");
