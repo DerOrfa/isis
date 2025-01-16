@@ -22,6 +22,8 @@ set(ISIS_VERSION
 
 project(ISIS VERSION ${ISIS_VERSION})
 
+cmake_policy(SET CMP0167 NEW)
+
 find_package(Git)
 find_package(Threads)
 
