@@ -151,21 +151,6 @@ if(ISIS_IOPLUGIN_PNG)
 endif()
 
 ############################################################
-# ImageMagic plugin
-############################################################
-if(ISIS_IOPLUGIN_IMAGEMAGIC)
-	find_package(ImageMagick REQUIRED Magick++ MagickWand MagickCore)
-
-	add_library(isisImageFormat_ImageMagick SHARED imageFormat_ImageMagick.cpp)
-	set_target_properties(isisImageFormat_ImageMagick PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${ImageMagick_INCLUDE_DIRS}")
-	target_link_libraries(isisImageFormat_ImageMagick isis_core ${ImageMagick_LIBRARIES})
-
-	add_definitions("-DMAGICKCORE_HDRI_ENABLE=0" "-DMAGICKCORE_QUANTUM_DEPTH=16")
-
-	set(TARGETS ${TARGETS} isisImageFormat_ImageMagick)
-endif()
-
-############################################################
 # COMP proxy plugin
 ############################################################
 if(ISIS_IOPLUGIN_COMP)
