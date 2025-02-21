@@ -103,17 +103,23 @@ public:
 		if(stat.is_valid()) {
 			ACE_CString type;
 			resp.get("Content-Type",type);
+			if(type.is_empty())resp.get("content-type",type);
 			type=type.substr(0,type.find(';'));
 			if(type=="application/json"){
 				result=Json::Value();
 				s >> std::get<Json::Value>(result);
 				LOG_IF(std::get<Json::Value>(result).isNull(),Runtime,error)<<"Failed to parse application/json answer to " << url;
 			} else if(type=="application/dicom"){
+				static const size_t growsize=1024*1024*10;
 				try{ //catch any error on single instances and simply report it as warning
 					auto len=resp.get_content_length();
-					data::ByteArray buffer(len);
-					s.read(std::static_pointer_cast<std::istream::char_type>(buffer.getRawAddress()).get(),len);
-					result=data::IOFactory::loadChunks( buffer, {"dcm"}, {} );
+					if(len == ACE::INet::HeaderBase::UNKNOWN_CONTENT_LENGTH) {
+						result=data::IOFactory::loadChunks( s.rdbuf(), {"dcm"}, {} );
+					} else {
+						data::ByteArray buffer(len);
+						s.read(std::static_pointer_cast<std::istream::char_type>(buffer.getRawAddress()).get(),len);
+						result=data::IOFactory::loadChunks( buffer, {"dcm"}, {} );
+					}
 				} catch(std::runtime_error &e){
 					LOG(Runtime,warning) << "Failed to load dicom data from " << req.get_URI() << " with error " << e.what();
 					result=std::list<data::Chunk>();
@@ -156,10 +162,14 @@ class visitor
 {
 	AceSession &m_session;
 	std::shared_ptr<util::ProgressFeedback> m_feedback;
+	bool is_rudicom;
 public:
-	visitor(AceSession &session,std::shared_ptr<util::ProgressFeedback> feedback):m_session(session),m_feedback(feedback){}
+	visitor(AceSession &session,std::shared_ptr<util::ProgressFeedback> feedback, bool _is_rudicom):
+	m_session(session),m_feedback(feedback), is_rudicom(_is_rudicom) {	}
     std::list<data::Chunk> operator()(const Json::Value &value) const
     {
+		const std::string prefix(is_rudicom?"/api":"");
+		const char *id_key{is_rudicom?"id":"ID"};
 		if(value.isArray()){ // assume its list of instances
 			std::list<data::Chunk> ret;
 			if(m_feedback)
@@ -171,13 +181,13 @@ public:
 		} else {
 			std::string request;
 			if(value["Type"]=="Patient"){
-				request=std::string("/patients/")+value["ID"].asString()+"/instances";
+				request=prefix+"/patients/"+value[id_key].asString()+"/instances";
 			} else if(value["Type"]=="Study"){
-				request=std::string("/studies/")+value["ID"].asString()+"/instances";
+				request=prefix+"/studies/"+value[id_key].asString()+"/instances";
 			} else if(value["Type"]=="Series"){
-				request=std::string("/series/")+value["ID"].asString()+"/instances";
+				request=prefix+"/series/"+value[id_key].asString()+"/instances";
 			} else if(value["Type"]=="Instance"){
-				request=std::string("/instances/")+value["ID"].asString()+"/file";
+				request=prefix+"/instances/"+value[id_key].asString()+"/file";
 			} else {
 				LOG(Runtime,error) << "Unknown orthanc object type " << value["Type"].asString();
 				return {};
@@ -202,7 +212,7 @@ class ImageFormat_orthanc: public FileFormat
 public:
 	std::list< data::Chunk > load(
 	  const std::filesystem::path &filename,
-	  std::list<util::istring> /*formatstack*/,
+	  std::list<util::istring> formatstack,
 	  std::list<util::istring> dialects,
 	  std::shared_ptr<util::ProgressFeedback> feedback
 	) override{
@@ -215,10 +225,23 @@ public:
 		
 		session.set_host(url.get_host());
 		session.set_port(url.get_port());
-		
-		auto result=session.get(url.get_request_uri().c_str());
-		
-		return std::visit(_internal::visitor(session,feedback), result);
+
+		auto vis=_internal::visitor(session,feedback,formatstack.back() == "rudicom");
+		if (formatstack.back() == "rudicom") {
+			auto ret=std::get<Json::Value>(session.get(url.get_request_uri()+"/instances"));
+			auto instances=Json::Value(Json::arrayValue);
+			for(auto v:ret) {
+				v["Type"]="Instance";
+				instances.append(v);
+			}
+			std::variant<Json::Value,std::list<data::Chunk>> ins(instances);
+			return std::visit(vis, ins);
+		} else {
+			auto result=session.get(url.get_request_uri().c_str());
+
+			return std::visit(vis, result);
+		}
+
 	}
 	[[nodiscard]] std::string getName() const override{return "orthanc database access";};
 	void write(const data::Image & image, const std::string & filename, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback) override{
@@ -226,7 +249,7 @@ public:
 	}
 	ImageFormat_orthanc()= default;
 protected:
-	[[nodiscard]] std::list<util::istring> suffixes(isis::image_io::FileFormat::io_modes modes) const override{return {".orthanc"};}
+	[[nodiscard]] std::list<util::istring> suffixes(io_modes modes) const override{return {".orthanc", ".rudicom"};}
 };
 
 }
