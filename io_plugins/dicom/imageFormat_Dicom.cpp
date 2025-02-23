@@ -334,80 +334,17 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<uti
 	transformOrTell<std::string>( prefix + "PatientName",     "subjectName",        object, info );
 	transformOrTell<util::date>       ( prefix + "PatientBirthDate", "subjectBirth",       object, info );
 	transformOrTell<uint16_t>  ( prefix + "PatientWeight",   "subjectWeigth",      object, info );
-	// compute voxelSize and gap
-	{
-		util::fvector3 voxelSize( {invalid_float, invalid_float, invalid_float} );
-		auto p_spacing = extractOrTell({
-			"PixelSpacing",
-			"ImagePlanePixelSpacing",
-			"ImagerPixelSpacing",
-			"PerFrameFunctionalGroupsSequence/PixelMeasuresSequence/PixelSpacing"
-		},dicomTree,warning);
-		if ( p_spacing ) {
-			voxelSize = p_spacing->as<util::fvector3>();
-			std::swap( voxelSize[0], voxelSize[1] ); // the values are row-spacing (size in column dir) /column spacing (size in row dir)
-		}
 
-		auto p_thickness = extractOrTell({"SliceThickness","PerFrameFunctionalGroupsSequence/PixelMeasuresSequence/SliceThickness"},dicomTree,warning);
-		if ( p_thickness ) {
-			voxelSize[2] = p_thickness->as<float>();
-		} else {
-			auto CSA_SliceRes = object.queryValueAs<float>( "DICOM/CSASeriesHeaderInfo/SliceResolution" );
-			if(CSA_SliceRes)
-				voxelSize[2] = 1 /  *CSA_SliceRes;
-		}
+	transformOrTell<uint16_t>( prefix + "SharedFunctionalGroupsSequence/MRTimingAndRelatedParametersSequence/RepetitionTime", "repetitionTime", object, verbose_info ) ||
+		transformOrTell<uint16_t>( prefix + "RepetitionTime", "repetitionTime", object, warning );
+	transformOrTell<float>( prefix + "PerFrameFunctionalGroupsSequence/MREchoSequence/EffectiveEchoTime", "echoTime", object, verbose_info ) ||
+		transformOrTell<float>( prefix + "EchoTime", "echoTime", object, warning );
+	transformOrTell<int16_t>( prefix + "SharedFunctionalGroupsSequence/MRTimingAndRelatedParametersSequence/FlipAngle", "flipAngle", object, verbose_info ) ||
+		transformOrTell<int16_t>( prefix + "FlipAngle", "flipAngle", object, warning );
 
-		object.setValueAs( "voxelSize", voxelSize );
-		transformOrTell<uint16_t>( prefix + "SharedFunctionalGroupsSequence/MRTimingAndRelatedParametersSequence/RepetitionTime", "repetitionTime", object, verbose_info ) ||
-			transformOrTell<uint16_t>( prefix + "RepetitionTime", "repetitionTime", object, warning );
-		transformOrTell<float>( prefix + "PerFrameFunctionalGroupsSequence/MREchoSequence/EffectiveEchoTime", "echoTime", object, verbose_info ) ||
-			transformOrTell<float>( prefix + "EchoTime", "echoTime", object, warning );
-		transformOrTell<int16_t>( prefix + "SharedFunctionalGroupsSequence/MRTimingAndRelatedParametersSequence/FlipAngle", "flipAngle", object, verbose_info ) ||
-			transformOrTell<int16_t>( prefix + "FlipAngle", "flipAngle", object, warning );
-
-		auto spacing = extractOrTell({"SpacingBetweenSlices","PerFrameFunctionalGroupsSequence/PixelMeasuresSequence/SpacingBetweenSlices"},dicomTree,info);
-		if ( spacing ) {
-			if ( voxelSize[2] != invalid_float ) {
-				object.setValueAs( "voxelGap", util::fvector3( {0, 0, spacing->as<float>() - voxelSize[2]} ) );
-			} else
-				LOG( Runtime, warning ) << "Cannot compute the voxel gap from the slice spacing because the slice thickness is not known";
-		}
-	}
 	transformOrTell<std::string>   ( prefix + "PerformingPhysiciansName", "performingPhysician", object, info );
 	transformOrTell<uint16_t>(prefix + "PerFrameFunctionalGroupsSequence/MRAveragesSequence/NumberOfAverages", "numberOfAverages", object, verbose_info ) ||
 		transformOrTell<uint16_t>(prefix + "NumberOfAverages", "numberOfAverages", object, warning );
-
-	auto orientation = extractOrTell({"PerFrameFunctionalGroupsSequence/PlaneOrientationSequence/ImageOrientationPatient","ImageOrientationPatient"},dicomTree,info);
-	if ( orientation ) {
-		auto buff = orientation->as<util::dlist>( );
-
-		if ( buff.size() == 6 ) {
-			util::fvector3 row, column;
-			auto b = buff.begin();
-
-			for ( int i = 0; i < 3; i++ )row[i] = float(*b++);
-
-			for ( int i = 0; i < 3; i++ )column[i] = float(*b++);
-
-			object.setValueAs( "rowVec" , row );
-			object.setValueAs( "columnVec", column );
-		} else {
-			LOG( Runtime, error ) << "Could not extract row- and columnVector from " << dicomTree.property( "ImageOrientationPatient" );
-		}
-
-		if( object.hasProperty( prefix + "SIEMENS CSA HEADER/SliceNormalVector" ) && !object.hasProperty( "sliceVec" ) ) {
-			LOG( Debug, info ) << "Extracting sliceVec from SIEMENS CSA HEADER/SliceNormalVector " << dicomTree.property( "SIEMENS CSA HEADER/SliceNormalVector" );
-			auto list = dicomTree.getValueAs<util::dlist >( "SIEMENS CSA HEADER/SliceNormalVector" );
-			util::fvector3 vec;
-			std::copy(list.begin(), list.end(), std::begin(vec) );
-			object.setValueAs( "sliceVec", vec );
-			dicomTree.remove( "SIEMENS CSA HEADER/SliceNormalVector" );
-		}
-	} else {
-		LOG( Runtime, warning ) << "Making up row and column vector, because the image lacks this information";
-		object.setValueAs( "rowVec" , util::fvector3( {1, 0, 0} ) );
-		object.setValueAs( "columnVec", util::fvector3( {0, 1, 0} ) );
-	}
 
 	transformOrTell<uint32_t>( prefix + "InstanceNumber", "acquisitionNumber", object, error );
 
@@ -541,7 +478,7 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<uti
 	}
 }
 
-void ImageFormat_Dicom::santitse_origin(util::PropertyMap &object) {
+void ImageFormat_Dicom::santitse_geometry(util::PropertyMap &object) {
 	util::PropertyMap &dicomTree = object.touchBranch( dicomTagTreeName );
 	const auto origin = extractOrTell({
 		"PerFrameFunctionalGroupsSequence/PlanePositionSequence/ImagePositionPatient",
@@ -562,6 +499,68 @@ void ImageFormat_Dicom::santitse_origin(util::PropertyMap &object) {
 			object.setValueAs( "indexOrigin", util::fvector3() );
 			LOG( Runtime, warning ) << "Making up indexOrigin, because the image lacks this information";
 		}
+	}
+
+	auto orientation = extractOrTell({"PerFrameFunctionalGroupsSequence/PlaneOrientationSequence/ImageOrientationPatient","ImageOrientationPatient"},dicomTree,info);
+	if ( orientation ) {
+		auto buff = orientation->as<util::dlist>( );
+
+		if ( buff.size() == 6 ) {
+			util::fvector3 row, column;
+			auto b = buff.begin();
+
+			for ( int i = 0; i < 3; i++ )row[i] = float(*b++);
+
+			for ( int i = 0; i < 3; i++ )column[i] = float(*b++);
+
+			object.setValueAs( "rowVec" , row );
+			object.setValueAs( "columnVec", column );
+		} else {
+			LOG( Runtime, error ) << "Could not extract row- and columnVector from " << dicomTree.property( "ImageOrientationPatient" );
+		}
+
+		if( dicomTree.hasProperty( "SIEMENS CSA HEADER/SliceNormalVector" ) && !object.hasProperty( "sliceVec" ) ) {
+			LOG( Debug, info ) << "Extracting sliceVec from SIEMENS CSA HEADER/SliceNormalVector " << dicomTree.property( "SIEMENS CSA HEADER/SliceNormalVector" );
+			auto list = dicomTree.getValueAs<util::dlist >( "SIEMENS CSA HEADER/SliceNormalVector" );
+			util::fvector3 vec;
+			std::copy(list.begin(), list.end(), std::begin(vec) );
+			object.setValueAs( "sliceVec", vec );
+			dicomTree.remove( "SIEMENS CSA HEADER/SliceNormalVector" );
+		}
+	} else {
+		LOG( Runtime, warning ) << "Making up row and column vector, because the image lacks this information";
+		object.setValueAs( "rowVec" , util::fvector3( {1, 0, 0} ) );
+		object.setValueAs( "columnVec", util::fvector3( {0, 1, 0} ) );
+	}
+
+	util::fvector3 voxelSize( {invalid_float, invalid_float, invalid_float} );
+	auto p_spacing = extractOrTell({
+		"PixelSpacing",
+		"ImagePlanePixelSpacing",
+		"ImagerPixelSpacing",
+		"PerFrameFunctionalGroupsSequence/PixelMeasuresSequence/PixelSpacing"
+	},dicomTree,warning);
+	if ( p_spacing ) {
+		voxelSize = p_spacing->as<util::fvector3>();
+		std::swap( voxelSize[0], voxelSize[1] ); // the values are row-spacing (size in column dir) /column spacing (size in row dir)
+	}
+
+	auto p_thickness = extractOrTell({"SliceThickness","PerFrameFunctionalGroupsSequence/PixelMeasuresSequence/SliceThickness"},dicomTree,warning);
+	if ( p_thickness ) {
+		voxelSize[2] = p_thickness->as<float>();
+	} else {
+		auto CSA_SliceRes = object.queryValueAs<float>( "DICOM/CSASeriesHeaderInfo/SliceResolution" );
+		if(CSA_SliceRes)
+			voxelSize[2] = 1 /  *CSA_SliceRes;
+	}
+
+	object.setValueAs( "voxelSize", voxelSize );
+	auto spacing = extractOrTell({"SpacingBetweenSlices","PerFrameFunctionalGroupsSequence/PixelMeasuresSequence/SpacingBetweenSlices"},dicomTree,info);
+	if ( spacing ) {
+		if ( voxelSize[2] != invalid_float ) {
+			object.setValueAs( "voxelGap", util::fvector3( {0, 0, spacing->as<float>() - voxelSize[2]} ) );
+		} else
+			LOG( Runtime, warning ) << "Cannot compute the voxel gap from the slice spacing because the slice thickness is not known";
 	}
 }
 
@@ -781,8 +780,8 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 			chunks.front().convertToType(util::typeID<float>(), philps_scale);
 		}
 
-		// sanitise indexOrigin before maybe doing MOSAIC decomposition
-		santitse_origin(chunks.front());
+		// sanitise geometry before maybe doing MOSAIC decomposition
+		santitse_geometry(chunks.front());
 
 		// check for multislice-data (with differing geometries)
 		const auto iType = chunks.front().queryValueAs<util::slist>( util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/" + "ImageType");

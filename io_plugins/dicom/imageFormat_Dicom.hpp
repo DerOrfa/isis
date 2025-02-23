@@ -124,7 +124,7 @@ public:
 	static const char unknownTagName[];
 	static void parseCSA(const data::ByteArray &data, isis::util::PropertyMap &map, std::list<util::istring> dialects );
 	static void sanitise( util::PropertyMap &object, const std::list<util::istring>& dialect );
-	static void santitse_origin( util::PropertyMap &object );
+	static void santitse_geometry( util::PropertyMap &object );
 	[[nodiscard]] std::string getName()const override;
 	[[nodiscard]] std::list<util::istring> dialects()const override;
 
