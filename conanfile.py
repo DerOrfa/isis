@@ -30,6 +30,7 @@ class isis(ConanFile):
 		"shared": True,
 		"with_qt5": False,
 		"with_cli": True,
+		"with_gsl": False,
 		"with_python": None,
 		"debug_log": False,
 		"io_zisraw": True,

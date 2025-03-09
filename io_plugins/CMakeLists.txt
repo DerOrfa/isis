@@ -57,9 +57,10 @@ endif()
 # orthanc plugin
 ############################################################
 if(ISIS_IOPLUGIN_ORTHANC)
+	find_package(jsoncpp)
 	add_library(isisImageFormat_orthanc SHARED imageFormat_orthanc.cpp )
 	set_target_properties(isisImageFormat_orthanc PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${INC_JSONCPP}")
-	target_link_libraries(isisImageFormat_orthanc isis_core ACE ACE_INet jsoncpp Threads::Threads)
+	target_link_libraries(isisImageFormat_orthanc isis_core ACE ACE_INet jsoncpp_lib Threads::Threads)
 	set(TARGETS ${TARGETS} isisImageFormat_orthanc)
 endif()
 
@@ -150,21 +151,6 @@ if(ISIS_IOPLUGIN_PNG)
 endif()
 
 ############################################################
-# ImageMagic plugin
-############################################################
-if(ISIS_IOPLUGIN_IMAGEMAGIC)
-	find_package(ImageMagick REQUIRED Magick++ MagickWand MagickCore)
-
-	add_library(isisImageFormat_ImageMagick SHARED imageFormat_ImageMagick.cpp)
-	set_target_properties(isisImageFormat_ImageMagick PROPERTIES INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR};${ImageMagick_INCLUDE_DIRS}")
-	target_link_libraries(isisImageFormat_ImageMagick isis_core ${ImageMagick_LIBRARIES})
-
-	add_definitions("-DMAGICKCORE_HDRI_ENABLE=0" "-DMAGICKCORE_QUANTUM_DEPTH=16")
-
-	set(TARGETS ${TARGETS} isisImageFormat_ImageMagick)
-endif()
-
-############################################################
 # COMP proxy plugin
 ############################################################
 if(ISIS_IOPLUGIN_COMP)
@@ -200,6 +186,7 @@ if(ISIS_IOPLUGIN_DICOM)
 	add_library(isisImageFormat_Dicom SHARED dicom/imageFormat_Dicom.cpp dicom/imageFormat_DicomParser.cpp dicom/imageFormat_DicomDictionary.cpp)
 	
 	if(OPENJPEG_FOUND)
+		target_include_directories(isisImageFormat_Dicom PRIVATE "/usr/include/openjpeg-2.4")
 		target_compile_definitions(isisImageFormat_Dicom PRIVATE "HAVE_OPENJPEG")
 		target_sources(isisImageFormat_Dicom PRIVATE dicom/imageFormat_DicomJ2k.cpp)
 		target_link_libraries(isisImageFormat_Dicom PRIVATE isis_core openjp2)

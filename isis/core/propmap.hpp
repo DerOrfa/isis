@@ -264,6 +264,8 @@ public:
 	 */
 	template<typename T> PathSet getLocal()const;
 
+	PathSet walkLeaves(key_predicate &predicate)const;
+
 	/**
 	 * Get the property at the path, or an empty one if there is none.
 	 * \param path the path to the property

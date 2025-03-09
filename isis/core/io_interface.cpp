@@ -85,7 +85,7 @@ std::list<data::Chunk> FileFormat::load(data::ByteArray source, std::list<util::
 }
 
 std::list<data::Chunk> FileFormat::load(std::streambuf *source, std::list<util::istring> formatstack, std::list<util::istring> dialects, std::shared_ptr<util::ProgressFeedback> feedback ){
-	util::TmpFile tmp("isis_streamio_adapter");
+	util::TmpFile tmp;
 	boost::iostreams::copy(*source,boost::iostreams::file_sink(tmp.c_str()));
 	return load(tmp.native(),formatstack,dialects,feedback);
 }

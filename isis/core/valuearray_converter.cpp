@@ -180,7 +180,9 @@ template<typename SRC, typename DST> class ValueArrayGenerator: public ValueArra
 {
 public:
 	[[nodiscard]] ValueArray create(const size_t len )const override {
-		return ValueArray(( DST * )calloc(len, sizeof( DST ) ), len );
+		void *allocated=calloc(len, sizeof( DST ) );
+		LOG_IF(allocated==nullptr,Runtime,error) << "Failed to allocate " << len*sizeof( DST ) << " bytes (" << strerror(errno)<<")";
+		return ValueArray(static_cast<DST *>(allocated), len );
 	}
 	[[nodiscard]] ValueArray generate(const ValueArray &src, const scaling_pair &scaling )const override {
 		//Create new "stuff" in memory

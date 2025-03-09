@@ -49,7 +49,7 @@ bool static_equal_compare(const Value &lhs, const equal_comparable_non_value aut
 		if constexpr(equal_comparable_with<l_type, r_type>)
 			return ptr == rhs;
 		else{
-			LOG(Runtime, error)
+			LOG(Debug, error)
 				<< "Cannot equal compare " << lhs.toString(true) << " and "
 				<< rhs << "(" << _internal::typename_with_fallback<r_type>() << ")";
 				return false;

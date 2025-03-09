@@ -1,7 +1,8 @@
 #include "imageFormat_Dicom.hpp"
 #include "imageFormat_DicomDictionary.hpp"
-#include <clocale>
 #include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/numeric/conversion/converter.hpp>
+#include <boost/numeric/conversion/conversion_traits.hpp>
 #include <boost/endian/buffers.hpp>
 #include <isis/core/common.hpp>
 
