@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 9.0.50~), cmake, libbz2-dev, zlib1g-dev,
  libmuparser-dev, qtbase5-dev, libace-inet-dev,
  libpng-dev, libjsoncpp-dev, libjxr-dev, libopenjp2-7-dev,
  libboost-iostreams-dev, pybind11-dev, libgsl-dev,
- pkg-config, libfftw3-dev, help2man, liblzma-dev
+ pkg-config, libfftw3-dev, help2man, liblzma-dev, libncurses-dev
 Standards-Version: 3.9.2
 Homepage: https://github.com/isis-group
 

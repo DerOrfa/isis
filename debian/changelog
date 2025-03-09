@@ -1,3 +1,12 @@
+isis (0.10.0) unstable; urgency=low
+
+  * update to CBS workstation G8
+  * sanitise indexOrigin before everything else (fixes failure to load TerraX Mosaic data)
+  * enable orthanc plugin to handle streaming data
+  * enable orthanc plugin to talk to rudicom server
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Sun, 09 Mar 2025 15:32:23 +0100
+
 isis (0.9.1) unstable; urgency=low
 
   * when comparing Properties and one side is a list while the other is a 

@@ -35,19 +35,18 @@ CMAKE_FLAGS=-DCMAKE_INSTALL_PREFIX:PATH=/usr \
             -DISIS_IOPLUGIN_COMP:BOOL=ON \
             -DISIS_IOPLUGIN_PNG:BOOL=ON \
             -DISIS_IOPLUGIN_FLIST:BOOL=ON \
-            -DISIS_IOPLUGIN_IMAGEMAGIC:BOOL=OFF \
             -DISIS_IOPLUGIN_TIFF_SA:BOOL=OFF \
             -DISIS_IOPLUGIN_ORTHANC:BOOL=ON \
             -DISIS_IOPLUGIN_TAR:BOOL=ON \
             -DISIS_IOPLUGIN_ZISRAW:BOOL=ON \
             -DISIS_QT5:BOOL=ON \
             -DISIS_PYTHON:BOOL=ON \
-            -DUSE_SYSTEM_PYBIND=ON \
             -DISIS_USE_FFTW:BOOL=ON \
             -DISIS_USE_GSL:BOOL=ON \
             -DISIS_RUNTIME_LOG:BOOL=ON \
             -DISIS_DEBUG_LOG:BOOL=OFF \
             -DMANPAGES:BOOL=ON \
+            -DBUILD_DOCUMENTATION=ON \
             -DGIT_REVISION="Debian-$(debver)"
 
 override_dh_auto_test:
