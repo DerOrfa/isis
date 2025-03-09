@@ -50,6 +50,7 @@ if(ISIS_QT5)
 	add_executable(isisview isisview.cpp)
 	target_link_libraries(isisview isis_qt5 )
 	set_target_properties(isisview PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+	build_manpage(isisview "simple mri data viewer")
 
 	install(TARGETS isisview RUNTIME DESTINATION bin COMPONENT "CLI_Tools")
 	build_manpage(isisview "display MRI data")

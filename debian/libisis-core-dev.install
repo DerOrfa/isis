@@ -1,0 +1,8 @@
+usr/share/isis/cmake
+usr/include/isis/config.hpp usr/include/isis/
+usr/include/isis/core usr/include/isis/
+usr/include/isis/math usr/include/isis/
+usr/lib/${DEB_HOST_MULTIARCH}/*isis_core.so
+usr/lib/${DEB_HOST_MULTIARCH}/*isis_core.a
+usr/lib/${DEB_HOST_MULTIARCH}/*isis_math.so
+usr/lib/${DEB_HOST_MULTIARCH}/*isis_math.a

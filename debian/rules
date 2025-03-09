@@ -1,0 +1,73 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+srcpkg = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Source:' | cut -d ' ' -f 2,2)
+debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f 2,2 )
+upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
+
+# this figures out the last merge point from 'master' into the Debian branch and
+# then described this commit relative to the last release tag
+# If this should make any sense the local master branch must track upstream's
+# master or whatever other source branch.
+gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match '*\.*\.*' $$(git merge-base -a HEAD master) | sed -e 's/_/./g' -e 's/-/+git/')
+
+
+# one ring to rule them all ...
+%:
+	dh $@ --buildsystem=cmake --parallel
+
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+# this enables everything that upstream considers to be ready for production
+# currently tests only get built but do not run as the test suite assumes
+# an already installed package -- upstream is working on a fix
+CMAKE_FLAGS=-DCMAKE_INSTALL_PREFIX:PATH=/usr \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DISIS_BUILD_STATIC_AND_SHARED:BOOL=ON \
+            -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--no-undefined" \
+            -DCMAKE_EXE_LINKER_FLAGS="-Wl,--no-undefined" \
+            -DISIS_CALC:BOOL=ON \
+            -DISIS_BUILD_TOOLS:BOOL=ON \
+            -DISIS_IOPLUGIN_DICOM:BOOL=ON \
+            -DISIS_IOPLUGIN_NIFTI_SA:BOOL=ON \
+            -DISIS_IOPLUGIN_VISTA_SA:BOOL=OFF \
+            -DISIS_IOPLUGIN_COMP:BOOL=ON \
+            -DISIS_IOPLUGIN_PNG:BOOL=ON \
+            -DISIS_IOPLUGIN_FLIST:BOOL=ON \
+            -DISIS_IOPLUGIN_IMAGEMAGIC:BOOL=OFF \
+            -DISIS_IOPLUGIN_TIFF_SA:BOOL=OFF \
+            -DISIS_IOPLUGIN_ORTHANC:BOOL=ON \
+            -DISIS_IOPLUGIN_TAR:BOOL=ON \
+            -DISIS_IOPLUGIN_ZISRAW:BOOL=ON \
+            -DISIS_QT5:BOOL=ON \
+            -DISIS_PYTHON:BOOL=ON \
+            -DUSE_SYSTEM_PYBIND=ON \
+            -DISIS_USE_FFTW:BOOL=ON \
+            -DISIS_USE_GSL:BOOL=ON \
+            -DISIS_RUNTIME_LOG:BOOL=ON \
+            -DISIS_DEBUG_LOG:BOOL=OFF \
+            -DMANPAGES:BOOL=ON \
+            -DGIT_REVISION="Debian-$(debver)"
+
+override_dh_auto_test:
+	# don't work ATM
+
+override_dh_auto_configure:
+	dh_auto_configure -- $(CMAKE_FLAGS)
+# TODO compile for mutliple python versions
+# dh_auto_configure --builddirectory=build-$*-dbg -- \
+#        -DCMAKE_BUILDTYPE:STRING="Debug" \
+#        -DCMAKE_SKIP_RPATH=true \
+#        -DCMAKE_PYTHON_VERSION=$*-dbg \
+#        -DCMAKE_PYTHONLIB_VERSION="$*_d;$*" \
+
+# ignore the plugins, as they are for private consumption by the binaries in
+# this package only
+override_dh_makeshlibs:
+	dh_makeshlibs -XlibisisImageFormat
+
+get-orig-source:
+	# orig tarball, turn directory into something nicer
+	git archive --format=tar --prefix=$(srcpkg)-$(gitver)/ HEAD | \
+	gzip -9 > $(srcpkg)_$(gitver).orig.tar.gz

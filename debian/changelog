@@ -1,0 +1,431 @@
+isis (0.9.1) unstable; urgency=low
+
+  * when comparing Properties and one side is a list while the other is a 
+    string explicitly compare as string
+  * remove redundant handling of "UT" na d"LT" CSA Values when interpreting 
+    "LT", "ST" and "UT" Values treat them as single string
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Tue, 17 Jan 2023 13:59:35 +0100
+
+isis (0.9.0+nmu1) unstable; urgency=low
+
+  * fix dependencies
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Tue, 09 Aug 2022 14:45:44 +0200
+
+isis (0.9.0) unstable; urgency=low
+
+  * switch to c++20
+  * reimplement value arithmetics using c++20
+  * some api cleanup
+  * drop support for vista
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Thu, 28 Jul 2022 16:31:17 +0200
+
+isis (0.8.0) unstable; urgency=low
+
+  * use own implementation of dicom and thus get rid of dcmtk
+  * include ZISRAW import (for ZEISS .czi files)
+  * in orthanc force deep copy of input to fix problems with cheap copy io
+    modules
+  * in dicom file io switch to deep copy of input when reaching os limit on
+    open files
+  * switch to c++17
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Sun, 22 May 2022 17:34:22 +0200
+
+isis (0.7.16-1) xenial UNRELEASED; urgency=low
+
+  [ ISIS Group ]
+  * big api change in progress
+  * updated packaging
+  * add experimental support for standalone vista
+  * add itk4 adapter
+  * add ImageMagic base io plugin
+  * improve SimpleImageView
+  * add support for fdf files
+  * improve performance with mosaic data
+
+ -- ISIS Group <gr_isis@cbs.mpg.de>  Tue, 28 Nov 2017 11:41:09 +0100
+
+isis (0.7.9-1ubuntu1) UNRELEASED; urgency=low
+
+  * fix crash with empty dcmstack
+  * in DICOM generate studyStart from StudyTime and StudyDate
+  * in DICOM add dialect to force MOSAIC decomposition
+  * bugfix for calculation of voxelSize
+
+ -- ISIS Group <gr_isis@cbs.mpg.de>  Thu, 12 Mar 2015 14:57:17 +0100
+
+isis (0.7.7-2) UNRELEASED; urgency=low
+
+  * use boost 1.48 to work around packaging issues in ubuntu
+
+ -- ISIS Group <gr_isis@cbs.mpg.de>  Wed, 20 Aug 2014 19:22:52 +0000
+
+isis (0.7.7-1) UNRELEASED; urgency=low
+
+  * add some value representations in DICOM
+  * consider volume chunks with different indexOrigin to be part of 
+    different images
+  * extend dcmstack support in nifti
+  * catch bad_lexical_cast when trying to parse string as ptime in the 
+    automatic value conversion
+  * in nifti_sa always store repetitionTime, if there is one
+  * improve message about incomplete images
+
+ -- ISIS Group <gr_isis@cbs.mpg.de>  Mon, 18 Aug 2014 20:14:18 +0000
+
+isis (0.7.6-1) UNRELEASED; urgency=low
+
+  * in nifti_sa add rudimentary support for reading json formated extensions
+  * in DICOM add fallback for missing number of slices in mosaic
+  * switch to boost::filesystem v3
+  * add support for lzma in imageFormat_compressed
+  * re-enabled help2man generated man files
+
+ -- ISIS Group <gr_isis@cbs.mpg.de>  Thu, 27 Jun 2013 16:24:21 +0200
+
+isis (0.7.5-2) UNRELEASED; urgency=low
+
+  * hardwire VIAIO_LIBRARY to /usr/lib/libviaio.a to get rid of runtime 
+    dependency on libvia
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Wed, 17 Apr 2013 14:34:25 +0200
+
+isis (0.7.5-1) UNRELEASED; urgency=low
+
+  * in nifti_sa _always_ store the sform to make SPM happy
+  * hardwiring isisdiff to ignore the "source" property
+  * fix crash when trying to convert color images to scalars
+  * make IOFactory::findPlugins ignore case when looking for plugin files
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Thu, 04 Apr 2013 15:21:48 +0200
+
+isis (0.7.4-1) UNRELEASED; urgency=low
+
+  * improve fsl dialect in nifti_sa
+    (should conform to "Chris Rorden's dcm2nii :: 12 12 2012" now)
+  * use vector3 for diffusionGradient (in dicom and nifti_sa)
+  * when reading dicom remove AcquisitionNumber if its a duplicate of 
+    InstanceNumber
+  * prevent "Unknown" entries for the dicom dictionary
+  * make the sanity check for the slice distance a bit less strict
+  * make clang happier
+  * fix some byteswap issues
+  * include static lib in dev package
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Tue, 05 Mar 2013 14:20:50 +0100
+
+isis (0.7.3-1) UNRELEASED; urgency=low
+
+  * make isis::util::FixedVector::sum const
+  * adapt itkAdapter to use of vector3
+  * some fixes for clang
+  * make nifti_sa for robust against invalid files
+  * not use acquisitionTime as secondary sort anymore
+  * fix bug when reading base256 encoded tar files in compression proxy
+  * tell about the dropped acquisitionTime when reading siemens DWI
+  * add support for conversion vectorX=>list
+  * remove obsolete build dependencies from control file
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Mon, 04 Feb 2013 23:30:18 +0100
+
+isis (0.7.1-1) UNRELEASED; urgency=low
+
+  * fix problem when copying voxelSize from qform/pixdim
+  * consider any voxelSize of 0 as invalid in Image::reIndex
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Wed, 18 Jul 2012 13:40:12 +0200
+
+isis (0.7.0-1) UNRELEASED; urgency=low
+
+  * API version changed to 3.0.0
+  * added vector3<float> and vector3<double> and use it for the image geometry
+    (row/column/sliceVec, indexOrigin and voxelSize/Gap)
+  * added automatic conversion between vector3/4 and lists
+  * use a more robust approach for singletons
+  * fix bug in string=>number conversion (there must not be a "e" or "." as
+    first "digit)
+  * change behaviour of DefaultMsgPrint to print a message only if it wasn't
+    send already within the last half second
+  * add dialect "siemens" in dicom IO to deal with broken AcquisitionTime in DWI
+    data
+  * improve performance of the type casting by skipping one type check
+  * replace separate plugin for gz and tar by a generic proxy for compressed
+    data
+  * fix recognition of scientific notation in type conversion from string
+  * use FindGit cmake module
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Mon, 16 Jul 2012 15:52:05 +0200
+
+isis (0.6.0-1) UNRELEASED; urgency=low
+
+  * add experimental filter infrastructure
+  * add convenience function FileFormat::setGender
+  * add Image::copyByID and Chunk::copyByID
+  * add parameters for voxel size and index origin to isisraw
+  * remove python (it is in https://github.com/isis-group/isis-python now)
+  * some speed improvements
+  * propagate the io-progress feedback to the io plugins and add
+    ProgressFeedback::extend
+  * make PropertyMap::joinTree keep the needed flags in the destinations (this
+    flag was lost from empty properties when property maps where joined in)
+  * in dicom only parse 0x0029, 0x1010/0x1020 as CSA Header if we know it _is_
+    one
+  * add missing "sequenceNumber" to the needed properties of images
+ 
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Thu, 07 Jun 2012 15:10:32 +0200
+
+isis (0.5.4-2) UNRELEASED; urgency=low
+
+  * add conflict with libisiscore0 and old io-plugins
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Fri, 7 May 2012 14:15:32 +0200
+
+isis (0.5.4-1) UNRELEASED; urgency=low
+
+  * in the Python interface remove ImageList and ChunkList;
+    now using standard python lists
+  * conversion from and to QMatrix4x4 are now only available
+    when using qt >= 4.6
+  * cosmetics
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Fri, 4 May 2012 14:15:32 +0200
+
+isis (0.5.3-1) UNRELEASED; urgency=low
+
+  * in the Python interface remove a stray debugging output in getProperty
+  * in the Python interface make getProperty return time if a stored timestamp 
+    only consists of a time-part
+  * in the Python interface make getProperty return an empty object if requested
+    property is not set (instead of crashing)
+  * fix python interface of hasProperty and hasBranch
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Sat, 14 Apr 2012 00:59:48 +0200
+
+isis (0.5.2-1) UNRELEASED; urgency=low
+
+  * get the qform=>matrix in nifti_sa right (hopefully)
+  * add some missing "BOOST_FILESYSTEM_VERSION 2"
+  * clean up linking a bit (less dpkg-shlibdeps whimper)
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Tue, 03 Apr 2012 18:36:36 +0200
+
+isis (0.5.1-2) UNRELEASED; urgency=low
+
+  * fix missing config.hpp in libisis-core-dev
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Thu, 29 Mar 2012 16:06:39 +0200
+
+isis (0.5.1-1) UNRELEASED; urgency=low
+
+  * fix python interface of IOFactory.load/write
+  * enable detection of python interpreters outside of debuild
+  * automatically determine the result type of FixedMatrix::dot
+  * fix logic bug in reading nifti geometries
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Thu, 29 Mar 2012 11:22:05 +0200
+
+isis (0.5.0-1) UNRELEASED; urgency=low
+
+  * minor performance improvements and cleanup
+  * prevent big parts of the conversion system from being exported -
+    reduces core library size by 10%
+  * make the png-plugin to accept signed 8/16 bit images for writing (just
+    write them as unsgined 8/16 bit)
+  * revised isisdiff to better read/diff datasets with multiple images
+  * in ParameterMap::parse stop searching for abbreviations if there is a
+    full match with a parameter (stops conflics with parameters which are
+    substrings of other parameters)
+  * enable getMinMax for color and complex numbers
+  * enable conversion of color and complex data (also from numeric types)
+  * add function Chunk::createByID
+  * put the IO functionality of IOApplication into static functions, so others
+    can use it as well
+  * add Application::addLogging to dynamically add logging modules and their
+    related program parameters
+  * add Image::copyAsValuePtr
+  * in IOApplication add program parameter to control scaling, when converting
+    for writing files
+  * add capability to show QMEssageBox in QDefaultMessagePrint module
+  * add an overloaded IOFactory::load to load from a list of sources
+  * disable confusing PropertyValue::operator-> inherited from ValueReference
+    and add some hooks to access some common functions from Value
+  * add optional parameter for Chunk creation to fake the properties needed for
+    a valid Chunk
+  * add Image::copyToValueArray
+  * replace imageFormat_raw by a special tool for reading/writing raw data
+  * move ValuePtrBase into namespace data (from data::_internal)
+  * rename Chunk::bytesPerVoxel to Chunk::getBytesPerVoxel
+  * rename Image::getBytesPerVoxel to Image::getMaxBytesPerVoxel (and improve
+    the doc)
+  * rename Image::copyToMemChunk to Image::copyAsMemChunk (and improve the doc)
+  * rename ValuePtr to ValueArray
+  * rename type.{ch}pp files to value.{ch}pp
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Thu, 15 Mar 2012 11:39:54 +0100
+
+isis (0.4.7-1) UNRELEASED; urgency=low
+
+  * Initial Debian packaging (Closes: #633677).
+
+ -- Michael Hanke <mih@debian.org>  Thu, 16 Feb 2012 09:31:22 +0100
+
+isis (0.4.6+git10-g7b6a946-1) UNRELEASED; urgency=low
+
+  * add support for writing 24/48bit rgb, and for 16bit grayscale images as
+    PNG
+  * dicom plugin builds on WIN32
+  * fix bug which caused Chunk::swapAlong to fail for non 8bit data
+  * add support for reading 24/48bit rgb, and for 16bit grayscale images (PNG)
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Tue, 31 Jan 2012 14:40:42 +0100
+
+isis (0.4.4gca0af59-0) UNRELEASED; urgency=low
+
+  * add png grayscale reading support
+  * add parameter scaling to Image::copyToMem()
+  * fixed bugs
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Tue, 12 Jan  2012 17:03:00 +0200
+
+isis (0.4.3g322ed3e-0) UNRELEASED; urgency=low
+
+  * api changes in PropertyMap
+  * fixed bug in nifti-sa-plugin
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Tue, 10 Jan  2012 14:12:00 +0200
+
+isis (0.4.2g12c919d-1) UNRELEASED; urgency=low
+
+  * fixed dependency bug in libisis-qt4-dev package
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Mon, 19 Dec  2011 12:12:00 +0200
+
+isis (0.4.2g12c919d-0) UNRELEASED; urgency=low
+
+  * add support for fsl color images
+  * bug fixes
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Fri, 16 Dec  2011 14:28:00 +0200
+
+isis (0.4.1ge179836-3) UNRELEASED; urgency=low
+
+  * add isisio0-common package
+  * all packages are EXACTLY dependet from 0.4.1
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Tue, 29 Nov 2011 14:28:00 +0200
+
+isis (0.4.1ge179836-2) UNRELEASED; urgency=low
+
+  * add missing install file for isisio0-raw
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Mon, 28 Nov 2011 14:48:00 +0200
+
+isis (0.4.1ge179836-1) UNRELEASED; urgency=low
+
+  * fixed dependencies for lenny package (libboost)  
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Mon, 28 Nov 2011 14:48:00 +0200
+
+isis (0.4.1ge179836-0) UNRELEASED; urgency=low
+
+  * add new nifti standalone plugins
+  * add first version of isis python bridge
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Mon, 28 Nov 2011 14:48:00 +0200
+
+isis (0.4.0g9140af9-0) UNRELEASED; urgency=low
+
+  * add first version for python support
+  * add support for dcmtk 3.6
+
+  * let ValuePtr::getRawAddress() return boost::shared_ptr<void> instead of boost::weak_ptr<void>, was a bit overdesigned
+  * fix typo in ValuePtr::copyFromMem and suppress some correct warnings in typePtrTest.cpp
+  * tell the user the size of the image written 
+  * add PropertyMap::find to search single keys in the property tree
+  * remove a private constructor in ValuePtr which prevented copy-construction from Value (should not be necessary)
+  * add FilePtr to handle memory mapped data 
+  * use mmap64 instead of mmap and ftruncate64 instead of fallocate 
+  * fix bug in MemChunk creation which caused the underlying ValuePtr to have a length of 0
+  * get back Chunk::copySlice
+  * fallocate seems not to work on ubuntu - replace by more generic ftruncate
+  * add FilePtr::close to explicitely unmap and close the mapped file 
+  * use FilePtr in io-plugins raw and tar-proxy 
+  * make PropertyMap entries two dimensional to be able to store lists of properties (this is just the storage / not in the interface)
+  * added basic matrix class to do some matrix-algebra on FixedVector 
+  * PropertyValue(bool needed) removed - was in conflict with creation from value
+  * add length check to Image::copyToMem 
+  * add aplying operators *=,/=,+= and -= to FixedVector 
+  * make ProgressFeedback in IOApplication and IOFactory shared_ptr to make them more robust against copying
+  * add some code to handle two dimensional properties (e.g. set by propertyValueAt) when reIndex-ing Images
+  * add stl-compatible begin/end to FixedVector 
+  * fix bug which caused the result of FixedMatrix::getRow to have the wrong internal size and use iterators instead of pointers there
+  * fix wrong warning about inserting chunks into existing image when splicing
+  * fix dicom build on mac
+  * workaround for apparently still/again broken dynamic_cast on MacOS Lion 
+  * remove dedundant LLMap from util::Application
+  * add optional parameter to FileFormat::getSuffixes to specify which IO is meant
+  * dont use Acquisition Time if its not precise enough and be less strict with expected properties - helps with GE data
+  * fix compiles with prehistoric boost versions (<=1.35) 
+  * add DICOM/AcquisitionNumber as attribute to differ between images 
+  * add qdefaultmessageprint class to qt4 adapter
+  * add rdialect onlyfirst to vistaio. This is needed by the viewer to only load the first image in zmaps
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Thu, 10 Nov 2011 12:48:00 +0200
+
+
+isis (0.3.4g5ae6013-0) UNRELEASED; urgency=low
+
+   * Fixed bug in transformCoords
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Tue, 12 Jul 2011 12:48:00 +0200
+
+isis (0.3.3gitg71597cb-1) UNRELEASED; urgency=low
+
+
+   * isis core should be build without debug log
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Thu, 23 Jun 2011 15:38:35 +0200
+
+isis (0.3.3gitg71597cb-0) UNRELEASED; urgency=low
+
+   * use int64_t instead of platform dependent size_t (or time_t) - fixes
+     compile for gcc/mac
+  
+   * do the copying directly in copyChunksToVector - prevent warning about
+     empty object creation
+  
+   * enabled CTest support. Added CoreUtils and DataStorage tests as CTest
+     targets.
+   
+   * make tar-proxy use the dialect to enforce the format used to read the
+    files inside
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Thu, 23 Jun 2011 15:38:35 +0200
+
+
+isis (0.3.1gite7210b-0) UNRELEASED; urgency=low
+
+    * major changes in the project structure. All former ISIS subprojects are now part of an overall ISIS project.
+
+    * added the application 'isiscalc' which performs arithmetical operations on voxel data.
+
+    * make the core additionally search in ISIS_PLUGIN_PATH (if given and env) and in $HOME/isis/plugins for plugins
+
+    * fixed several bugs in the type conversion and file IO.
+
+    * added several new IO-plugins like: imageFormat_raw for raw image output, tar input proxy, imageFormat_png to
+      read and write PNG images,
+
+    * major changes in the core API. The programmers interface has been completely revised.
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Thu, 05 May 2011 15:38:35 +0200
+
+isis (0.2.0git312-0) UNRELEASED; urgency=low
+
+    * Initial Debian packaging attempt. This is the first version of
+      an ISIS debian package.
+
+ -- ISIS Group (The friendly isis team) <gr_isis@cbs.mpg.de>  Wed, 13 Oct 2010 19:43:07 +0100

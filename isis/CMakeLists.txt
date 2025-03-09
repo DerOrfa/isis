@@ -69,8 +69,8 @@ endmacro()
 install(FILES "config.hpp" DESTINATION include/isis COMPONENT Development)
 
 add_subdirectory(core)
-add_subdirectory(adapter)
 add_subdirectory(math)
+add_subdirectory(adapter)
 
 #write exports
 install(EXPORT isis-exports FILE ISISTargets.cmake NAMESPACE ISIS:: DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/isis/cmake")
