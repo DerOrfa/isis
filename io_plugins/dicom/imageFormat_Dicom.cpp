@@ -543,19 +543,19 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<uti
 
 void ImageFormat_Dicom::santitse_origin(util::PropertyMap &object) {
 	util::PropertyMap &dicomTree = object.touchBranch( dicomTagTreeName );
-	const auto origin = extractOrTell({
+	auto origin = extractOrTell({
 		"PerFrameFunctionalGroupsSequence/PlanePositionSequence/ImagePositionPatient",
 		"ImagePositionPatient",
 		"UnknownTag/(0019,1015)"
 	}, dicomTree,info);
 	if ( origin ) {
-		object.setValueAs( "indexOrigin", origin->as<util::fvector3>( ) );
+		origin->swap(object.touchProperty( "indexOrigin"));
 	} else {
-		auto CSA_SliceNumber = dicomTree.queryValueAs<int32_t>( "SIEMENS CSA HEADER/ProtocolSliceNumber" );
-		auto CSA_SliceRes = dicomTree.queryValueAs<float>("CSASeriesHeaderInfo/SliceResolution");
+		const auto CSA_SliceNumber = dicomTree.queryValueAs<int32_t>( "SIEMENS CSA HEADER/ProtocolSliceNumber" );
+		const auto CSA_SliceRes = dicomTree.queryValueAs<float>("CSASeriesHeaderInfo/SliceResolution");
 
 		if( CSA_SliceNumber && CSA_SliceRes ){
-			util::fvector3 orig {0,0,float(*CSA_SliceNumber) / *CSA_SliceRes };
+			const util::fvector3 orig {0,0,float(*CSA_SliceNumber) / *CSA_SliceRes };
 			LOG(Runtime, info) << "Synthesize missing indexOrigin from SIEMENS CSA HEADER/ProtocolSliceNumber as " << orig;
 			object.setValueAs("indexOrigin", orig);
 		} else {
@@ -785,14 +785,14 @@ std::list< data::Chunk > ImageFormat_Dicom::load(data::ByteArray source, std::li
 		santitse_origin(chunks.front());
 
 		// check for multislice-data (with differing geometries)
-		const auto iType = chunks.front().queryValueAs<util::slist>( util::istring( ImageFormat_Dicom::dicomTagTreeName ) + "/" + "ImageType");
+		const auto iType = chunks.front().queryValueAs<util::slist>( util::istring( dicomTagTreeName ) + "/" + "ImageType");
 		//handle siemens mosaic data
-		if ( iType && std::find( iType->begin(), iType->end(), "MOSAIC" ) != iType->end() ) { // if we have an image type and its a mosaic
+		if ( iType && std::find( iType->begin(), iType->end(), "MOSAIC" ) != iType->end() ) { // if we have an image type and it's a mosaic
 			if( checkDialect(dialects, "keepmosaic") ) {
 				LOG( Runtime, info ) << "This seems to be an mosaic image, but dialect \"keepmosaic\" was selected";
 			} else {
 				chunks.front() = readMosaic( chunks.front() );
-				if( chunks.front().hasProperty( "SiemensNumberOfImagesInMosaic" ) ) { // if its still there image was no mosaic, so I guess it should be used according to the standard
+				if( chunks.front().hasProperty( "SiemensNumberOfImagesInMosaic" ) ) { // if it's still there image was no mosaic, so I guess it should be used according to the standard
 					chunks.front().rename( "SiemensNumberOfImagesInMosaic", "SliceOrientation" );
 				}
 
