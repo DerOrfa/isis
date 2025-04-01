@@ -89,7 +89,7 @@ Description: Qt5 bindings for ISIS data I/O framework
 Package: libisis-qt5-dev
 Section: libdevel
 Architecture: any
-Depends: libisis-adapter-qt5-0 (<< ${source:Version}.1~), libisis-core-dev  (<< ${source:Version}.1~), ${misc:Depends}, qtbase5-dev
+Depends: libisis-qt5-0 (<< ${source:Version}.1~), libisis-core-dev  (<< ${source:Version}.1~), ${misc:Depends}, qtbase5-dev
 Description: Qt5 bindings for ISIS data I/O framework (development headers)
  This framework aids access of and conversion between various established
  neuro-imaging data formats.

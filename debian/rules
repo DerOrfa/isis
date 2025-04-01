@@ -46,7 +46,7 @@ CMAKE_FLAGS=-DCMAKE_INSTALL_PREFIX:PATH=/usr \
             -DISIS_RUNTIME_LOG:BOOL=ON \
             -DISIS_DEBUG_LOG:BOOL=OFF \
             -DMANPAGES:BOOL=ON \
-            -DBUILD_DOCUMENTATION=ON \
+            -DFETCHCONTENT_FULLY_DISCONNECTED=OFF \ #work around debuild defaulting to this - but we need fetch_content
             -DGIT_REVISION="Debian-$(debver)"
 
 override_dh_auto_test:

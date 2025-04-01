@@ -1,4 +1,11 @@
-isis (0.10.0) unstable; urgency=low
+isis (0.10.1-1) unstable; urgency=medium
+
+  * fix handling of fix handling of multi-value ImagePositionPatient in dicom
+  * directly use FrameAcquisitionDateTime if available in dicom
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Tue, 01 Apr 2025 11:53:40 +0200
+
+isis (0.10.0-1) unstable; urgency=low
 
   * update to CBS workstation G8
   * sanitise indexOrigin before everything else (fixes failure to load TerraX Mosaic data)
