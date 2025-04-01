@@ -305,16 +305,22 @@ void ImageFormat_Dicom::sanitise( util::PropertyMap &object, const std::list<uti
 		}
 	}
 	{
-		// compute acquisitionTime
-		auto o_acTime= extractOrTell({"AcquisitionTime","ContentTime"},dicomTree,warning);
-		if ( o_acTime ) {
-			auto o_acDate= extractOrTell({"AcquisitionDate", "ContentDate", "SeriesDate"},dicomTree,warning);
-			if( o_acDate ) {
-				const util::timestamp acTime = o_acTime->as<util::timestamp>()+o_acDate->as<util::date>().time_since_epoch();
-				object.setValueAs<util::timestamp>("acquisitionTime", acTime);
-				LOG(Debug,verbose_info)
-				    << "Merging Content Time " << *o_acTime << " and Date " << *o_acDate
-				    << " as " << std::make_pair("acquisitionTime",object.property("acquisitionTime"));
+		auto *frame_time=dicomTree.queryProperty("PerFrameFunctionalGroupsSequence/FrameContentSequence/FrameAcquisitionDateTime");
+		if (frame_time) {
+			frame_time->swap(object.touchProperty("acquisitionTime"));
+			dicomTree.remove("PerFrameFunctionalGroupsSequence/FrameContentSequence/FrameAcquisitionDateTime");
+		} else {
+			// compute acquisitionTime
+			auto o_acTime= extractOrTell({"AcquisitionTime","ContentTime"},dicomTree,warning);
+			if ( o_acTime ) {
+				auto o_acDate= extractOrTell({"AcquisitionDate", "ContentDate", "SeriesDate"},dicomTree,warning);
+				if( o_acDate ) {
+					const util::timestamp acTime = o_acTime->as<util::timestamp>()+o_acDate->as<util::date>().time_since_epoch();
+					object.setValueAs<util::timestamp>("acquisitionTime", acTime);
+					LOG(Debug,verbose_info)
+						<< "Merging Content Time " << *o_acTime << " and Date " << *o_acDate
+						<< " as " << std::make_pair("acquisitionTime",object.property("acquisitionTime"));
+				}
 			}
 		}
 	}
