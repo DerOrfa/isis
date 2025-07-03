@@ -8,7 +8,7 @@ from os import path
 
 class isis(ConanFile):
 	name = "isis"
-	version = "0.9.1-dev"
+	version = "0.10.2-dev"
 	license = "GPL-3.0-or-later"
 	description = "The ISIS project aims to provide a framework to access a large variety of image processing libraries written in different programming languages and environments."
 

@@ -204,39 +204,39 @@ std::list<std::shared_ptr<MessageHandlerBase>> Application::resetLogging()
 	return std::move(ret);
 }
 
-void Application::printHelp( bool withHidden )const
+void Application::printHelp(const bool withHidden )const
 {
 	typedef std::list<std::pair<std::string, std::string> >::const_reference example_type;
 	std::cerr << this->m_name << " (using isis " << getCoreVersion() << ")" << std::endl;
 	std::cerr << "Usage: " << this->m_filename << " <options>" << std::endl << "Where <options> includes:" << std::endl;;
 
-	for (const auto & parameter : parameters) {
+	for (const auto &[param_name, param] : parameters) {
 		std::string pref;
 
-		if ( parameter.second.isNeeded() ) {
+		if ( param.isNeeded() ) {
 			pref = ". Required.";
-		} else if( parameter.second.isHidden() ) {
+		} else if( param.isHidden() ) {
 			if( !withHidden )
 				continue; // if its hidden, not needed, and wie want the short version skip this parameter
 		}
 
-		if ( ! parameter.second.isNeeded() ) {
-			pref = ". Default: \"" + parameter.second.toString() + "\".";
+		if ( ! param.isNeeded() ) {
+			pref = ". Default: \"" + param.toString() + "\".";
 		}
 
 		std::cerr
-		        << "\t-" << parameter.first << " <" << parameter.second.getTypeName() << ">" << std::endl
-		        << "\t\t" << parameter.second.description() << pref << std::endl;
+		        << "\t-" << param_name << " <" << param.getTypeName() << ">" << std::endl
+		        << "\t\t" << param.description() << pref << std::endl;
 
-		if ( parameter.second.is<Selection>() ) {
-			const Selection &ref = parameter.second.as<Selection>();
+		if ( param.is<Selection>() ) {
+			const Selection &ref = param.as<Selection>();
 			const std::list< istring > entries = ref.getEntries();
 			auto i = entries.begin();
 			std::cerr << "\t\tOptions are: \"" << *i << "\"";
 
 			for( i++ ; i != entries.end(); i++ ) {
 				auto dummy = i;
-				std::cout << ( ( ++dummy ) != entries.end() ? ", " : " or " ) << "\"" << *i << "\"";
+				std::cerr << ( ( ++dummy ) != entries.end() ? ", " : " or " ) << "\"" << *i << "\"";
 			}
 
 			std::cerr << "." << std::endl;

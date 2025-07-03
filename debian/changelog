@@ -1,3 +1,12 @@
+isis (0.10.2-1) unstable; urgency=low
+
+  * fix broken TmpFile
+  * add dicom dialect "skope" to handle diffusion-gradient data stored as frames
+  * actually load plugins from $ISIS_PLUGIN_PATH and $HOME/isis/plugins after the builtin ones, so they can override them.
+  * fix lists for default parameters being printed to cout (should be cerr)
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Thu, 03 Jul 2025 09:49:28 +0200
+
 isis (0.10.1-1) unstable; urgency=medium
 
   * fix handling of fix handling of multi-value ImagePositionPatient in dicom
