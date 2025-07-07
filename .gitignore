@@ -3,6 +3,7 @@
 files
 *.log
 *.substvars
+.idea/
 
 #Packaging##############################
 lib/Core/debian/tmp/

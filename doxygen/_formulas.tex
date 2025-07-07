@@ -1,0 +1,36 @@
+\documentclass{article}
+\usepackage{ifthen}
+\usepackage{epsfig}
+\usepackage[utf8]{inputenc}
+\usepackage{newunicodechar}
+  \newunicodechar{⁻}{${}^{-}$}% Superscript minus
+  \newunicodechar{²}{${}^{2}$}% Superscript two
+  \newunicodechar{³}{${}^{3}$}% Superscript three
+
+\pagestyle{empty}
+\begin{document}
+\[ |a-b| <= \varepsilon_T * \lceil |a|,|b|,|thresh| \rceil \]
+\pagebreak
+
+$ \prod_{i=0}^{DIMS-1} getDimSize(i) $
+\pagebreak
+
+$ \overrightarrow{this} \cdot \overrightarrow{src}  = \sum_{i=0}^{SIZE-1} {this_i * src_i} $
+\pagebreak
+
+$ \overrightarrow{this} \cdot \overrightarrow{this} = \sum_{i=0}^{SIZE-1} this_i^2 $
+\pagebreak
+
+$ \sqrt{\sum_{i=0}^{SIZE-1} this_i^2} $
+\pagebreak
+
+\[ \overrightarrow{this} = \overrightarrow{this} * {1 \over {\sqrt{\sum_{i=0}^{SIZE-1} this_i^2}}}  \]
+\pagebreak
+
+\[ \prod_{i=0}^{SIZE-1} this_i \]
+\pagebreak
+
+\[ \sum_{i=0}^{SIZE-1} this_i \]
+\pagebreak
+
+\end{document}
