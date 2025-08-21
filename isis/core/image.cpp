@@ -473,6 +473,20 @@ const Chunk Image::getChunk ( size_t first, size_t second, size_t third, size_t 
 	return getChunkAt( index, copy_metadata );
 }
 
+void Image::copyRange( const std::array<size_t,4> &source_start, const std::array<size_t,4> &source_end, Chunk &dst, const std::array<size_t,4> &destination ) const {
+	const auto start_index = commonGet( source_start[0], source_start[1], source_start[2], source_start[3] );
+	const auto end_index = commonGet( source_end[0], source_end[1], source_end[2], source_end[3] );
+	auto stack = chunkPtrAt( start_index.first );
+	auto start = stack->getCoordsFromLinIndex(start_index.second);
+	util::vector<size_t,4> end;
+	if (start_index.first != end_index.first) {
+		if (end_index.second>0)
+			throw std::logic_error("Cannot copy across chunk boundaries");
+		end = stack->getCoordsFromLinIndex(stack->getVolume());;
+	} else
+		end = stack->getCoordsFromLinIndex(end_index.second);
+	stack->copyRange(start,end,dst,destination);
+}
 void Image::copyToValueArray(ValueArray &dst, scaling_pair scaling ) const
 {
 	if( getVolume() > dst.getLength() ) {

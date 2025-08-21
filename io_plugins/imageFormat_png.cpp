@@ -80,7 +80,7 @@ public:
 	[[nodiscard]] std::string getName()const override {
 		return "PNG (Portable Network Graphics)";
 	}
-	[[nodiscard]] std::list<util::istring> dialects() const override {return {"middle","stacked", "noflip", "parallel"};}
+	[[nodiscard]] std::list<util::istring> dialects() const override {return {"middle","stacked", "noflip", "parallel", "mosaic"};}
 	bool write_png( const std::string &filename, const data::Chunk &src, int color_type, int bit_depth ) {
 		assert( src.getRelevantDims() == 2 );
 		FILE *fp;
@@ -303,9 +303,8 @@ public:
 		}
 
 		tImg.spliceDownTo( data::sliceDim );
-
-
-		if( checkDialect(dialects, "middle" ) ) { //save only the middle
+		if( checkDialect(dialects, "middle" ) ) {
+			//save only the middle
 			std::vector<data::Chunk > chunks;
 			size_t middle= tImg.getDimSize(data::sliceDim) / 2;
 			LOG( Runtime, info ) 
@@ -316,7 +315,27 @@ public:
 				chunks.push_back(tImg.getChunk(0,0,middle,i));
 			
 			writeChunks(chunks,filename,color_type,bit_depth,dialects,feedback);  // write all slices
+		} else if (checkDialect(dialects, "mosaic" )) {
 
+			std::vector<data::Chunk> mosaics;
+			const auto size = tImg.getSizeAsVector();
+			const auto stacks = size[data::timeDim];
+			const auto slices = size[data::sliceDim];
+			const auto row_width = size[data::rowDim];
+			const auto slice_rows = size[data::columnDim];
+			const size_t mos_with = std::ceil(std::sqrt(slices));
+			for (size_t i=0; i<stacks;i++)	{
+				auto mosaic = data::Chunk::createByID(isis_data_type,mos_with,mos_with);
+				for (size_t slice=0; slice < slices;slice++) {
+					// we already know we have slice-chunks so selecting a slice is equivalent to selecting a chunk
+					auto tile = tImg.getChunk(0,0,slice,i,false);
+					std::array<size_t,2> sector = {slice%mos_with,slice/mos_with};
+					std::array<size_t,4> dst = {sector[0]*row_width,sector[1]*slice_rows};
+					mosaic.copyFromTile(tile,dst);
+				}
+				mosaics.push_back(std::move(mosaic));
+			}
+			writeChunks(mosaics,filename,color_type,bit_depth,dialects,feedback);
 		} else { //save all slices
 			writeChunks(tImg.copyChunksToVector(),filename,color_type,bit_depth,dialects,feedback);  // write all slices
 		}

@@ -304,6 +304,14 @@ public:
 	Chunk getChunk ( size_t first, size_t second = 0, size_t third = 0, size_t fourth = 0, bool copy_metadata = true );
 
 	/**
+	 * Copy a range of voxels from the image into a destination Chunk.
+	 *
+	 * This wraps around Chunk::copyRange and automatically selects the correct source-chunk
+	 * It *cannot* copy across multiple chunks!
+	 *
+	 */
+	void copyRange( const std::array<size_t,4> &source_start, const std::array<size_t,4> &source_end, Chunk &dst, const std::array<size_t,4> &destination ) const;
+	/**
 	 * Get the chunk that contains the voxel at the given coordinates in the given type.
 	 * If the accordant chunk has type T a cheap copy is returned.
 	 * Otherwise a MemChunk-copy of the requested type is created from it.
