@@ -95,9 +95,9 @@ else(USE_CONAN)
 endif(USE_CONAN)
 
 if(BUILD_TESTING)
-	find_package(Boost REQUIRED COMPONENTS iostreams unit_test_framework)
+	find_package(Boost REQUIRED COMPONENTS iostreams unit_test_framework NO_MODULE)
 else(BUILD_TESTING)
-	find_package(Boost REQUIRED COMPONENTS iostreams)
+	find_package(Boost REQUIRED COMPONENTS iostreams NO_MODULE)
 endif(BUILD_TESTING)
 
 ############################################################
