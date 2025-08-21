@@ -171,12 +171,22 @@ template<> std::pair<__m128i, __m128i> _getMinMaxBlockLoop<uint32_t>( const __m1
 
 template<typename T> std::pair<T, T> _getMinMax( const T *data, size_t len )
 {
-	size_t blocks = len / ( 16 / sizeof( T ) );
-
 	T bmin = std::numeric_limits<T>::max();
 	T bmax = std::numeric_limits<T>::min();
 
-	if( blocks ) { // if there are 16byte-blocks of values
+	// doing some evil pointer magic to figure out how many elements until next 16byte align
+	auto prelude = (16-(uintptr_t)data % 16)/sizeof(T);
+
+	if ( prelude ) {
+		bmin = *std::min_element( data, data + prelude );
+		bmax = *std::max_element( data, data + prelude );
+		data += prelude;
+		len -= prelude;
+	}
+
+	const size_t blocks = len / ( 16 / sizeof( T ) );
+
+	if( blocks ) { // if there are some 16byte-blocks of values
 		std::pair<__m128i, __m128i> minmax = _getMinMaxBlockLoop<T>( reinterpret_cast<const __m128i *>( data ), blocks );
 		// compute the min/max of the blocks bmin/bmax
 		const _VectorUnion<T> smin = minmax.first;

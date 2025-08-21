@@ -325,7 +325,7 @@ public:
 			const auto slice_rows = size[data::columnDim];
 			const size_t mos_with = std::ceil(std::sqrt(slices));
 			for (size_t i=0; i<stacks;i++)	{
-				auto mosaic = data::Chunk::createByID(isis_data_type,mos_with,mos_with);
+				auto mosaic = data::Chunk::createByID(isis_data_type,mos_with*row_width,mos_with*slice_rows);
 				for (size_t slice=0; slice < slices;slice++) {
 					// we already know we have slice-chunks so selecting a slice is equivalent to selecting a chunk
 					auto tile = tImg.getChunk(0,0,slice,i,false);
