@@ -162,7 +162,7 @@ public:
 
 	/**
 	 * Copy data from a (smaller) chunk and insert it as a tile at a specified position.
-	 * If the data would not fit at the given position (aka would got beyound the images size) it will be clipped and a warning will be sent if enabled.
+	 * If the data would not fit at the given position (aka would go beyond the images size) it will be clipped and a warning will be sent if enabled.
 	 * \note the size of the copied tile is defined by the size of the source. In other words the whole source is copied as a tile.
 	 * \param src the source for the tile-data
 	 * \param pos the position where to insert the data
