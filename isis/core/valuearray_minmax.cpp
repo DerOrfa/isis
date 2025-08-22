@@ -177,7 +177,7 @@ template<typename T> std::pair<T, T> _getMinMax( const T *data, size_t len )
 	// doing some evil pointer magic to figure out how many elements until next 16byte align
 	auto prelude = (16-(uintptr_t)data % 16)/sizeof(T);
 
-	if ( prelude ) {
+	if ( prelude != 16/sizeof(T) ) {
 		bmin = *std::min_element( data, data + prelude );
 		bmax = *std::max_element( data, data + prelude );
 		data += prelude;
