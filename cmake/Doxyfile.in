@@ -1,4 +1,7 @@
 # Doxyfile 1.5.6
+# create with
+# cmake .. -DBUILD_DOCUMENTATION=YES -DDOXYFILE_HTML_DIR="/data/tu_reimer/projects/isis-pages/doxygen"
+# make doc
 
 #---------------------------------------------------------------------------
 # Project related configuration options
