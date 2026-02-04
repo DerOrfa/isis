@@ -37,19 +37,21 @@ int main( int argc, char **argv )
 
 
 	const std::string op = app.parameters["voxelop"];
+	std::list<data::Image> out_images;
 
 	try {
 		VoxelOp vop( op );
-
-		for( data::TypedImage<double> img: app.images ) { //muparser needs double
+		while (!app.images.empty()) { //muparser needs double
+			auto img = app.fetchImageAs<double>();
 			std::cout << "Computing vox=(" << op << ") for each voxel of the " << img.getSizeAsString() << "-Image" << std::endl;
 			img.foreachVoxel( vop );
+			out_images.push_back(std::move(img));
 		}
 	} catch( mu::Parser::exception_type &e ) {
 		std::cerr << e.GetMsg() << std::endl;
 		exit( -1 );
 	}
 
-	app.autowrite( app.images );
+	app.autowrite( out_images );
 	return EXIT_SUCCESS;
 }
