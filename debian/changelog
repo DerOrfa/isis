@@ -1,3 +1,12 @@
+isis (0.10.4-1) UNRELEASED; urgency=medium
+
+  * fix issue were an implicit copy of the VoxelOp would cause muparser to use wrong buffers
+  * fix issue were isiscalc would output the original data instead of the processed
+  * make sure getMinMax gets data 16-byte aligned before doing SSE operations
+  * drop libace network support
+
+ -- Enrico Reimer <reimer@cbs.mpg.de>  Thu, 05 Feb 2026 16:27:39 +0100
+
 isis (0.10.2-1) unstable; urgency=low
 
   * fix broken TmpFile

@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: ISIS Group <gr_isis@cbs.mpg.de>
 Uploaders: Enrico Reimer <reimer@cbs.mpg.de>
 Build-Depends: debhelper (>= 9.0.50~), cmake, libbz2-dev, zlib1g-dev,
- libmuparser-dev, qtbase5-dev, libace-inet-dev,
+ libmuparser-dev, qtbase5-dev,
  libpng-dev, libjsoncpp-dev, libjxr-dev, libopenjp2-7-dev,
  libboost-iostreams-dev, pybind11-dev, libgsl-dev,
  pkg-config, libfftw3-dev, help2man, liblzma-dev, libncurses-dev
