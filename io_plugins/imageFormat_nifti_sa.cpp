@@ -486,7 +486,7 @@ void ImageFormat_NiftiSa::storeHeader( const util::PropertyMap &props, _internal
 	const isis::util::Matrix4x4< double > nifti2image = util::transpose(getNiftiMatrix( props )); //use the inverse of image2nifti to extract direction vectors easier
 
 	for( int i = 0; i < 3; i++ ) {
-		//vector length of the i'th column (thats ok with vector4, because fourth element is allways 0)
+		//vector length of the i'th column (that's ok with vector4, because fourth element is allways 0)
 		assert(nifti2image[i][3]==0); //just to be sure
 		head->pixdim[i + 1] = util::vectorFromArray(nifti2image[i]).len();
 	}
