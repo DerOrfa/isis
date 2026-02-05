@@ -1,4 +1,7 @@
 # Doxyfile 1.5.6
+# create with
+# cmake .. -DBUILD_DOCUMENTATION=YES -DDOXYFILE_HTML_DIR="/data/tu_reimer/projects/isis-pages/doxygen"
+# make doc
 
 #---------------------------------------------------------------------------
 # Project related configuration options
@@ -80,7 +83,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/isis/Core"
+INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/isis/core"
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          =
 RECURSIVE              = YES
@@ -110,7 +113,6 @@ VERBATIM_HEADERS       = YES
 # configuration options related to the alphabetical class index
 #---------------------------------------------------------------------------
 ALPHABETICAL_INDEX     = NO
-COLS_IN_ALPHA_INDEX    = 5
 IGNORE_PREFIX          =
 #---------------------------------------------------------------------------
 # configuration options related to the HTML output
@@ -180,11 +182,9 @@ TAGFILES               =
 GENERATE_TAGFILE       =
 ALLEXTERNALS           = NO
 EXTERNAL_GROUPS        = YES
-PERL_PATH              = /usr/bin/perl
 #---------------------------------------------------------------------------
 # Configuration options related to the dot tool
 #---------------------------------------------------------------------------
-CLASS_DIAGRAMS         = YES
 HAVE_DOT               = NO
 #---------------------------------------------------------------------------
 # Configuration::additions related to the search engine

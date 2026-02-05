@@ -10,14 +10,20 @@ class VoxelOp
 	mu::Parser parser;
 	double voxBuff;
 	util::dvector4 posBuff;
-public:
-	VoxelOp( std::string expr ) {
-		parser.SetExpr( expr );
+	void init() {
 		parser.DefineVar( std::string( "vox" ), &voxBuff );
 		parser.DefineVar( std::string( "pos_x" ), &posBuff[data::rowDim] );
 		parser.DefineVar( std::string( "pos_y" ), &posBuff[data::columnDim] );
 		parser.DefineVar( std::string( "pos_z" ), &posBuff[data::sliceDim] );
 		parser.DefineVar( std::string( "pos_t" ), &posBuff[data::timeDim] );
+	}
+public:
+	VoxelOp(const VoxelOp &other):parser(other.parser) {
+		init();
+	}
+	VoxelOp( std::string expr ) {
+		parser.SetExpr( expr );
+		init();
 	}
 	bool operator()( double &vox, const isis::util::vector4<size_t>& pos ) {
 		voxBuff = vox; //using parser.DefineVar every time would slow down the evaluation
@@ -37,19 +43,21 @@ int main( int argc, char **argv )
 
 
 	const std::string op = app.parameters["voxelop"];
+	std::list<data::Image> out_images;
 
 	try {
 		VoxelOp vop( op );
-
-		for( data::TypedImage<double> img: app.images ) { //muparser needs double
+		while (!app.images.empty()) { //muparser needs double
+			auto img = app.fetchImageAs<double>();
 			std::cout << "Computing vox=(" << op << ") for each voxel of the " << img.getSizeAsString() << "-Image" << std::endl;
 			img.foreachVoxel( vop );
+			out_images.push_back(std::move(img));
 		}
 	} catch( mu::Parser::exception_type &e ) {
 		std::cerr << e.GetMsg() << std::endl;
 		exit( -1 );
 	}
 
-	app.autowrite( app.images );
+	app.autowrite( out_images );
 	return EXIT_SUCCESS;
 }

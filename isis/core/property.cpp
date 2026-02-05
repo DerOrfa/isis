@@ -198,13 +198,13 @@ PropertyValue::iterator PropertyValue::erase( size_t at ){
 PropertyValue::iterator PropertyValue::erase( iterator first, iterator last ){return container.erase(first,last);}
 
 Value& PropertyValue::front(){
-	LOG_IF(size()>1,Debug,warning) << "Doing single value operation on a multi value Property (" << util::listToString(begin(),end()) << ")";
+	LOG_IF(size()>1,Debug,info) << "Doing single value operation on a multi value Property (" << util::listToString(begin(),end()) << ")";
 	LOG_IF(isEmpty(),Debug,error) << "Doing single value operation on an empty Property, exception ahead ..";
 	return container.front();
 }
 
 const Value& PropertyValue::front() const{
-	LOG_IF(size()>1,Debug,warning) << "Doing single value operation on a multi value Property (" << util::listToString(begin(),end()) << ")";
+	LOG_IF(size()>1,Debug,info) << "Doing single value operation on a multi value Property (" << util::listToString(begin(),end()) << ")";
 	LOG_IF(isEmpty(),Debug,error) << "Doing single value operation on an empty Property, exception ahead ..";
 	return container.front();
 }
