@@ -10,14 +10,20 @@ class VoxelOp
 	mu::Parser parser;
 	double voxBuff;
 	util::dvector4 posBuff;
-public:
-	VoxelOp( std::string expr ) {
-		parser.SetExpr( expr );
+	void init() {
 		parser.DefineVar( std::string( "vox" ), &voxBuff );
 		parser.DefineVar( std::string( "pos_x" ), &posBuff[data::rowDim] );
 		parser.DefineVar( std::string( "pos_y" ), &posBuff[data::columnDim] );
 		parser.DefineVar( std::string( "pos_z" ), &posBuff[data::sliceDim] );
 		parser.DefineVar( std::string( "pos_t" ), &posBuff[data::timeDim] );
+	}
+public:
+	VoxelOp(const VoxelOp &other):parser(other.parser) {
+		init();
+	}
+	VoxelOp( std::string expr ) {
+		parser.SetExpr( expr );
+		init();
 	}
 	bool operator()( double &vox, const isis::util::vector4<size_t>& pos ) {
 		voxBuff = vox; //using parser.DefineVar every time would slow down the evaluation
